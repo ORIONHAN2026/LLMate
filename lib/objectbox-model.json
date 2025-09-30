@@ -1,0 +1,101 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:2427291254187522065",
+      "lastPropertyId": "14:8915503282069050847",
+      "name": "RagChunk",
+      "properties": [
+        {
+          "id": "1:7315479431914948222",
+          "name": "obxId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:2322983327837858376",
+          "name": "id",
+          "type": 9
+        },
+        {
+          "id": "3:6806492403935758534",
+          "name": "documentId",
+          "type": 9,
+          "flags": 2048,
+          "indexId": "2:4151929041608218679"
+        },
+        {
+          "id": "4:5880255232733353955",
+          "name": "content",
+          "type": 9
+        },
+        {
+          "id": "5:184503596856241988",
+          "name": "startPosition",
+          "type": 6
+        },
+        {
+          "id": "6:9207914127268119247",
+          "name": "endPosition",
+          "type": 6
+        },
+        {
+          "id": "7:2425818164704995268",
+          "name": "chunkIndex",
+          "type": 6
+        },
+        {
+          "id": "8:3721636695803376665",
+          "name": "sourceFilePath",
+          "type": 9
+        },
+        {
+          "id": "9:4618719534939614861",
+          "name": "relativePath",
+          "type": 9
+        },
+        {
+          "id": "10:3565766560646042824",
+          "name": "folderName",
+          "type": 9
+        },
+        {
+          "id": "11:1509275965614863330",
+          "name": "createdTime",
+          "type": 10
+        },
+        {
+          "id": "12:6123722966705702991",
+          "name": "embeddings",
+          "type": 29
+        },
+        {
+          "id": "13:8917263794182828480",
+          "name": "comment",
+          "type": 9
+        },
+        {
+          "id": "14:8915503282069050847",
+          "name": "modelId",
+          "type": 9,
+          "flags": 2048,
+          "indexId": "1:2318127421183411635"
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "1:2427291254187522065",
+  "lastIndexId": "2:4151929041608218679",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [],
+  "retiredRelationUids": [],
+  "version": 1
+}

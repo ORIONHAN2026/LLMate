@@ -1,0 +1,466 @@
+import 'dart:async';
+import '../models/bigmodel/chat_model.dart';
+import '../models/chat/chat_session.dart';
+import '../models/chat/chat_message.dart';
+import '../models/rag/rag_document.dart';
+import '../models/rag/rag_knowledge_base.dart';
+import 'services/vector_database_service.dart';
+import 'llmproviders/base_provider.dart';
+import 'llmproviders/openai_provider.dart';
+import 'llmproviders/deepseek_provider.dart';
+import 'llmproviders/anthropic_provider.dart';
+import 'llmproviders/modelscope_provider.dart';
+import 'llmproviders/gemini_provider.dart';
+import 'llmproviders/qwen_provider.dart';
+import 'llmproviders/zhipu_provider.dart';
+import 'llmproviders/ollama_provider.dart';
+import 'ragproviders/base_rag_provider.dart';
+import 'ragproviders/default_rag_provider.dart';
+
+/// LLM Hub - 大模型统一调用框架
+/// 支持多种大模型提供商和RAG提供商，提供统一的API接口
+class LlmHub {
+  final Map<String, BaseLlmProvider> _providers = {};
+
+  /// 私有构造函数
+  LlmHub._internal() {
+    _initializeProviders();
+  }
+
+  /// 单例实例
+  static final LlmHub _instance = LlmHub._internal();
+
+  /// 获取单例实例
+  static LlmHub get instance => _instance;
+
+  /// 工厂构造函数
+  factory LlmHub() => _instance;
+
+  /// 初始化所有提供商
+  void _initializeProviders() {
+    _providers['openai'] = OpenAiProvider();
+    _providers['deepseek'] = DeepSeekProvider();
+    _providers['anthropic'] = AnthropicProvider();
+    _providers['modelscope'] = ModelScopeProvider();
+    _providers['gemini'] = GeminiProvider();
+    _providers['qwen'] = QwenProvider();
+    _providers['zhipu'] = ZhipuProvider();
+    _providers['ollama'] = OllamaProvider();
+  }
+
+ 
+  /// 直接通过 ChatModel 创建客户端（推荐方式）
+  LlmClient createClient(ChatModel model) {
+    print("=== LlmHub.createClient 被调用 ===");
+    print("模型提供商: ${model.provider}");
+    print("模型名称: ${model.name}");
+    print("模型ID: ${model.model}");
+    print("可用提供商: ${_providers.keys.toList()}");
+    
+    if (model.provider == null || model.provider!.isEmpty) {
+      throw ArgumentError('模型必须指定提供商');
+    }
+    
+    final llmProvider = _providers[model.provider];
+    print("找到的提供商: ${llmProvider.runtimeType}");
+    
+    if (llmProvider == null) {
+      throw UnsupportedError('不支持的提供商: ${model.provider}');
+    }
+    
+    final client = LlmClient._(llmProvider);
+    client.configure(model);
+    print("客户端配置完成");
+    return client;
+  }
+
+  /// 创建RAG客户端（现在作为普通的LLM客户端）
+  LlmClient createRagClient([String provider = 'rag']) {
+    final ragProvider = _providers[provider];
+    if (ragProvider == null) {
+      throw UnsupportedError('不支持的RAG提供商: $provider');
+    }
+    return LlmClient._(ragProvider);
+  }
+
+  /// 根据 ChatSession 创建客户端
+  LlmClient createClientFromSession(ChatSession session) {
+    if (session.chatModel == null) {
+      throw ArgumentError('会话必须绑定模型');
+    }
+    return createClient(session.chatModel!);
+  }
+
+  /// 获取所有支持的提供商
+  List<String> getSupportedProviders() {
+    return _providers.keys.toList();
+  }
+
+  /// 检查提供商是否支持
+  bool isProviderSupported(String provider) {
+    return _providers.containsKey(provider);
+  }
+}
+
+/// LLM 客户端 - 用于具体的模型调用
+class LlmClient {
+  final BaseLlmProvider _llmProvider;
+  BaseRagProvider? _ragProvider;
+  ChatModel? _model;
+
+  /// 内部构造函数
+  LlmClient._(this._llmProvider) {
+    // 默认创建RAG提供商
+    _ragProvider = DefaultRagProvider();
+  }
+
+  /// 清理资源
+  Future<void> dispose() async {
+    await _ragProvider?.dispose();
+    _ragProvider = null;
+  }
+
+  /// 便捷的静态工厂方法 - 直接通过 ChatModel 创建客户端
+  static LlmClient fromModel(ChatModel model) {
+    return LlmHub.instance.createClient(model);
+  }
+
+ 
+  /// 便捷的静态工厂方法 - 通过 ChatSession 创建客户端
+  static LlmClient fromSession(ChatSession session) {
+    return LlmHub.instance.createClientFromSession(session);
+  }
+
+  /// 配置模型和RAG
+  void configure(ChatModel model, {String? ragId}) {
+    _model = model;
+    _llmProvider.configure(model);
+    _ragProvider?.configure(model);
+    
+    // 设置RAG提供商的代码描述回调函数
+    _ragProvider?.setCodeDescriptionCallback((prompt) async {
+      return await _llmProvider.sendSimpleMessage(prompt);
+    });
+  }
+
+  /// 设置RAG知识库（已废弃，保留兼容性）
+  @Deprecated('RAG功能现在通过独立的RAG提供商管理')
+  void setRagKnowledgeBase(String? ragId) {
+    // 保留方法以确保向后兼容
+  }
+
+  /// 获取当前配置的模型
+  ChatModel? get model => _model;
+
+  /// 发送消息 - 流式响应
+  Stream<Map<String, String?>> sendMessageStream({
+    required ChatMessage userMessage,
+    ChatSession? session,
+  }) {
+    print("=== LlmClient.sendMessageStream 被调用 ===");
+    print("提供商类型: ${_llmProvider.runtimeType}");
+    print("用户消息: ${userMessage.content}");
+    
+    if (_model == null) {
+      print("错误: 客户端未配置模型");
+      throw StateError('客户端未配置模型');
+    }
+
+    print("准备调用提供商的 sendMessageStream 方法");
+    return _llmProvider.sendMessageStream(
+      userMessage: userMessage,
+      session: session,
+    );
+  }
+
+  /// 发送消息 - 一次性响应
+  Future<String> sendMessage({
+    required ChatMessage userMessage,
+    ChatSession? session,
+  }) async {
+    final buffer = StringBuffer();
+    await for (final chunkMap in sendMessageStream(
+      userMessage: userMessage,
+      session: session,
+    )) {
+      buffer.write(chunkMap['content'] ?? '');
+    }
+    return buffer.toString();
+  }
+
+  /// 验证配置
+  Future<bool> validateConfiguration() async {
+    print("=== LlmClient.validateConfiguration 被调用 ===");
+    
+    if (_model == null) {
+      print('LlmClient 验证失败: 客户端未配置模型');
+      throw StateError('客户端未配置模型');
+    }
+
+    print('开始验证配置...');
+    print('提供商: ${_model!.provider}');
+    print('模型: ${_model!.model}');
+    print('API URL: ${_model!.apiUrl}');
+    if (_model!.apiKey != null && _model!.apiKey!.isNotEmpty) {
+      print('API Key: ${_model!.apiKey!.substring(0, _model!.apiKey!.length > 10 ? 10 : _model!.apiKey!.length)}...');
+    } else {
+      print('API Key: 未设置或为空');
+    }
+
+    try {
+      print('调用提供商的 validateConfiguration 方法...');
+      final isValid = await _llmProvider.validateConfiguration();
+
+      print('配置验证结果: ${isValid ? '成功' : '失败'}');
+
+      return isValid;
+    } catch (e) {
+      print('配置验证过程中发生错误: $e');
+      return false;
+    }
+  }
+
+  /// 获取模型信息
+  Future<Map<String, dynamic>?> getModelInfo() async {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+    return _llmProvider.getModelInfo();
+  }
+
+  /// 获取支持的功能
+  List<String> getSupportedFeatures() {
+    return _llmProvider.getSupportedFeatures();
+  }
+
+  /// 检查是否支持某项功能
+  bool supportsFeature(String feature) {
+    return _llmProvider.supportsFeature(feature);
+  }
+
+  /// 构建系统提示词
+  String buildSystemPrompt({String? customPrompt}) {
+    return _llmProvider.buildSystemPrompt(customPrompt: customPrompt);
+  }
+
+  /// 构建消息列表
+  List<Map<String, dynamic>> buildMessages({
+    required ChatMessage userMessage,
+    ChatSession? session,
+  }) {
+    return _llmProvider.buildMessages(userMessage: userMessage, session: session);
+  }
+
+  /// 处理工具调用（MCP）
+  Future<Map<String, dynamic>?> handleToolCall({
+    required Map<String, dynamic> toolCall,
+    ChatSession? session,
+  }) async {
+    if (!supportsFeature('tool_calling')) {
+      return null;
+    }
+    return _llmProvider.handleToolCall(toolCall: toolCall, session: session);
+  }
+
+  /// 发送消息 - 流式响应（支持 RAG 增强）
+
+  
+
+  /// 发送消息 - 流式响应（支持 RAG 增强）
+  Stream<Map<String, String?>> sendMessageStreamWithRag({
+    required ChatMessage userMessage,
+    ChatSession? session,
+    String? ragId,
+    int maxRelevantDocs = 3,
+  }) async* {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+
+    // RAG功能现在通过独立的RAG提供商处理
+    // 这里可以在将来添加RAG增强逻辑
+    
+    // 使用LLM提供商的标准消息发送
+    yield* _llmProvider.sendMessageStream(
+      userMessage: userMessage,
+      session: session,
+    );
+  }
+
+  /// 发送消息 - 一次性响应（支持 RAG 增强）
+  Future<String> sendMessageWithRag({
+    required ChatMessage userMessage,
+    ChatSession? session,
+    String? ragId,
+    int maxRelevantDocs = 3,
+  }) async {
+    final buffer = StringBuffer();
+    await for (final chunkMap in sendMessageStreamWithRag(
+      userMessage: userMessage,
+      session: session,
+      ragId: ragId,
+      maxRelevantDocs: maxRelevantDocs,
+    )) {
+      buffer.write(chunkMap['content'] ?? '');
+    }
+    return buffer.toString();
+  }
+
+  // ============ RAG 文档管理功能 ============
+
+  /// 创建RAG知识库（使用modelId）
+  Future<String> createRagKnowledgeBase() async {
+    if (_ragProvider == null) {
+      throw StateError('RAG提供商未配置');
+    }
+    return await _ragProvider!.createRagKnowledgeBase();
+  }
+
+  /// 导入单个文件到RAG知识库
+  Future<RagDocument> importFileToRag({
+    required String filePath,
+    String? customTitle,
+    String? relativePath,
+    String? folderName,
+  }) async {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+    if (_ragProvider == null) {
+      throw StateError('RAG提供商未配置');
+    }
+    return await _ragProvider!.importFileToRag(
+      sourceFilePath: filePath,
+      customTitle: customTitle,
+      relativePath: relativePath,
+      folderName: folderName,
+    );
+  }
+
+  /// 导入文件夹到RAG知识库
+  Future<List<RagDocument>> importFolderToRag({
+    required String folderPath,
+    bool recursive = true,
+  }) async {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+    if (_ragProvider == null) {
+      throw StateError('RAG提供商未配置');
+    }
+    return await _ragProvider!.importFolderToRag(
+      sourceFolderPath: folderPath,
+      recursive: recursive,
+    );
+  }
+
+  /// 获取RAG知识库信息
+  Future<RagKnowledgeBase?> getRagKnowledgeBase() async {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+    if (_ragProvider == null) {
+      throw StateError('RAG提供商未配置');
+    }
+    return await _ragProvider!.getRagKnowledgeBase();
+  }
+
+  /// 获取RAG知识库中的所有文档
+  Future<List<RagDocument>> getAllRagDocuments() async {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+    final knowledgeBase = await getRagKnowledgeBase();
+    if (knowledgeBase == null) {
+      return [];
+    }
+    return knowledgeBase.documents;
+  }
+
+  /// 在RAG知识库中搜索文档
+  Future<List<VectorSearchResult>> searchRagDocuments({
+    required String query,
+  }) async {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+    if (_ragProvider == null) {
+      throw StateError('RAG提供商未配置');
+    }
+    return await _ragProvider!.searchRagDocuments(
+      query: query,
+    );
+  }
+
+  /// 删除RAG文档
+  Future<bool> deleteRagDocument({
+    required String documentId,
+  }) async {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+    if (_ragProvider == null) {
+      throw StateError('RAG提供商未配置');
+    }
+    return await _ragProvider!.deleteRagDocument(
+      documentId: documentId,
+    );
+  }
+
+  /// 为文档创建分块
+  Future<List<dynamic>> chunkDocument(RagDocument document) async {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+    if (_ragProvider == null) {
+      throw StateError('RAG提供商未配置');
+    }
+    return await _ragProvider!.chunkDocument(document);
+  }
+}
+
+/// 使用示例和便捷方法
+class LlmHubExamples {
+  /// 示例：使用新的简化方式创建客户端（推荐）
+  static Future<void> simplifiedExample() async {
+    // 创建模型配置
+    final model = ChatModel.create(
+      name: 'GPT-4',
+      model: 'gpt-4',
+      provider: 'openai',
+      apiKey: 'your-api-key',
+      apiUrl: 'https://api.openai.com/v1',
+    );
+
+    // 方式1：使用静态工厂方法（最简单）
+    final client = LlmClient.fromModel(model);
+
+    // 方式2：使用 LlmHub（等价于方式1）
+    // final client = LlmHub.instance.createClientFromModel(model);
+
+    // 验证配置
+    final isValid = await client.validateConfiguration();
+    if (!isValid) {
+      print('配置验证失败');
+      return;
+    }
+
+    // 发送消息
+    final userMessage = ChatMessage(
+      msgId: 'test_${DateTime.now().millisecondsSinceEpoch}',
+      content: '你好！请简单介绍一下你自己。',
+      role: MessageRole.user,
+      timestamp: DateTime.now(),
+    );
+
+    // 流式响应
+    print('AI回复: ');
+    await for (final chunkMap in client.sendMessageStream(userMessage: userMessage)) {
+      print(chunkMap['content'] ?? '');
+    }
+
+    // 释放资源
+    client.dispose();
+  }
+
+  }

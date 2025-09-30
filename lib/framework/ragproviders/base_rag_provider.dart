@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
-import 'package:http/http.dart' as http;
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/rag/rag_document.dart';
 import '../../models/rag/rag_knowledge_base.dart';
@@ -24,8 +23,7 @@ abstract class BaseRagProvider {
   /// 向量数据库服务实例
   VectorDatabaseService? _vectorDbService;
 
-  /// 代码描述生成回调函数
-  Future<String?> Function(String prompt)? _codeDescriptionCallback;
+  // 已移除代码描述相关回调字段 _codeDescriptionCallback（功能暂未启用）
 
   /// RAG支持的文件类型
   static const Set<String> supportedRagExtensions = {
@@ -65,10 +63,7 @@ abstract class BaseRagProvider {
     onConfigure(model);
   }
 
-  /// 设置代码描述生成回调函数
-  void setCodeDescriptionCallback(Future<String?> Function(String prompt) callback) {
-    _codeDescriptionCallback = callback;
-  }
+  // setCodeDescriptionCallback 已移除（代码描述功能暂未启用）
 
   /// 子类可以重写此方法来处理配置
   void onConfigure(ChatModel model) {}
@@ -1620,7 +1615,7 @@ abstract class BaseRagProvider {
       
       final chunkContent = content.substring(start, end);
       final chunk = RagChunk.create(
-                  modelId: _model!.modelId!,
+                  modelId: _model!.modelId,
 
         documentId: document.id,
         content: chunkContent,
@@ -1699,187 +1694,11 @@ abstract class BaseRagProvider {
     }
   }
 
-  /// 为代码分块生成功能描述
-  /// TODO: 此方法目前未使用，将在代码文档生成功能实现时启用
-  Future<List<RagChunk>> _addCodeDescriptionsToChunks(List<RagChunk> chunks, String fileExtension) async {
-    if (chunks.isEmpty || _model == null) return chunks;
-    
-    try {
-      final chunksWithDescriptions = <RagChunk>[];
-      
-      for (int i = 0; i < chunks.length; i++) {
-        final chunk = chunks[i];
-        
-        if (kDebugMode) {
-          print('正在生成代码描述 ${i + 1}/${chunks.length}: ${chunk.preview}');
-        }
-        
-        // 构建提问内容
-        final prompt = _buildCodeDescriptionPrompt(chunk.content, fileExtension);
-        
-        // 向模型发起请求获取功能描述
-        final description = await _getCodeDescription(prompt);
-        
-        // 创建包含功能描述的新分块
-        final chunkWithDescription = chunk.copyWith(comment: description);
-        chunksWithDescriptions.add(chunkWithDescription);
-        
-        // 添加延迟避免过于频繁的请求
-        if (i < chunks.length - 1) {
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
-      }
-      
-      if (kDebugMode) {
-        final successCount = chunksWithDescriptions.where((c) => c.comment != null && c.comment!.isNotEmpty).length;
-        print('代码描述生成完成: 成功 $successCount/${chunks.length} 个分块');
-      }
-      
-      return chunksWithDescriptions;
-    } catch (e) {
-      if (kDebugMode) {
-        print('代码描述生成过程出错: $e，返回原始分块');
-      }
-      return chunks;
-    }
-  }
+  // 已移除未使用的 _addCodeDescriptionsToChunks 方法（保留的相关辅助方法可供未来功能启用）
 
-  /// 构建代码描述提问内容
-  String _buildCodeDescriptionPrompt(String code, String fileExtension) {
-    final language = _getLanguageName(fileExtension);
-    return '''请分析以下${language}代码片段的功能，用简洁清晰的中文描述其主要功能和用途。请只返回功能描述，不要包含其他内容：
+  // 已移除未使用的与代码描述相关的辅助方法：_buildCodeDescriptionPrompt / _getLanguageName / _getCodeDescription
 
-```$language
-$code
-```
-
-请简要说明这个代码片段的功能：''';
-  }
-
-  /// 获取编程语言名称
-  String _getLanguageName(String extension) {
-    switch (extension.toLowerCase()) {
-      case '.dart': return 'Dart';
-      case '.go': return 'Go';
-      case '.py': return 'Python';
-      case '.js': return 'JavaScript';
-      case '.ts': return 'TypeScript';
-      case '.java': return 'Java';
-      case '.cpp':
-      case '.c': return 'C/C++';
-      case '.rs': return 'Rust';
-      case '.rb': return 'Ruby';
-      case '.php': return 'PHP';
-      case '.swift': return 'Swift';
-      case '.kt': return 'Kotlin';
-      case '.scala': return 'Scala';
-      default: return '代码';
-    }
-  }
-
-  /// 向模型发起请求获取代码功能描述
-  Future<String?> _getCodeDescription(String prompt) async {
-    try {
-      if (_model == null) return null;
-      
-      // 这里需要调用具体的模型API来获取描述
-      // 由于这是抽象类，具体实现由子类完成
-      // 这里先返回一个占位符实现
-      return await _requestCodeDescription(prompt);
-    } catch (e) {
-      if (kDebugMode) {
-        print('获取代码描述失败: $e');
-      }
-      return null;
-    }
-  }
-
-  /// 请求代码描述，优先使用回调函数，否则使用HTTP请求
-  Future<String?> _requestCodeDescription(String prompt) async {
-    try {
-      // 优先使用回调函数（来自LLMProvider）
-      if (_codeDescriptionCallback != null) {
-        return await _codeDescriptionCallback!(prompt);
-      }
-      
-      // 回退到HTTP请求
-      return await _requestCodeDescriptionViaHttp(prompt);
-    } catch (e) {
-      if (kDebugMode) {
-        print('请求代码描述出错: $e');
-      }
-      return null;
-    }
-  }
-
-  /// 通过HTTP请求获取代码描述
-  Future<String?> _requestCodeDescriptionViaHttp(String prompt) async {
-    try {
-      if (_model == null || _model!.apiUrl == null) {
-        if (kDebugMode) {
-          print('模型未配置或缺少API URL，跳过代码描述生成');
-        }
-        return null;
-      }
-
-      final apiUrl = _model!.apiUrl!;
-      final apiKey = _model!.apiKey;
-      final modelName = _model!.model;
-      
-      // 构建请求体
-      final requestBody = {
-        'model': modelName,
-        'messages': [
-          {
-            'role': 'system',
-            'content': '你是一个代码分析专家，请简洁地描述代码功能，只返回功能描述，不要包含其他内容。'
-          },
-          {
-            'role': 'user',
-            'content': prompt
-          }
-        ],
-        'max_tokens': 200,
-        'temperature': 0.3,
-      };
-
-      // 设置请求头
-      final headers = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (apiKey != null && apiKey.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $apiKey';
-      }
-
-      // 发送HTTP请求
-      final response = await http.post(
-        Uri.parse('$apiUrl/chat/completions'),
-        headers: headers,
-        body: jsonEncode(requestBody),
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['choices'] != null && data['choices'].isNotEmpty) {
-          final content = data['choices'][0]['message']?['content'];
-          if (content != null && content.toString().isNotEmpty) {
-            return content.toString().trim();
-          }
-        }
-      } else {
-        if (kDebugMode) {
-          print('代码描述请求失败: ${response.statusCode} - ${response.body}');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('请求代码描述出错: $e');
-      }
-    }
-    
-    return null;
-  }
+  // 已移除请求代码描述的辅助方法 _requestCodeDescription / _requestCodeDescriptionViaHttp
 
   /// 按行数分块
   Future<List<RagChunk>> _chunkByLines(RagDocument document, String content, List<String> lines, int linesPerChunk) async {
@@ -2002,64 +1821,7 @@ $code
 
   // ============ 代码分析辅助方法 ============
 
-  /// 查找Go函数结束位置（专门优化的函数边界检测）
-  /// Go 语言函数结束位置查找
-  /// TODO: 此方法目前未使用，将在代码文档生成功能实现时启用
-  int _findGoFunctionEnd(List<String> lines, int startLine) {
-    int braceCount = 0;
-    bool foundOpenBrace = false;
-    bool inString = false;
-    bool inComment = false;
-    
-    for (int i = startLine; i < lines.length; i++) {
-      final line = lines[i];
-      
-      for (int j = 0; j < line.length; j++) {
-        final char = line[j];
-        final nextChar = j + 1 < line.length ? line[j + 1] : '';
-        
-        // 处理字符串字面量
-        if (char == '"' && !inComment) {
-          // 检查是否是转义的引号
-          if (j == 0 || line[j - 1] != '\\') {
-            inString = !inString;
-          }
-          continue;
-        }
-        
-        // 处理注释
-        if (!inString) {
-          if (char == '/' && nextChar == '/') {
-            inComment = true;
-            break; // 跳过本行剩余部分
-          }
-          if (char == '/' && nextChar == '*') {
-            // 多行注释开始，但为了简化，我们忽略它
-            j++; // 跳过 '*'
-            continue;
-          }
-        }
-        
-        // 只在非字符串、非注释中计算花括号
-        if (!inString && !inComment) {
-          if (char == '{') {
-            braceCount++;
-            foundOpenBrace = true;
-          } else if (char == '}') {
-            braceCount--;
-            if (foundOpenBrace && braceCount == 0) {
-              return i;
-            }
-          }
-        }
-      }
-      
-      // 每行结束时重置注释状态（单行注释）
-      inComment = false;
-    }
-    
-    return lines.length - 1;
-  }
+  // 已移除未使用的 _findGoFunctionEnd 方法（未来如需更精确的 Go 函数边界检测，可在版本控制历史中恢复）
 
   /// 查找代码块结束位置（通过花括号匹配）
   int _findBlockEnd(List<String> lines, int startLine) {
@@ -2189,7 +1951,7 @@ $code
         final keyValue = '"${entry.key}": ${json.encode(entry.value)}';
         final chunk = RagChunk.create(
           documentId: document.id,
-          modelId: _model!.modelId!,
+          modelId: _model!.modelId,
           content: keyValue,
           startPosition: position,
           endPosition: position + keyValue.length,
@@ -2206,7 +1968,7 @@ $code
       for (int i = 0; i < jsonData.length; i++) {
         final itemContent = json.encode(jsonData[i]);
         final chunk = RagChunk.create(
-                    modelId: _model!.modelId!,
+                    modelId: _model!.modelId,
 
           documentId: document.id,
           content: itemContent,

@@ -652,42 +652,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   }
 
   // 发送升级高级版申请邮件
-  Future<void> _sendUpgradeEmail() async {
-    const String upgradeEmail = 'hanxinyc@gmail.com';
-    const String subject = 'ChatHub应用-申请升级高级版';
-    final String body = '''
-你好！
-
-我希望申请升级ChatHub应用的高级版，请提供相关的升级信息和支付链接。
-
------------------------------
-申请时间：${DateTime.now().toString()}，您将在10分钟内得到回复。
-
-谢谢！
-''';
-
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: upgradeEmail,
-      queryParameters: {'subject': subject, 'body': body},
-    );
-
-    try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
-      } else {
-        // 如果无法启动邮箱应用，显示错误提示
-        if (mounted) {
-          SnackBarUtils.showError(context, '无法打开邮箱应用，请手动发送邮件至：$upgradeEmail');
-        }
-      }
-    } catch (e) {
-      // 发生错误时显示提示
-      if (mounted) {
-        SnackBarUtils.showError(context, '发送邮件失败：${e.toString()}');
-      }
-    }
-  }
+  // _sendUpgradeEmail 方法已删除（不再使用）
 
   // 处理删除会话的回调
   void _handleDeleteSession(dynamic value) {

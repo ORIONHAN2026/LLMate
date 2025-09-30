@@ -273,84 +273,10 @@ class _SessionItemState extends State<_SessionItem>
     }
   }
 
-  // 根据模型名称获取对应的图标
-  IconData _getModelIcon(String modelName) {
-    final lowercaseName = modelName.toLowerCase();
-
-    if (lowercaseName.contains('deepseek') || lowercaseName.contains('r1')) {
-      return CupertinoIcons.cube_box;
-    } else if (lowercaseName.contains('gpt') ||
-        lowercaseName.contains('openai')) {
-      return CupertinoIcons.chat_bubble_2;
-    } else if (lowercaseName.contains('claude')) {
-      return CupertinoIcons.ant_circle;
-    } else if (lowercaseName.contains('gemini') ||
-        lowercaseName.contains('bard')) {
-      return CupertinoIcons.star;
-    } else if (lowercaseName.contains('llama') ||
-        lowercaseName.contains('meta')) {
-      return CupertinoIcons.flame;
-    } else if (lowercaseName.contains('qwen') ||
-        lowercaseName.contains('tongyi')) {
-      return CupertinoIcons.cloud;
-    } else if (lowercaseName.contains('chatglm') ||
-        lowercaseName.contains('glm')) {
-      return CupertinoIcons.bolt;
-    } else if (lowercaseName.contains('baichuan')) {
-      return CupertinoIcons.tree;
-    } else if (lowercaseName.contains('wenxin') ||
-        lowercaseName.contains('ernie')) {
-      return CupertinoIcons.leaf_arrow_circlepath;
-    } else if (lowercaseName.contains('spark') ||
-        lowercaseName.contains('讯飞')) {
-      return CupertinoIcons.flame_fill;
-    } else {
-      return CupertinoIcons.chat_bubble;
-    }
-  }
-
-  // 根据模型名称获取对应的图标颜色
-  Color _getModelIconColor(String modelName, bool isSelected) {
-    if (isSelected) return Theme.of(context).colorScheme.onPrimary;
-
-    final lowercaseName = modelName.toLowerCase();
-
-    if (lowercaseName.contains('deepseek') || lowercaseName.contains('r1')) {
-      return const Color(0xFF6366F1);
-    } else if (lowercaseName.contains('gpt') ||
-        lowercaseName.contains('openai')) {
-      return const Color(0xFF10B981);
-    } else if (lowercaseName.contains('claude')) {
-      return const Color(0xFFF59E0B);
-    } else if (lowercaseName.contains('gemini') ||
-        lowercaseName.contains('bard')) {
-      return const Color(0xFF3B82F6);
-    } else if (lowercaseName.contains('llama') ||
-        lowercaseName.contains('meta')) {
-      return const Color(0xFFEF4444);
-    } else if (lowercaseName.contains('qwen') ||
-        lowercaseName.contains('tongyi')) {
-      return const Color(0xFF8B5CF6);
-    } else if (lowercaseName.contains('chatglm') ||
-        lowercaseName.contains('glm')) {
-      return const Color(0xFF06B6D4);
-    } else if (lowercaseName.contains('baichuan')) {
-      return const Color(0xFF84CC16);
-    } else if (lowercaseName.contains('wenxin') ||
-        lowercaseName.contains('ernie')) {
-      return const Color(0xFFF97316);
-    } else if (lowercaseName.contains('spark') ||
-        lowercaseName.contains('讯飞')) {
-      return const Color(0xFFEC4899);
-    } else {
-      return Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
-    }
-  }
+  // 已移除未使用的模型图标/颜色辅助方法 _getModelIcon / _getModelIconColor
 
   // 根据模型名称构建对应的图标Widget
   Widget _buildModelIconWidget(String modelName, bool isSelected) {
-    final lowercaseName = modelName.toLowerCase();
-
     // 使用统一的ModelIconUtils来处理图标
     return ModelIconUtils.buildModelIconWidget(
       modelName,

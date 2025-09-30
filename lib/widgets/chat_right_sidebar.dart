@@ -25,6 +25,13 @@ class ChatRightSidebar extends StatefulWidget {
 
 class _ChatRightSidebarState extends State<ChatRightSidebar> {
   // 需求：移除工作区与附件的概念，清空显示，仅保留一个占位空面板供后续功能使用
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
 
   @override
   void didUpdateWidget(covariant ChatRightSidebar oldWidget) {
@@ -38,21 +45,39 @@ class _ChatRightSidebarState extends State<ChatRightSidebar> {
   @override
   Widget build(BuildContext context) {
     if (widget.isCollapsed) return const SizedBox.shrink();
+    final text = widget.chatSession.workspacePlainText?.trim() ?? '';
     return Container(
       width: widget.width,
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         border: Border(left: BorderSide(color: Theme.of(context).dividerColor)),
       ),
-      child: Center(
-        child: Text(
-          '（侧边区域已清空，等待新功能接入）',
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
-          ),
-        ),
-      ),
+      child: text.isEmpty
+          ? Center(
+              child: Text(
+                '（暂无整理内容，发送包含 “整理/总结/归纳/生成文档” 等指令的消息后显示结果）',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withOpacity(0.45),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          : Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
+                child: SelectableText(
+                  text,
+                  style: const TextStyle(fontSize: 13, height: 1.45),
+                ),
+              ),
+            ),
     );
   }
 }

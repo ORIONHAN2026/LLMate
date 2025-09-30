@@ -22,6 +22,7 @@ class ChatSession {
   final bool isRagEnabled; // 会话绑定的RAG功能开关
   final String? workspaceDelta; // 富文本编辑器的 Delta JSON 序列化
   final String? workspacePlainText; // 纯文本快照（用于搜索 / 预览）
+  final bool pendingAutoOpenRightPanel; // 是否需要自动展开右侧面板（一次性标记）
   
   final ChatModel? chatModel; // 会话绑定的模型信息
   final List<ChatMessage> messages;
@@ -45,6 +46,7 @@ class ChatSession {
         this.isRagEnabled = false, // 默认为false
     this.workspaceDelta,
     this.workspacePlainText,
+  this.pendingAutoOpenRightPanel = false,
 
     this.sessionQuickCommands = const [], // 默认为空列表
   });
@@ -110,6 +112,7 @@ class ChatSession {
     List<ChatCommand>? sessionQuickCommands,
     String? workspaceDelta,
     String? workspacePlainText,
+    bool? pendingAutoOpenRightPanel,
   }) {
     return ChatSession(
       sessionId: sessionId ?? this.sessionId,
@@ -131,6 +134,8 @@ class ChatSession {
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
       workspaceDelta: workspaceDelta ?? this.workspaceDelta,
       workspacePlainText: workspacePlainText ?? this.workspacePlainText,
+      pendingAutoOpenRightPanel:
+          pendingAutoOpenRightPanel ?? this.pendingAutoOpenRightPanel,
     );
   }
 
@@ -180,6 +185,7 @@ class ChatSession {
               : null, // 从JSON加载模型对象，允许为null
     workspaceDelta: json['workspaceDelta'] as String?,
     workspacePlainText: json['workspacePlainText'] as String?,
+    pendingAutoOpenRightPanel: json['pendingAutoOpenRightPanel'] ?? false,
     );
   }
 
@@ -209,6 +215,7 @@ class ChatSession {
       'chatModel': chatModel?.toMap(), // 保存模型对象到JSON，允许为null
       'workspaceDelta': workspaceDelta,
       'workspacePlainText': workspacePlainText,
+      'pendingAutoOpenRightPanel': pendingAutoOpenRightPanel,
     };
   }
 

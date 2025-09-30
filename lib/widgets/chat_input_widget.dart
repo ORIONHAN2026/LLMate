@@ -83,6 +83,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   // 模型相关数据
   String _selectedModel = 'DeepSeekR1';
   List<ChatModel> _availableModels = [];
+  // 预判是否为本次发送的文档整理类任务（避免多次判定不一致）
+  bool _pendingOrganizeDoc = false;
 
   // 监听器
   late final StreamSubscription _sessionSubscription;
@@ -986,39 +988,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建RAG搜索切换按钮
-  Widget _buildRagToggle() {
-    final currentSession = sessionController.currentSession.value;
-    final isEnabled = currentSession?.isRagEnabled ?? false;
-
-    return Tooltip(
-      message: isEnabled ? '关闭知识库搜索' : '开启知识库搜索',
-      child: InkWell(
-        onTap: _isSending ? null : _toggleRagSearch,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            color:
-                isEnabled
-                    ? Theme.of(context).colorScheme.surfaceVariant
-                    : Colors.transparent, // 开启时加深背景
-          ),
-          child: Icon(
-            CupertinoIcons.book,
-            size: 13,
-            color:
-                _isSending
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                    : Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.6), // 保持一致的图标颜色
-          ),
-        ),
-      ),
-    );
-  }
+  // （已移除未使用的 RAG toggle 按钮）
 
 
   /// 构建联网搜索切换按钮
@@ -2535,27 +2505,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       },
     );
   }
-
-  /// 构建发送/停止按钮
-  void _toggleRagSearch() {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final updatedSession = currentSession.copyWith(
-      isRagEnabled: !currentSession.isRagEnabled,
-    );
-
-    sessionController.updateSession(updatedSession);
-
-    // 显示状态提示
-    // final isEnabled = updatedSession.isWebSearchEnabled;
-    // if (mounted) {
-    //   SnackBarUtils.showInfo(
-    //     context,
-    //     isEnabled ? '已开启联网搜索，发送消息时将自动搜索网页内容' : '已关闭联网搜索',
-    //   );
-    // }
-  }
+  // _toggleRagSearch 已彻底移除（旧 RAG 功能清理）
   /// 构建发送/停止按钮
   void _toggleWebSearch() {
     final currentSession = sessionController.currentSession.value;
@@ -2623,146 +2573,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       await _performWebSearchBeforeSending(text);
       // 搜索完成后继续执行发送逻辑，不返回
     }
-    //rag
-    // if (currentSession?.isRagEnabled == true && text.isNotEmpty) {
-    //   await _performRagSearchBeforeSending(text);
-    //   // 搜索完成后继续执行发送逻辑，不返回
-    // }
+  // RAG 逻辑已移除
 
     // 直接发送消息，MCP工具调用将在AI响应过程中处理
     await _doSendMessage(text);
   }
 
-   //rag搜索
-     //rag搜索
-  Future<void> _performRagSearchBeforeSending(String query) async {
-    // 生成唯一的搜索附件ID
-    final searchAttachmentId =
-        '${DateTime.now().millisecondsSinceEpoch}_ragsearch';
-
-    try {
-      // 显示搜索提示
-      SnackBarUtils.showInfo(context, '正在进行RAG搜索...');
-      debugPrint('🔍 开始RAG搜索: $query');
-
-      // 立即创建"搜索中"状态的附件，content 为 null 表示处理中
-      final searchingAttachment = ChatAttachment(
-        id: searchAttachmentId,
-        name: '🔍 正在RAG搜索: $query',
-        type: 'rag_search',
-        filePath: '', // RAG搜索没有文件路径
-        size: 0, // 搜索中大小为0
-        createdAt: DateTime.now(),
-        content: null, // null 表示正在处理中
-      );
-
-      // 立即将"搜索中"附件添加到当前附件列表和会话中
-      final currentSession = sessionController.currentSession.value;
-      if (currentSession != null) {
-        final updatedAttachments = [
-          ..._currentAttachments,
-          searchingAttachment,
-        ];
-        final updatedSession = currentSession.copyWith(
-          attachments: updatedAttachments,
-        );
-        sessionController.updateSession(updatedSession);
-
-        debugPrint('� 已添加"搜索中"附件: ${searchingAttachment.name}');
-        debugPrint('🔄 当前会话附件数量: ${updatedSession.attachments.length}');
-      }
-
-      // 创建RAG查询
-      
-
-      // 执行RAG搜索
-      // 使用LlmClient进行搜索
-      print('使用LlmClient搜索...');
-      final searchResults = await LlmClient.fromModel(currentSession!.chatModel!).searchRagDocuments(
-        query: query,
-      );
-
-    
-
-
-      if (searchResults.isNotEmpty) {
-        // 搜索成功，更新附件内容
-        String attachment="";
-          print('搜索结果: 找到 ${searchResults.length} 个相关文档');
-      for (int i = 0; i < searchResults.length && i < 3; i++) {
-        final result = searchResults[i];
-        final chunk = result.chunk;
-        print('  结果${i + 1}: ${chunk.sourceFilePath} (相似度: ${result.similarity.toStringAsFixed(3)})');
-        print('    内容预览: ${chunk.preview}');
-        attachment=attachment+chunk.content;
-      }
-      print('==================');
-         final completedAttachment = ChatAttachment(
-          id: searchAttachmentId, // 使用相同的ID
-          name: '🔍 $query (RAG搜索)',
-          type: 'rag_search',
-          filePath: '',
-          size: attachment.length,
-          createdAt: searchingAttachment.createdAt,
-          content: attachment,
-        );
-
-        // 更新会话中的搜索附件
-        final currentSessionAfterSearch =
-            sessionController.currentSession.value;
-        if (currentSessionAfterSearch != null) {
-          // 替换搜索中的附件为完成的附件
-          final updatedAttachments =
-              currentSessionAfterSearch.attachments
-                  .map(
-                    (attachment) =>
-                        attachment.id == searchAttachmentId
-                            ? completedAttachment
-                            : attachment,
-                  )
-                  .toList();
-
-          final updatedSession = currentSessionAfterSearch.copyWith(
-            attachments: updatedAttachments,
-          );
-          sessionController.updateSession(updatedSession);
-
-          debugPrint('✅ RAG搜索完成，找到 ${searchResults.length} 个结果');
-          debugPrint('✅ 搜索附件已更新: ${completedAttachment.name}');
-          debugPrint('✅ 当前会话附件数量: ${updatedSession.attachments.length}');
-
-          if (mounted) {
-            SnackBarUtils.showSuccess(
-              context,
-              'RAG搜索完成，找到 ${searchResults.length} 个结果',
-            );
-          }
-        } else {
-          if (mounted) {
-            SnackBarUtils.showError(
-              context,
-              'RAG搜索未找到任何结果',
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          SnackBarUtils.showError(
-            context,
-            'RAG搜索失败',
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ RAG搜索异常: $e');
-      if (mounted) {
-        SnackBarUtils.showError(
-          context,
-          'RAG搜索异常: $e',
-        );
-      }
-    }
-  }
+  // （已移除未使用的 RAG 搜索方法）
   
   /// 在发送消息前执行联网搜索
   Future<void> _performWebSearchBeforeSending(String query) async {
@@ -3043,6 +2860,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       }
 
       await _generateAIResponse(updatedSession, userMessage);
+      _pendingOrganizeDoc = _isDocumentDocInstruction(userMessage.content);
+      if (_pendingOrganizeDoc) {
+        debugPrint('🛈 识别到文档整理类指令(预判): ${userMessage.content}');
+      }
+      await _generateAIResponse(updatedSession, userMessage);
     } catch (e) {
       _handleSendError(e);
     }
@@ -3233,6 +3055,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         botMessageId,
       );
 
+      // 如果用户输入属于文档整理类指令，则将最终结果写入会话并请求展开右栏
+      // 最终判定（使用预判标记或再判一次）
+      final bool finalIsDoc = _pendingOrganizeDoc || _isDocumentDocInstruction(userMessage.content);
+      if (finalIsDoc) {
+        final trimmed = accumulatedContent.trim();
+        if (trimmed.isNotEmpty) {
+          _saveOrganizedDocument(updateSession, trimmed);
+        } else {
+          debugPrint('⚠️ 文档整理判定为真但最终内容为空，跳过保存');
+        }
+      } else {
+        debugPrint('ℹ️ 最终判定非文档整理，跳过保存');
+      }
+
       setState(() {});
     } catch (e) {
       rethrow;
@@ -3243,6 +3079,46 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       } catch (e) {
         // 忽略释放资源时的错误
       }
+    }
+  }
+
+  // 判断是否为文档整理 / 说明 / 总结类指令
+  bool _isDocumentDocInstruction(String text) {
+    if (text.isEmpty) return false;
+    const positive = [
+      '整理', '总结', '归纳', '提炼', '优化', '润色', '改写', '重写', '重构', '结构化', '格式化', '生成目录',
+      '完善文档', '写一个', '写成文档', '生成文档', '合并上述', '基于以上', '综合以上', '说明文档', 'README', '报告', '梳理', '章节', '目录',
+    ];
+    const negative = ['报错', '错误日志', '异常栈', '运行失败'];
+    final lower = text.toLowerCase();
+    if (negative.any((n) => lower.contains(n))) return false;
+    final matched = positive.any((k) => text.contains(k));
+    if (matched) debugPrint('🔎 文档整理关键词命中: $text');
+    return matched;
+  }
+
+  // 保存整理后的结果到当前会话，并触发右侧面板展开（通过一次性标记）
+  void _saveOrganizedDocument(ChatSession session, String content) {
+    try {
+      final trimmed = content.trim();
+      if (trimmed.isEmpty) return;
+      // 再取一次最新会话，避免覆盖其他字段更新
+      final latest = sessionController.sessions.firstWhere(
+        (s) => s.sessionId == session.sessionId,
+        orElse: () => session,
+      );
+      if (latest.workspacePlainText == trimmed) {
+        debugPrint('🗂️ 整理文档内容未变化，跳过保存');
+        return;
+      }
+      final updated = latest.copyWith(
+        workspacePlainText: trimmed,
+        pendingAutoOpenRightPanel: true,
+      );
+      sessionController.updateSession(updated);
+      debugPrint('🗂️ 已保存整理文档 (len=${trimmed.length}) 并标记自动展开');
+    } catch (e) {
+      debugPrint('保存整理结果失败: $e');
     }
   }
 

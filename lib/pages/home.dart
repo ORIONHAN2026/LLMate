@@ -316,6 +316,19 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       );
     }
 
+    // 如果有一次性自动展开标记则展开右侧面板
+    final s = currentSession!;
+    if (s.pendingAutoOpenRightPanel && _isRightPanelCollapsed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _isRightPanelCollapsed) {
+          setState(() => _isRightPanelCollapsed = false);
+          // 清除标记
+          sessionController.updateSession(
+            s.copyWith(pendingAutoOpenRightPanel: false),
+          );
+        }
+      });
+    }
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -857,25 +870,31 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             ),
           ),
           // 右侧内容面板（Markdown 工作区）
-          if (currentSession != null)
-            Row(
-              children: [
-                if (!_isRightPanelCollapsed) _buildRightResizableHandle(),
-                ChatRightSidebar(
-                  isCollapsed: _isRightPanelCollapsed,
-                  chatSession: currentSession!,
-                  chatSessions: chatSessions,
-                  onClose: () {
-                    setState(() => _isRightPanelCollapsed = true);
-                  },
-                  onSessionUpdated: (updated) {
-                    sessionController.updateSession(updated);
-                    setState(() {});
-                  },
-                  width: _rightPanelWidth,
-                ),
-              ],
-            ),
+          // 右侧面板需要跟随会话字段（如 workspacePlainText）变化重建，因此使用 GetX 包裹
+          GetX<SessionController>(
+            builder: (controller) {
+              final cs = controller.currentSession.value;
+              if (cs == null) return const SizedBox.shrink();
+              return Row(
+                children: [
+                  if (!_isRightPanelCollapsed) _buildRightResizableHandle(),
+                  ChatRightSidebar(
+                    isCollapsed: _isRightPanelCollapsed,
+                    chatSession: cs,
+                    chatSessions: chatSessions,
+                    onClose: () {
+                      setState(() => _isRightPanelCollapsed = true);
+                    },
+                    onSessionUpdated: (updated) {
+                      sessionController.updateSession(updated);
+                      setState(() {});
+                    },
+                    width: _rightPanelWidth,
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
@@ -910,25 +929,30 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             ),
           ),
           // 右侧内容面板（Markdown 工作区）
-          if (currentSession != null)
-            Row(
-              children: [
-                if (!_isRightPanelCollapsed) _buildRightResizableHandle(),
-                ChatRightSidebar(
-                  isCollapsed: _isRightPanelCollapsed,
-                  chatSession: currentSession!,
-                  chatSessions: chatSessions,
-                  onClose: () {
-                    setState(() => _isRightPanelCollapsed = true);
-                  },
-                  onSessionUpdated: (updated) {
-                    sessionController.updateSession(updated);
-                    setState(() {});
-                  },
-                  width: _rightPanelWidth,
-                ),
-              ],
-            ),
+          GetX<SessionController>(
+            builder: (controller) {
+              final cs = controller.currentSession.value;
+              if (cs == null) return const SizedBox.shrink();
+              return Row(
+                children: [
+                  if (!_isRightPanelCollapsed) _buildRightResizableHandle(),
+                  ChatRightSidebar(
+                    isCollapsed: _isRightPanelCollapsed,
+                    chatSession: cs,
+                    chatSessions: chatSessions,
+                    onClose: () {
+                      setState(() => _isRightPanelCollapsed = true);
+                    },
+                    onSessionUpdated: (updated) {
+                      sessionController.updateSession(updated);
+                      setState(() {});
+                    },
+                    width: _rightPanelWidth,
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );

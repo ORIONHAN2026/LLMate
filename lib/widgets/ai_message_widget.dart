@@ -120,6 +120,19 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             onEnter: (_) => setState(() => _isHovered = true),
             onExit: (_) => setState(() => _isHovered = false),
             child: GestureDetector(
+              onTap: () {
+                // 如果该AI消息具有整理文档，则选中它并展开右侧面板
+                if (widget.message.organizedDocument != null && widget.message.organizedDocument!.trim().isNotEmpty) {
+                  final session = _findSessionContainingMessage(widget.message.msgId);
+                  if (session != null) {
+                    final updated = session.copyWith(
+                      selectedOrganizedMessageId: widget.message.msgId,
+                      pendingAutoOpenRightPanel: true,
+                    );
+                    sessionController.updateSession(updated);
+                  }
+                }
+              },
               onSecondaryTapDown: (details) {
                 _showAiMessageMenu(context, details.globalPosition);
               },
@@ -212,7 +225,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // 显示思考内容（如果有的话）
-                              if (widget.message.think != null && widget.message.think!.isNotEmpty) ...[
+                              if (widget.message.think.isNotEmpty) ...[
                                 Container(
                                   margin: const EdgeInsets.only(bottom: 12),
                                   padding: const EdgeInsets.all(12),
@@ -237,7 +250,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        widget.message.think!,
+                                        widget.message.think,
                                         style: TextStyle(
                                           fontSize: 11, // 更小的字体
                                           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), // 更淡的颜色

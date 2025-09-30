@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/chat/chat_session.dart';
+import '../models/chat/chat_message.dart';
 
 class ChatRightSidebar extends StatefulWidget {
   final bool isCollapsed;
@@ -45,7 +46,30 @@ class _ChatRightSidebarState extends State<ChatRightSidebar> {
   @override
   Widget build(BuildContext context) {
     if (widget.isCollapsed) return const SizedBox.shrink();
-    final text = widget.chatSession.workspacePlainText?.trim() ?? '';
+    String text = '';
+    // 优先根据选中的 AI 消息 ID 获取其整理文档
+    final selectedId = widget.chatSession.selectedOrganizedMessageId;
+    if (selectedId != null) {
+      final msg = widget.chatSession.messages.firstWhere(
+        (m) => m.msgId == selectedId,
+        orElse: () => ChatMessage(
+          msgId: 'temp',
+          role: MessageRole.bot,
+          content: '',
+          timestamp: DateTime.now(),
+        ),
+      );
+      text = msg.organizedDocument?.trim() ?? '';
+    }
+    // 回退：如果未指定ID或内容为空，尝试找到最近一条有 organizedDocument 的AI消息
+    if (text.isEmpty) {
+      for (final m in widget.chatSession.messages.reversed) {
+        if (m.role == MessageRole.bot && (m.organizedDocument?.isNotEmpty ?? false)) {
+          text = m.organizedDocument!.trim();
+          break;
+        }
+      }
+    }
     return Container(
       width: widget.width,
       decoration: BoxDecoration(
@@ -55,7 +79,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar> {
       child: text.isEmpty
           ? Center(
               child: Text(
-                '（暂无整理内容，发送包含 “整理/总结/归纳/生成文档” 等指令的消息后显示结果）',
+                '（暂无整理内容，生成含结构化输出的 AI 回答后会显示其整理文档）',
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context)

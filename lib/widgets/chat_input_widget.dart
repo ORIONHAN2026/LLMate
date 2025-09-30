@@ -3128,16 +3128,33 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         (s) => s.sessionId == session.sessionId,
         orElse: () => session,
       );
-      if (latest.workspacePlainText == trimmed) {
-        debugPrint('🗂️ 整理文档内容未变化，跳过保存');
+      // 找到最新一条 bot 消息（本次生成的）
+      final botMessages = latest.messages.where((m) => m.role == MessageRole.bot).toList();
+      if (botMessages.isEmpty) {
+        debugPrint('⚠️ 未找到可附加整理文档的AI消息');
         return;
       }
-      final updated = latest.copyWith(
-        workspacePlainText: trimmed,
-        pendingAutoOpenRightPanel: true,
-      );
-      sessionController.updateSession(updated);
-      debugPrint('🗂️ 已保存整理文档 (len=${trimmed.length}) 并标记自动展开');
+      final ChatMessage target = botMessages.last;
+      if (target.organizedDocument == trimmed) {
+        debugPrint('🗂️ 整理文档内容未变化（绑定在消息 ${target.msgId}），跳过保存');
+        return;
+      }
+      // 更新该消息
+      final updatedMessage = target.copyWith(organizedDocument: trimmed);
+      final updatedMessages = List<ChatMessage>.from(latest.messages);
+      final idx = updatedMessages.indexWhere((m) => m.msgId == target.msgId);
+      if (idx != -1) {
+        updatedMessages[idx] = updatedMessage;
+        final updatedSession = latest.copyWith(
+          messages: updatedMessages,
+          selectedOrganizedMessageId: target.msgId,
+          pendingAutoOpenRightPanel: true,
+        );
+        sessionController.updateSession(updatedSession);
+        debugPrint('🗂️ 已将整理文档绑定到消息 ${target.msgId} (len=${trimmed.length}) 并标记自动展开');
+      } else {
+        debugPrint('⚠️ 未能定位到消息索引，保存失败');
+      }
     } catch (e) {
       debugPrint('保存整理结果失败: $e');
     }

@@ -23,6 +23,7 @@ class ChatSession {
   final String? workspaceDelta; // 富文本编辑器的 Delta JSON 序列化
   final String? workspacePlainText; // 纯文本快照（用于搜索 / 预览）
   final bool pendingAutoOpenRightPanel; // 是否需要自动展开右侧面板（一次性标记）
+  final String? selectedOrganizedMessageId; // 当前右侧面板选中的整理文档所属的AI消息ID
   
   final ChatModel? chatModel; // 会话绑定的模型信息
   final List<ChatMessage> messages;
@@ -44,6 +45,7 @@ class ChatSession {
     this.isWebSearchEnabled = false, // 默认为false
     this.isMcpToolsEnabled = false, // 默认为false
         this.isRagEnabled = false, // 默认为false
+  this.selectedOrganizedMessageId, // 新增的参数
     this.workspaceDelta,
     this.workspacePlainText,
   this.pendingAutoOpenRightPanel = false,
@@ -112,6 +114,7 @@ class ChatSession {
     List<ChatCommand>? sessionQuickCommands,
     String? workspaceDelta,
     String? workspacePlainText,
+  String? selectedOrganizedMessageId, // 新增的参数
     bool? pendingAutoOpenRightPanel,
   }) {
     return ChatSession(
@@ -134,6 +137,7 @@ class ChatSession {
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
       workspaceDelta: workspaceDelta ?? this.workspaceDelta,
       workspacePlainText: workspacePlainText ?? this.workspacePlainText,
+  selectedOrganizedMessageId: selectedOrganizedMessageId ?? this.selectedOrganizedMessageId,
       pendingAutoOpenRightPanel:
           pendingAutoOpenRightPanel ?? this.pendingAutoOpenRightPanel,
     );
@@ -186,6 +190,7 @@ class ChatSession {
     workspaceDelta: json['workspaceDelta'] as String?,
     workspacePlainText: json['workspacePlainText'] as String?,
     pendingAutoOpenRightPanel: json['pendingAutoOpenRightPanel'] ?? false,
+    selectedOrganizedMessageId: json['selectedOrganizedMessageId'] as String?,
     );
   }
 
@@ -215,6 +220,7 @@ class ChatSession {
       'chatModel': chatModel?.toMap(), // 保存模型对象到JSON，允许为null
       'workspaceDelta': workspaceDelta,
       'workspacePlainText': workspacePlainText,
+      'selectedOrganizedMessageId': selectedOrganizedMessageId,
       'pendingAutoOpenRightPanel': pendingAutoOpenRightPanel,
     };
   }
@@ -233,3 +239,4 @@ class ChatSession {
     return null; // 使用系统默认目录
   }
 }
+ 

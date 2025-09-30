@@ -84,7 +84,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   String _selectedModel = 'DeepSeekR1';
   List<ChatModel> _availableModels = [];
   // 预判是否为本次发送的文档整理类任务（避免多次判定不一致）
-  bool _pendingOrganizeDoc = false;
+  // 移除原先的 _pendingOrganizeDoc 预判逻辑，改为仅依据最终 AI 回复内容判定是否保存整理文档
 
   // 监听器
   late final StreamSubscription _sessionSubscription;
@@ -2860,11 +2860,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       }
 
       await _generateAIResponse(updatedSession, userMessage);
-      _pendingOrganizeDoc = _isDocumentDocInstruction(userMessage.content);
-      if (_pendingOrganizeDoc) {
-        debugPrint('🛈 识别到文档整理类指令(预判): ${userMessage.content}');
-      }
-      await _generateAIResponse(updatedSession, userMessage);
     } catch (e) {
       _handleSendError(e);
     }
@@ -3057,8 +3052,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       // 如果用户输入属于文档整理类指令，则将最终结果写入会话并请求展开右栏
       // 最终判定（使用预判标记或再判一次）
-      final bool finalIsDoc = _pendingOrganizeDoc || _isDocumentDocInstruction(userMessage.content);
-      if (finalIsDoc) {
+      // 仅根据 AI 最终输出内容是否呈现“文档型”特征来判定
+      final bool looksLikeOrganizedDoc = _looksLikeOrganizedDocument(accumulatedContent);
+      if (looksLikeOrganizedDoc) {
         final trimmed = accumulatedContent.trim();
         if (trimmed.isNotEmpty) {
           _saveOrganizedDocument(updateSession, trimmed);
@@ -3066,7 +3062,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           debugPrint('⚠️ 文档整理判定为真但最终内容为空，跳过保存');
         }
       } else {
-        debugPrint('ℹ️ 最终判定非文档整理，跳过保存');
+        debugPrint('ℹ️ 最终输出不符合文档整理特征，跳过保存');
       }
 
       setState(() {});
@@ -3082,19 +3078,44 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  // 判断是否为文档整理 / 说明 / 总结类指令
-  bool _isDocumentDocInstruction(String text) {
+  // 旧的指令关键词判断函数已移除，统一改为基于最终输出结构判断
+
+  // 基于输出内容特征判断是否是整理后的文档
+  bool _looksLikeOrganizedDocument(String content) {
+    final text = content.trim();
     if (text.isEmpty) return false;
-    const positive = [
-      '整理', '总结', '归纳', '提炼', '优化', '润色', '改写', '重写', '重构', '结构化', '格式化', '生成目录',
-      '完善文档', '写一个', '写成文档', '生成文档', '合并上述', '基于以上', '综合以上', '说明文档', 'README', '报告', '梳理', '章节', '目录',
+    // 规则特征：
+    // 1. 含有多级标题 / 有序或无序列表结构
+    // 2. 明显章节关键字出现频率较高
+    // 3. 总结/整理类关键词 + 结构性符号同时命中
+    int score = 0;
+
+    final headingPattern = RegExp(r'^(#{1,6}\s+.+)|(^\d+\.|^[-*+]\s+)', multiLine: true);
+    if (headingPattern.hasMatch(text)) score += 2;
+
+    final sectionKeywords = [
+      '目录', '引言', '背景', '概述', '章节', '总结', '结论', '实现', '方案', '目的', '目标', '特性', '注意事项', '示例', '使用方法', '原理'
     ];
-    const negative = ['报错', '错误日志', '异常栈', '运行失败'];
-    final lower = text.toLowerCase();
-    if (negative.any((n) => lower.contains(n))) return false;
-    final matched = positive.any((k) => text.contains(k));
-    if (matched) debugPrint('🔎 文档整理关键词命中: $text');
-    return matched;
+    int sectionHits = 0;
+    for (final k in sectionKeywords) {
+      if (text.contains(k)) sectionHits++;
+    }
+    if (sectionHits >= 3) score += 2;
+    else if (sectionHits >= 1) score += 1;
+
+    final structureMarkers = RegExp(r'(\n\n)|(```)|(\r?\n#{1,6}\s)');
+    if (structureMarkers.allMatches(text).length >= 2) score += 1;
+
+    final length = text.length;
+    if (length > 300) score += 1; // 适度长度
+
+    // 如果出现“以下是.*整理|总结|归纳|优化后的”字样
+    if (RegExp(r'以下[\s\S]{0,10}(整理|总结|归纳|优化|文档)', multiLine: true).hasMatch(text)) {
+      score += 2;
+    }
+
+    debugPrint('🧪 文档特征评分: $score (命中章节: $sectionHits, 长度: $length)');
+    return score >= 3; // 阈值可调
   }
 
   // 保存整理后的结果到当前会话，并触发右侧面板展开（通过一次性标记）

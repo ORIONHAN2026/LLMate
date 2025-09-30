@@ -113,30 +113,27 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       margin: const EdgeInsets.only(bottom: 32),
       child: RepaintBoundary(
         key: _messageKey,
-        child: Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          padding: const EdgeInsets.all(16),
-          child: MouseRegion(
-            onEnter: (_) => setState(() => _isHovered = true),
-            onExit: (_) => setState(() => _isHovered = false),
-            child: GestureDetector(
-              onTap: () {
-                // 如果该AI消息具有整理文档，则选中它并展开右侧面板
-                if (widget.message.organizedDocument != null && widget.message.organizedDocument!.trim().isNotEmpty) {
-                  final session = _findSessionContainingMessage(widget.message.msgId);
-                  if (session != null) {
-                    final updated = session.copyWith(
-                      selectedOrganizedMessageId: widget.message.msgId,
-                      pendingAutoOpenRightPanel: true,
-                    );
-                    sessionController.updateSession(updated);
-                  }
-                }
-              },
-              onSecondaryTapDown: (details) {
-                _showAiMessageMenu(context, details.globalPosition);
-              },
-              behavior: HitTestBehavior.opaque, // 确保空白区域也能响应点击
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            final session = _findSessionContainingMessage(widget.message.msgId);
+            if (session != null) {
+              final updated = session.copyWith(
+                selectedOrganizedMessageId: widget.message.msgId,
+                pendingAutoOpenRightPanel: true,
+              );
+              sessionController.updateSession(updated);
+            }
+          },
+          onSecondaryTapDown: (details) {
+            _showAiMessageMenu(context, details.globalPosition);
+          },
+          child: Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            padding: const EdgeInsets.all(16),
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isHovered = true),
+              onExit: (_) => setState(() => _isHovered = false),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -262,16 +259,12 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                   ),
                                 ),
                               ],
-                              // 显示正文内容
                               MarkdownBody(
                                 data: widget.message.content,
                                 styleSheet: _buildMarkdownStyleSheet(),
                                 selectable: true,
                                 onTapLink: (text, href, title) {
-                                  // 处理链接点击
-                                  if (href != null) {
-                                    _openLink(href);
-                                  }
+                                  if (href != null) _openLink(href);
                                 },
                               ),
                             ],
@@ -355,9 +348,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     ),
                   ),
                 ],
+                ),
               ),
             ),
-          ),
         ),
       ),
     );
@@ -1085,11 +1078,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
   }
 
-  // 朗读消息
-  void _speakMessage(BuildContext context, String content) {
-    // TODO: 实现TTS朗读功能
-    SnackBarUtils.showInfo(context, 'TTS功能开发中...');
-  }
 
   // 从消息创建新对话
   void _createNewSessionFromMessage(BuildContext context, ChatMessage message) {
@@ -1269,7 +1257,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     //   subtitle: '朗读消息',
                     //   onTap: () {
                     //     Navigator.pop(context);
-                    //     _speakMessage(context, widget.message.content);
+                    // （朗读功能已移除）
                     //   },
                     // ),
                     // const SizedBox(height: 4),

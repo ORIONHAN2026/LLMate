@@ -206,6 +206,24 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     });
   }
 
+  // 计算自适应右侧面板宽度，防止在小屏下出现 Row 溢出
+  double _computeEffectiveRightPanelWidth(BuildContext context) {
+    if (_isRightPanelCollapsed) return 0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final leftWidth = _isSidebarCollapsed ? 0.0 : (_sidebarWidth);
+    const double minChatArea = 360; // 保证聊天区最小可用宽度
+    double desired = _rightPanelWidth;
+    final remaining = screenWidth - leftWidth - desired;
+    if (remaining < minChatArea) {
+      desired = (screenWidth - leftWidth - minChatArea).clamp(0, _rightPanelWidth);
+      if (desired < 160) {
+        // 太窄则直接折叠隐藏
+        desired = 0;
+      }
+    }
+    return desired;
+  }
+
   // 切换到指定会话（通过 sessionId）
   void _switchToSession(ChatSession chatSession) {
     // 保存当前会话的滚动位置
@@ -326,6 +344,26 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           sessionController.updateSession(
             s.copyWith(pendingAutoOpenRightPanel: false),
           );
+        }
+      });
+    }
+
+    // 动态根据选中消息是否含 organizedDocument 控制右侧显示/隐藏
+    if (s.selectedOrganizedMessageId != null) {
+      final msg = s.messages.where((m)=>m.msgId==s.selectedOrganizedMessageId).cast().isEmpty
+          ? null
+          : s.messages.firstWhere((m)=>m.msgId==s.selectedOrganizedMessageId);
+      final hasDoc = (msg?.organizedDocument?.trim().isNotEmpty ?? false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (hasDoc) {
+          if (_isRightPanelCollapsed) {
+            setState(() => _isRightPanelCollapsed = false);
+          }
+        } else {
+          if (!_isRightPanelCollapsed) {
+            setState(() => _isRightPanelCollapsed = true);
+          }
         }
       });
     }
@@ -484,22 +522,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       elevation: 8,
       color: Theme.of(context).scaffoldBackgroundColor, // 使用主题色
       items: [
-        // 升级高级版
-        PopupMenuItem(
-          height: 48,
-          child: Row(
-            children: [
-              Icon(CupertinoIcons.star_circle, size: 16, color: Colors.orange),
-              const SizedBox(width: 12),
-              const Text('升级高级版', style: TextStyle(fontSize: 12)),
-            ],
-          ),
-          onTap: () {
-            // 发送升级申请邮件
-            _sendUpgradeEmail();
-          },
-        ),
-        // 反馈
         PopupMenuItem(
           height: 48,
           child: Row(
@@ -513,10 +535,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               const Text('反馈意见', style: TextStyle(fontSize: 12)),
             ],
           ),
-          onTap: () {
-            // 发送反馈邮件
-            _sendFeedbackEmail();
-          },
+          onTap: _sendFeedbackEmail,
         ),
         // 设置
         PopupMenuItem(
@@ -870,29 +889,47 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             ),
           ),
           // 右侧内容面板（Markdown 工作区）
-          // 右侧面板需要跟随会话字段（如 workspacePlainText）变化重建，因此使用 GetX 包裹
-          GetX<SessionController>(
-            builder: (controller) {
-              final cs = controller.currentSession.value;
-              if (cs == null) return const SizedBox.shrink();
-              return Row(
-                children: [
-                  if (!_isRightPanelCollapsed) _buildRightResizableHandle(),
-                  ChatRightSidebar(
-                    isCollapsed: _isRightPanelCollapsed,
-                    chatSession: cs,
-                    chatSessions: chatSessions,
-                    onClose: () {
-                      setState(() => _isRightPanelCollapsed = true);
-                    },
-                    onSessionUpdated: (updated) {
-                      sessionController.updateSession(updated);
-                      setState(() {});
-                    },
-                    width: _rightPanelWidth,
+          // 右侧面板需要跟随会话字段（如选中的整理文档消息等）变化重建，因此使用 GetX 包裹
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return GetX<SessionController>(builder: (controller) {
+                final cs = controller.currentSession.value;
+                if (cs == null) return const SizedBox.shrink();
+                final effectiveWidth = _computeEffectiveRightPanelWidth(context);
+                // 如果有效宽度为0直接不渲染，避免 Row 溢出
+                if (effectiveWidth <= 0) return const SizedBox.shrink();
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: effectiveWidth,
                   ),
-                ],
-              );
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeInOut,
+                    width: effectiveWidth,
+                    child: Row(
+                      children: [
+                        _buildRightResizableHandle(),
+                        Expanded(
+                          child: ChatRightSidebar(
+                            isCollapsed: false,
+                            chatSession: cs,
+                            chatSessions: chatSessions,
+                            onClose: () {
+                              if (!_isRightPanelCollapsed) {
+                                setState(() => _isRightPanelCollapsed = true);
+                              }
+                            },
+                            onSessionUpdated: (updated) {
+                              sessionController.updateSession(updated);
+                            },
+                            width: effectiveWidth,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              });
             },
           ),
         ],
@@ -929,30 +966,39 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             ),
           ),
           // 右侧内容面板（Markdown 工作区）
-          GetX<SessionController>(
-            builder: (controller) {
-              final cs = controller.currentSession.value;
-              if (cs == null) return const SizedBox.shrink();
-              return Row(
+          GetX<SessionController>(builder: (controller) {
+            final cs = controller.currentSession.value;
+            if (cs == null) return const SizedBox.shrink();
+            if (_isRightPanelCollapsed) return const SizedBox.shrink();
+            final effective = (_computeEffectiveRightPanelWidth(context) - 4).clamp(0, 10000).toDouble();
+            if (effective <= 0) return const SizedBox.shrink();
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeInOut,
+              width: effective,
+              child: Row(
                 children: [
-                  if (!_isRightPanelCollapsed) _buildRightResizableHandle(),
-                  ChatRightSidebar(
-                    isCollapsed: _isRightPanelCollapsed,
-                    chatSession: cs,
-                    chatSessions: chatSessions,
-                    onClose: () {
-                      setState(() => _isRightPanelCollapsed = true);
-                    },
-                    onSessionUpdated: (updated) {
-                      sessionController.updateSession(updated);
-                      setState(() {});
-                    },
-                    width: _rightPanelWidth,
+                  _buildRightResizableHandle(),
+                  Expanded(
+                    child: ChatRightSidebar(
+                      isCollapsed: false,
+                      chatSession: cs,
+                      chatSessions: chatSessions,
+                      onClose: () {
+                        if (!_isRightPanelCollapsed) {
+                          setState(() => _isRightPanelCollapsed = true);
+                        }
+                      },
+                      onSessionUpdated: (updated) {
+                        sessionController.updateSession(updated);
+                      },
+                      width: effective,
+                    ),
                   ),
                 ],
-              );
-            },
-          ),
+              ),
+            );
+          }),
         ],
       ),
     );

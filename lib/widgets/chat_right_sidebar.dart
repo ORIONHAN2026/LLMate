@@ -61,15 +61,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar> {
       );
       text = msg.organizedDocument?.trim() ?? '';
     }
-    // 回退：如果未指定ID或内容为空，尝试找到最近一条有 organizedDocument 的AI消息
-    if (text.isEmpty) {
-      for (final m in widget.chatSession.messages.reversed) {
-        if (m.role == MessageRole.bot && (m.organizedDocument?.isNotEmpty ?? false)) {
-          text = m.organizedDocument!.trim();
-          break;
-        }
-      }
-    }
+    // 不再回退：如果当前选中消息没有整理文档，则保持空白
     return Container(
       width: widget.width,
       decoration: BoxDecoration(

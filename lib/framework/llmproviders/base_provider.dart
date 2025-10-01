@@ -240,7 +240,7 @@ abstract class BaseLlmProvider {
         .map(_buildSingleAttachmentInfo)
         .toList();
 
-    return '${attachmentInfos.join('\n\n')}\n\n用户问题: ${userMessage.content}';
+    return '${attachmentInfos.join('\n\n')}\n\n ${userMessage.content}';
   }
 
   /// 构建单个附件信息

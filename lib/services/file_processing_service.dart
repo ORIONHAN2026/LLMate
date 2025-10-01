@@ -479,10 +479,10 @@ class FileProcessingService {
         buffer.writeln('目前显示基本信息，内容解析功能正在开发中。');
     }
 
-    buffer.writeln('\n💡 提示: 您可以：');
-    buffer.writeln('• 描述文档的主要内容');
-    buffer.writeln('• 提出关于文档的具体问题');
-    buffer.writeln('• 请求文档分析或总结建议');
+    // buffer.writeln('\n💡 提示: 您可以：');
+    // buffer.writeln('• 描述文档的主要内容');
+    // buffer.writeln('• 提出关于文档的具体问题');
+    // buffer.writeln('• 请求文档分析或总结建议');
 
     return buffer.toString();
   }

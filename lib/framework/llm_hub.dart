@@ -138,9 +138,9 @@ class LlmClient {
     _ragProvider?.configure(model);
     
     // 设置RAG提供商的代码描述回调函数
-    _ragProvider?.setCodeDescriptionCallback((prompt) async {
-      return await _llmProvider.sendSimpleMessage(prompt);
-    });
+    // _ragProvider?.setCodeDescriptionCallback((prompt) async {
+    //   return await _llmProvider.sendSimpleMessage(prompt);
+    // });
   }
 
   /// 设置RAG知识库（已废弃，保留兼容性）

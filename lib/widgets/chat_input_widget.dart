@@ -833,7 +833,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       const SizedBox(width: 8),
                       // _buildRagToggle(),
                       // const SizedBox(width: 8),
-                      _buildMcpToolsToggle(),
+                      // _buildMcpToolsToggle(),
 
                       const SizedBox(width: 8),
                       _buildQuickCommandToggle(),

@@ -13,7 +13,7 @@ import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/utils/responsive_utils.dart';
 import '../widgets/chat_conversation_area.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../widgets/chat_right_sidebar.dart';
+// import '../widgets/chat_right_sidebar.dart'; // 已移除右侧边栏功能
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});
@@ -35,11 +35,8 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   final GlobalKey _settingsButtonKey = GlobalKey(); // 设置按钮的key
   final GlobalKey _modelSelectorKey = GlobalKey(); // 模型选择器的key
   bool _isSidebarCollapsed = false; // 侧边栏折叠状态
-  bool _isRightPanelCollapsed = true; // 右侧设置面板折叠状态
   double _sidebarWidth = 280.0; // 左侧边栏宽度，可调整
   bool _isResizeHandleHovered = false; // 拖动条悬停状态
-  double _rightPanelWidth = 420.0; // 右侧边栏宽度，可调整
-  bool _isRightResizeHandleHovered = false; // 右侧拖动条悬停状态
   // 中间聊天区域的最小可视宽度，避免被两侧面板挤压得太窄
   static const double _minChatAreaWidth = 520.0;
 
@@ -409,13 +406,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               builder: (context) {
                 return Positioned(
                   left: () {
-                    final leftSidebarWidth = _isSidebarCollapsed ? 0 : 280;
-                    final rightPanelWidth = _isRightPanelCollapsed ? 0 : _rightPanelWidth; // 使用动态右侧面板宽度
-                    final screenWidth = MediaQuery.of(context).size.width;
-                    final chatAreaWidth =
-                        screenWidth - leftSidebarWidth - rightPanelWidth;
-                    // 按钮居中于整个对话区域
-                    return (chatAreaWidth / 2) - 12.5; // 12.5是按钮宽度的一半
+                    final leftSidebarWidth = _isSidebarCollapsed ? 0 : 280;\n                    // 右侧面板已移除，聊天区域占满剩余空间\n                    final screenWidth = MediaQuery.of(context).size.width;\n                    final chatAreaWidth = screenWidth - leftSidebarWidth;\n                    // 按钮居中于整个对话区域\n                    return (chatAreaWidth / 2) - 12.5; // 12.5是按钮宽度的一半"
                   }(),
                   bottom: 130, // 在输入区域上方
                   child: AnimatedOpacity(
@@ -934,7 +925,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           GetX<SessionController>(builder: (controller) {
             final cs = controller.currentSession.value;
             if (cs == null) return const SizedBox.shrink();
-            if (_isRightPanelCollapsed) return const SizedBox.shrink();
+            if (true) return const SizedBox.shrink(); // 右侧面板已禁用
             final effective = (_computeEffectiveRightPanelWidth(context) - 4).clamp(0, 10000).toDouble();
             if (effective <= 0) return const SizedBox.shrink();
             return AnimatedContainer(
@@ -1013,20 +1004,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           ),
           // 使用 Spacer 将控制按钮推到最右侧
           const Spacer(),
-          // 右上角按钮：打开/关闭右侧面板（靠右显示）
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _isRightPanelCollapsed = !_isRightPanelCollapsed;
-              });
-            },
-            icon: Icon(
-              CupertinoIcons.sidebar_right,
-              size: ResponsiveUtils.isMobile(context) ? 20 : 18,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-            ),
-            tooltip: _isRightPanelCollapsed ? '打开右侧面板' : '关闭右侧面板',
-          ),
+          // 右侧边栏功能已移除
         ],
       ),
     );

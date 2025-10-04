@@ -3050,21 +3050,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         botMessageId,
       );
 
-      // 如果用户输入属于文档整理类指令，则将最终结果写入会话并请求展开右栏
-      // 最终判定（使用预判标记或再判一次）
-      // 仅根据 AI 最终输出内容是否呈现“文档型”特征来判定
-      final bool looksLikeOrganizedDoc = _looksLikeOrganizedDocument(accumulatedContent);
-      if (looksLikeOrganizedDoc) {
-        final trimmed = accumulatedContent.trim();
-        if (trimmed.isNotEmpty) {
-          _saveOrganizedDocument(updateSession, trimmed);
-        } else {
-          debugPrint('⚠️ 文档整理判定为真但最终内容为空，跳过保存');
-        }
-      } else {
-        debugPrint('ℹ️ 最终输出不符合文档整理特征，跳过保存');
-      }
-
+     
       setState(() {});
     } catch (e) {
       rethrow;
@@ -3118,50 +3104,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return score >= 3; // 阈值可调
   }
 
-  // 保存整理后的结果到当前会话，并触发右侧面板展开（通过一次性标记）
-  void _saveOrganizedDocument(ChatSession session, String content) {
-    try {
-      // 先做正文抽取，只保留主体内容（去掉AI说明性前导/结尾客套话等）
-      final extracted = _extractOrganizedBody(content);
-      final trimmed = extracted.trim();
-      if (trimmed.isEmpty) return;
-      // 再取一次最新会话，避免覆盖其他字段更新
-      final latest = sessionController.sessions.firstWhere(
-        (s) => s.sessionId == session.sessionId,
-        orElse: () => session,
-      );
-      // 找到最新一条 bot 消息（本次生成的）
-      final botMessages = latest.messages.where((m) => m.role == MessageRole.bot).toList();
-      if (botMessages.isEmpty) {
-        debugPrint('⚠️ 未找到可附加整理文档的AI消息');
-        return;
-      }
-      final ChatMessage target = botMessages.last;
-      if (target.organizedDocument == trimmed) {
-        debugPrint('🗂️ 整理文档内容未变化（绑定在消息 ${target.msgId}），跳过保存');
-        return;
-      }
-      // 更新该消息
-      final updatedMessage = target.copyWith(organizedDocument: trimmed);
-      final updatedMessages = List<ChatMessage>.from(latest.messages);
-      final idx = updatedMessages.indexWhere((m) => m.msgId == target.msgId);
-      if (idx != -1) {
-        updatedMessages[idx] = updatedMessage;
-        final updatedSession = latest.copyWith(
-          messages: updatedMessages,
-          selectedOrganizedMessageId: target.msgId,
-          pendingAutoOpenRightPanel: true,
-        );
-        sessionController.updateSession(updatedSession);
-        debugPrint('🗂️ 已将整理文档绑定到消息 ${target.msgId} (len=${trimmed.length}) 并标记自动展开');
-      } else {
-        debugPrint('⚠️ 未能定位到消息索引，保存失败');
-      }
-    } catch (e) {
-      debugPrint('保存整理结果失败: $e');
-    }
-  }
-
+ 
   /// 从原始整理文本中提取纯正文主体：
   /// 1. 移除开头若干行的说明/引导语（如“以下是…整理…”, “我已为你…”, “好的，下面是…” 等）
   /// 2. 移除尾部客套/继续需求类语句（如“如果你需要…”, “希望这些…”, “如需进一步…” 等）

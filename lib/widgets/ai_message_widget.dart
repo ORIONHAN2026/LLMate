@@ -116,14 +116,14 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
-            final session = _findSessionContainingMessage(widget.message.msgId);
-            if (session != null) {
-              final updated = session.copyWith(
-                selectedOrganizedMessageId: widget.message.msgId,
-                pendingAutoOpenRightPanel: true,
-              );
-              sessionController.updateSession(updated);
-            }
+            // final session = _findSessionContainingMessage(widget.message.msgId);
+            // if (session != null) {
+            //   final updated = session.copyWith(
+            //     selectedOrganizedMessageId: widget.message.msgId,
+            //     pendingAutoOpenRightPanel: true,
+            //   );
+            //   sessionController.updateSession(updated);
+            // }
           },
           onSecondaryTapDown: (details) {
             _showAiMessageMenu(context, details.globalPosition);

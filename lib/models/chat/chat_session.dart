@@ -20,8 +20,6 @@ class ChatSession {
   final bool isWebSearchEnabled; // 会话绑定的联网搜索开关
   final bool isMcpToolsEnabled; // 会话绑定的MCP工具开关
   final bool isRagEnabled; // 会话绑定的RAG功能开关
-  final bool pendingAutoOpenRightPanel; // 是否需要自动展开右侧面板（一次性标记）
-  final String? selectedOrganizedMessageId; // 当前右侧面板选中的整理文档所属的AI消息ID
   
   final ChatModel? chatModel; // 会话绑定的模型信息
   final List<ChatMessage> messages;
@@ -43,8 +41,6 @@ class ChatSession {
     this.isWebSearchEnabled = false, // 默认为false
     this.isMcpToolsEnabled = false, // 默认为false
         this.isRagEnabled = false, // 默认为false
-  this.selectedOrganizedMessageId, // 新增的参数
-  this.pendingAutoOpenRightPanel = false,
 
     this.sessionQuickCommands = const [], // 默认为空列表
   });
@@ -108,8 +104,6 @@ class ChatSession {
     ChatModel? chatModel,
     bool clearChatModel = false, // 用于显式清空chatModel
     List<ChatCommand>? sessionQuickCommands,
-  String? selectedOrganizedMessageId, // 新增的参数
-    bool? pendingAutoOpenRightPanel,
   }) {
     return ChatSession(
       sessionId: sessionId ?? this.sessionId,
@@ -129,9 +123,6 @@ class ChatSession {
       isRagEnabled: isRagEnabled ?? this.isRagEnabled,
       chatModel: clearChatModel ? null : (chatModel ?? this.chatModel),
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
-  selectedOrganizedMessageId: selectedOrganizedMessageId ?? this.selectedOrganizedMessageId,
-      pendingAutoOpenRightPanel:
-          pendingAutoOpenRightPanel ?? this.pendingAutoOpenRightPanel,
     );
   }
 
@@ -179,8 +170,6 @@ class ChatSession {
           json['chatModel'] != null
               ? ChatModel.fromMap(json['chatModel'])
               : null, // 从JSON加载模型对象，允许为null
-    pendingAutoOpenRightPanel: json['pendingAutoOpenRightPanel'] ?? false,
-    selectedOrganizedMessageId: json['selectedOrganizedMessageId'] as String?,
     );
   }
 
@@ -208,8 +197,6 @@ class ChatSession {
               .map((command) => command.toJson())
               .toList(), // 保存会话快捷指令到JSON
       'chatModel': chatModel?.toMap(), // 保存模型对象到JSON，允许为null
-      'selectedOrganizedMessageId': selectedOrganizedMessageId,
-      'pendingAutoOpenRightPanel': pendingAutoOpenRightPanel,
     };
   }
 

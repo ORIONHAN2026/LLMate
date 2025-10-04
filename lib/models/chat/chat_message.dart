@@ -14,7 +14,6 @@ class ChatMessage {
   final MessageRole role;
   String content;
   String think; // 思考内容，必填字段，默认为空字符串
-  String? organizedDocument; // 该AI消息生成的整理文档内容（若有）
   final DateTime timestamp;
   final String? repoId;
   final bool? isTyping;
@@ -45,7 +44,6 @@ class ChatMessage {
     required this.role,
     required this.content,
     this.think = '', // 思考内容，默认为空字符串
-    this.organizedDocument,
     required this.timestamp,
     this.repoId,
     this.isTyping = false,
@@ -94,7 +92,6 @@ class ChatMessage {
       role: _parseRole(json['role']),
       content: json['content'] ?? '',
       think: json['think'] ?? '', // 思考内容，默认为空字符串
-      organizedDocument: json['organizedDocument'],
       timestamp:
           json['timestamp'] != null
               ? DateTime.tryParse(json['timestamp']) ?? DateTime.now()
@@ -165,7 +162,6 @@ class ChatMessage {
       'role': _roleToString(role),
       'content': content,
       'think': think, // 思考内容
-      'organizedDocument': organizedDocument,
       'timestamp': timestamp.toIso8601String(),
       'repoId': repoId,
       'isTyping': isTyping,
@@ -215,7 +211,6 @@ class ChatMessage {
     MessageRole? role,
     String? content,
     String? think, // 思考内容
-    String? organizedDocument,
     DateTime? timestamp,
     String? repoId,
     bool? isTyping,
@@ -238,7 +233,6 @@ class ChatMessage {
       role: role ?? this.role,
       content: content ?? this.content,
       think: think ?? this.think, // 思考内容
-  organizedDocument: organizedDocument ?? this.organizedDocument,
       timestamp: timestamp ?? this.timestamp,
       repoId: repoId ?? this.repoId,
       isTyping: isTyping ?? this.isTyping,

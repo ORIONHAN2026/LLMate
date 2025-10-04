@@ -13,7 +13,6 @@ import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/utils/responsive_utils.dart';
 import '../widgets/chat_conversation_area.dart';
 import 'package:url_launcher/url_launcher.dart';
-// import '../widgets/chat_right_sidebar.dart'; // 已移除右侧边栏功能
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});
@@ -204,22 +203,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   }
 
   // 计算自适应右侧面板宽度，防止在小屏下出现 Row 溢出
-  double _computeEffectiveRightPanelWidth(BuildContext context) {
-    if (_isRightPanelCollapsed) return 0;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final leftWidth = _isSidebarCollapsed ? 0.0 : (_sidebarWidth);
-    const double minChatArea = 360; // 保证聊天区最小可用宽度
-    double desired = _rightPanelWidth;
-    final remaining = screenWidth - leftWidth - desired;
-    if (remaining < minChatArea) {
-      desired = (screenWidth - leftWidth - minChatArea).clamp(0, _rightPanelWidth);
-      if (desired < 160) {
-        // 太窄则直接折叠隐藏
-        desired = 0;
-      }
-    }
-    return desired;
-  }
+
 
   // 切换到指定会话（通过 sessionId）
   void _switchToSession(ChatSession chatSession) {
@@ -330,40 +314,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         ),
       );
     }
-
-    // 如果有一次性自动展开标记则展开右侧面板
-    final s = currentSession!;
-    if (s.pendingAutoOpenRightPanel && _isRightPanelCollapsed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _isRightPanelCollapsed) {
-          setState(() => _isRightPanelCollapsed = false);
-          // 清除标记
-          sessionController.updateSession(
-            s.copyWith(pendingAutoOpenRightPanel: false),
-          );
-        }
-      });
-    }
-
-    // 动态根据选中消息是否含 organizedDocument 控制右侧显示/隐藏
-    if (s.selectedOrganizedMessageId != null) {
-      final msg = s.messages.where((m)=>m.msgId==s.selectedOrganizedMessageId).cast().isEmpty
-          ? null
-          : s.messages.firstWhere((m)=>m.msgId==s.selectedOrganizedMessageId);
-      final hasDoc = (msg?.organizedDocument?.trim().isNotEmpty ?? false);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (hasDoc) {
-          if (_isRightPanelCollapsed) {
-            setState(() => _isRightPanelCollapsed = false);
-          }
-        } else {
-          if (!_isRightPanelCollapsed) {
-            setState(() => _isRightPanelCollapsed = true);
-          }
-        }
-      });
-    }
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -406,7 +356,11 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               builder: (context) {
                 return Positioned(
                   left: () {
-                    final leftSidebarWidth = _isSidebarCollapsed ? 0 : 280;\n                    // 右侧面板已移除，聊天区域占满剩余空间\n                    final screenWidth = MediaQuery.of(context).size.width;\n                    final chatAreaWidth = screenWidth - leftSidebarWidth;\n                    // 按钮居中于整个对话区域\n                    return (chatAreaWidth / 2) - 12.5; // 12.5是按钮宽度的一半"
+                    final leftSidebarWidth = _isSidebarCollapsed ? 0 : 280;
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    final chatAreaWidth = screenWidth - leftSidebarWidth;
+                    // 按钮居中于整个对话区域
+                    return (chatAreaWidth / 2) - 12.5; // 12.5是按钮宽度的一半
                   }(),
                   bottom: 130, // 在输入区域上方
                   child: AnimatedOpacity(
@@ -668,35 +622,18 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   // 处理侧边栏宽度调整
   void _onSidebarResize(double delta) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final rightW = _isRightPanelCollapsed ? 0.0 : _rightPanelWidth;
 
     double proposed = (_sidebarWidth + delta).clamp(200.0, 400.0);
     // 计算剩余聊天区域宽度
-    double remaining = screenWidth - proposed - rightW;
+    double remaining = screenWidth - proposed;
     if (remaining < _minChatAreaWidth) {
       // 调整左侧栏宽度使聊天区保持最小宽度
-      proposed = (screenWidth - rightW - _minChatAreaWidth).clamp(200.0, 400.0);
-      remaining = screenWidth - proposed - rightW;
+      proposed = (screenWidth - _minChatAreaWidth).clamp(200.0, 400.0);
+      remaining = screenWidth - proposed;
     }
 
     // 如果屏幕太窄导致无法满足最小聊天宽度，允许聊天区变窄（降级处理）
     setState(() => _sidebarWidth = proposed);
-  }
-
-  // 处理右侧边栏宽度调整（向左拖动扩大，向右拖动缩小）
-  void _onRightSidebarResize(double delta) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final leftW = _isSidebarCollapsed ? 0.0 : _sidebarWidth;
-
-    double proposed = (_rightPanelWidth - delta).clamp(260.0, 600.0);
-    double remaining = screenWidth - leftW - proposed;
-    if (remaining < _minChatAreaWidth) {
-      // 调整右侧栏宽度以保留最小聊天区域
-      proposed = (screenWidth - leftW - _minChatAreaWidth).clamp(260.0, 600.0);
-      remaining = screenWidth - leftW - proposed;
-    }
-
-    setState(() => _rightPanelWidth = proposed);
   }
 
   // 构建可调整大小的分隔条
@@ -720,35 +657,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                         ? Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.3)
-                        : Theme.of(context).dividerColor,
-                width: 1,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 构建右侧可调整大小的分隔条（位于右侧边栏左侧）
-  Widget _buildRightResizableHandle() {
-    return MouseRegion(
-      cursor: SystemMouseCursors.resizeColumn,
-      onEnter: (_) => setState(() => _isRightResizeHandleHovered = true),
-      onExit: (_) => setState(() => _isRightResizeHandleHovered = false),
-      child: GestureDetector(
-        onPanUpdate: (details) {
-          _onRightSidebarResize(details.delta.dx);
-        },
-        child: Container(
-          width: 3,
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            border: Border(
-              left: BorderSide(
-                color:
-                    _isRightResizeHandleHovered
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
                         : Theme.of(context).dividerColor,
                 width: 1,
               ),
@@ -844,50 +752,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               ],
             ),
           ),
-          // 右侧内容面板（Markdown 工作区）
-          // 右侧面板需要跟随会话字段（如选中的整理文档消息等）变化重建，因此使用 GetX 包裹
-          LayoutBuilder(
-            builder: (context, constraints) {
-              return GetX<SessionController>(builder: (controller) {
-                final cs = controller.currentSession.value;
-                if (cs == null) return const SizedBox.shrink();
-                final effectiveWidth = _computeEffectiveRightPanelWidth(context);
-                // 如果有效宽度为0直接不渲染，避免 Row 溢出
-                if (effectiveWidth <= 0) return const SizedBox.shrink();
-                return ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: effectiveWidth,
-                  ),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeInOut,
-                    width: effectiveWidth,
-                    child: Row(
-                      children: [
-                        _buildRightResizableHandle(),
-                        Expanded(
-                          child: ChatRightSidebar(
-                            isCollapsed: false,
-                            chatSession: cs,
-                            chatSessions: chatSessions,
-                            onClose: () {
-                              if (!_isRightPanelCollapsed) {
-                                setState(() => _isRightPanelCollapsed = true);
-                              }
-                            },
-                            onSessionUpdated: (updated) {
-                              sessionController.updateSession(updated);
-                            },
-                            width: effectiveWidth,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              });
-            },
-          ),
         ],
       ),
     );
@@ -921,40 +785,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               ],
             ),
           ),
-          // 右侧内容面板（Markdown 工作区）
-          GetX<SessionController>(builder: (controller) {
-            final cs = controller.currentSession.value;
-            if (cs == null) return const SizedBox.shrink();
-            if (true) return const SizedBox.shrink(); // 右侧面板已禁用
-            final effective = (_computeEffectiveRightPanelWidth(context) - 4).clamp(0, 10000).toDouble();
-            if (effective <= 0) return const SizedBox.shrink();
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              curve: Curves.easeInOut,
-              width: effective,
-              child: Row(
-                children: [
-                  _buildRightResizableHandle(),
-                  Expanded(
-                    child: ChatRightSidebar(
-                      isCollapsed: false,
-                      chatSession: cs,
-                      chatSessions: chatSessions,
-                      onClose: () {
-                        if (!_isRightPanelCollapsed) {
-                          setState(() => _isRightPanelCollapsed = true);
-                        }
-                      },
-                      onSessionUpdated: (updated) {
-                        sessionController.updateSession(updated);
-                      },
-                      width: effective,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
         ],
       ),
     );
@@ -1002,9 +832,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               selectorKey: _modelSelectorKey,
             ),
           ),
-          // 使用 Spacer 将控制按钮推到最右侧
-          const Spacer(),
-          // 右侧边栏功能已移除
+          const SizedBox(width: 8),
         ],
       ),
     );

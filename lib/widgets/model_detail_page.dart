@@ -169,7 +169,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
               _buildTab('对话设置', 1, CupertinoIcons.chat_bubble_2),
               _buildTab('快捷指令', 2, CupertinoIcons.command),
               // _buildTab('RAG知识库', 3, CupertinoIcons.book_fill),
-              _buildTab('MCP服务', 4, CupertinoIcons.cloud),
+              // _buildTab('MCP服务', 4, CupertinoIcons.cloud),
             ],
           ),
         ),

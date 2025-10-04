@@ -90,7 +90,11 @@ class _ChatRightSidebarState extends State<ChatRightSidebar> {
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
                 child: SelectableText(
                   text,
-                  style: const TextStyle(fontSize: 13, height: 1.45),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    fontFamily: 'monospace', // 使用等宽字体保持缩进对齐
+                  ),
                 ),
               ),
             ),

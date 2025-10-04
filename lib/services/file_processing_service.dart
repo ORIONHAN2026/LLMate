@@ -253,8 +253,10 @@ class FileProcessingService {
 
   /// 读取代码文件
   static Future<String> _readCodeFile(File file, String extension) async {
+    // 保留原始代码内容，不再包裹 ``` 以避免后续整理时格式被二次加工
+    // 仍应用截断逻辑：_readTextFile 内部已调用 _truncateText
     final content = await _readTextFile(file);
-    return '```$extension\n$content\n```';
+    return content; // 直接返回原始文本以保持缩进/空行
   }
 
   /// 尝试作为文本文件读取

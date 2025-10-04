@@ -3121,7 +3121,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   // 保存整理后的结果到当前会话，并触发右侧面板展开（通过一次性标记）
   void _saveOrganizedDocument(ChatSession session, String content) {
     try {
-      final trimmed = content.trim();
+      // 先做正文抽取，只保留主体内容（去掉AI说明性前导/结尾客套话等）
+      final extracted = _extractOrganizedBody(content);
+      final trimmed = extracted.trim();
       if (trimmed.isEmpty) return;
       // 再取一次最新会话，避免覆盖其他字段更新
       final latest = sessionController.sessions.firstWhere(
@@ -3158,6 +3160,133 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     } catch (e) {
       debugPrint('保存整理结果失败: $e');
     }
+  }
+
+  /// 从原始整理文本中提取纯正文主体：
+  /// 1. 移除开头若干行的说明/引导语（如“以下是…整理…”, “我已为你…”, “好的，下面是…” 等）
+  /// 2. 移除尾部客套/继续需求类语句（如“如果你需要…”, “希望这些…”, “如需进一步…” 等）
+  /// 3. 保留所有标题 / 列表 / 代码块 / 缩进与空行，不做重排
+  /// 4. 避免误删真正的第一节标题：检测到以 # / 数字. / 中文序号 / “一、” 等结构即认为正文开始
+  ///
+  /// 设计原则：轻量启发式，不追求完美，若误判宁可少删；所有删减有 debug 日志可追溯。
+  String _extractOrganizedBody(String raw) {
+    if (raw.trim().isEmpty) return raw.trim();
+    final original = raw.replaceAll('\r\n', '\n');
+    final lines = original.split('\n');
+
+    // 先尝试识别 --- 分隔的正文区域：
+    // 情况A：YAML front matter（开头两段 --- 包裹的元信息） -> 真正文在第二个 --- 之后
+    // 情况B：正文被人工在前后加上 --- 边界 -> 取两个 --- 之间最长的段落作为正文
+    // 情况C：多段 ---，选取相邻 --- 之间非空行数最多的段落
+    List<int> delimIdx = [];
+    final delimPattern = RegExp(r'^-{3,}\s*$');
+    for (var i = 0; i < lines.length; i++) {
+      if (delimPattern.hasMatch(lines[i].trim())) {
+        delimIdx.add(i);
+      }
+    }
+    bool usedDelimExtraction = false;
+    if (delimIdx.length >= 2) {
+      // 检测 front matter：首行是 --- 且第二个 --- 在前 20 行以内，并且中间多为 key: value
+      final first = delimIdx.first;
+      final second = delimIdx[1];
+      bool looksLikeFrontMatter = false;
+      if (first == 0 && second - first <= 20) {
+        int yamlLike = 0;
+        for (int i = first + 1; i < second; i++) {
+          final l = lines[i].trim();
+          if (l.isEmpty) continue;
+            if (RegExp(r'^[A-Za-z0-9_-]+:\s').hasMatch(l)) yamlLike++;
+        }
+        if (yamlLike >= 1 && yamlLike >= (second - first - 1) / 2) {
+          looksLikeFrontMatter = true;
+        }
+      }
+      if (looksLikeFrontMatter) {
+        // 去掉 front matter，正文从 second+1 开始，到末尾
+        final removed = lines.sublist(0, second + 1).length;
+        final body = lines.sublist(second + 1);
+        lines
+          ..clear()
+          ..addAll(body);
+        usedDelimExtraction = true;
+        debugPrint('📎 已移除 front matter (行数=$removed)，继续正文提取');
+      } else {
+        // 选取相邻 --- 之间最长的段落
+        int bestStart = -1;
+        int bestEnd = -1;
+        int bestNonEmpty = 0;
+        int totalNonEmpty = lines.where((l) => l.trim().isNotEmpty).length;
+        for (int i = 0; i < delimIdx.length - 1; i++) {
+          final a = delimIdx[i];
+            final b = delimIdx[i + 1];
+          final segment = lines.sublist(a + 1, b);
+          final nonEmpty = segment.where((l) => l.trim().isNotEmpty).length;
+          if (nonEmpty > bestNonEmpty) {
+            bestNonEmpty = nonEmpty;
+            bestStart = a + 1;
+            bestEnd = b - 1;
+          }
+        }
+        if (bestStart != -1 && bestNonEmpty >= 1) {
+          // 判断该段是否占据主要内容
+          final ratio = totalNonEmpty == 0 ? 0 : bestNonEmpty / totalNonEmpty;
+          if (ratio >= 0.5 || bestNonEmpty >= 8) {
+            final body = lines.sublist(bestStart, bestEnd + 1);
+            lines
+              ..clear()
+              ..addAll(body);
+            usedDelimExtraction = true;
+            debugPrint('📎 使用 --- 分隔提取正文: segmentNonEmpty=$bestNonEmpty ratio=${ratio.toStringAsFixed(2)}');
+          }
+        }
+      }
+    }
+
+    final bodyStartMarkers = RegExp(r'^(#{1,6}\s|[0-9]+[\.|、]\s|[一二三四五六七八九十]{1,3}[、.\s]|\*\s|\-|\+\s)');
+    final leadingDisclaimer = RegExp(r'^(以下是|这是|我(已|为)?你|基于你|根据你|好的[,，]?|下面(是|为)|现对|整理如下|总结如下)');
+    final leadingShortWithKeywords = RegExp(r'^(以下|现在|好的).{0,20}(整理|总结|归纳|优化)');
+    int removedHead = 0;
+
+    // 去除前导说明性行（长度不超过 60，且不匹配正文开始标记）
+    while (lines.isNotEmpty) {
+      final l = lines.first.trim();
+      if (l.isEmpty) { lines.removeAt(0); continue; }
+      if (bodyStartMarkers.hasMatch(l)) break; // 进入正文
+      final isDisclaimer = (l.length <= 60) && (leadingDisclaimer.hasMatch(l) || leadingShortWithKeywords.hasMatch(l));
+      // 如果含有“整理/总结/归纳/优化”但又像句子而非标题，也删除
+      final containsKeywords = RegExp(r'(整理|总结|归纳|优化)').hasMatch(l);
+      final looksLikeTitle = RegExp(r'(目录|概述)$').hasMatch(l);
+      if (isDisclaimer || (containsKeywords && !looksLikeTitle && !bodyStartMarkers.hasMatch(l) && l.length < 40)) {
+        lines.removeAt(0); removedHead++; continue;
+      }
+      break; // 其他情况保留
+    }
+    // 清理前导多余空行
+    while (lines.isNotEmpty && lines.first.trim().isEmpty) { lines.removeAt(0); }
+
+    // 处理尾部客套/引导继续类语句
+    final trailingPatterns = RegExp(r'^(如果你需要|如需进一步|需要我|欢迎继续|希望这些|若还需要|可以继续|有其他|随时告诉|祝你|祝好)');
+    int removedTail = 0;
+    while (lines.isNotEmpty) {
+      final l = lines.last.trim();
+      if (l.isEmpty) { lines.removeLast(); continue; }
+      if (l.length <= 40 && trailingPatterns.hasMatch(l)) { lines.removeLast(); removedTail++; continue; }
+      // 去掉单独一行“—— END ——”等装饰
+      if (RegExp(r'^[-—~_*\s]{3,}$').hasMatch(l)) { lines.removeLast(); removedTail++; continue; }
+      break;
+    }
+    // 去除尾部多余空行
+    while (lines.isNotEmpty && lines.last.trim().isEmpty) { lines.removeLast(); }
+
+    final result = lines.join('\n');
+    if (removedHead > 0 || removedTail > 0) {
+      debugPrint('✂️ 整理正文提取: 去掉前导 $removedHead 行, 结尾 $removedTail 行; 原长度=${raw.length}, 新长度=${result.length}');
+    }
+    if (usedDelimExtraction) {
+      debugPrint('✅ 已结合 --- 分隔完成正文抽取，最终长度=${result.length}');
+    }
+    return result;
   }
 
   /// 估算文本的token数量

@@ -192,17 +192,18 @@ class _ModelSelectorState extends State<ModelSelector> {
         Offset.zero,
         ancestor: overlay,
       );
+      // 直接使用按钮左下角作为锚点，宽高设为0，让菜单以 left/top 为起点展开
       position = RelativeRect.fromRect(
         Rect.fromLTWH(
-          buttonPosition.dx,
-          buttonPosition.dy + button.size.height,
-          button.size.width,
+          buttonPosition.dx, // 与触发按钮左边缘对齐
+          buttonPosition.dy + button.size.height, // 紧贴按钮下方
+          0,
           0,
         ),
         Offset.zero & overlay.size,
       );
     } else {
-      // fallback
+      // fallback：靠页面左上角一个合理偏移
       position = RelativeRect.fromLTRB(24, 60, 0, 0);
     }
 

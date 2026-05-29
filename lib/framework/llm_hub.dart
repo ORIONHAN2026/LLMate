@@ -108,8 +108,52 @@ class LlmClient {
     }
 
     // 2. 执行 MCP 工具调用 + follow-up
-    if (!_cancelled && toolCallsJson != null && _session.mcpServer != null) {
-      final results = await _executeMcpToolsAndYield(toolCallsJson);
+    if (!_cancelled && _session.mcpServer != null) {
+      _McpToolResults? results;
+
+      if (toolCallsJson != null) {
+        // 原生 tool_calls
+        results = await _executeMcpToolsAndYield(toolCallsJson);
+      } else {
+        // 回退：文本格式 tool_calls（如 <tool_call>...</tool_call>）
+        final textCalls = McpService.parseToolCallsFromResponse(acc);
+        if (textCalls.isNotEmpty) {
+          // 从累积内容中移除原始 tool_call 文本，避免展示到 UI
+          acc = _stripTextToolCalls(acc);
+          // 告知 UI 开始执行
+          for (final tc in textCalls) {
+            yield {'tool': '执行: ${tc['tool']}'};
+          }
+          // 执行工具调用
+          final execResults = await McpService.executeSessionToolCalls(
+            session: _session,
+            toolCalls: textCalls,
+          );
+          // 转换为统一格式供 follow-up 使用
+          final list = <Map<String, dynamic>>[];
+          final data = <Map<String, dynamic>>[];
+          for (int i = 0; i < textCalls.length; i++) {
+            final tc = textCalls[i];
+            final callId = 'call_$i';
+            list.add({
+              'id': callId,
+              'name': tc['tool'],
+              'arguments': tc['args'],
+              'index': i,
+            });
+            final tr = i < execResults.length ? execResults[i] : null;
+            data.add({
+              'id': callId,
+              'name': tc['tool'],
+              'args': tc['args'],
+              'result': tr?.result ?? '',
+              'isError': tr?.isSuccess != true,
+            });
+          }
+          results = _McpToolResults(list: list, data: data);
+        }
+      }
+
       if (results == null || _cancelled) return;
 
       // 向 UI 透传工具执行描述（和 content/think 同级）

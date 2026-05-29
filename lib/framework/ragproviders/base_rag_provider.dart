@@ -43,7 +43,7 @@ abstract class BaseRagProvider {
     // 数据文件
     '.csv', '.tsv', '.log',
     // 其他
-    '.rtf', '.odt', '.makefile', '.cmake', '.gradle'
+    '.rtf', '.odt', '.makefile', '.cmake', '.gradle',
   };
 
   /// 构造函数
@@ -78,11 +78,11 @@ abstract class BaseRagProvider {
     final ragId = _model!.modelId;
     final ragDir = path.join('assets/RAG', ragId);
     final documentsDir = path.join(ragDir, 'documents');
-    
+
     try {
       // 创建目录结构
       await Directory(documentsDir).create(recursive: true);
-      
+
       // 创建空的知识库元数据
       final knowledgeBase = RagKnowledgeBase(
         ragId: ragId,
@@ -92,11 +92,11 @@ abstract class BaseRagProvider {
       );
 
       await _saveKnowledgeBase(knowledgeBase);
-      
+
       if (kDebugMode) {
         print('RAG知识库创建成功: $ragId');
       }
-      
+
       return ragId;
     } catch (e) {
       if (kDebugMode) {
@@ -116,21 +116,21 @@ abstract class BaseRagProvider {
     if (_model?.modelId == null) {
       throw RagException('模型未配置或modelId为空');
     }
-    
+
     try {
       // 验证文件和类型
       await _validateSourceFile(sourceFilePath);
-      
+
       // 准备目标路径和目录
       final targetPath = await _prepareTargetPath(
         sourceFilePath: sourceFilePath,
         relativePath: relativePath,
         folderName: folderName,
       );
-      
+
       // 复制文件到目标路径
       final finalPath = await _copyFileToTarget(sourceFilePath, targetPath);
-      
+
       // 创建文档记录
       final document = await _createDocumentRecord(
         sourceFilePath: sourceFilePath,
@@ -164,14 +164,14 @@ abstract class BaseRagProvider {
     if (_model?.modelId == null) {
       throw RagException('模型未配置或modelId为空');
     }
-    
+
     try {
       final sourceDir = Directory(sourceFolderPath);
       await _validateSourceDirectory(sourceDir);
 
       final importContext = await _createImportContext(sourceDir, recursive);
       final documents = await _importFilesFromContext(importContext);
-      
+
       _logImportResults(importContext, documents);
       return documents;
     } catch (e) {
@@ -188,16 +188,16 @@ abstract class BaseRagProvider {
       return null;
     }
     final ragId = _model!.modelId;
-    
+
     try {
       final ragDir = path.join('assets/RAG', ragId);
       final metadataPath = path.join(ragDir, 'metadata.json');
       final metadataFile = File(metadataPath);
-      
+
       if (!await metadataFile.exists()) {
         return null;
       }
-      
+
       final jsonContent = await metadataFile.readAsString();
       return RagKnowledgeBase.fromJson(jsonContent);
     } catch (e) {
@@ -208,15 +208,12 @@ abstract class BaseRagProvider {
     }
   }
 
-
   /// 删除RAG文档（使用modelId）
-  Future<bool> deleteRagDocument({
-    required String documentId,
-  }) async {
+  Future<bool> deleteRagDocument({required String documentId}) async {
     if (_model?.modelId == null) {
       return false;
     }
-    
+
     try {
       // 加载知识库
       final knowledgeBase = await getRagKnowledgeBase();
@@ -225,10 +222,11 @@ abstract class BaseRagProvider {
       }
 
       // 查找要删除的文档
-      final document = knowledgeBase.documents
-          .where((doc) => doc.id == documentId)
-          .firstOrNull;
-      
+      final document =
+          knowledgeBase.documents
+              .where((doc) => doc.id == documentId)
+              .firstOrNull;
+
       if (document == null) {
         return false;
       }
@@ -253,10 +251,9 @@ abstract class BaseRagProvider {
       }
 
       // 更新知识库元数据
-      final updatedDocuments = knowledgeBase.documents
-          .where((doc) => doc.id != documentId)
-          .toList();
-      
+      final updatedDocuments =
+          knowledgeBase.documents.where((doc) => doc.id != documentId).toList();
+
       final updatedKnowledgeBase = RagKnowledgeBase(
         ragId: _model!.modelId,
         documents: updatedDocuments,
@@ -284,7 +281,7 @@ abstract class BaseRagProvider {
     if (_model?.modelId == null) {
       return false;
     }
-    
+
     try {
       final ragDir = Directory(path.join('assets/RAG', _model!.modelId));
       if (!ragDir.existsSync()) {
@@ -307,13 +304,12 @@ abstract class BaseRagProvider {
     }
   }
 
-
   // ============ 私有辅助方法 ============
 
   /// 验证源文件
   Future<void> _validateSourceFile(String sourceFilePath) async {
     final sourceFile = File(sourceFilePath);
-    
+
     if (!await sourceFile.exists()) {
       throw RagException('源文件不存在: $sourceFilePath');
     }
@@ -335,9 +331,14 @@ abstract class BaseRagProvider {
     await Directory(documentsDir).create(recursive: true);
 
     final fileName = path.basename(sourceFilePath);
-    
+
     if (relativePath != null && relativePath.isNotEmpty) {
-      return _buildRelativeTargetPath(documentsDir, relativePath, folderName, fileName);
+      return _buildRelativeTargetPath(
+        documentsDir,
+        relativePath,
+        folderName,
+        fileName,
+      );
     } else {
       return _buildDirectTargetPath(documentsDir, folderName, fileName);
     }
@@ -354,12 +355,11 @@ abstract class BaseRagProvider {
     if (folderName != null && folderName.isNotEmpty) {
       basePath = path.join(documentsDir, folderName);
     }
-    
+
     final relativeDir = path.dirname(relativePath);
-    final targetDir = relativeDir == '.' 
-        ? basePath 
-        : path.join(basePath, relativeDir);
-    
+    final targetDir =
+        relativeDir == '.' ? basePath : path.join(basePath, relativeDir);
+
     await Directory(targetDir).create(recursive: true);
     return path.join(targetDir, fileName);
   }
@@ -380,12 +380,15 @@ abstract class BaseRagProvider {
   }
 
   /// 复制文件到目标位置
-  Future<String> _copyFileToTarget(String sourceFilePath, String targetFilePath) async {
+  Future<String> _copyFileToTarget(
+    String sourceFilePath,
+    String targetFilePath,
+  ) async {
     String finalTargetPath = targetFilePath;
     if (await File(targetFilePath).exists()) {
       finalTargetPath = await _getUniqueFilePath(targetFilePath);
     }
-    
+
     await File(sourceFilePath).copy(finalTargetPath);
     return finalTargetPath;
   }
@@ -431,11 +434,14 @@ abstract class BaseRagProvider {
   }
 
   /// 创建导入上下文
-  Future<_ImportContext> _createImportContext(Directory sourceDir, bool recursive) async {
+  Future<_ImportContext> _createImportContext(
+    Directory sourceDir,
+    bool recursive,
+  ) async {
     final files = await _getFilesFromDirectory(sourceDir, recursive);
     final folderName = path.basename(sourceDir.path);
     final sourceDirPath = sourceDir.absolute.path;
-    
+
     if (kDebugMode) {
       print('准备导入文件夹: $folderName');
       print('找到 ${files.length} 个支持的文件');
@@ -451,7 +457,9 @@ abstract class BaseRagProvider {
   }
 
   /// 从导入上下文中导入文件
-  Future<List<RagDocument>> _importFilesFromContext(_ImportContext context) async {
+  Future<List<RagDocument>> _importFilesFromContext(
+    _ImportContext context,
+  ) async {
     final documents = <RagDocument>[];
     final errors = <String>[];
 
@@ -459,15 +467,18 @@ abstract class BaseRagProvider {
       try {
         final document = await _importSingleFile(file, context);
         documents.add(document);
-        
+
         if (kDebugMode) {
-          final relativePath = path.relative(file.absolute.path, from: context.sourceDirPath);
+          final relativePath = path.relative(
+            file.absolute.path,
+            from: context.sourceDirPath,
+          );
           print('文件导入成功: ${context.folderName}/$relativePath');
         }
       } catch (e) {
         final fileName = path.basename(file.path);
         errors.add('$fileName: $e');
-        
+
         if (kDebugMode) {
           print('跳过文件 ${file.path}: $e');
         }
@@ -479,10 +490,13 @@ abstract class BaseRagProvider {
   }
 
   /// 导入单个文件
-  Future<RagDocument> _importSingleFile(File file, _ImportContext context) async {
+  Future<RagDocument> _importSingleFile(
+    File file,
+    _ImportContext context,
+  ) async {
     final filePath = file.absolute.path;
     final relativePath = path.relative(filePath, from: context.sourceDirPath);
-    
+
     return await importFileToRag(
       sourceFilePath: file.path,
       relativePath: relativePath,
@@ -491,17 +505,24 @@ abstract class BaseRagProvider {
   }
 
   /// 记录导入结果
-  void _logImportResults(_ImportContext context, List<RagDocument> documents) async {
+  void _logImportResults(
+    _ImportContext context,
+    List<RagDocument> documents,
+  ) async {
     if (!kDebugMode) return;
-    
+
     final skippedFiles = <String>[];
-    await _collectSkippedFiles(context.sourceDir, context.recursive, skippedFiles);
+    await _collectSkippedFiles(
+      context.sourceDir,
+      context.recursive,
+      skippedFiles,
+    );
 
     print('文件夹 "${context.folderName}" 导入完成:');
     print('  - 成功导入: ${documents.length} 个文件');
     print('  - 跳过文件: ${skippedFiles.length} 个');
     print('  - 错误文件: ${context.errors.length} 个');
-    
+
     if (skippedFiles.isNotEmpty) {
       print('跳过的文件 (不支持的类型):');
       skippedFiles.take(5).forEach((file) => print('  - $file'));
@@ -509,7 +530,7 @@ abstract class BaseRagProvider {
         print('  - 还有 ${skippedFiles.length - 5} 个文件...');
       }
     }
-    
+
     if (context.errors.isNotEmpty) {
       print('错误的文件:');
       context.errors.take(5).forEach((error) => print('  - $error'));
@@ -531,14 +552,14 @@ abstract class BaseRagProvider {
     try {
       final ragDir = path.join('assets/RAG', knowledgeBase.ragId);
       final metadataPath = path.join(ragDir, 'metadata.json');
-      
+
       // 确保目录存在
       await Directory(ragDir).create(recursive: true);
-      
+
       // 保存元数据
       final metadataFile = File(metadataPath);
       await metadataFile.writeAsString(knowledgeBase.toJson());
-      
+
       if (kDebugMode) {
         print('知识库元数据保存成功: $metadataPath');
       }
@@ -555,7 +576,7 @@ abstract class BaseRagProvider {
     final ragId = _model!.modelId;
     // 获取现有知识库
     var knowledgeBase = await getRagKnowledgeBase();
-    
+
     knowledgeBase ??= RagKnowledgeBase(
       ragId: ragId,
       documents: [],
@@ -565,10 +586,10 @@ abstract class BaseRagProvider {
 
     // 添加新文档
     final allDocuments = [...knowledgeBase.documents, document];
-    
+
     // 计算统计信息
     final stats = _calculateRagStats(allDocuments);
-    
+
     // 创建更新后的知识库
     final updatedKnowledgeBase = RagKnowledgeBase(
       ragId: ragId,
@@ -587,7 +608,7 @@ abstract class BaseRagProvider {
     bool recursive,
   ) async {
     final files = <File>[];
-    
+
     await for (final entity in directory.list(recursive: recursive)) {
       if (entity is File) {
         final extension = path.extension(entity.path).toLowerCase();
@@ -596,7 +617,7 @@ abstract class BaseRagProvider {
         }
       }
     }
-    
+
     return files;
   }
 
@@ -629,7 +650,7 @@ abstract class BaseRagProvider {
 
     int counter = 1;
     String newPath;
-    
+
     do {
       newPath = path.join(dir, '${fileName}_$counter$extension');
       counter++;
@@ -648,7 +669,7 @@ abstract class BaseRagProvider {
 
       // 根据文件类型处理内容
       final extension = document.fileExtension?.toLowerCase();
-      
+
       switch (extension) {
         case '.txt':
         case '.md':
@@ -712,7 +733,7 @@ abstract class BaseRagProvider {
         case '.gradle':
           // 文本文件直接读取
           return await file.readAsString();
-        
+
         case '.pdf':
         case '.doc':
         case '.docx':
@@ -720,10 +741,10 @@ abstract class BaseRagProvider {
         case '.odt':
           // 对于二进制文档文件，返回文件信息
           return '文档文件: ${document.fileName}\n'
-                 '大小: ${document.fileSize} 字节\n'
-                 '上传时间: ${document.uploadTime}\n'
-                 '路径: ${document.filePath}';
-        
+              '大小: ${document.fileSize} 字节\n'
+              '上传时间: ${document.uploadTime}\n'
+              '路径: ${document.filePath}';
+
         default:
           return '不支持的文件类型: $extension';
       }
@@ -764,13 +785,12 @@ abstract class BaseRagProvider {
     return stats;
   }
 
-
   //增加切片功能
-  
+
   /// 分块配置常量
   static const int defaultChunkSize = 1000; // 默认分块大小
   static const int defaultChunkOverlap = 200; // 默认重叠大小
-  
+
   /// 为文档创建分块
   Future<List<RagChunk>> chunkDocument(RagDocument document) async {
     try {
@@ -783,20 +803,22 @@ abstract class BaseRagProvider {
       }
 
       final chunks = await _createChunksForDocument(document, content);
-      
+
       // 为分块添加向量化
       final chunksWithEmbeddings = await _addEmbeddingsToChunks(chunks);
-      
+
       // 保存分块到文件系统
       await _saveChunksToFile(document, chunksWithEmbeddings);
-      
+
       // 保存分块到向量数据库
       await _saveChunkToObjectBox(chunksWithEmbeddings);
-      
+
       if (kDebugMode) {
-        print('文档分块完成: ${document.fileName}, 共生成 ${chunksWithEmbeddings.length} 个分块');
+        print(
+          '文档分块完成: ${document.fileName}, 共生成 ${chunksWithEmbeddings.length} 个分块',
+        );
       }
-      
+
       return chunksWithEmbeddings;
     } catch (e) {
       if (kDebugMode) {
@@ -812,7 +834,7 @@ abstract class BaseRagProvider {
     try {
       // 确保向量数据库服务已初始化
       await _ensureVectorDbService();
-      
+
       if (_vectorDbService == null) {
         if (kDebugMode) {
           print('向量数据库服务未初始化');
@@ -822,11 +844,11 @@ abstract class BaseRagProvider {
 
       // 保存分块到向量数据库
       await _vectorDbService!.saveChunks(chunks);
-      
+
       if (kDebugMode) {
         print('成功保存 ${chunks.length} 个分块到向量数据库');
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -843,7 +865,7 @@ abstract class BaseRagProvider {
       if (_vectorDbService != null) {
         _vectorDbService!.dispose();
       }
-      
+
       final ragId = _model!.ragId.isNotEmpty ? _model!.ragId : _model!.modelId;
       _vectorDbService = VectorDatabaseService(ragId);
     }
@@ -866,7 +888,7 @@ abstract class BaseRagProvider {
     try {
       // 确保向量数据库服务已初始化
       await _ensureVectorDbService();
-      
+
       if (_vectorDbService == null) {
         if (kDebugMode) {
           print('向量数据库服务未初始化');
@@ -882,7 +904,7 @@ abstract class BaseRagProvider {
         }
         return [];
       }
-        print("查询向量: $queryEmbeddings" ); 
+      print("查询向量: $queryEmbeddings");
 
       // 执行向量搜索
       final results = await _vectorDbService!.vectorSearch(
@@ -922,17 +944,17 @@ abstract class BaseRagProvider {
   Future<bool> deleteDocumentVectorData(String documentId) async {
     try {
       await _ensureVectorDbService();
-      
+
       if (_vectorDbService == null) {
         return false;
       }
 
       await _vectorDbService!.deleteChunksByDocumentId(documentId);
-      
+
       if (kDebugMode) {
         print('已删除文档 $documentId 的向量数据');
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -942,12 +964,13 @@ abstract class BaseRagProvider {
     }
   }
 
-     
-
   /// 为特定文档创建分块
-  Future<List<RagChunk>> _createChunksForDocument(RagDocument document, String content) async {
+  Future<List<RagChunk>> _createChunksForDocument(
+    RagDocument document,
+    String content,
+  ) async {
     final extension = document.fileExtension?.toLowerCase();
-    
+
     switch (extension) {
       // 代码文件分块
       case '.dart':
@@ -967,34 +990,34 @@ abstract class BaseRagProvider {
       case '.kt':
       case '.scala':
         return _chunkCodeFile(document, content, extension!);
-        
+
       // Go 相关配置文件
       case '.mod':
       case '.sum':
         return _chunkGoConfigFile(document, content);
-        
+
       // 标记文档分块
       case '.md':
       case '.markdown':
         return _chunkMarkdownFile(document, content);
-        
+
       // 文本文档分块
       case '.txt':
       case '.log':
         return _chunkTextFile(document, content);
-        
+
       // 结构化文档分块
       case '.json':
         return _chunkJsonFile(document, content);
-        
+
       case '.xml':
       case '.html':
         return _chunkXmlFile(document, content);
-        
+
       case '.yaml':
       case '.yml':
         return _chunkYamlFile(document, content);
-        
+
       // 配置文件分块
       case '.conf':
       case '.config':
@@ -1002,7 +1025,7 @@ abstract class BaseRagProvider {
       case '.env':
       case '.properties':
         return _chunkConfigFile(document, content);
-        
+
       // 文档文件（PDF、Word等）使用段落分块
       case '.pdf':
       case '.doc':
@@ -1010,7 +1033,7 @@ abstract class BaseRagProvider {
       case '.rtf':
       case '.odt':
         return _chunkDocumentFile(document, content);
-        
+
       // 默认使用固定大小分块
       default:
         return _chunkByFixedSize(document, content);
@@ -1018,9 +1041,13 @@ abstract class BaseRagProvider {
   }
 
   /// 代码文件分块（按函数、类、方法）
-  Future<List<RagChunk>> _chunkCodeFile(RagDocument document, String content, String extension) async {
+  Future<List<RagChunk>> _chunkCodeFile(
+    RagDocument document,
+    String content,
+    String extension,
+  ) async {
     final lines = content.split('\n');
-    
+
     List<RagChunk> chunks;
     switch (extension) {
       case '.dart':
@@ -1043,30 +1070,42 @@ abstract class BaseRagProvider {
         chunks = await _chunkGenericCode(document, content, lines);
         break;
     }
-    
+
     // 为代码分块生成功能描述
     // 暂时去掉对代码的描述，直接返回分块
     return chunks;
   }
 
   /// Dart代码分块
-  Future<List<RagChunk>> _chunkDartCode(RagDocument document, String content, List<String> lines) async {
+  Future<List<RagChunk>> _chunkDartCode(
+    RagDocument document,
+    String content,
+    List<String> lines,
+  ) async {
     final chunks = <RagChunk>[];
     int chunkIndex = 0;
     int currentStart = 0;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // 检测类定义
-      if (line.startsWith('class ') || line.startsWith('abstract class ') || 
-          line.startsWith('mixin ') || line.startsWith('enum ')) {
-        
+      if (line.startsWith('class ') ||
+          line.startsWith('abstract class ') ||
+          line.startsWith('mixin ') ||
+          line.startsWith('enum ')) {
         if (i > currentStart) {
           // 保存之前的内容
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
-        
+
         // 找到类的结束位置
         final classEnd = _findBlockEnd(lines, i);
         await _addCodeChunk(chunks, document, lines, i, classEnd, chunkIndex++);
@@ -1076,21 +1115,35 @@ abstract class BaseRagProvider {
       // 检测顶级函数
       else if (_isTopLevelFunction(line) && !_isInsideClass(lines, i)) {
         if (i > currentStart) {
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
-        
+
         final funcEnd = _findFunctionEnd(lines, i);
         await _addCodeChunk(chunks, document, lines, i, funcEnd, chunkIndex++);
         currentStart = funcEnd + 1;
         i = funcEnd;
       }
     }
-    
+
     // 处理剩余内容
     if (currentStart < lines.length) {
-      await _addCodeChunk(chunks, document, lines, currentStart, lines.length - 1, chunkIndex);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        currentStart,
+        lines.length - 1,
+        chunkIndex,
+      );
     }
-    
+
     return chunks;
   }
 
@@ -1100,7 +1153,8 @@ abstract class BaseRagProvider {
     // 向上查找注释，直到遇到空行或非注释行
     while (line > 0) {
       final prevLine = lines[line - 1].trim();
-      if (prevLine.isEmpty || (!prevLine.startsWith('//') && !prevLine.startsWith('/*'))) {
+      if (prevLine.isEmpty ||
+          (!prevLine.startsWith('//') && !prevLine.startsWith('/*'))) {
         break;
       }
       line--;
@@ -1114,27 +1168,39 @@ abstract class BaseRagProvider {
   /// - 类型定义（struct、interface等）作为单独的块
   /// - 函数和方法定义作为单独的块
   /// - 保持代码块的完整性和上下文
-  Future<List<RagChunk>> _chunkGoCode(RagDocument document, String content, List<String> lines) async {
+  Future<List<RagChunk>> _chunkGoCode(
+    RagDocument document,
+    String content,
+    List<String> lines,
+  ) async {
     final List<RagChunk> chunks = [];
     int chunkIndex = 0;
 
     // 记录包和导入信息，用于函数块的上下文
     List<String> imports = [];
-    
+
     // 当前代码块的状态
     int blockStartLine = 0;
     bool inImportBlock = false;
     bool inTypeBlock = false;
     bool inFuncBlock = false;
     String currentBlockType = '';
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // 处理包声明
       if (line.startsWith('package ')) {
         if (i > blockStartLine && currentBlockType.isNotEmpty) {
-          _addGoChunk(chunks, document, lines, blockStartLine, i - 1, chunkIndex++, currentBlockType);
+          _addGoChunk(
+            chunks,
+            document,
+            lines,
+            blockStartLine,
+            i - 1,
+            chunkIndex++,
+            currentBlockType,
+          );
         }
         blockStartLine = i;
         currentBlockType = 'go_package';
@@ -1145,7 +1211,15 @@ abstract class BaseRagProvider {
       if (line.startsWith('import')) {
         if (line.contains('(')) {
           if (i > blockStartLine && currentBlockType.isNotEmpty) {
-            _addGoChunk(chunks, document, lines, blockStartLine, i - 1, chunkIndex++, currentBlockType);
+            _addGoChunk(
+              chunks,
+              document,
+              lines,
+              blockStartLine,
+              i - 1,
+              chunkIndex++,
+              currentBlockType,
+            );
           }
           inImportBlock = true;
           blockStartLine = i;
@@ -1155,11 +1229,19 @@ abstract class BaseRagProvider {
           imports.add(line);
         }
       }
-      
+
       // 导入块结束
       if (inImportBlock && line == ')') {
         inImportBlock = false;
-        _addGoChunk(chunks, document, lines, blockStartLine, i, chunkIndex++, 'go_imports');
+        _addGoChunk(
+          chunks,
+          document,
+          lines,
+          blockStartLine,
+          i,
+          chunkIndex++,
+          'go_imports',
+        );
         currentBlockType = '';
         continue;
       }
@@ -1167,7 +1249,15 @@ abstract class BaseRagProvider {
       // 处理类型定义
       if (line.startsWith('type ')) {
         if (i > blockStartLine && currentBlockType.isNotEmpty) {
-          _addGoChunk(chunks, document, lines, blockStartLine, i - 1, chunkIndex++, currentBlockType);
+          _addGoChunk(
+            chunks,
+            document,
+            lines,
+            blockStartLine,
+            i - 1,
+            chunkIndex++,
+            currentBlockType,
+          );
         }
         // 向上查找关联的注释
         blockStartLine = _findCommentStart(lines, i);
@@ -1179,7 +1269,15 @@ abstract class BaseRagProvider {
       // 处理函数定义
       if (line.startsWith('func ')) {
         if (i > blockStartLine && currentBlockType.isNotEmpty) {
-          _addGoChunk(chunks, document, lines, blockStartLine, i - 1, chunkIndex++, currentBlockType);
+          _addGoChunk(
+            chunks,
+            document,
+            lines,
+            blockStartLine,
+            i - 1,
+            chunkIndex++,
+            currentBlockType,
+          );
         }
         // 向上查找关联的注释
         blockStartLine = _findCommentStart(lines, i);
@@ -1191,7 +1289,15 @@ abstract class BaseRagProvider {
       // 检测类型块或函数块的结束
       if ((inTypeBlock || inFuncBlock) && line == '}') {
         if (_isBlockEnd(lines, i)) {
-          _addGoChunk(chunks, document, lines, blockStartLine, i, chunkIndex++, currentBlockType);
+          _addGoChunk(
+            chunks,
+            document,
+            lines,
+            blockStartLine,
+            i,
+            chunkIndex++,
+            currentBlockType,
+          );
           inTypeBlock = false;
           inFuncBlock = false;
           currentBlockType = '';
@@ -1202,7 +1308,15 @@ abstract class BaseRagProvider {
 
     // 处理最后一个块
     if (blockStartLine < lines.length - 1 && currentBlockType.isNotEmpty) {
-      _addGoChunk(chunks, document, lines, blockStartLine, lines.length - 1, chunkIndex, currentBlockType);
+      _addGoChunk(
+        chunks,
+        document,
+        lines,
+        blockStartLine,
+        lines.length - 1,
+        chunkIndex,
+        currentBlockType,
+      );
     }
 
     if (kDebugMode) {
@@ -1225,23 +1339,25 @@ abstract class BaseRagProvider {
     final startPos = _getStartPosition(lines, startLine);
     final endPos = _getStartPosition(lines, endLine) + lines[endLine].length;
 
-    chunks.add(RagChunk.create(
-      documentId: document.id,
-      modelId: _model!.modelId,
-      content: content,
-      startPosition: startPos,
-      endPosition: endPos,
-      chunkIndex: chunkIndex,
-      sourceFilePath: document.filePath,
-      relativePath: document.metadata?['relativePath'],
-      folderName: document.metadata?['folderName'],
-      metadata: {
-        'type': blockType,
-        'start_line': startLine + 1,
-        'end_line': endLine + 1,
-        'line_count': endLine - startLine + 1,
-      },
-    ));
+    chunks.add(
+      RagChunk.create(
+        documentId: document.id,
+        modelId: _model!.modelId,
+        content: content,
+        startPosition: startPos,
+        endPosition: endPos,
+        chunkIndex: chunkIndex,
+        sourceFilePath: document.filePath,
+        relativePath: document.metadata?['relativePath'],
+        folderName: document.metadata?['folderName'],
+        metadata: {
+          'type': blockType,
+          'start_line': startLine + 1,
+          'end_line': endLine + 1,
+          'line_count': endLine - startLine + 1,
+        },
+      ),
+    );
   }
 
   /// 检测代码块是否结束
@@ -1252,7 +1368,7 @@ abstract class BaseRagProvider {
     // 向上搜索直到找到块的开始
     for (int i = currentLine; i >= 0; i--) {
       final line = lines[i].trim();
-      
+
       if (line.startsWith('type ') || line.startsWith('func ')) {
         foundStart = true;
         break;
@@ -1275,20 +1391,31 @@ abstract class BaseRagProvider {
   }
 
   /// Python代码分块
-  Future<List<RagChunk>> _chunkPythonCode(RagDocument document, String content, List<String> lines) async {
+  Future<List<RagChunk>> _chunkPythonCode(
+    RagDocument document,
+    String content,
+    List<String> lines,
+  ) async {
     final chunks = <RagChunk>[];
     int chunkIndex = 0;
     int currentStart = 0;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // 检测类定义
       if (line.startsWith('class ')) {
         if (i > currentStart) {
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
-        
+
         final classEnd = _findPythonBlockEnd(lines, i);
         await _addCodeChunk(chunks, document, lines, i, classEnd, chunkIndex++);
         currentStart = classEnd + 1;
@@ -1297,41 +1424,66 @@ abstract class BaseRagProvider {
       // 检测函数定义
       else if (line.startsWith('def ')) {
         if (i > currentStart) {
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
-        
+
         final funcEnd = _findPythonBlockEnd(lines, i);
         await _addCodeChunk(chunks, document, lines, i, funcEnd, chunkIndex++);
         currentStart = funcEnd + 1;
         i = funcEnd;
       }
     }
-    
+
     // 处理剩余内容
     if (currentStart < lines.length) {
-      await _addCodeChunk(chunks, document, lines, currentStart, lines.length - 1, chunkIndex);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        currentStart,
+        lines.length - 1,
+        chunkIndex,
+      );
     }
-    
+
     return chunks;
   }
 
   /// JavaScript/TypeScript代码分块
-  Future<List<RagChunk>> _chunkJavaScriptCode(RagDocument document, String content, List<String> lines) async {
+  Future<List<RagChunk>> _chunkJavaScriptCode(
+    RagDocument document,
+    String content,
+    List<String> lines,
+  ) async {
     final chunks = <RagChunk>[];
     int chunkIndex = 0;
     int currentStart = 0;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // 检测函数定义
-      if (line.contains('function ') || line.contains(') => {') || 
+      if (line.contains('function ') ||
+          line.contains(') => {') ||
           RegExp(r'^\w+\s*\([^)]*\)\s*{').hasMatch(line)) {
-        
         if (i > currentStart) {
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
-        
+
         final funcEnd = _findBlockEnd(lines, i);
         await _addCodeChunk(chunks, document, lines, i, funcEnd, chunkIndex++);
         currentStart = funcEnd + 1;
@@ -1340,92 +1492,150 @@ abstract class BaseRagProvider {
       // 检测类定义
       else if (line.startsWith('class ')) {
         if (i > currentStart) {
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
-        
+
         final classEnd = _findBlockEnd(lines, i);
         await _addCodeChunk(chunks, document, lines, i, classEnd, chunkIndex++);
         currentStart = classEnd + 1;
         i = classEnd;
       }
     }
-    
+
     // 处理剩余内容
     if (currentStart < lines.length) {
-      await _addCodeChunk(chunks, document, lines, currentStart, lines.length - 1, chunkIndex);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        currentStart,
+        lines.length - 1,
+        chunkIndex,
+      );
     }
-    
+
     return chunks;
   }
 
   /// Java代码分块
-  Future<List<RagChunk>> _chunkJavaCode(RagDocument document, String content, List<String> lines) async {
+  Future<List<RagChunk>> _chunkJavaCode(
+    RagDocument document,
+    String content,
+    List<String> lines,
+  ) async {
     final chunks = <RagChunk>[];
     int chunkIndex = 0;
     int currentStart = 0;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // 检测类定义
-      if (line.contains('class ') || line.contains('interface ') || line.contains('enum ')) {
+      if (line.contains('class ') ||
+          line.contains('interface ') ||
+          line.contains('enum ')) {
         if (i > currentStart) {
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
-        
+
         final classEnd = _findBlockEnd(lines, i);
         await _addCodeChunk(chunks, document, lines, i, classEnd, chunkIndex++);
         currentStart = classEnd + 1;
         i = classEnd;
       }
     }
-    
+
     // 处理剩余内容
     if (currentStart < lines.length) {
-      await _addCodeChunk(chunks, document, lines, currentStart, lines.length - 1, chunkIndex);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        currentStart,
+        lines.length - 1,
+        chunkIndex,
+      );
     }
-    
+
     return chunks;
   }
 
   /// 通用代码分块
-  Future<List<RagChunk>> _chunkGenericCode(RagDocument document, String content, List<String> lines) async {
+  Future<List<RagChunk>> _chunkGenericCode(
+    RagDocument document,
+    String content,
+    List<String> lines,
+  ) async {
     return _chunkByLines(document, content, lines, 50); // 按50行分块
   }
 
   /// Markdown文件分块（按标题）
-  Future<List<RagChunk>> _chunkMarkdownFile(RagDocument document, String content) async {
+  Future<List<RagChunk>> _chunkMarkdownFile(
+    RagDocument document,
+    String content,
+  ) async {
     final chunks = <RagChunk>[];
     final lines = content.split('\n');
     int chunkIndex = 0;
     int currentStart = 0;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // 检测标题
       if (line.startsWith('#')) {
         if (i > currentStart) {
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
         currentStart = i;
       }
     }
-    
+
     // 处理剩余内容
     if (currentStart < lines.length) {
-      await _addCodeChunk(chunks, document, lines, currentStart, lines.length - 1, chunkIndex);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        currentStart,
+        lines.length - 1,
+        chunkIndex,
+      );
     }
-    
+
     return chunks;
   }
 
   /// 文本文件分块（按段落）
-  Future<List<RagChunk>> _chunkTextFile(RagDocument document, String content) async {
+  Future<List<RagChunk>> _chunkTextFile(
+    RagDocument document,
+    String content,
+  ) async {
     final paragraphs = content.split(RegExp(r'\n\s*\n'));
     final chunks = <RagChunk>[];
     int position = 0;
-    
+
     for (int i = 0; i < paragraphs.length; i++) {
       final paragraph = paragraphs[i].trim();
       if (paragraph.isNotEmpty) {
@@ -1445,12 +1655,15 @@ abstract class BaseRagProvider {
       }
       position += paragraph.length + 2; // +2 for \n\n
     }
-    
+
     return chunks;
   }
 
   /// JSON文件分块
-  Future<List<RagChunk>> _chunkJsonFile(RagDocument document, String content) async {
+  Future<List<RagChunk>> _chunkJsonFile(
+    RagDocument document,
+    String content,
+  ) async {
     try {
       final jsonData = json.decode(content);
       return _chunkJsonData(document, jsonData, content);
@@ -1461,23 +1674,35 @@ abstract class BaseRagProvider {
   }
 
   /// XML/HTML文件分块
-  Future<List<RagChunk>> _chunkXmlFile(RagDocument document, String content) async {
+  Future<List<RagChunk>> _chunkXmlFile(
+    RagDocument document,
+    String content,
+  ) async {
     final lines = content.split('\n');
     final chunks = <RagChunk>[];
     int chunkIndex = 0;
     int currentStart = 0;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // 检测XML标签开始
-      if (line.startsWith('<') && !line.startsWith('</') && line.contains('>')) {
+      if (line.startsWith('<') &&
+          !line.startsWith('</') &&
+          line.contains('>')) {
         final tagName = _extractTagName(line);
         if (tagName.isNotEmpty) {
           if (i > currentStart) {
-            await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+            await _addCodeChunk(
+              chunks,
+              document,
+              lines,
+              currentStart,
+              i - 1,
+              chunkIndex++,
+            );
           }
-          
+
           final tagEnd = _findXmlTagEnd(lines, i, tagName);
           await _addCodeChunk(chunks, document, lines, i, tagEnd, chunkIndex++);
           currentStart = tagEnd + 1;
@@ -1485,53 +1710,83 @@ abstract class BaseRagProvider {
         }
       }
     }
-    
+
     // 处理剩余内容
     if (currentStart < lines.length) {
-      await _addCodeChunk(chunks, document, lines, currentStart, lines.length - 1, chunkIndex);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        currentStart,
+        lines.length - 1,
+        chunkIndex,
+      );
     }
-    
+
     return chunks;
   }
 
   /// YAML文件分块
-  Future<List<RagChunk>> _chunkYamlFile(RagDocument document, String content) async {
+  Future<List<RagChunk>> _chunkYamlFile(
+    RagDocument document,
+    String content,
+  ) async {
     final lines = content.split('\n');
     return _chunkByLines(document, content, lines, 30); // 按30行分块
   }
 
   /// 配置文件分块
-  Future<List<RagChunk>> _chunkConfigFile(RagDocument document, String content) async {
+  Future<List<RagChunk>> _chunkConfigFile(
+    RagDocument document,
+    String content,
+  ) async {
     final lines = content.split('\n');
     final chunks = <RagChunk>[];
     int chunkIndex = 0;
     int currentStart = 0;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // 检测配置节
       if (line.startsWith('[') && line.endsWith(']')) {
         if (i > currentStart) {
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
         currentStart = i;
       }
     }
-    
+
     // 处理剩余内容
     if (currentStart < lines.length) {
-      await _addCodeChunk(chunks, document, lines, currentStart, lines.length - 1, chunkIndex);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        currentStart,
+        lines.length - 1,
+        chunkIndex,
+      );
     }
-    
+
     return chunks;
   }
 
   /// Go配置文件分块（go.mod, go.sum）
-  Future<List<RagChunk>> _chunkGoConfigFile(RagDocument document, String content) async {
+  Future<List<RagChunk>> _chunkGoConfigFile(
+    RagDocument document,
+    String content,
+  ) async {
     final lines = content.split('\n');
     final extension = document.fileExtension?.toLowerCase();
-    
+
     if (extension == '.mod') {
       // go.mod 文件按模块声明分块
       return _chunkGoModFile(document, content, lines);
@@ -1545,66 +1800,101 @@ abstract class BaseRagProvider {
   }
 
   /// 分块 go.mod 文件
-  Future<List<RagChunk>> _chunkGoModFile(RagDocument document, String content, List<String> lines) async {
+  Future<List<RagChunk>> _chunkGoModFile(
+    RagDocument document,
+    String content,
+    List<String> lines,
+  ) async {
     final chunks = <RagChunk>[];
     int chunkIndex = 0;
     int currentStart = 0;
-    
+
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
-      
+
       // 检测主要的go.mod指令
-      if (line.startsWith('module ') || 
+      if (line.startsWith('module ') ||
           line.startsWith('go ') ||
           line.startsWith('require ') ||
           line.startsWith('replace ') ||
           line.startsWith('exclude ')) {
-        
         if (i > currentStart) {
-          await _addCodeChunk(chunks, document, lines, currentStart, i - 1, chunkIndex++);
+          await _addCodeChunk(
+            chunks,
+            document,
+            lines,
+            currentStart,
+            i - 1,
+            chunkIndex++,
+          );
         }
         currentStart = i;
       }
     }
-    
+
     // 处理剩余内容
     if (currentStart < lines.length) {
-      await _addCodeChunk(chunks, document, lines, currentStart, lines.length - 1, chunkIndex);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        currentStart,
+        lines.length - 1,
+        chunkIndex,
+      );
     }
-    
+
     return chunks;
   }
 
   /// 按较小的行数分块（专门用于处理大型列表文件如go.sum）
-  Future<List<RagChunk>> _chunkBySmallerLines(RagDocument document, String content, List<String> lines, int linesPerChunk) async {
+  Future<List<RagChunk>> _chunkBySmallerLines(
+    RagDocument document,
+    String content,
+    List<String> lines,
+    int linesPerChunk,
+  ) async {
     final chunks = <RagChunk>[];
-    
+
     for (int i = 0; i < lines.length; i += linesPerChunk) {
       final endIndex = math.min(i + linesPerChunk, lines.length);
-      await _addCodeChunk(chunks, document, lines, i, endIndex - 1, chunks.length);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        i,
+        endIndex - 1,
+        chunks.length,
+      );
     }
-    
+
     return chunks;
   }
 
   /// 文档文件分块（Word、PDF等）
-  Future<List<RagChunk>> _chunkDocumentFile(RagDocument document, String content) async {
+  Future<List<RagChunk>> _chunkDocumentFile(
+    RagDocument document,
+    String content,
+  ) async {
     // 按段落分块，段落之间用双换行分隔
     return _chunkTextFile(document, content);
   }
 
   /// 按固定大小分块
-  Future<List<RagChunk>> _chunkByFixedSize(RagDocument document, String content) async {
+  Future<List<RagChunk>> _chunkByFixedSize(
+    RagDocument document,
+    String content,
+  ) async {
     final chunks = <RagChunk>[];
     const chunkSize = defaultChunkSize;
     const overlap = defaultChunkOverlap;
-    
+
     int start = 0;
     int chunkIndex = 0;
-    
+
     while (start < content.length) {
       int end = math.min(start + chunkSize, content.length);
-      
+
       // 尝试在单词边界处断开
       if (end < content.length) {
         final lastSpace = content.lastIndexOf(' ', end);
@@ -1612,10 +1902,10 @@ abstract class BaseRagProvider {
           end = lastSpace;
         }
       }
-      
+
       final chunkContent = content.substring(start, end);
       final chunk = RagChunk.create(
-                  modelId: _model!.modelId,
+        modelId: _model!.modelId,
 
         documentId: document.id,
         content: chunkContent,
@@ -1628,20 +1918,20 @@ abstract class BaseRagProvider {
         metadata: {'type': 'fixed_size', 'chunk_size': chunkSize},
       );
       chunks.add(chunk);
-      
+
       // 确保下一个开始位置向前推进，避免无限循环
       final nextStart = math.max(start + 1, end - overlap);
       if (nextStart >= content.length) break;
       start = nextStart;
     }
-    
+
     return chunks;
   }
 
   /// 为分块添加向量化
   Future<List<RagChunk>> _addEmbeddingsToChunks(List<RagChunk> chunks) async {
     if (chunks.isEmpty) return chunks;
-    
+
     try {
       // 检查向量化服务是否可用
       final isAvailable = await _embeddingService.isServiceAvailable();
@@ -1651,40 +1941,43 @@ abstract class BaseRagProvider {
         }
         return chunks;
       }
-      
+
       final chunksWithEmbeddings = <RagChunk>[];
-      
+
       for (int i = 0; i < chunks.length; i++) {
         final chunk = chunks[i];
-        
+
         if (kDebugMode) {
           print('正在向量化分块 ${i + 1}/${chunks.length}: ${chunk.preview}');
         }
-        
+
         // 构建用于向量化的文本：合并内容和注释
         String textForEmbedding = chunk.content;
         if (chunk.comment != null && chunk.comment!.isNotEmpty) {
           textForEmbedding = '${chunk.content}\n\n功能描述: ${chunk.comment}';
         }
-        
+
         // 获取分块内容的向量化表示
-        final embedding = await _embeddingService.getEmbedding(textForEmbedding);
-        
+        final embedding = await _embeddingService.getEmbedding(
+          textForEmbedding,
+        );
+
         // 创建包含向量化数据的新分块
         final chunkWithEmbedding = chunk.copyWith(embeddings: embedding);
         chunksWithEmbeddings.add(chunkWithEmbedding);
-        
+
         // 添加小延迟避免过于频繁的请求
         if (i < chunks.length - 1) {
           await Future.delayed(const Duration(milliseconds: 200));
         }
       }
-      
+
       if (kDebugMode) {
-        final successCount = chunksWithEmbeddings.where((c) => c.embeddings != null).length;
+        final successCount =
+            chunksWithEmbeddings.where((c) => c.embeddings != null).length;
         print('向量化完成: 成功 $successCount/${chunks.length} 个分块');
       }
-      
+
       return chunksWithEmbeddings;
     } catch (e) {
       if (kDebugMode) {
@@ -1701,37 +1994,52 @@ abstract class BaseRagProvider {
   // 已移除请求代码描述的辅助方法 _requestCodeDescription / _requestCodeDescriptionViaHttp
 
   /// 按行数分块
-  Future<List<RagChunk>> _chunkByLines(RagDocument document, String content, List<String> lines, int linesPerChunk) async {
+  Future<List<RagChunk>> _chunkByLines(
+    RagDocument document,
+    String content,
+    List<String> lines,
+    int linesPerChunk,
+  ) async {
     final chunks = <RagChunk>[];
-    
+
     for (int i = 0; i < lines.length; i += linesPerChunk) {
       final endIndex = math.min(i + linesPerChunk, lines.length);
-      await _addCodeChunk(chunks, document, lines, i, endIndex - 1, i ~/ linesPerChunk);
+      await _addCodeChunk(
+        chunks,
+        document,
+        lines,
+        i,
+        endIndex - 1,
+        i ~/ linesPerChunk,
+      );
     }
-    
+
     return chunks;
   }
 
   /// 保存分块到文件
-  Future<void> _saveChunksToFile(RagDocument document, List<RagChunk> chunks) async {
+  Future<void> _saveChunksToFile(
+    RagDocument document,
+    List<RagChunk> chunks,
+  ) async {
     if (chunks.isEmpty) return;
-    
+
     try {
       final ragDir = path.join('assets/RAG', _model!.modelId);
       final chunksDir = path.join(ragDir, 'chunks');
-      
+
       // 创建chunks目录结构，保持与documents相同的目录结构
       String targetChunkDir = chunksDir;
-      
+
       // 根据文档的metadata重建目录结构
       if (document.metadata != null) {
         final relativePath = document.metadata!['relativePath'] as String?;
         final folderName = document.metadata!['folderName'] as String?;
-        
+
         if (folderName != null && folderName.isNotEmpty) {
           // 如果有文件夹名称，先添加文件夹名称
           targetChunkDir = path.join(chunksDir, folderName);
-          
+
           // 如果有相对路径，进一步构建子目录
           if (relativePath != null && relativePath.isNotEmpty) {
             final relativeDir = path.dirname(relativePath);
@@ -1747,23 +2055,24 @@ abstract class BaseRagProvider {
           }
         }
       }
-      
+
       // 确保目标目录存在
       await Directory(targetChunkDir).create(recursive: true);
-      
+
       // 为每个分块保存JSON文件，使用有意义的文件名
       final baseFileName = path.basenameWithoutExtension(document.fileName);
       final fileExtension = document.fileExtension ?? '';
-      
+
       for (int i = 0; i < chunks.length; i++) {
         final chunk = chunks[i];
-        final chunkFileName = '${baseFileName}_chunk_${i.toString().padLeft(3, '0')}${fileExtension}.json';
+        final chunkFileName =
+            '${baseFileName}_chunk_${i.toString().padLeft(3, '0')}$fileExtension.json';
         final chunkFilePath = path.join(targetChunkDir, chunkFileName);
-        
+
         final chunkFile = File(chunkFilePath);
         await chunkFile.writeAsString(chunk.toJson());
       }
-      
+
       if (kDebugMode) {
         print('分块文件保存成功:');
         print('  原文件: ${document.filePath}');
@@ -1780,26 +2089,32 @@ abstract class BaseRagProvider {
   }
 
   /// 添加代码分块的辅助方法
-  Future<void> _addCodeChunk(List<RagChunk> chunks, RagDocument document, List<String> lines, int startLine, int endLine, int chunkIndex) async {
+  Future<void> _addCodeChunk(
+    List<RagChunk> chunks,
+    RagDocument document,
+    List<String> lines,
+    int startLine,
+    int endLine,
+    int chunkIndex,
+  ) async {
     if (startLine > endLine || startLine >= lines.length) return;
-    
+
     final actualEndLine = math.min(endLine, lines.length - 1);
     final chunkLines = lines.sublist(startLine, actualEndLine + 1);
     final content = chunkLines.join('\n');
-    
+
     if (content.trim().isEmpty) return;
-    
+
     // 计算在原始内容中的位置
     int startPosition = 0;
     for (int i = 0; i < startLine; i++) {
       startPosition += lines[i].length + 1; // +1 for \n
     }
-    
-    int endPosition = startPosition + content.length;
-    
-    final chunk = RagChunk.create(
 
-                  modelId: _model!.modelId,
+    int endPosition = startPosition + content.length;
+
+    final chunk = RagChunk.create(
+      modelId: _model!.modelId,
       documentId: document.id,
       content: content,
       startPosition: startPosition,
@@ -1815,7 +2130,7 @@ abstract class BaseRagProvider {
         'line_count': actualEndLine - startLine + 1,
       },
     );
-    
+
     chunks.add(chunk);
   }
 
@@ -1827,7 +2142,7 @@ abstract class BaseRagProvider {
   int _findBlockEnd(List<String> lines, int startLine) {
     int braceCount = 0;
     bool foundOpenBrace = false;
-    
+
     for (int i = startLine; i < lines.length; i++) {
       final line = lines[i];
       for (int j = 0; j < line.length; j++) {
@@ -1842,26 +2157,26 @@ abstract class BaseRagProvider {
         }
       }
     }
-    
+
     return lines.length - 1;
   }
 
   /// 查找Python代码块结束位置（通过缩进）
   int _findPythonBlockEnd(List<String> lines, int startLine) {
     if (startLine >= lines.length) return startLine;
-    
+
     final startIndent = _getIndentLevel(lines[startLine]);
-    
+
     for (int i = startLine + 1; i < lines.length; i++) {
       final line = lines[i].trim();
       if (line.isEmpty) continue;
-      
+
       final currentIndent = _getIndentLevel(lines[i]);
       if (currentIndent <= startIndent) {
         return i - 1;
       }
     }
-    
+
     return lines.length - 1;
   }
 
@@ -1884,26 +2199,31 @@ abstract class BaseRagProvider {
   int _findFunctionEnd(List<String> lines, int startLine) {
     // 对于简单函数，查找下一个空行或者下一个相同缩进级别的代码
     final startIndent = _getIndentLevel(lines[startLine]);
-    
+
     for (int i = startLine + 1; i < lines.length; i++) {
       final line = lines[i].trim();
       if (line.isEmpty) continue;
-      
+
       final currentIndent = _getIndentLevel(lines[i]);
-      if (currentIndent <= startIndent && !line.startsWith('//') && !line.startsWith('*')) {
+      if (currentIndent <= startIndent &&
+          !line.startsWith('//') &&
+          !line.startsWith('*')) {
         return i - 1;
       }
     }
-    
+
     return lines.length - 1;
   }
 
   /// 检测是否是顶级函数
   bool _isTopLevelFunction(String line) {
-    return (line.contains('(') && line.contains(')') && 
-            !line.startsWith('//') && !line.startsWith('*') &&
-            (line.contains('func ') || line.contains('function ') || 
-             RegExp(r'^\w+\s*\(').hasMatch(line)));
+    return (line.contains('(') &&
+        line.contains(')') &&
+        !line.startsWith('//') &&
+        !line.startsWith('*') &&
+        (line.contains('func ') ||
+            line.contains('function ') ||
+            RegExp(r'^\w+\s*\(').hasMatch(line)));
   }
 
   /// 检测是否在类内部
@@ -1929,24 +2249,28 @@ abstract class BaseRagProvider {
   /// 查找XML标签结束位置
   int _findXmlTagEnd(List<String> lines, int startLine, String tagName) {
     final closeTag = '</$tagName>';
-    
+
     for (int i = startLine; i < lines.length; i++) {
       if (lines[i].contains(closeTag)) {
         return i;
       }
     }
-    
+
     return lines.length - 1;
   }
 
   /// 分块JSON数据
-  List<RagChunk> _chunkJsonData(RagDocument document, dynamic jsonData, String content) {
+  List<RagChunk> _chunkJsonData(
+    RagDocument document,
+    dynamic jsonData,
+    String content,
+  ) {
     final chunks = <RagChunk>[];
-    
+
     if (jsonData is Map) {
       int chunkIndex = 0;
       int position = 0;
-      
+
       for (final entry in jsonData.entries) {
         final keyValue = '"${entry.key}": ${json.encode(entry.value)}';
         final chunk = RagChunk.create(
@@ -1968,7 +2292,7 @@ abstract class BaseRagProvider {
       for (int i = 0; i < jsonData.length; i++) {
         final itemContent = json.encode(jsonData[i]);
         final chunk = RagChunk.create(
-                    modelId: _model!.modelId,
+          modelId: _model!.modelId,
 
           documentId: document.id,
           content: itemContent,
@@ -1983,7 +2307,7 @@ abstract class BaseRagProvider {
         chunks.add(chunk);
       }
     }
-    
+
     return chunks;
   }
 
@@ -1992,21 +2316,21 @@ abstract class BaseRagProvider {
     if (_model?.modelId == null) {
       return [];
     }
-    
+
     try {
       final ragDir = path.join('assets/RAG', _model!.modelId);
       final chunksDir = path.join(ragDir, 'chunks');
-      
+
       // 重建目标目录路径
       String targetChunkDir = chunksDir;
-      
+
       if (document.metadata != null) {
         final relativePath = document.metadata!['relativePath'] as String?;
         final folderName = document.metadata!['folderName'] as String?;
-        
+
         if (folderName != null && folderName.isNotEmpty) {
           targetChunkDir = path.join(chunksDir, folderName);
-          
+
           if (relativePath != null && relativePath.isNotEmpty) {
             final relativeDir = path.dirname(relativePath);
             if (relativeDir != '.' && relativeDir.isNotEmpty) {
@@ -2020,15 +2344,15 @@ abstract class BaseRagProvider {
           }
         }
       }
-      
+
       final chunkDirectory = Directory(targetChunkDir);
       if (!await chunkDirectory.exists()) {
         return [];
       }
-      
+
       final baseFileName = path.basenameWithoutExtension(document.fileName);
       final chunks = <RagChunk>[];
-      
+
       // 查找所有相关的分块文件
       await for (final entity in chunkDirectory.list()) {
         if (entity is File && entity.path.contains('${baseFileName}_chunk_')) {
@@ -2043,14 +2367,14 @@ abstract class BaseRagProvider {
           }
         }
       }
-      
+
       // 按分块索引排序
       chunks.sort((a, b) => a.chunkIndex.compareTo(b.chunkIndex));
-      
+
       if (kDebugMode) {
         print('找到文档 ${document.fileName} 的 ${chunks.length} 个分块');
       }
-      
+
       return chunks;
     } catch (e) {
       if (kDebugMode) {
@@ -2065,21 +2389,21 @@ abstract class BaseRagProvider {
     if (_model?.modelId == null) {
       return false;
     }
-    
+
     try {
       final ragDir = path.join('assets/RAG', _model!.modelId);
       final chunksDir = path.join(ragDir, 'chunks');
-      
+
       // 重建目标目录路径
       String targetChunkDir = chunksDir;
-      
+
       if (document.metadata != null) {
         final relativePath = document.metadata!['relativePath'] as String?;
         final folderName = document.metadata!['folderName'] as String?;
-        
+
         if (folderName != null && folderName.isNotEmpty) {
           targetChunkDir = path.join(chunksDir, folderName);
-          
+
           if (relativePath != null && relativePath.isNotEmpty) {
             final relativeDir = path.dirname(relativePath);
             if (relativeDir != '.' && relativeDir.isNotEmpty) {
@@ -2093,15 +2417,15 @@ abstract class BaseRagProvider {
           }
         }
       }
-      
+
       final chunkDirectory = Directory(targetChunkDir);
       if (!await chunkDirectory.exists()) {
         return true; // 目录不存在，认为删除成功
       }
-      
+
       final baseFileName = path.basenameWithoutExtension(document.fileName);
       int deletedCount = 0;
-      
+
       // 删除所有相关的分块文件
       await for (final entity in chunkDirectory.list()) {
         if (entity is File && entity.path.contains('${baseFileName}_chunk_')) {
@@ -2115,11 +2439,11 @@ abstract class BaseRagProvider {
           }
         }
       }
-      
+
       if (kDebugMode) {
         print('删除文档 ${document.fileName} 的 $deletedCount 个分块文件');
       }
-      
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -2134,11 +2458,11 @@ abstract class BaseRagProvider {
     if (_model?.modelId == null) {
       return;
     }
-    
+
     try {
       final ragDir = path.join('assets/RAG', _model!.modelId);
       final chunksDir = Directory(path.join(ragDir, 'chunks'));
-      
+
       if (await chunksDir.exists()) {
         await chunksDir.delete(recursive: true);
         if (kDebugMode) {
@@ -2157,9 +2481,9 @@ abstract class BaseRagProvider {
 /// RAG异常
 class RagException implements Exception {
   final String message;
-  
+
   const RagException(this.message);
-  
+
   @override
   String toString() => 'RagException: $message';
 }

@@ -116,78 +116,89 @@ class ModelListTab extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Builder(
-        builder: (context) => GestureDetector(
-          onTap: () => onModelSelected(index),
-          onSecondaryTapDown: (details) => _showContextMenu(context, details, model),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
-                width: 1,
+        builder:
+            (context) => GestureDetector(
+              onTap: () => onModelSelected(index),
+              onSecondaryTapDown:
+                  (details) => _showContextMenu(context, details, model),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color:
+                      isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color:
+                        isSelected
+                            ? const Color(0xFF3B82F6)
+                            : Colors.transparent,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // 模型图标
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: ModelIconUtils.buildModelIconWidget(
+                        model.name,
+                        isSelected,
+                        provider: model.provider,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // 模型信息
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            model.name,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? Colors.white : Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // 状态指示器
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color:
+                            model.status == 'active'
+                                ? (isSelected
+                                    ? Colors.white
+                                    : const Color(0xFF10B981))
+                                : (isSelected
+                                    ? Colors.white.withOpacity(0.5)
+                                    : Colors.grey[400]),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            child: Row(
-              children: [
-                // 模型图标
-                Container(
-                  width: 32,
-                  height: 32,
-                  child: ModelIconUtils.buildModelIconWidget(
-                    model.name,
-                    isSelected,
-                    provider: model.provider,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // 模型信息
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        model.name,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                // 状态指示器
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color:
-                        model.status == 'active'
-                            ? (isSelected
-                                ? Colors.white
-                                : const Color(0xFF10B981))
-                            : (isSelected
-                                ? Colors.white.withOpacity(0.5)
-                                : Colors.grey[400]),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
 
   /// 显示右键菜单
-  void _showContextMenu(BuildContext context, TapDownDetails details, ChatModel model) {
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    
+  void _showContextMenu(
+    BuildContext context,
+    TapDownDetails details,
+    ChatModel model,
+  ) {
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+
     showMenu(
       context: context,
       position: RelativeRect.fromRect(
@@ -239,7 +250,7 @@ class ModelListTab extends StatelessWidget {
       updatedAt: DateTime.now(),
       // 清空不需要复制的配置
       chatSettings: null, // 不复制对话设置
-      mcpServices: null,  // 不复制MCP配置
+      mcpServices: null, // 不复制MCP配置
       chatCommands: null, // 不复制快捷指令
     );
 
@@ -250,18 +261,18 @@ class ModelListTab extends StatelessWidget {
   String _generateCopyName(String originalName) {
     // 检查是否已有相同名称的模型
     final existingNames = models.map((m) => m.name).toSet();
-    
+
     // 如果原名称没有冲突，直接添加2
     String baseName = originalName;
     String newName = '$baseName 2';
-    
+
     // 如果新名称已存在，继续递增数字
     int counter = 2;
     while (existingNames.contains(newName)) {
       counter++;
       newName = '$baseName $counter';
     }
-    
+
     return newName;
   }
 }

@@ -32,15 +32,15 @@ class _RagTabState extends State<RagTab> {
   List<RagDocument> _documents = [];
   bool _isLoading = false;
   bool _isUploading = false;
-  
+
   // 构建知识库进度状态
   bool _isBuildingKnowledgeBase = false;
   int _buildProgress = 0; // 当前处理的文档数量
   int _totalDocuments = 0; // 总文档数量
   String _currentProcessingFile = ''; // 当前正在处理的文件名
-  
+
   // 文件夹结构相关状态
-  Map<String, List<RagDocument>> _folderStructure = {};
+  final Map<String, List<RagDocument>> _folderStructure = {};
   List<String> _currentPath = [];
 
   @override
@@ -48,13 +48,13 @@ class _RagTabState extends State<RagTab> {
     super.initState();
     _currentModel = widget.model;
     _ragDocumentController = TextEditingController();
-    
+
     // 异步初始化RAG知识库
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeRagKnowledgeBase();
     });
   }
-  
+
   /// 上传文件夹，保存到 assets/rag/$ragId/documents, 保留目录结构
   void _uploadFolder() async {
     if (_ragId == null) {
@@ -70,14 +70,13 @@ class _RagTabState extends State<RagTab> {
           _isUploading = true;
         });
 
-        final documents = await LlmClient.fromModel(_currentModel).importFolderToRag(
-          folderPath: selectedDirectory,
-          recursive: true,
-        );
+        final documents = await LlmClient.fromModel(
+          _currentModel,
+        ).importFolderToRag(folderPath: selectedDirectory, recursive: true);
 
         if (mounted) {
           SnackBarUtils.showSuccess(context, '成功导入 ${documents.length} 个文件');
-          
+
           // 重新加载文档列表
           await _loadDocuments();
         }
@@ -114,15 +113,14 @@ class _RagTabState extends State<RagTab> {
         });
 
         final List<RagDocument> allDocuments = [];
-        
+
         for (final file in result.files) {
           if (file.path != null) {
             try {
-              final document = await LlmClient.fromModel(_currentModel).importFileToRag(
-                filePath: file.path!,
-                customTitle: file.name,
-              );
-              
+              final document = await LlmClient.fromModel(
+                _currentModel,
+              ).importFileToRag(filePath: file.path!, customTitle: file.name);
+
               allDocuments.add(document);
             } catch (e) {
               print('导入文件 ${file.name} 失败: $e');
@@ -132,7 +130,7 @@ class _RagTabState extends State<RagTab> {
 
         if (mounted) {
           SnackBarUtils.showSuccess(context, '成功导入 ${allDocuments.length} 个文件');
-          
+
           await _loadDocuments();
         }
       }
@@ -164,14 +162,13 @@ class _RagTabState extends State<RagTab> {
         });
 
         // 使用LlmClient导入文件夹
-        final documents = await LlmClient.fromModel(_currentModel).importFolderToRag(
-          folderPath: selectedDirectory,
-          recursive: true,
-        );
+        final documents = await LlmClient.fromModel(
+          _currentModel,
+        ).importFolderToRag(folderPath: selectedDirectory, recursive: true);
 
         if (mounted) {
           SnackBarUtils.showSuccess(context, '代码库导入完成：${documents.length} 个文件');
-          
+
           await _loadDocuments();
         }
       }
@@ -199,23 +196,24 @@ class _RagTabState extends State<RagTab> {
       print('创建新的RAG知识库...');
       // 创建RAG知识库目录结构（现在使用modelId）
       await LlmClient.fromModel(_currentModel).createRagKnowledgeBase();
-      
+
       // RAG系统现在直接使用modelId，不需要单独存储知识库对象
-      
+
       widget.onModelUpdated(_currentModel);
     }
 
     _ragId = _currentModel.ragId;
     print('开始初始化RAG知识库，RAG ID: $_ragId');
-    
+
     setState(() {
       _isLoading = true;
     });
 
     try {
       // 加载知识库信息
-      _knowledgeBase = await LlmClient.fromModel(_currentModel).getRagKnowledgeBase();
-      
+      _knowledgeBase =
+          await LlmClient.fromModel(_currentModel).getRagKnowledgeBase();
+
       if (_knowledgeBase != null) {
         print('知识库加载成功，文档数量: ${_knowledgeBase!.documents.length}');
         _documents = _knowledgeBase!.documents;
@@ -224,7 +222,7 @@ class _RagTabState extends State<RagTab> {
         print('知识库不存在或为空');
         _documents = [];
       }
-      
+
       print('RAG知识库初始化完成');
     } catch (e) {
       print('RAG知识库初始化失败: $e');
@@ -247,14 +245,17 @@ class _RagTabState extends State<RagTab> {
       print('开始加载已有文档，RAG ID: $_ragId');
 
       // 从LlmClient加载文档
-      final docs = await LlmClient.fromModel(_currentModel).getAllRagDocuments();
+      final docs =
+          await LlmClient.fromModel(_currentModel).getAllRagDocuments();
       print('获取到 ${docs.length} 个文档');
 
       print('文档加载完成，找到 ${docs.length} 个文档');
       if (docs.isNotEmpty) {
         print('文档详情:');
         for (int i = 0; i < docs.length && i < 3; i++) {
-          print('  文档${i + 1}: ${docs[i].title} (${docs[i].formattedFileSize})');
+          print(
+            '  文档${i + 1}: ${docs[i].title} (${docs[i].formattedFileSize})',
+          );
         }
       }
 
@@ -279,7 +280,7 @@ class _RagTabState extends State<RagTab> {
   /// 构建文件夹结构
   void _buildFolderStructure(List<RagDocument> docs) {
     _folderStructure.clear();
-    
+
     for (final doc in docs) {
       final metadata = doc.metadata;
       if (metadata == null) {
@@ -287,10 +288,10 @@ class _RagTabState extends State<RagTab> {
         _folderStructure.putIfAbsent('', () => []).add(doc);
         continue;
       }
-      
+
       final relativePath = metadata['relativePath'] as String?;
       final folderName = metadata['folderName'] as String?;
-      
+
       if (relativePath == null || relativePath.isEmpty) {
         // 没有相对路径的文档，检查是否有文件夹名称
         if (folderName != null && folderName.isNotEmpty) {
@@ -301,7 +302,7 @@ class _RagTabState extends State<RagTab> {
         }
         continue;
       }
-      
+
       // 解析完整路径
       String fullPath = '';
       if (folderName != null && folderName.isNotEmpty) {
@@ -326,10 +327,10 @@ class _RagTabState extends State<RagTab> {
           fullPath = '';
         }
       }
-      
+
       _folderStructure.putIfAbsent(fullPath, () => []).add(doc);
     }
-    
+
     print('文件夹结构构建完成：');
     _folderStructure.forEach((path, files) {
       print('  路径 "$path": ${files.length} 个文件');
@@ -340,10 +341,10 @@ class _RagTabState extends State<RagTab> {
   List<dynamic> _getCurrentDirectoryItems() {
     final currentPathStr = _currentPath.join('/');
     List<dynamic> items = [];
-    
+
     // 收集子文件夹
     Set<String> subFolders = {};
-    
+
     // 遍历所有已知的文件夹路径
     for (final folderPath in _folderStructure.keys) {
       if (currentPathStr.isEmpty) {
@@ -358,7 +359,7 @@ class _RagTabState extends State<RagTab> {
         if (folderPath.startsWith('$currentPathStr/')) {
           // 获取当前路径后的剩余部分
           final remainingPath = folderPath.substring(currentPathStr.length + 1);
-          
+
           if (remainingPath.contains('/')) {
             // 如果剩余路径还包含斜杠，说明还有更深层的目录
             final nextFolder = remainingPath.split('/')[0];
@@ -370,21 +371,18 @@ class _RagTabState extends State<RagTab> {
         }
       }
     }
-    
+
     // 添加文件夹项
     for (final folder in subFolders) {
-      final folderPath = currentPathStr.isEmpty ? folder : '$currentPathStr/$folder';
-      items.add({
-        'type': 'folder',
-        'name': folder,
-        'path': folderPath,
-      });
+      final folderPath =
+          currentPathStr.isEmpty ? folder : '$currentPathStr/$folder';
+      items.add({'type': 'folder', 'name': folder, 'path': folderPath});
     }
-    
+
     // 添加当前目录的文件
     final currentFiles = _folderStructure[currentPathStr] ?? [];
     items.addAll(currentFiles);
-    
+
     return items;
   }
 
@@ -420,7 +418,6 @@ class _RagTabState extends State<RagTab> {
       SnackBarUtils.showSuccess(context, '已刷新，找到 ${_documents.length} 个文档');
     }
   }
-
 
   /// 构建知识库 - 后台异步执行切片任务
   Future<void> _buildKnowledgeBase() async {
@@ -476,11 +473,11 @@ class _RagTabState extends State<RagTab> {
 
           // 为文档创建分块
           final chunks = await ragClient.chunkDocument(document);
-          
+
           if (chunks.isNotEmpty) {
             totalChunks += chunks.length;
             processedFiles.add(document.fileName);
-            
+
             if (kDebugMode) {
               print('文档 ${document.fileName} 分块完成，生成 ${chunks.length} 个分块');
             }
@@ -489,22 +486,21 @@ class _RagTabState extends State<RagTab> {
               print('文档 ${document.fileName} 内容为空或无法分块');
             }
           }
-          
+
           processedCount++;
-          
+
           // 更新进度状态
           if (mounted) {
             setState(() {
               _buildProgress = processedCount;
             });
           }
-
         } catch (e) {
           failedFiles.add(document.fileName);
           if (kDebugMode) {
             print('处理文档 ${document.fileName} 失败: $e');
           }
-          
+
           processedCount++;
           if (mounted) {
             setState(() {
@@ -520,25 +516,27 @@ class _RagTabState extends State<RagTab> {
         print('- 生成分块: $totalChunks 个');
         print('- 失败文件: ${failedFiles.length} 个');
       }
-      
+
       // 显示完成提示
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        
+
         if (failedFiles.isEmpty) {
-          final message = '知识库构建完成！\n'
+          final message =
+              '知识库构建完成！\n'
               '成功处理 ${processedFiles.length} 个文档\n'
               '生成 $totalChunks 个智能分块\n'
               '支持代码语法感知和语义搜索';
           SnackBarUtils.showSuccess(context, message);
         } else {
-          final message = '知识库构建部分完成\n'
+          final message =
+              '知识库构建部分完成\n'
               '成功处理: ${processedFiles.length} 个文档\n'
               '生成分块: $totalChunks 个\n'
               '失败文件: ${failedFiles.length} 个';
           SnackBarUtils.showWarning(context, message);
         }
-        
+
         // 重置构建状态
         setState(() {
           _isBuildingKnowledgeBase = false;
@@ -554,7 +552,7 @@ class _RagTabState extends State<RagTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         SnackBarUtils.showError(context, '知识库构建失败: $e');
-        
+
         // 重置构建状态（即使失败也要重置）
         setState(() {
           _isBuildingKnowledgeBase = false;
@@ -565,7 +563,6 @@ class _RagTabState extends State<RagTab> {
       }
     }
   }
-
 
   /// 调试RAG存储状态
 
@@ -582,9 +579,7 @@ class _RagTabState extends State<RagTab> {
       children: [
         const SizedBox(height: 12),
         // 文档管理卡片
-        Expanded(
-          child: _buildDocumentUploadSection(),
-        ),
+        Expanded(child: _buildDocumentUploadSection()),
       ],
     );
   }
@@ -611,9 +606,8 @@ class _RagTabState extends State<RagTab> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-         
-          Row(
-            children: [
+            Row(
+              children: [
                 IconButton(
                   onPressed: _isLoading ? null : _refreshDocuments,
                   icon: const Icon(CupertinoIcons.refresh, size: 12),
@@ -651,25 +645,27 @@ class _RagTabState extends State<RagTab> {
                 ),
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  onSelected: _isUploading ? null : (value) {
-                    switch (value) {
-                      case 'file':
-                        _importFiles();
-                        break;
-                      case 'folder':
-                        _uploadFolder();
-                        break;
-                      case 'codebase':
-                        _importCodebase();
-                        break;
-                      case 'git':
-                        _importFromGit();
-                        break;
-                    }
-                  },
+                  onSelected:
+                      _isUploading
+                          ? null
+                          : (value) {
+                            switch (value) {
+                              case 'file':
+                                _importFiles();
+                                break;
+                              case 'folder':
+                                _uploadFolder();
+                                break;
+                              case 'codebase':
+                                _importCodebase();
+                                break;
+                              case 'git':
+                                _importFromGit();
+                                break;
+                            }
+                          },
                   itemBuilder:
                       (BuildContext context) => [
-                      
                         const PopupMenuItem<String>(
                           value: 'file',
                           child: Row(
@@ -694,7 +690,10 @@ class _RagTabState extends State<RagTab> {
                           value: 'codebase',
                           child: Row(
                             children: [
-                              Icon(CupertinoIcons.square_stack_3d_down_right, size: 14),
+                              Icon(
+                                CupertinoIcons.square_stack_3d_down_right,
+                                size: 14,
+                              ),
                               SizedBox(width: 8),
                               Text('导入代码库', style: TextStyle(fontSize: 12)),
                             ],
@@ -717,7 +716,8 @@ class _RagTabState extends State<RagTab> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: _isUploading ? Colors.grey : const Color(0xFF3B82F6),
+                      color:
+                          _isUploading ? Colors.grey : const Color(0xFF3B82F6),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
@@ -729,7 +729,9 @@ class _RagTabState extends State<RagTab> {
                             height: 8,
                             child: CircularProgressIndicator(
                               strokeWidth: 1,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -761,7 +763,10 @@ class _RagTabState extends State<RagTab> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
-                  onPressed: (_isUploading || _isBuildingKnowledgeBase) ? null : _buildKnowledgeBase,
+                  onPressed:
+                      (_isUploading || _isBuildingKnowledgeBase)
+                          ? null
+                          : _buildKnowledgeBase,
                   icon: const Icon(CupertinoIcons.gear_alt, size: 10),
                   label: const Text('构建知识库'),
                   style: ElevatedButton.styleFrom(
@@ -783,7 +788,10 @@ class _RagTabState extends State<RagTab> {
                   const SizedBox(width: 8),
                   Container(
                     height: 16, // 与构建按钮高度一致
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.blue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
@@ -797,7 +805,9 @@ class _RagTabState extends State<RagTab> {
                           height: 8,
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.blue,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -836,73 +846,74 @@ class _RagTabState extends State<RagTab> {
               border: Border.all(color: Colors.grey.withOpacity(0.1)),
             ),
             child:
-              _isLoading
-                  ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          color: Color(0xFF3B82F6),
-                          strokeWidth: 2,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          '正在加载文档...',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  )
-                  : _getCurrentDirectoryItems().isEmpty
-                  ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _currentPath.isEmpty 
-                            ? CupertinoIcons.doc_text
-                            : CupertinoIcons.folder,
-                          size: 32,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _currentPath.isEmpty ? '暂无文档' : '文件夹为空',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                            fontWeight: FontWeight.w500,
+                _isLoading
+                    ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: Color(0xFF3B82F6),
+                            strokeWidth: 2,
                           ),
-                        ),
-                        if (_currentPath.isEmpty) ...[
-                          const SizedBox(height: 4),
+                          SizedBox(height: 8),
                           Text(
-                            '支持单个文件、文件夹和Git仓库导入\n文档格式：TXT、MD、JSON、CSV、DOC、DOCX等\n代码格式：Dart、JS、TS、Python、Java、Go等',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[400],
-                            ),
-                            textAlign: TextAlign.center,
+                            '正在加载文档...',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ],
-                      ],
+                      ),
+                    )
+                    : _getCurrentDirectoryItems().isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _currentPath.isEmpty
+                                ? CupertinoIcons.doc_text
+                                : CupertinoIcons.folder,
+                            size: 32,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _currentPath.isEmpty ? '暂无文档' : '文件夹为空',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (_currentPath.isEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '支持单个文件、文件夹和Git仓库导入\n文档格式：TXT、MD、JSON、CSV、DOC、DOCX等\n代码格式：Dart、JS、TS、Python、Java、Go等',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[400],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ],
+                      ),
+                    )
+                    : ListView.builder(
+                      itemCount: _getCurrentDirectoryItems().length,
+                      itemBuilder: (context, index) {
+                        final item = _getCurrentDirectoryItems()[index];
+
+                        if (item is Map<String, dynamic> &&
+                            item['type'] == 'folder') {
+                          // 文件夹项
+                          return _buildFolderItem(item);
+                        } else {
+                          // 文件项
+                          final doc = item as RagDocument;
+                          return _buildDocumentItem(doc);
+                        }
+                      },
                     ),
-                  )
-                  : ListView.builder(
-                    itemCount: _getCurrentDirectoryItems().length,
-                    itemBuilder: (context, index) {
-                      final item = _getCurrentDirectoryItems()[index];
-                      
-                      if (item is Map<String, dynamic> && item['type'] == 'folder') {
-                        // 文件夹项
-                        return _buildFolderItem(item);
-                      } else {
-                        // 文件项
-                        final doc = item as RagDocument;
-                        return _buildDocumentItem(doc);
-                      }
-                    },
-                  ),
           ),
         ),
         const SizedBox(height: 4),
@@ -915,7 +926,7 @@ class _RagTabState extends State<RagTab> {
             if (_currentPath.isNotEmpty) ...[
               const SizedBox(width: 8),
               Text(
-                '(当前目录: ${_getCurrentDirectoryItems().where((item) => item is RagDocument).length} 个文件)',
+                '(当前目录: ${_getCurrentDirectoryItems().whereType<RagDocument>().length} 个文件)',
                 style: TextStyle(fontSize: 10, color: Colors.grey[500]),
               ),
             ],
@@ -953,7 +964,10 @@ class _RagTabState extends State<RagTab> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: _currentPath.isEmpty ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+                color:
+                    _currentPath.isEmpty
+                        ? Colors.blue.withOpacity(0.1)
+                        : Colors.transparent,
                 borderRadius: BorderRadius.circular(3),
               ),
               child: Row(
@@ -962,26 +976,39 @@ class _RagTabState extends State<RagTab> {
                   Icon(
                     CupertinoIcons.home,
                     size: 12,
-                    color: _currentPath.isEmpty ? Colors.blue[600] : Colors.grey[600],
+                    color:
+                        _currentPath.isEmpty
+                            ? Colors.blue[600]
+                            : Colors.grey[600],
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '根目录',
                     style: TextStyle(
                       fontSize: 11,
-                      color: _currentPath.isEmpty ? Colors.blue[600] : Colors.grey[600],
-                      fontWeight: _currentPath.isEmpty ? FontWeight.w600 : FontWeight.normal,
+                      color:
+                          _currentPath.isEmpty
+                              ? Colors.blue[600]
+                              : Colors.grey[600],
+                      fontWeight:
+                          _currentPath.isEmpty
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          
+
           // 路径分隔符和路径项
           for (int i = 0; i < _currentPath.length; i++) ...[
             const SizedBox(width: 4),
-            Icon(CupertinoIcons.chevron_right, size: 10, color: Colors.grey[500]),
+            Icon(
+              CupertinoIcons.chevron_right,
+              size: 10,
+              color: Colors.grey[500],
+            ),
             const SizedBox(width: 4),
             GestureDetector(
               onTap: () {
@@ -995,23 +1022,32 @@ class _RagTabState extends State<RagTab> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: i == _currentPath.length - 1 ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+                  color:
+                      i == _currentPath.length - 1
+                          ? Colors.blue.withOpacity(0.1)
+                          : Colors.transparent,
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Text(
                   _currentPath[i],
                   style: TextStyle(
                     fontSize: 11,
-                    color: i == _currentPath.length - 1 ? Colors.blue[600] : Colors.grey[600],
-                    fontWeight: i == _currentPath.length - 1 ? FontWeight.w600 : FontWeight.normal,
+                    color:
+                        i == _currentPath.length - 1
+                            ? Colors.blue[600]
+                            : Colors.grey[600],
+                    fontWeight:
+                        i == _currentPath.length - 1
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                   ),
                 ),
               ),
             ),
           ],
-          
+
           const Spacer(),
-          
+
           // 返回按钮
           if (_currentPath.isNotEmpty)
             GestureDetector(
@@ -1038,24 +1074,25 @@ class _RagTabState extends State<RagTab> {
   Widget _buildFolderItem(Map<String, dynamic> folderItem) {
     final folderName = folderItem['name'] as String;
     final folderPath = folderItem['path'] as String;
-    
+
     // 统计文件夹中的文件数量、总大小和最新上传时间
     int fileCount = 0;
     int totalSize = 0;
     DateTime? latestUploadTime;
-    
+
     _folderStructure.forEach((path, files) {
       if (path.startsWith(folderPath)) {
         fileCount += files.length;
         for (final file in files) {
           totalSize += file.fileSize ?? 0;
-          if (latestUploadTime == null || file.uploadTime.isAfter(latestUploadTime!)) {
+          if (latestUploadTime == null ||
+              file.uploadTime.isAfter(latestUploadTime!)) {
             latestUploadTime = file.uploadTime;
           }
         }
       }
     });
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       child: Material(
@@ -1068,9 +1105,7 @@ class _RagTabState extends State<RagTab> {
             decoration: BoxDecoration(
               color: Colors.blue.withOpacity(0.03),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: Colors.blue.withOpacity(0.2),
-              ),
+              border: Border.all(color: Colors.blue.withOpacity(0.2)),
             ),
             child: Row(
               children: [
@@ -1104,16 +1139,13 @@ class _RagTabState extends State<RagTab> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      
+
                       Text(
                         '$fileCount 个文件',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 6),
-                     
+
                       // 文件夹大小和上传时间
                       Row(
                         children: [
@@ -1137,7 +1169,7 @@ class _RagTabState extends State<RagTab> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                        
+
                           // 上传时间
                           if (latestUploadTime != null) ...[
                             Icon(
@@ -1208,9 +1240,7 @@ class _RagTabState extends State<RagTab> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: Colors.grey.withOpacity(0.2),
-              ),
+              border: Border.all(color: Colors.grey.withOpacity(0.2)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.1),
@@ -1253,9 +1283,10 @@ class _RagTabState extends State<RagTab> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      
+
                       // 显示相对路径信息
-                      if (doc.metadata != null && doc.metadata!['relativePath'] != null) ...[
+                      if (doc.metadata != null &&
+                          doc.metadata!['relativePath'] != null) ...[
                         Row(
                           children: [
                             Icon(
@@ -1280,7 +1311,7 @@ class _RagTabState extends State<RagTab> {
                         ),
                         const SizedBox(height: 4),
                       ],
-                     
+
                       // 文件大小和上传时间
                       Row(
                         children: [
@@ -1379,7 +1410,8 @@ class _RagTabState extends State<RagTab> {
             ),
           ),
         ),
-      ));
+      ),
+    );
   }
 
   /// 显示文件内容对话框
@@ -1397,7 +1429,7 @@ class _RagTabState extends State<RagTab> {
   Future<void> _openFileWithSystem(RagDocument doc) async {
     try {
       final file = File(doc.filePath);
-      
+
       if (!await file.exists()) {
         if (mounted) {
           SnackBarUtils.showError(context, '文件不存在: ${doc.fileName}');
@@ -1410,7 +1442,10 @@ class _RagTabState extends State<RagTab> {
       if (Platform.isMacOS) {
         result = await Process.run('open', [doc.filePath]);
       } else if (Platform.isWindows) {
-        result = await Process.run('start', ['', doc.filePath], runInShell: true);
+        result = await Process.run('start', [
+          '',
+          doc.filePath,
+        ], runInShell: true);
       } else if (Platform.isLinux) {
         result = await Process.run('xdg-open', [doc.filePath]);
       } else {
@@ -1420,7 +1455,7 @@ class _RagTabState extends State<RagTab> {
       if (result.exitCode != 0) {
         throw Exception('打开文件失败: ${result.stderr}');
       }
-      
+
       if (mounted) {
         SnackBarUtils.showSuccess(context, '已用系统默认程序打开: ${doc.fileName}');
       }
@@ -1452,8 +1487,11 @@ class _RagTabState extends State<RagTab> {
     try {
       // 解析git地址后面的目录名
       final uri = Uri.parse(gitUrl.trim());
-      String repoName = uri.pathSegments.isNotEmpty ? uri.pathSegments.last.replaceAll('.git', '') : 'git_repo';
-      final tempDir = Directory.systemTemp.createTempSync(repoName  );
+      String repoName =
+          uri.pathSegments.isNotEmpty
+              ? uri.pathSegments.last.replaceAll('.git', '')
+              : 'git_repo';
+      final tempDir = Directory.systemTemp.createTempSync(repoName);
       final repoPath = tempDir.path;
 
       SnackBarUtils.showInfo(context, '正在克隆仓库: $gitUrl');
@@ -1472,10 +1510,9 @@ class _RagTabState extends State<RagTab> {
       }
 
       // 使用LlmClient导入文件夹
-      final documents = await LlmClient.fromModel(_currentModel).importFolderToRag(
-        folderPath: repoPath,
-        recursive: true,
-      );
+      final documents = await LlmClient.fromModel(
+        _currentModel,
+      ).importFolderToRag(folderPath: repoPath, recursive: true);
 
       if (documents.isEmpty) {
         throw Exception('仓库中未找到有效的代码文件');
@@ -1483,7 +1520,7 @@ class _RagTabState extends State<RagTab> {
 
       if (mounted) {
         SnackBarUtils.showSuccess(context, 'Git仓库导入完成：${documents.length} 个文件');
-        
+
         await _loadDocuments();
       }
 
@@ -1514,7 +1551,7 @@ class _RagTabState extends State<RagTab> {
     return showDialog<String>(
       context: context,
       barrierDismissible: false,
-      
+
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -1602,10 +1639,10 @@ class _RagTabState extends State<RagTab> {
   /// 格式化上传时间
   String _formatUploadTime(DateTime? uploadTime) {
     if (uploadTime == null) return '未知时间';
-    
+
     final now = DateTime.now();
     final diff = now.difference(uploadTime);
-    
+
     if (diff.inDays > 0) {
       return '${diff.inDays}天前';
     } else if (diff.inHours > 0) {
@@ -1620,16 +1657,16 @@ class _RagTabState extends State<RagTab> {
   /// 格式化文件大小
   String _formatFileSize(int bytes) {
     if (bytes == 0) return '0 B';
-    
+
     const List<String> units = ['B', 'KB', 'MB', 'GB'];
     int unitIndex = 0;
     double size = bytes.toDouble();
-    
+
     while (size >= 1024 && unitIndex < units.length - 1) {
       size /= 1024;
       unitIndex++;
     }
-    
+
     if (unitIndex == 0) {
       return '${size.toInt()} ${units[unitIndex]}';
     } else {
@@ -1800,9 +1837,9 @@ class _RagTabState extends State<RagTab> {
       }
 
       // 删除文档记录
-      await LlmClient.fromModel(_currentModel).deleteRagDocument(
-        documentId: document.id,
-      );
+      await LlmClient.fromModel(
+        _currentModel,
+      ).deleteRagDocument(documentId: document.id);
 
       // 重新加载文档列表
       await _loadDocuments();
@@ -1879,10 +1916,10 @@ class _RagTabState extends State<RagTab> {
           }
 
           // 删除文档记录
-          await LlmClient.fromModel(_currentModel).deleteRagDocument(
-            documentId: document.id,
-          );
-          
+          await LlmClient.fromModel(
+            _currentModel,
+          ).deleteRagDocument(documentId: document.id);
+
           deletedCount++;
         } catch (e) {
           errors.add('删除文档 "${document.title}" 失败: $e');
@@ -1894,9 +1931,15 @@ class _RagTabState extends State<RagTab> {
 
       if (mounted) {
         if (errors.isEmpty) {
-          SnackBarUtils.showSuccess(context, '已删除文件夹 "$folderName" 及其 $deletedCount 个文件');
+          SnackBarUtils.showSuccess(
+            context,
+            '已删除文件夹 "$folderName" 及其 $deletedCount 个文件',
+          );
         } else {
-          SnackBarUtils.showWarning(context, '文件夹删除完成，成功删除 $deletedCount 个文件，${errors.length} 个失败');
+          SnackBarUtils.showWarning(
+            context,
+            '文件夹删除完成，成功删除 $deletedCount 个文件，${errors.length} 个失败',
+          );
         }
       }
     } catch (e) {
@@ -1938,10 +1981,10 @@ class _RagQueryTestDialogState extends State<_RagQueryTestDialog> {
   /// 格式化上传时间
   String _formatUploadTime(DateTime? uploadTime) {
     if (uploadTime == null) return '未知时间';
-    
+
     final now = DateTime.now();
     final diff = now.difference(uploadTime);
-    
+
     if (diff.inDays > 0) {
       return '${diff.inDays}天前';
     } else if (diff.inHours > 0) {
@@ -2107,7 +2150,7 @@ class _RagQueryTestDialogState extends State<_RagQueryTestDialog> {
               icon: const Icon(CupertinoIcons.search, size: 16),
               onPressed: _testRagQuery,
               tooltip: '测试查询',
-                       ),
+            ),
           ),
           style: const TextStyle(fontSize: 12),
           onSubmitted: (_) => _testRagQuery(),
@@ -2318,15 +2361,17 @@ class _RagQueryTestDialogState extends State<_RagQueryTestDialog> {
 
       // 使用LlmClient进行搜索
       print('使用LlmClient搜索...');
-      final results = await LlmClient.fromModel(widget.model).searchRagDocuments(
-        query: query,
-      );
+      final results = await LlmClient.fromModel(
+        widget.model,
+      ).searchRagDocuments(query: query);
 
       print('搜索结果: 找到 ${results.length} 个相关文档');
       for (int i = 0; i < results.length && i < 3; i++) {
         final result = results[i];
         final chunk = result.chunk;
-        print('  结果${i + 1}: ${chunk.sourceFilePath} (相似度: ${result.similarity.toStringAsFixed(3)})');
+        print(
+          '  结果${i + 1}: ${chunk.sourceFilePath} (相似度: ${result.similarity.toStringAsFixed(3)})',
+        );
         print('    内容预览: ${chunk.preview}');
       }
       print('==================');
@@ -2379,14 +2424,15 @@ class _FileContentDialogState extends State<_FileContentDialog> {
       if (await file.exists()) {
         final fileSize = await file.length();
         final extension = widget.document.fileExtension?.toLowerCase();
-        
+
         // 根据文件类型选择不同的读取方式
         if (extension == 'docx') {
           // 读取DOCX文件
           _content = await _readDocxFile(file);
         } else if (extension == 'doc') {
           // DOC文件暂时显示提示信息，因为需要更复杂的解析
-          _content = '抱歉，暂不支持直接预览.doc格式文件，请转换为.docx格式后重新上传。\n\n文件信息：\n文件名：${widget.document.fileName}\n文件大小：${widget.document.formattedFileSize}\n文件路径：${widget.document.filePath}';
+          _content =
+              '抱歉，暂不支持直接预览.doc格式文件，请转换为.docx格式后重新上传。\n\n文件信息：\n文件名：${widget.document.fileName}\n文件大小：${widget.document.formattedFileSize}\n文件路径：${widget.document.filePath}';
         } else {
           // 普通文本文件
           if (fileSize > 1024 * 1024) {
@@ -2420,11 +2466,11 @@ class _FileContentDialogState extends State<_FileContentDialog> {
   Future<String> _readDocxFile(File file) async {
     try {
       final text = await FileProcessingService.extractDocxText(file);
-      
+
       if (text.isEmpty) {
         return '文档内容为空或无法读取文本内容。\n\n文件信息：\n文件名：${widget.document.fileName}\n文件大小：${widget.document.formattedFileSize}';
       }
-      
+
       return text;
     } catch (e) {
       return '读取DOCX文件失败: $e\n\n可能原因：\n1. 文件损坏或格式不正确\n2. 文档包含复杂格式或加密\n3. 文件正在被其他程序使用\n\n文件信息：\n文件名：${widget.document.fileName}\n文件大小：${widget.document.formattedFileSize}';
@@ -2434,7 +2480,7 @@ class _FileContentDialogState extends State<_FileContentDialog> {
   /// 获取文件类型对应的语言标识（用于语法高亮）
   String _getLanguageFromExtension(String? extension) {
     if (extension == null) return 'text';
-    
+
     switch (extension.toLowerCase()) {
       case 'dart':
         return 'dart';
@@ -2512,9 +2558,7 @@ class _FileContentDialogState extends State<_FileContentDialog> {
               decoration: BoxDecoration(
                 color: Colors.grey.withOpacity(0.05),
                 border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey.withOpacity(0.2),
-                  ),
+                  bottom: BorderSide(color: Colors.grey.withOpacity(0.2)),
                 ),
               ),
               child: Row(
@@ -2602,82 +2646,83 @@ class _FileContentDialogState extends State<_FileContentDialog> {
             ),
             // 内容区域
             Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            color: Color(0xFF3B82F6),
-                            strokeWidth: 2,
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            '正在加载文件内容...',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
+              child:
+                  _isLoading
+                      ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              color: Color(0xFF3B82F6),
+                              strokeWidth: 2,
                             ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : _error.isNotEmpty
+                            SizedBox(height: 12),
+                            Text(
+                              '正在加载文件内容...',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      : _error.isNotEmpty
                       ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                CupertinoIcons.exclamationmark_triangle,
-                                size: 48,
-                                color: Colors.red[400],
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              CupertinoIcons.exclamationmark_triangle,
+                              size: 48,
+                              color: Colors.red[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              '加载失败',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.red[600],
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                '加载失败',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.red[600],
-                                ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _error,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _error,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        )
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      )
                       : Container(
-                          padding: const EdgeInsets.all(16),
-                          child: SingleChildScrollView(
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8F9FA),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Colors.grey.withOpacity(0.2),
-                                ),
+                        padding: const EdgeInsets.all(16),
+                        child: SingleChildScrollView(
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8F9FA),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.grey.withOpacity(0.2),
                               ),
-                              child: SelectableText(
-                                _content,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontFamily: 'Monaco, Consolas, monospace',
-                                  height: 1.4,
-                                  color: Color(0xFF2C3E50),
-                                ),
+                            ),
+                            child: SelectableText(
+                              _content,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontFamily: 'Monaco, Consolas, monospace',
+                                height: 1.4,
+                                color: Color(0xFF2C3E50),
                               ),
                             ),
                           ),
                         ),
+                      ),
             ),
             // 底部操作栏
             Container(
@@ -2685,27 +2730,19 @@ class _FileContentDialogState extends State<_FileContentDialog> {
               decoration: BoxDecoration(
                 color: Colors.grey.withOpacity(0.05),
                 border: Border(
-                  top: BorderSide(
-                    color: Colors.grey.withOpacity(0.2),
-                  ),
+                  top: BorderSide(color: Colors.grey.withOpacity(0.2)),
                 ),
               ),
               child: Row(
                 children: [
                   Text(
                     '文件路径: ${widget.document.filePath}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   ),
                   const Spacer(),
                   Text(
                     '语言: ${_getLanguageFromExtension(widget.document.fileExtension)}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   ),
                 ],
               ),

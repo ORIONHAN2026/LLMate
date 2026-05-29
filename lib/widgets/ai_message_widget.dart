@@ -2,11 +2,9 @@ import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/models/bigmodel/models.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/framework/llm_hub.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -107,7 +105,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   @override
   Widget build(BuildContext context) {
     // 调试信息：打印think内容状态
-   
+
     return Container(
       key: ValueKey(widget.message.msgId),
       margin: const EdgeInsets.only(bottom: 32),
@@ -148,7 +146,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         Icon(
                           CupertinoIcons.person_crop_circle,
                           size: 20,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
                         ),
                   ),
                   const SizedBox(width: 12),
@@ -158,7 +158,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // 消息内容区域 - 统一布局避免跳动
-                        if (_isStreaming && widget.message.content.isEmpty&& widget.message.think.isEmpty)
+                        if (_isStreaming &&
+                            widget.message.content.isEmpty &&
+                            widget.message.think.isEmpty)
                           // 流式传输时显示呼吸动画，保持最小高度
                           Container(
                             constraints: const BoxConstraints(minHeight: 24),
@@ -172,9 +174,13 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                       height: 8,
                                       margin: const EdgeInsets.only(right: 6),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6).withValues(
-                                          alpha: _breathingAnimation.value,
-                                        ),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6)
+                                            .withValues(
+                                              alpha: _breathingAnimation.value,
+                                            ),
                                         shape: BoxShape.circle,
                                       ),
                                     );
@@ -188,10 +194,15 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                       height: 8,
                                       margin: const EdgeInsets.only(right: 6),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6).withValues(
-                                          alpha:
-                                              _breathingAnimation.value * 0.7,
-                                        ),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6)
+                                            .withValues(
+                                              alpha:
+                                                  _breathingAnimation.value *
+                                                  0.7,
+                                            ),
                                         shape: BoxShape.circle,
                                       ),
                                     );
@@ -204,10 +215,15 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                       width: 8,
                                       height: 8,
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6).withValues(
-                                          alpha:
-                                              _breathingAnimation.value * 0.4,
-                                        ),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6)
+                                            .withValues(
+                                              alpha:
+                                                  _breathingAnimation.value *
+                                                  0.4,
+                                            ),
                                         shape: BoxShape.circle,
                                       ),
                                     );
@@ -227,21 +243,30 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                   margin: const EdgeInsets.only(bottom: 12),
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest
+                                        .withOpacity(0.3),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.outline.withOpacity(0.2),
                                       width: 1,
                                     ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         '💭 思考中...',
                                         style: TextStyle(
                                           fontSize: 10,
-                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.4),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -250,7 +275,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                         widget.message.think,
                                         style: TextStyle(
                                           fontSize: 11, // 更小的字体
-                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), // 更淡的颜色
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6), // 更淡的颜色
                                           fontStyle: FontStyle.italic,
                                           height: 1.4,
                                         ),
@@ -337,7 +365,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                   _formatTime(widget.message.timestamp),
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.5),
                                   ),
                                 ),
                               ],
@@ -348,9 +378,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     ),
                   ),
                 ],
-                ),
               ),
             ),
+          ),
         ),
       ),
     );
@@ -826,7 +856,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         // 处理content和think内容
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
-        
+
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
 
@@ -850,7 +880,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             msgId: botMessageId,
             role: MessageRole.bot,
             content: accumulatedContent,
-          think: accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
+            think:
+                accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
             timestamp: botMessage.timestamp,
             repoId: null,
             sessionId: session.sessionId,
@@ -1010,14 +1041,23 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 hintText: '请输入消息内容...',
-                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+                hintStyle: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.5),
+                  fontSize: 14,
+                ),
                 contentPadding: const EdgeInsets.all(16),
               ),
               style: const TextStyle(fontSize: 14, height: 1.5),
@@ -1027,7 +1067,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                foregroundColor: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.6),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 12,
@@ -1078,7 +1120,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
   }
 
-
   // 从消息创建新对话
   void _createNewSessionFromMessage(BuildContext context, ChatMessage message) {
     try {
@@ -1123,7 +1164,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
   MarkdownStyleSheet _buildMarkdownStyleSheet() {
     return MarkdownStyleSheet(
-      p: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface, height: 1.6),
+      p: TextStyle(
+        fontSize: 14,
+        color: Theme.of(context).colorScheme.onSurface,
+        height: 1.6,
+      ),
       h1: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.bold,
@@ -1142,19 +1187,28 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       code: TextStyle(
         fontSize: 12,
         fontFamily: 'monospace',
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        backgroundColor: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
         color: Theme.of(context).colorScheme.onSurface,
       ),
       codeblockDecoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3), width: 1),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          width: 1,
+        ),
       ),
       codeblockPadding: const EdgeInsets.all(16),
       blockquote: TextStyle(
         fontSize: 12, // 思考内容使用更小的字体
         fontStyle: FontStyle.italic,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), // 更淡的颜色
+        color: Theme.of(
+          context,
+        ).colorScheme.onSurface.withOpacity(0.6), // 更淡的颜色
       ),
       blockquoteDecoration: BoxDecoration(
         border: Border(left: BorderSide(color: Colors.grey[400]!, width: 4)),
@@ -1199,7 +1253,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Icon(icon, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+          child: Icon(
+            icon,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          ),
         ),
       ),
     );
@@ -1393,7 +1451,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceVariant,
+                        color:
+                            Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -1405,7 +1466,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                               '耗时: ${widget.message.formattedDuration}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                               ),
                             )
                           else
@@ -1413,7 +1477,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                               '耗时: 计算中...',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           const SizedBox(height: 2),
@@ -1422,7 +1489,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                               '速度: ${widget.message.formattedTokensPerSecond}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                               ),
                             )
                           else
@@ -1430,7 +1500,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                               '速度: 计算中...',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           const SizedBox(height: 2),
@@ -1439,7 +1512,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                               '生成 token 数: ${widget.message.outputTokens}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                               ),
                             )
                           else
@@ -1447,7 +1523,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                               '生成 token 数: 计算中...',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                         ],
@@ -1479,7 +1558,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface),
+            Icon(
+              icon,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1487,18 +1570,30 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 children: [
                   Text(
                     title,
-                    style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                   if (subtitle != null)
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.7),
+                      ),
                     ),
                 ],
               ),
             ),
             if (hasArrow)
-              Icon(CupertinoIcons.chevron_right, size: 12, color: Theme.of(context).colorScheme.onSurface),
+              Icon(
+                CupertinoIcons.chevron_right,
+                size: 12,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
           ],
         ),
       ),
@@ -1524,12 +1619,19 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             child: Row(
               children: [
-                Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface),
+                Icon(
+                  icon,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 Icon(
@@ -1568,12 +1670,21 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            Icon(
+              icon,
+              size: 14,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
               ),
             ),
           ],

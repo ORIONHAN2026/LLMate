@@ -20,7 +20,7 @@ class ChatSession {
   final bool isWebSearchEnabled; // 会话绑定的联网搜索开关
   final bool isMcpToolsEnabled; // 会话绑定的MCP工具开关
   final bool isRagEnabled; // 会话绑定的RAG功能开关
-  
+
   final ChatModel? chatModel; // 会话绑定的模型信息
   final List<ChatMessage> messages;
   final List<ChatCommand> sessionQuickCommands; // 会话级别的快捷指令
@@ -40,7 +40,7 @@ class ChatSession {
     this.lastSelectedDirectory, // 允许为空，默认为null
     this.isWebSearchEnabled = false, // 默认为false
     this.isMcpToolsEnabled = false, // 默认为false
-        this.isRagEnabled = false, // 默认为false
+    this.isRagEnabled = false, // 默认为false
 
     this.sessionQuickCommands = const [], // 默认为空列表
   });
@@ -77,7 +77,7 @@ class ChatSession {
   // 获取模型显示信息：配置名称和真实模型名称
   String get modelDisplayInfo {
     if (chatModel != null && chatModel!.model.isNotEmpty) {
-      return '${chatModel!.name}';
+      return chatModel!.name;
     } else {
       return '未设置对话大模型';
     }
@@ -159,8 +159,7 @@ class ChatSession {
           json['isWebSearchEnabled'] ?? false, // 从JSON加载联网搜索开关，默认为false
       isMcpToolsEnabled:
           json['isMcpToolsEnabled'] ?? false, // 从JSON加载MCP工具开关，默认为false
-      isRagEnabled:
-          json['isRagEnabled'] ?? false, // 从JSON加载RAG搜索开关，默认为false
+      isRagEnabled: json['isRagEnabled'] ?? false, // 从JSON加载RAG搜索开关，默认为false
       sessionQuickCommands:
           (json['sessionQuickCommands'] as List<dynamic>?)
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
@@ -214,4 +213,3 @@ class ChatSession {
     return null; // 使用系统默认目录
   }
 }
- 

@@ -297,7 +297,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final newSessions = [newSession, ...sessionController.sessions];
     sessionController.setSessions(newSessions);
     sessionController.setCurrentSession(newSession);
-    
+
     // 创建新会话后自动聚焦到输入框
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -411,7 +411,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         isSending: false,
       );
       sessionController.updateSession(updatedSession);
-      
+
       // 停止消息生成后自动聚焦到输入框
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -490,7 +490,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       }
 
       debugPrint(
-        "文件处理统计: 总计${result.files.length}个，有效${validFiles.length}个，重复${duplicateCount}个，超大${oversizedCount}个",
+        "文件处理统计: 总计${result.files.length}个，有效${validFiles.length}个，重复$duplicateCount个，超大$oversizedCount个",
       );
 
       if (validFiles.isNotEmpty) {
@@ -564,7 +564,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       return;
     }
 
-      // 批量创建所有附件对象
+    // 批量创建所有附件对象
     final List<ChatAttachment> newAttachments = [];
     final List<String> attachmentIds = [];
 
@@ -598,7 +598,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           attachmentType = 'image';
         } else if (['.md', '.txt', '.doc', '.docx', '.pdf'].contains(ext)) {
           attachmentType = 'document';
-        } else if (['.go', '.py', '.js', '.html', '.css', '.dart', '.java', '.cpp'].contains(ext)) {
+        } else if ([
+          '.go',
+          '.py',
+          '.js',
+          '.html',
+          '.css',
+          '.dart',
+          '.java',
+          '.cpp',
+        ].contains(ext)) {
           attachmentType = 'code';
         }
       }
@@ -614,8 +623,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       );
 
       newAttachments.add(attachment);
-      debugPrint('创建附件对象: ${attachment.name}, ID: ${attachment.id}, 大小: ${attachment.size}, 内容长度: ${content?.length ?? 0}');
-    }    // 一次性更新会话，添加所有附件
+      debugPrint(
+        '创建附件对象: ${attachment.name}, ID: ${attachment.id}, 大小: ${attachment.size}, 内容长度: ${content?.length ?? 0}',
+      );
+    } // 一次性更新会话，添加所有附件
     final updatedAttachments = List<ChatAttachment>.from(
       currentSession.attachments,
     );
@@ -754,7 +765,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Theme.of(context).dividerColor, width: 1),
         ),
@@ -777,9 +790,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               focusNode: FocusNode(),
               onKey: (RawKeyEvent event) {
                 if (event is RawKeyDownEvent) {
-                  final isEnterPressed = event.logicalKey == LogicalKeyboardKey.enter;
+                  final isEnterPressed =
+                      event.logicalKey == LogicalKeyboardKey.enter;
                   final isShiftPressed = event.isShiftPressed;
-                  
+
                   if (isEnterPressed && !isShiftPressed && !_isSending) {
                     // 普通回车发送消息
                     _sendMessage();
@@ -831,10 +845,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       _buildWebSearchToggle(),
 
                       const SizedBox(width: 8),
+
                       // _buildRagToggle(),
                       // const SizedBox(width: 8),
                       // _buildMcpToolsToggle(),
-
                       const SizedBox(width: 8),
                       _buildQuickCommandToggle(),
                       const SizedBox(width: 8),
@@ -990,7 +1004,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   // （已移除未使用的 RAG toggle 按钮）
 
-
   /// 构建联网搜索切换按钮
   Widget _buildWebSearchToggle() {
     final currentSession = sessionController.currentSession.value;
@@ -1007,7 +1020,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             borderRadius: BorderRadius.circular(4),
             color:
                 isEnabled
-                    ? Theme.of(context).colorScheme.surfaceVariant
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest
                     : Colors.transparent, // 开启时加深背景
           ),
           child: Icon(
@@ -1047,7 +1060,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             borderRadius: BorderRadius.circular(4),
             color:
                 isEnabled
-                    ? Theme.of(context).colorScheme.surfaceVariant
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest
                     : Colors.transparent, // 开启时加深背景
           ),
           child: Icon(
@@ -1289,7 +1302,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          color:
+                              Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                           borderRadius: const BorderRadius.only(
                             bottomLeft: Radius.circular(12),
                             bottomRight: Radius.circular(12),
@@ -1561,7 +1577,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          color:
+                              Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                           borderRadius: const BorderRadius.only(
                             bottomLeft: Radius.circular(12),
                             bottomRight: Radius.circular(12),
@@ -1757,7 +1776,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          color:
+                              Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: Theme.of(context).dividerColor,
@@ -1878,7 +1900,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          color:
+                              Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: Theme.of(context).dividerColor,
@@ -1929,7 +1954,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     isAlreadyAdded
                                         ? Theme.of(
                                           context,
-                                        ).colorScheme.surfaceVariant
+                                        ).colorScheme.surfaceContainerHighest
                                         : Theme.of(
                                           context,
                                         ).colorScheme.secondaryContainer,
@@ -2077,7 +2102,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Theme.of(context).dividerColor),
                 ),
@@ -2288,7 +2313,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          color:
+                              Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                           borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(12),
                             topRight: Radius.circular(12),
@@ -2444,7 +2472,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          color:
+                              Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                           borderRadius: const BorderRadius.only(
                             bottomLeft: Radius.circular(12),
                             bottomRight: Radius.circular(12),
@@ -2505,6 +2536,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       },
     );
   }
+
   // _toggleRagSearch 已彻底移除（旧 RAG 功能清理）
   /// 构建发送/停止按钮
   void _toggleWebSearch() {
@@ -2573,14 +2605,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       await _performWebSearchBeforeSending(text);
       // 搜索完成后继续执行发送逻辑，不返回
     }
-  // RAG 逻辑已移除
+    // RAG 逻辑已移除
 
     // 直接发送消息，MCP工具调用将在AI响应过程中处理
     await _doSendMessage(text);
   }
 
   // （已移除未使用的 RAG 搜索方法）
-  
+
   /// 在发送消息前执行联网搜索
   Future<void> _performWebSearchBeforeSending(String query) async {
     // 生成唯一的搜索附件ID
@@ -2974,7 +3006,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
             botMessage.content = accumulatedContent;
             botMessage.think = accumulatedThink;
-         
 
             debugPrint('更新消息 - think内容: ${botMessage.think}');
 
@@ -3014,7 +3045,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       if (messageIndex != -1) {
         final updatedMessages = List<ChatMessage>.from(updateSession.messages);
         updatedMessages[messageIndex] = botMessage.copyWith(
-  
           isError:
               accumulatedContent.startsWith('请求失败') ||
               accumulatedContent.startsWith('API 错误') ||
@@ -3050,7 +3080,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         botMessageId,
       );
 
-     
       setState(() {});
     } catch (e) {
       rethrow;
@@ -3076,18 +3105,38 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 3. 总结/整理类关键词 + 结构性符号同时命中
     int score = 0;
 
-    final headingPattern = RegExp(r'^(#{1,6}\s+.+)|(^\d+\.|^[-*+]\s+)', multiLine: true);
+    final headingPattern = RegExp(
+      r'^(#{1,6}\s+.+)|(^\d+\.|^[-*+]\s+)',
+      multiLine: true,
+    );
     if (headingPattern.hasMatch(text)) score += 2;
 
     final sectionKeywords = [
-      '目录', '引言', '背景', '概述', '章节', '总结', '结论', '实现', '方案', '目的', '目标', '特性', '注意事项', '示例', '使用方法', '原理'
+      '目录',
+      '引言',
+      '背景',
+      '概述',
+      '章节',
+      '总结',
+      '结论',
+      '实现',
+      '方案',
+      '目的',
+      '目标',
+      '特性',
+      '注意事项',
+      '示例',
+      '使用方法',
+      '原理',
     ];
     int sectionHits = 0;
     for (final k in sectionKeywords) {
       if (text.contains(k)) sectionHits++;
     }
-    if (sectionHits >= 3) score += 2;
-    else if (sectionHits >= 1) score += 1;
+    if (sectionHits >= 3) {
+      score += 2;
+    } else if (sectionHits >= 1)
+      score += 1;
 
     final structureMarkers = RegExp(r'(\n\n)|(```)|(\r?\n#{1,6}\s)');
     if (structureMarkers.allMatches(text).length >= 2) score += 1;
@@ -3096,7 +3145,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (length > 300) score += 1; // 适度长度
 
     // 如果出现“以下是.*整理|总结|归纳|优化后的”字样
-    if (RegExp(r'以下[\s\S]{0,10}(整理|总结|归纳|优化|文档)', multiLine: true).hasMatch(text)) {
+    if (RegExp(
+      r'以下[\s\S]{0,10}(整理|总结|归纳|优化|文档)',
+      multiLine: true,
+    ).hasMatch(text)) {
       score += 2;
     }
 
@@ -3104,7 +3156,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return score >= 3; // 阈值可调
   }
 
- 
   /// 从原始整理文本中提取纯正文主体：
   /// 1. 移除开头若干行的说明/引导语（如“以下是…整理…”, “我已为你…”, “好的，下面是…” 等）
   /// 2. 移除尾部客套/继续需求类语句（如“如果你需要…”, “希望这些…”, “如需进一步…” 等）
@@ -3139,7 +3190,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         for (int i = first + 1; i < second; i++) {
           final l = lines[i].trim();
           if (l.isEmpty) continue;
-            if (RegExp(r'^[A-Za-z0-9_-]+:\s').hasMatch(l)) yamlLike++;
+          if (RegExp(r'^[A-Za-z0-9_-]+:\s').hasMatch(l)) yamlLike++;
         }
         if (yamlLike >= 1 && yamlLike >= (second - first - 1) / 2) {
           looksLikeFrontMatter = true;
@@ -3162,7 +3213,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         int totalNonEmpty = lines.where((l) => l.trim().isNotEmpty).length;
         for (int i = 0; i < delimIdx.length - 1; i++) {
           final a = delimIdx[i];
-            final b = delimIdx[i + 1];
+          final b = delimIdx[i + 1];
           final segment = lines.sublist(a + 1, b);
           final nonEmpty = segment.where((l) => l.trim().isNotEmpty).length;
           if (nonEmpty > bestNonEmpty) {
@@ -3180,51 +3231,88 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               ..clear()
               ..addAll(body);
             usedDelimExtraction = true;
-            debugPrint('📎 使用 --- 分隔提取正文: segmentNonEmpty=$bestNonEmpty ratio=${ratio.toStringAsFixed(2)}');
+            debugPrint(
+              '📎 使用 --- 分隔提取正文: segmentNonEmpty=$bestNonEmpty ratio=${ratio.toStringAsFixed(2)}',
+            );
           }
         }
       }
     }
 
-    final bodyStartMarkers = RegExp(r'^(#{1,6}\s|[0-9]+[\.|、]\s|[一二三四五六七八九十]{1,3}[、.\s]|\*\s|\-|\+\s)');
-    final leadingDisclaimer = RegExp(r'^(以下是|这是|我(已|为)?你|基于你|根据你|好的[,，]?|下面(是|为)|现对|整理如下|总结如下)');
+    final bodyStartMarkers = RegExp(
+      r'^(#{1,6}\s|[0-9]+[\.|、]\s|[一二三四五六七八九十]{1,3}[、.\s]|\*\s|\-|\+\s)',
+    );
+    final leadingDisclaimer = RegExp(
+      r'^(以下是|这是|我(已|为)?你|基于你|根据你|好的[,，]?|下面(是|为)|现对|整理如下|总结如下)',
+    );
     final leadingShortWithKeywords = RegExp(r'^(以下|现在|好的).{0,20}(整理|总结|归纳|优化)');
     int removedHead = 0;
 
     // 去除前导说明性行（长度不超过 60，且不匹配正文开始标记）
     while (lines.isNotEmpty) {
       final l = lines.first.trim();
-      if (l.isEmpty) { lines.removeAt(0); continue; }
+      if (l.isEmpty) {
+        lines.removeAt(0);
+        continue;
+      }
       if (bodyStartMarkers.hasMatch(l)) break; // 进入正文
-      final isDisclaimer = (l.length <= 60) && (leadingDisclaimer.hasMatch(l) || leadingShortWithKeywords.hasMatch(l));
+      final isDisclaimer =
+          (l.length <= 60) &&
+          (leadingDisclaimer.hasMatch(l) ||
+              leadingShortWithKeywords.hasMatch(l));
       // 如果含有“整理/总结/归纳/优化”但又像句子而非标题，也删除
       final containsKeywords = RegExp(r'(整理|总结|归纳|优化)').hasMatch(l);
       final looksLikeTitle = RegExp(r'(目录|概述)$').hasMatch(l);
-      if (isDisclaimer || (containsKeywords && !looksLikeTitle && !bodyStartMarkers.hasMatch(l) && l.length < 40)) {
-        lines.removeAt(0); removedHead++; continue;
+      if (isDisclaimer ||
+          (containsKeywords &&
+              !looksLikeTitle &&
+              !bodyStartMarkers.hasMatch(l) &&
+              l.length < 40)) {
+        lines.removeAt(0);
+        removedHead++;
+        continue;
       }
       break; // 其他情况保留
     }
     // 清理前导多余空行
-    while (lines.isNotEmpty && lines.first.trim().isEmpty) { lines.removeAt(0); }
+    while (lines.isNotEmpty && lines.first.trim().isEmpty) {
+      lines.removeAt(0);
+    }
 
     // 处理尾部客套/引导继续类语句
-    final trailingPatterns = RegExp(r'^(如果你需要|如需进一步|需要我|欢迎继续|希望这些|若还需要|可以继续|有其他|随时告诉|祝你|祝好)');
+    final trailingPatterns = RegExp(
+      r'^(如果你需要|如需进一步|需要我|欢迎继续|希望这些|若还需要|可以继续|有其他|随时告诉|祝你|祝好)',
+    );
     int removedTail = 0;
     while (lines.isNotEmpty) {
       final l = lines.last.trim();
-      if (l.isEmpty) { lines.removeLast(); continue; }
-      if (l.length <= 40 && trailingPatterns.hasMatch(l)) { lines.removeLast(); removedTail++; continue; }
+      if (l.isEmpty) {
+        lines.removeLast();
+        continue;
+      }
+      if (l.length <= 40 && trailingPatterns.hasMatch(l)) {
+        lines.removeLast();
+        removedTail++;
+        continue;
+      }
       // 去掉单独一行“—— END ——”等装饰
-      if (RegExp(r'^[-—~_*\s]{3,}$').hasMatch(l)) { lines.removeLast(); removedTail++; continue; }
+      if (RegExp(r'^[-—~_*\s]{3,}$').hasMatch(l)) {
+        lines.removeLast();
+        removedTail++;
+        continue;
+      }
       break;
     }
     // 去除尾部多余空行
-    while (lines.isNotEmpty && lines.last.trim().isEmpty) { lines.removeLast(); }
+    while (lines.isNotEmpty && lines.last.trim().isEmpty) {
+      lines.removeLast();
+    }
 
     final result = lines.join('\n');
     if (removedHead > 0 || removedTail > 0) {
-      debugPrint('✂️ 整理正文提取: 去掉前导 $removedHead 行, 结尾 $removedTail 行; 原长度=${raw.length}, 新长度=${result.length}');
+      debugPrint(
+        '✂️ 整理正文提取: 去掉前导 $removedHead 行, 结尾 $removedTail 行; 原长度=${raw.length}, 新长度=${result.length}',
+      );
     }
     if (usedDelimExtraction) {
       debugPrint('✅ 已结合 --- 分隔完成正文抽取，最终长度=${result.length}');
@@ -3588,7 +3676,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         final successCount = toolResults.where((r) => r.isSuccess).length;
         SnackBarUtils.showSuccess(
           context,
-          '工具调用完成: ${successCount}/${toolResults.length} 成功',
+          '工具调用完成: $successCount/${toolResults.length} 成功',
         );
       }
 

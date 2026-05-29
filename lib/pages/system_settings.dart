@@ -238,7 +238,7 @@ class _SystemSettingsPageState extends State<SystemSettingsPage> {
             _buildConfigItem(
               '搜索服务商',
               DropdownButtonFormField<String>(
-                value: _selectedSearchProvider,
+                initialValue: _selectedSearchProvider,
                 dropdownColor: Colors.white,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
@@ -557,7 +557,7 @@ class _SystemSettingsPageState extends State<SystemSettingsPage> {
         CupertinoSwitch(
           value: value,
           onChanged: onChanged,
-          activeColor: const Color(0xFF10B981),
+          activeTrackColor: const Color(0xFF10B981),
         ),
       ],
     );

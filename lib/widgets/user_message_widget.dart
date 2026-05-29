@@ -7,7 +7,6 @@ import 'package:chathub/framework/llm_hub.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import '../models/chat/chat_message.dart';
 import 'chat_message_widget.dart';
 
 // 用户消息组件
@@ -68,17 +67,27 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                   children: [
                     Container(
                       constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 
-                            ResponsiveUtils.getUserMessageMaxWidthRatio(context),
+                        maxWidth:
+                            MediaQuery.of(context).size.width *
+                            ResponsiveUtils.getUserMessageMaxWidthRatio(
+                              context,
+                            ),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2), width: 1),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withOpacity(0.2),
+                          width: 1,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,7 +200,11 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
             color: Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Icon(icon, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+          child: Icon(
+            icon,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          ),
         ),
       ),
     );
@@ -236,14 +249,23 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 hintText: '请输入消息内容...',
-                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+                hintStyle: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.5),
+                  fontSize: 14,
+                ),
                 contentPadding: const EdgeInsets.all(16),
               ),
               style: const TextStyle(fontSize: 14, height: 1.5),
@@ -253,7 +275,9 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                foregroundColor: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.6),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 12,
@@ -420,7 +444,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     // 找到对应的用户问题
     String? userQuestion;
     ChatMessage? userMessage;
-    
+
     // 优先通过 pairedMsgId 找到对应的用户问题
     if (aiMessage.pairedMsgId != null) {
       try {
@@ -436,7 +460,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
         return;
       }
     }
-    
+
     // 如果没有 pairedMsgId 或者找不到配对消息，使用原来的方法
     if (userMessage == null) {
       for (int i = lastAiMessageIndex - 1; i >= 0; i--) {
@@ -890,7 +914,11 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface),
+            Icon(
+              icon,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -898,18 +926,30 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                   if (subtitle != null)
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.7),
+                      ),
                     ),
                 ],
               ),
             ),
             if (hasArrow)
-              Icon(CupertinoIcons.chevron_right, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+              Icon(
+                CupertinoIcons.chevron_right,
+                size: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
           ],
         ),
       ),
@@ -935,12 +975,19 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             child: Row(
               children: [
-                Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface),
+                Icon(
+                  icon,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 Icon(
@@ -948,7 +995,9 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                       ? CupertinoIcons.chevron_down
                       : CupertinoIcons.chevron_right,
                   size: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ],
             ),
@@ -979,12 +1028,21 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            Icon(
+              icon,
+              size: 14,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
               ),
             ),
           ],
@@ -1030,7 +1088,8 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Theme.of(context).dividerColor),
                     ),
@@ -1084,9 +1143,14 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceVariant,
+                        color:
+                            Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Theme.of(context).dividerColor),
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                        ),
                       ),
                       child: SelectableText(
                         attachment.content!,
@@ -1103,21 +1167,33 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceVariant,
+                        color:
+                            Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Theme.of(context).dividerColor),
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                        ),
                       ),
                       child: Column(
                         children: [
                           Icon(
                             Icons.description_outlined,
                             size: 32,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             '暂无内容预览',
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            style: TextStyle(
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -1139,7 +1215,14 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Text('关闭', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+              child: Text(
+                '关闭',
+                style: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
             ),
             if (attachment.content != null && attachment.content!.isNotEmpty)
               ElevatedButton(
@@ -1310,7 +1393,9 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                           _formatFileSize(attachment.size!),
                           style: TextStyle(
                             fontSize: 9,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                       if (attachment.content != null &&
@@ -1320,7 +1405,9 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                             ' • ',
                             style: TextStyle(
                               fontSize: 9,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                         Icon(
@@ -1343,7 +1430,11 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.open_in_new, size: 10, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+            Icon(
+              Icons.open_in_new,
+              size: 10,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            ),
           ],
         ),
       ),

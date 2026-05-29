@@ -85,10 +85,12 @@ class McpServerConfig {
     if (env != null) data['env'] = env;
     if (workingDirectory != null) data['workingDirectory'] = workingDirectory;
     if (timeout != null) data['timeout'] = timeout;
-    if (tools != null)
+    if (tools != null) {
       data['tools'] = tools!.map((tool) => tool.toJson()).toList();
-    if (lastUpdated != null)
+    }
+    if (lastUpdated != null) {
       data['lastUpdated'] = lastUpdated!.toIso8601String();
+    }
 
     return data;
   }

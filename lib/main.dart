@@ -15,7 +15,11 @@ const double kMinLeftSidebarWidth = 200;
 const double kMinChatAreaWidth = 520;
 const double kMinRightSidebarWidth = 260;
 const double kWindowExtraPadding = 40;
-const double kMinWindowWidth = kMinLeftSidebarWidth + kMinChatAreaWidth + kMinRightSidebarWidth + kWindowExtraPadding; // = 1040
+const double kMinWindowWidth =
+    kMinLeftSidebarWidth +
+    kMinChatAreaWidth +
+    kMinRightSidebarWidth +
+    kWindowExtraPadding; // = 1040
 const double kMinWindowHeight = 640; // 依据布局中顶部栏/输入区等高度需要，留出足够空间
 
 void main() async {
@@ -33,7 +37,9 @@ void main() async {
     );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       // 保险：部分平台在 waitUntilReadyToShow 里再显式设置一次最小尺寸
-      await windowManager.setMinimumSize(const Size(kMinWindowWidth, kMinWindowHeight));
+      await windowManager.setMinimumSize(
+        const Size(kMinWindowWidth, kMinWindowHeight),
+      );
       await windowManager.show();
       await windowManager.focus();
     });
@@ -51,138 +57,140 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<ThemeController>(
-      builder: (themeController) => GetMaterialApp(
-        title: 'ChatHub',
-        debugShowCheckedModeBanner: false, // 去掉调试横幅
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            primary: const Color(0xFF3B82F6),
-            seedColor: const Color(0xFF3B82F6), // 使用更深更鲜明的蓝色 (blue-700)
-            brightness: Brightness.light,
-          ).copyWith(
-            background: Colors.white,
-            surface: Colors.white,
-            onSurface: const Color(0xFF1F2937),
-          ),
-          useMaterial3: true,
-          scaffoldBackgroundColor: Colors.white,
-          canvasColor: Colors.white,
-          dialogBackgroundColor: Colors.white,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white, // 标题栏背景色
-            surfaceTintColor: Colors.transparent, // 移除Material 3的色调效果
-            foregroundColor: Color(0xFF1F2937), // 标题文字颜色
-            titleTextStyle: TextStyle(
-              color: Color(0xFF1F2937), // 标题文字颜色
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
+      builder:
+          (themeController) => GetMaterialApp(
+            title: 'ChatHub',
+            debugShowCheckedModeBanner: false, // 去掉调试横幅
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                primary: const Color(0xFF3B82F6),
+                seedColor: const Color(0xFF3B82F6), // 使用更深更鲜明的蓝色 (blue-700)
+                brightness: Brightness.light,
+              ).copyWith(
+                surface: Colors.white,
+                onSurface: const Color(0xFF1F2937),
+              ),
+              useMaterial3: true,
+              scaffoldBackgroundColor: Colors.white,
+              canvasColor: Colors.white,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.white, // 标题栏背景色
+                surfaceTintColor: Colors.transparent, // 移除Material 3的色调效果
+                foregroundColor: Color(0xFF1F2937), // 标题文字颜色
+                titleTextStyle: TextStyle(
+                  color: Color(0xFF1F2937), // 标题文字颜色
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+                iconTheme: IconThemeData(
+                  color: Color(0xFF1F2937), // 图标颜色
+                ),
+                actionsIconTheme: IconThemeData(
+                  color: Color(0xFF1F2937), // 操作按钮图标颜色
+                ),
+                elevation: 0, // 去掉阴影
+                scrolledUnderElevation: 0, // 滚动时也不显示阴影
+                centerTitle: false, // 标题左对齐
+              ),
+              cardColor: Colors.white,
+              dividerColor: const Color(0xFFE5E7EB),
+              primaryColor: const Color(0xFF3B82F6),
+
+              // 按钮主题配置
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6), // 主按钮蓝色
+                  foregroundColor: Colors.white, // 文字颜色
+                  elevation: 2,
+                ),
+              ),
+              filledButtonTheme: FilledButtonThemeData(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6), // 填充按钮蓝色
+                  foregroundColor: Colors.white, // 文字颜色
+                ),
+              ),
+              outlinedButtonTheme: OutlinedButtonThemeData(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF3B82F6), // 边框按钮蓝色
+                  side: const BorderSide(color: Color(0xFF3B82F6)),
+                ),
+              ),
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF3B82F6), // 文本按钮蓝色
+                ),
+              ),
+
+              // 抽屉主题 - 移动端适配
+              drawerTheme: const DrawerThemeData(
+                elevation: 16,
+                backgroundColor: Colors.white,
+              ),
+              dialogTheme: DialogThemeData(backgroundColor: Colors.white),
             ),
-            iconTheme: IconThemeData(
-              color: Color(0xFF1F2937), // 图标颜色
+            darkTheme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                primary: const Color(0xFF3B82F6),
+                seedColor: const Color(0xFF3B82F6),
+                brightness: Brightness.dark,
+              ),
+              useMaterial3: true,
+              scaffoldBackgroundColor: const Color(0xFF1F1F1F),
+              canvasColor: const Color(0xFF1F1F1F),
+              primaryColor: const Color(0xFF3B82F6),
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Color(0xFF1F1F1F),
+                surfaceTintColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                titleTextStyle: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+                iconTheme: IconThemeData(color: Colors.white70),
+                actionsIconTheme: IconThemeData(color: Colors.white70),
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                centerTitle: false,
+              ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6),
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                ),
+              ),
+              filledButtonTheme: FilledButtonThemeData(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              outlinedButtonTheme: OutlinedButtonThemeData(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF60A5FA),
+                  side: const BorderSide(color: Color(0xFF60A5FA)),
+                ),
+              ),
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF60A5FA),
+                ),
+              ),
+              cardColor: const Color(0xFF262626),
+              dividerColor: const Color(0xFF30363D),
+              drawerTheme: const DrawerThemeData(
+                elevation: 16,
+                backgroundColor: Color(0xFF1F1F1F),
+              ),
+              dialogTheme: DialogThemeData(
+                backgroundColor: const Color(0xFF262626),
+              ),
             ),
-            actionsIconTheme: IconThemeData(
-              color: Color(0xFF1F2937), // 操作按钮图标颜色
-            ),
-            elevation: 0, // 去掉阴影
-            scrolledUnderElevation: 0, // 滚动时也不显示阴影
-            centerTitle: false, // 标题左对齐
+            themeMode: themeController.themeMode,
+            home: const AppInitializer(),
           ),
-          cardColor: Colors.white,
-          dividerColor: const Color(0xFFE5E7EB),
-          primaryColor: const Color(0xFF3B82F6),
-          
-          // 按钮主题配置
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6), // 主按钮蓝色
-              foregroundColor: Colors.white, // 文字颜色
-              elevation: 2,
-            ),
-          ),
-          filledButtonTheme: FilledButtonThemeData(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6), // 填充按钮蓝色
-              foregroundColor: Colors.white, // 文字颜色
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF3B82F6), // 边框按钮蓝色
-              side: const BorderSide(color: Color(0xFF3B82F6)),
-            ),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF3B82F6), // 文本按钮蓝色
-            ),
-          ),
-          
-          // 抽屉主题 - 移动端适配
-          drawerTheme: const DrawerThemeData(
-            elevation: 16,
-            backgroundColor: Colors.white,
-          ),
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            primary: const Color(0xFF3B82F6),
-            seedColor: const Color(0xFF3B82F6),
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-          scaffoldBackgroundColor: const Color(0xFF1F1F1F),
-          canvasColor: const Color(0xFF1F1F1F),
-            dialogBackgroundColor: const Color(0xFF262626),
-          primaryColor: const Color(0xFF3B82F6),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF1F1F1F),
-            surfaceTintColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            titleTextStyle: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-            iconTheme: IconThemeData(color: Colors.white70),
-            actionsIconTheme: IconThemeData(color: Colors.white70),
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            centerTitle: false,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-              foregroundColor: Colors.white,
-              elevation: 2,
-            ),
-          ),
-          filledButtonTheme: FilledButtonThemeData(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-              foregroundColor: Colors.white,
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF60A5FA),
-              side: const BorderSide(color: Color(0xFF60A5FA)),
-            ),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF60A5FA),
-            ),
-          ),
-          cardColor: const Color(0xFF262626),
-          dividerColor: const Color(0xFF30363D),
-          drawerTheme: const DrawerThemeData(
-            elevation: 16,
-            backgroundColor: Color(0xFF1F1F1F),
-          ),
-        ),
-        themeMode: themeController.themeMode,
-        home: const AppInitializer(),
-      ),
     );
   }
 }

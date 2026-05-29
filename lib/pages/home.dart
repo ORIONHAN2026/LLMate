@@ -204,7 +204,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
 
   // 计算自适应右侧面板宽度，防止在小屏下出现 Row 溢出
 
-
   // 切换到指定会话（通过 sessionId）
   void _switchToSession(ChatSession chatSession) {
     // 保存当前会话的滚动位置
@@ -469,6 +468,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       items: [
         PopupMenuItem(
           height: 48,
+          onTap: _sendFeedbackEmail,
           child: Row(
             children: [
               Icon(
@@ -480,7 +480,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               const Text('反馈意见', style: TextStyle(fontSize: 12)),
             ],
           ),
-          onTap: _sendFeedbackEmail,
         ),
         // 设置
         PopupMenuItem(

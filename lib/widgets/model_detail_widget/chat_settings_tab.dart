@@ -3,7 +3,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:chathub/models/bigmodel/chat_model.dart';
 import 'package:chathub/models/chat/chat_setting.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class ChatSettingsTab extends StatefulWidget {
   final ChatModel model;
@@ -243,10 +242,7 @@ class _ChatSettingsTabState extends State<ChatSettingsTab> {
             GestureDetector(
               onTap: _showPresetRolesDialog,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(6),
@@ -254,7 +250,6 @@ class _ChatSettingsTabState extends State<ChatSettingsTab> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                 
                     Icon(Icons.psychology, size: 14, color: Colors.white),
                     const SizedBox(width: 6),
                     Text(
@@ -337,8 +332,7 @@ class _ChatSettingsTabState extends State<ChatSettingsTab> {
     {
       'name': '拼写检查',
       'description': '拼写检查专家',
-      'prompt':
-          '你是一个经验丰富的文字编辑工作者，可以发现并纠正文章中的错别字以及相关语法问题。',
+      'prompt': '你是一个经验丰富的文字编辑工作者，可以发现并纠正文章中的错别字以及相关语法问题。',
     },
     {
       'name': '代码专家',

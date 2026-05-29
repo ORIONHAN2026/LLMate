@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math' as math;
-import 'package:objectbox/objectbox.dart';
 
 // 引入 ObjectBox 生成的代码
 import '../../objectbox.g.dart';
@@ -12,10 +11,10 @@ class RagChunk {
   int obxId = 0;
 
   String id; // 切片唯一标识符
-  
+
   @Index()
   String modelId; // 所属模型ID
-  
+
   @Index()
   String documentId; // 所属文档ID
   String content; // 切片内容
@@ -25,25 +24,24 @@ class RagChunk {
   String sourceFilePath; // 源文件路径
   String? relativePath; // 相对路径（保持目录结构）
   String? folderName; // 文件夹名称
-  
+
   @Property(type: PropertyType.date)
   DateTime createdTime; // 创建时间
-  
+
   @Transient()
   Map<String, dynamic>? _metadata; // 额外元数据（内存中）
-  
+
   String? _metadataJson; // 元数据的 JSON 存储
-  
+
   Map<String, dynamic>? get metadata => _metadata;
-  
+
   set metadata(Map<String, dynamic>? value) {
     _metadata = value;
     _metadataJson = value != null ? json.encode(value) : null;
   }
+
   List<double>? embeddings; // 向量化内容
   String? comment; // 注释
-   
-
 
   RagChunk({
     this.obxId = 0,
@@ -78,17 +76,20 @@ class RagChunk {
       sourceFilePath: map['sourceFilePath'] ?? '',
       relativePath: map['relativePath'],
       folderName: map['folderName'],
-      createdTime: map['createdTime'] != null 
-          ? DateTime.parse(map['createdTime']) 
-          : DateTime.now(),
-      metadata: map['metadata'] != null
-          ? (map['metadata'] is String 
-              ? json.decode(map['metadata'])
-              : Map<String, dynamic>.from(map['metadata']))
-          : null,
-      embeddings: map['embeddings'] != null
-          ? List<double>.from(map['embeddings'])
-          : null,
+      createdTime:
+          map['createdTime'] != null
+              ? DateTime.parse(map['createdTime'])
+              : DateTime.now(),
+      metadata:
+          map['metadata'] != null
+              ? (map['metadata'] is String
+                  ? json.decode(map['metadata'])
+                  : Map<String, dynamic>.from(map['metadata']))
+              : null,
+      embeddings:
+          map['embeddings'] != null
+              ? List<double>.from(map['embeddings'])
+              : null,
       comment: map['comment'],
     );
   }
@@ -232,12 +233,20 @@ class RagChunk {
   int get hashCode => id.hashCode;
 
   /// 在保存之前清除相同 modelId 和 documentId 的内容
-  static void clearExistingDocument(Box<RagChunk> box, String modelId, String documentId) {
-    final existing = box.query(
-      RagChunk_.modelId.equals(modelId).and(
-        RagChunk_.documentId.equals(documentId)
-      )
-    ).build().find();
+  static void clearExistingDocument(
+    Box<RagChunk> box,
+    String modelId,
+    String documentId,
+  ) {
+    final existing =
+        box
+            .query(
+              RagChunk_.modelId
+                  .equals(modelId)
+                  .and(RagChunk_.documentId.equals(documentId)),
+            )
+            .build()
+            .find();
     if (existing.isNotEmpty) {
       box.removeMany(existing.map((e) => e.obxId).toList());
     }
@@ -246,21 +255,21 @@ class RagChunk {
   /// 计算与另一个向量的余弦相似度
   double? cosineSimilarity(List<double> otherEmbeddings) {
     if (embeddings == null) return null;
-    
+
     if (embeddings!.length != otherEmbeddings.length) return null;
-    
+
     double dotProduct = 0.0;
     double normA = 0.0;
     double normB = 0.0;
-    
+
     for (int i = 0; i < embeddings!.length; i++) {
       dotProduct += embeddings![i] * otherEmbeddings[i];
       normA += embeddings![i] * embeddings![i];
       normB += otherEmbeddings[i] * otherEmbeddings[i];
     }
-    
+
     if (normA == 0.0 || normB == 0.0) return 0.0;
-    
+
     return dotProduct / (math.sqrt(normA) * math.sqrt(normB));
   }
 }

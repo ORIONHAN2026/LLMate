@@ -154,7 +154,7 @@ class _WebSearchDialogState extends State<WebSearchDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedEngine,
+                      initialValue: _selectedEngine,
                       items:
                           _availableEngines.map((engine) {
                             return DropdownMenuItem(
@@ -234,7 +234,7 @@ class _WebSearchDialogState extends State<WebSearchDialog> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: _language,
+                          initialValue: _language,
                           items: const [
                             DropdownMenuItem(value: 'zh', child: Text('中文')),
                             DropdownMenuItem(
@@ -269,7 +269,7 @@ class _WebSearchDialogState extends State<WebSearchDialog> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: _region,
+                          initialValue: _region,
                           items: const [
                             DropdownMenuItem(value: 'CN', child: Text('中国')),
                             DropdownMenuItem(value: 'US', child: Text('美国')),

@@ -19,7 +19,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   int _currentStep = 0;
   String _selectedProvider = '';
   String _selectedOnlineModel = '';
-  Map<String, String> _selectedModelSizes = {}; // 改为 Map，为每个模型独立存储选中的规格
+  final Map<String, String> _selectedModelSizes = {}; // 改为 Map，为每个模型独立存储选中的规格
   String _customModelName = '';
   bool _isCustomModel = false; // 新增：是否使用自定义模型
 
@@ -34,7 +34,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   List<Map<String, dynamic>> _ollamaModels = [];
   String _ollamaModelsError = '';
 
-  // ModelScope模型获取相关状态  
+  // ModelScope模型获取相关状态
   bool _isLoadingModelScopeModels = false;
   List<Map<String, dynamic>> _modelScopeModels = [];
   String _modelScopeModelsError = '';
@@ -192,7 +192,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           title,
           style: TextStyle(
             fontSize: 11, // 从12减少到11
-            color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color:
+                isActive
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
           ),
         ),
@@ -256,15 +259,15 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     _customModelController.clear(); // 清空自定义模型输入
                     // 设置默认API地址
                     _apiUrlController.text = provider['defaultUrl'];
-                    
+
                     // 重置Ollama模型相关状态
                     _ollamaModels.clear();
                     _ollamaModelsError = '';
-                    
+
                     // 重置ModelScope模型相关状态
                     _modelScopeModels.clear();
                     _modelScopeModelsError = '';
-                    
+
                     // 默认选择第一个模型
                     if (provider['models'] != null &&
                         (provider['models'] as List).isNotEmpty) {
@@ -275,7 +278,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     _testPassed = false;
                     _testResponse = '';
                   });
-                  
+
                   // 如果选择了Ollama，自动获取模型列表
                   if (provider['id'] == 'ollama') {
                     // 延迟一点执行，确保API URL已经设置
@@ -283,7 +286,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       _fetchOllamaModels();
                     });
                   }
-                  
+
                   // 如果选择了ModelScope，自动获取模型列表
                   if (provider['id'] == 'modelscope') {
                     // 延迟一点执行，确保API URL已经设置
@@ -297,10 +300,15 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   decoration: BoxDecoration(
                     color:
                         isSelected
-                            ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.1)
                             : Theme.of(context).colorScheme.surface,
                     border: Border.all(
-                      color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
+                      color:
+                          isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).dividerColor,
                       width: isSelected ? 2 : 1,
                     ),
                     borderRadius: BorderRadius.circular(8), // 从12减少到8
@@ -321,7 +329,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                 color:
                                     isSelected
                                         ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.8),
                               ),
                             ),
                           ),
@@ -333,7 +344,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                           provider['description'],
                           style: TextStyle(
                             fontSize: 11, // 从12减少到11
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                             height: 1.3, // 添加行高以更好的显示
                           ),
                           maxLines: 2,
@@ -415,9 +428,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ), // 只允许英文、数字和常用API密钥字符
             ],
             decoration: InputDecoration(
-              hintText: _selectedProvider == 'ollama' 
-                  ? '本地 Ollama 服务通常不需要 API 密钥，可留空'
-                  : '输入您的 API 密钥',
+              hintText:
+                  _selectedProvider == 'ollama'
+                      ? '本地 Ollama 服务通常不需要 API 密钥，可留空'
+                      : '输入您的 API 密钥',
               hintStyle: const TextStyle(fontSize: 12), // 从14减少到12
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
@@ -502,14 +516,14 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   _testPassed = false;
                   _testResponse = '';
                 }
-                
+
                 // 如果是Ollama，重置模型列表状态
                 if (_selectedProvider == 'ollama') {
                   _ollamaModels.clear();
                   _ollamaModelsError = '';
                   _selectedOnlineModel = '';
                 }
-                
+
                 // 如果是ModelScope，重置模型列表状态
                 if (_selectedProvider == 'modelscope') {
                   _modelScopeModels.clear();
@@ -517,21 +531,22 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   _selectedOnlineModel = '';
                 }
               });
-              
+
               // 如果是Ollama，延迟重新获取模型列表
               if (_selectedProvider == 'ollama' && trimmedValue.isNotEmpty) {
                 Future.delayed(const Duration(milliseconds: 500), () {
-                  if (_selectedProvider == 'ollama' && 
+                  if (_selectedProvider == 'ollama' &&
                       _apiUrlController.text.trim() == trimmedValue) {
                     _fetchOllamaModels();
                   }
                 });
               }
-              
+
               // 如果是ModelScope，延迟重新获取模型列表
-              if (_selectedProvider == 'modelscope' && trimmedValue.isNotEmpty) {
+              if (_selectedProvider == 'modelscope' &&
+                  trimmedValue.isNotEmpty) {
                 Future.delayed(const Duration(milliseconds: 500), () {
-                  if (_selectedProvider == 'modelscope' && 
+                  if (_selectedProvider == 'modelscope' &&
                       _apiUrlController.text.trim() == trimmedValue) {
                     _fetchModelScopeModels();
                   }
@@ -542,7 +557,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           const SizedBox(height: 6),
           Text(
             '默认为官方API地址，可根据需要修改为本地或私有部署地址',
-            style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
           ),
           const SizedBox(height: 12), // 从16减少到12
           // 模型选择
@@ -578,7 +596,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     decoration: BoxDecoration(
                       color:
                           !_isCustomModel
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                              ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.1)
                               : Theme.of(context).colorScheme.surface,
                       border: Border.all(
                         color:
@@ -597,7 +617,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         color:
                             !_isCustomModel
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                : Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
                         fontWeight:
                             !_isCustomModel
                                 ? FontWeight.w500
@@ -625,7 +647,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     decoration: BoxDecoration(
                       color:
                           _isCustomModel
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                              ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.1)
                               : Theme.of(context).colorScheme.surface,
                       border: Border.all(
                         color:
@@ -644,7 +668,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         color:
                             _isCustomModel
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                : Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
                         fontWeight:
                             _isCustomModel
                                 ? FontWeight.w500
@@ -666,143 +692,197 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: _selectedProvider == 'ollama' 
-                  ? _buildOllamaModelList()
-                  : _selectedProvider == 'modelscope'
-                  ? _buildModelScopeModelList()
-                  : Column(
-                      children:
-                          (selectedProviderData['models']
-                                  as List<Map<String, dynamic>>)
-                              .map((model) {
-                          final isSelected =
-                              _selectedOnlineModel == model['id'];
-                          return InkWell(
-                            onTap: () {
-                              setState(() {
-                                _selectedOnlineModel = model['id'];
-                                // 不需要重置该模型的规格选择，保持用户已选择的状态
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    isSelected
-                                        ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
-                                        : null,
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: Theme.of(context).dividerColor.withOpacity(0.5),
-                                    width: 0.5,
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
+              child:
+                  _selectedProvider == 'ollama'
+                      ? _buildOllamaModelList()
+                      : _selectedProvider == 'modelscope'
+                      ? _buildModelScopeModelList()
+                      : Column(
+                        children:
+                            (selectedProviderData['models']
+                                    as List<Map<String, dynamic>>)
+                                .map((model) {
+                                  final isSelected =
+                                      _selectedOnlineModel == model['id'];
+                                  return InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedOnlineModel = model['id'];
+                                        // 不需要重置该模型的规格选择，保持用户已选择的状态
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
                                         color:
                                             isSelected
-                                                ? Theme.of(context).colorScheme.primary
-                                                : Theme.of(context).colorScheme.outline.withOpacity(0.5),
-                                        width: 2,
-                                      ),
-                                      color:
-                                          isSelected
-                                              ? Theme.of(context).colorScheme.primary
-                                              : Colors.transparent,
-                                    ),
-                                    child:
-                                        isSelected
-                                            ? Icon(
-                                              Icons.circle,
-                                              size: 8,
-                                              color: Theme.of(context).colorScheme.onPrimary,
-                                            )
-                                            : null,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '${model['name']}${_selectedModelSizes[model['id']]?.isNotEmpty == true ? ':${_selectedModelSizes[model['id']]}' : ''}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight:
-                                                isSelected
-                                                    ? FontWeight.w500
-                                                    : FontWeight.normal,
-                                            color:
-                                                isSelected
-                                                    ? Theme.of(context).colorScheme.primary
-                                                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                                                ? Theme.of(context)
+                                                    .colorScheme
+                                                    .primary
+                                                    .withOpacity(0.08)
+                                                : null,
+                                        border: Border(
+                                          bottom: BorderSide(
+                                            color: Theme.of(
+                                              context,
+                                            ).dividerColor.withOpacity(0.5),
+                                            width: 0.5,
                                           ),
                                         ),
-                                     
-                                        // 如果模型有 size 字段且选中了该模型，显示 size 选择标签
-                                        if (isSelected && model['size'] != null && (model['size'] as List).isNotEmpty) ...[
-                                          const SizedBox(height: 8),
-                                          Wrap(
-                                            spacing: 6,
-                                            runSpacing: 4,
-                                            children: (model['size'] as List<String>).map((size) {
-                                              final isSizeSelected = _selectedModelSizes[model['id']] == size;
-                                              return GestureDetector(
-                                                onTap: () {
-                                                  setState(() {
-                                                    _selectedModelSizes[model['id']] = size;
-                                                  });
-                                                },
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: isSizeSelected
-                                                        ? const Color(0xFF3B82F6)
-                                                        : const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    border: Border.all(
-                                                      color: const Color(0xFF3B82F6),
-                                                      width: 1,
-                                                    ),
-                                                  ),
-                                                  child: Text(
-                                                    size,
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w500,
-                                                      color: isSizeSelected
-                                                          ? Colors.white
-                                                          : const Color(0xFF3B82F6),
-                                                    ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color:
+                                                    isSelected
+                                                        ? Theme.of(
+                                                          context,
+                                                        ).colorScheme.primary
+                                                        : Theme.of(context)
+                                                            .colorScheme
+                                                            .outline
+                                                            .withOpacity(0.5),
+                                                width: 2,
+                                              ),
+                                              color:
+                                                  isSelected
+                                                      ? Theme.of(
+                                                        context,
+                                                      ).colorScheme.primary
+                                                      : Colors.transparent,
+                                            ),
+                                            child:
+                                                isSelected
+                                                    ? Icon(
+                                                      Icons.circle,
+                                                      size: 8,
+                                                      color:
+                                                          Theme.of(context)
+                                                              .colorScheme
+                                                              .onPrimary,
+                                                    )
+                                                    : null,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '${model['name']}${_selectedModelSizes[model['id']]?.isNotEmpty == true ? ':${_selectedModelSizes[model['id']]}' : ''}',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        isSelected
+                                                            ? FontWeight.w500
+                                                            : FontWeight.normal,
+                                                    color:
+                                                        isSelected
+                                                            ? Theme.of(context)
+                                                                .colorScheme
+                                                                .primary
+                                                            : Theme.of(context)
+                                                                .colorScheme
+                                                                .onSurface
+                                                                .withOpacity(
+                                                                  0.8,
+                                                                ),
                                                   ),
                                                 ),
-                                              );
-                                            }).toList(),
+
+                                                // 如果模型有 size 字段且选中了该模型，显示 size 选择标签
+                                                if (isSelected &&
+                                                    model['size'] != null &&
+                                                    (model['size'] as List)
+                                                        .isNotEmpty) ...[
+                                                  const SizedBox(height: 8),
+                                                  Wrap(
+                                                    spacing: 6,
+                                                    runSpacing: 4,
+                                                    children:
+                                                        (model['size'] as List<String>).map((
+                                                          size,
+                                                        ) {
+                                                          final isSizeSelected =
+                                                              _selectedModelSizes[model['id']] ==
+                                                              size;
+                                                          return GestureDetector(
+                                                            onTap: () {
+                                                              setState(() {
+                                                                _selectedModelSizes[model['id']] =
+                                                                    size;
+                                                              });
+                                                            },
+                                                            child: Container(
+                                                              padding:
+                                                                  const EdgeInsets.symmetric(
+                                                                    horizontal:
+                                                                        8,
+                                                                    vertical: 4,
+                                                                  ),
+                                                              decoration: BoxDecoration(
+                                                                color:
+                                                                    isSizeSelected
+                                                                        ? const Color(
+                                                                          0xFF3B82F6,
+                                                                        )
+                                                                        : const Color(
+                                                                          0xFF3B82F6,
+                                                                        ).withValues(
+                                                                          alpha:
+                                                                              0.1,
+                                                                        ),
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      12,
+                                                                    ),
+                                                                border: Border.all(
+                                                                  color: const Color(
+                                                                    0xFF3B82F6,
+                                                                  ),
+                                                                  width: 1,
+                                                                ),
+                                                              ),
+                                                              child: Text(
+                                                                size,
+                                                                style: TextStyle(
+                                                                  fontSize: 10,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                  color:
+                                                                      isSizeSelected
+                                                                          ? Colors
+                                                                              .white
+                                                                          : const Color(
+                                                                            0xFF3B82F6,
+                                                                          ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }).toList(),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
                                           ),
                                         ],
-                                      ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        })
-                        .toList(),
-              ),
+                                  );
+                                })
+                                .toList(),
+                      ),
             ),
           ] else ...[
             // 自定义模型输入
@@ -891,25 +971,18 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             ],
           ),
         ),
-        
+
         // 模型列表或错误信息
         if (_ollamaModelsError.isNotEmpty)
           Container(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Icon(
-                  Icons.error_outline,
-                  color: Colors.red[300],
-                  size: 32,
-                ),
+                Icon(Icons.error_outline, color: Colors.red[300], size: 32),
                 const SizedBox(height: 8),
                 Text(
                   _ollamaModelsError,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.red[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.red[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -925,18 +998,11 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  color: Colors.grey[400],
-                  size: 32,
-                ),
+                Icon(Icons.info_outline, color: Colors.grey[400], size: 32),
                 const SizedBox(height: 8),
                 Text(
                   '请先启动 Ollama 服务并下载模型\n然后点击刷新按钮获取模型列表',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -962,14 +1028,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF3B82F6).withValues(alpha: 0.08)
-                      : null,
+                  color:
+                      isSelected
+                          ? const Color(0xFF3B82F6).withValues(alpha: 0.08)
+                          : null,
                   border: Border(
-                    bottom: BorderSide(
-                      color: Colors.grey[200]!,
-                      width: 0.5,
-                    ),
+                    bottom: BorderSide(color: Colors.grey[200]!, width: 0.5),
                   ),
                 ),
                 child: Row(
@@ -980,22 +1044,25 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected
-                              ? const Color(0xFF3B82F6)
-                              : Colors.grey[400]!,
+                          color:
+                              isSelected
+                                  ? const Color(0xFF3B82F6)
+                                  : Colors.grey[400]!,
                           width: 2,
                         ),
-                        color: isSelected
-                            ? const Color(0xFF3B82F6)
-                            : Colors.transparent,
+                        color:
+                            isSelected
+                                ? const Color(0xFF3B82F6)
+                                : Colors.transparent,
                       ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.circle,
-                              size: 8,
-                              color: Colors.white,
-                            )
-                          : null,
+                      child:
+                          isSelected
+                              ? const Icon(
+                                Icons.circle,
+                                size: 8,
+                                color: Colors.white,
+                              )
+                              : null,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -1006,12 +1073,14 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                             model['name'],
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.w500
-                                  : FontWeight.normal,
-                              color: isSelected
-                                  ? const Color(0xFF3B82F6)
-                                  : Colors.black87,
+                              fontWeight:
+                                  isSelected
+                                      ? FontWeight.w500
+                                      : FontWeight.normal,
+                              color:
+                                  isSelected
+                                      ? const Color(0xFF3B82F6)
+                                      : Colors.black87,
                             ),
                           ),
                           if (model['size'] != null && model['size'] > 0) ...[
@@ -1031,7 +1100,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 ),
               ),
             );
-          }).toList(),
+          }),
       ],
     );
   }
@@ -1040,7 +1109,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '${bytes}B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
   }
 
@@ -1087,25 +1158,18 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             ],
           ),
         ),
-        
+
         // 模型列表或错误信息
         if (_modelScopeModelsError.isNotEmpty)
           Container(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Icon(
-                  Icons.error_outline,
-                  color: Colors.red[300],
-                  size: 32,
-                ),
+                Icon(Icons.error_outline, color: Colors.red[300], size: 32),
                 const SizedBox(height: 8),
                 Text(
                   _modelScopeModelsError,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.red[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.red[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -1121,18 +1185,11 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  color: Colors.grey[400],
-                  size: 32,
-                ),
+                Icon(Icons.info_outline, color: Colors.grey[400], size: 32),
                 const SizedBox(height: 8),
                 Text(
                   '请确保 API 密钥正确\n然后点击刷新按钮获取模型列表',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -1158,14 +1215,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF3B82F6).withValues(alpha: 0.08)
-                      : null,
+                  color:
+                      isSelected
+                          ? const Color(0xFF3B82F6).withValues(alpha: 0.08)
+                          : null,
                   border: Border(
-                    bottom: BorderSide(
-                      color: Colors.grey[200]!,
-                      width: 0.5,
-                    ),
+                    bottom: BorderSide(color: Colors.grey[200]!, width: 0.5),
                   ),
                 ),
                 child: Row(
@@ -1176,22 +1231,25 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected
-                              ? const Color(0xFF3B82F6)
-                              : Colors.grey[400]!,
+                          color:
+                              isSelected
+                                  ? const Color(0xFF3B82F6)
+                                  : Colors.grey[400]!,
                           width: 2,
                         ),
-                        color: isSelected
-                            ? const Color(0xFF3B82F6)
-                            : Colors.transparent,
+                        color:
+                            isSelected
+                                ? const Color(0xFF3B82F6)
+                                : Colors.transparent,
                       ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.circle,
-                              size: 8,
-                              color: Colors.white,
-                            )
-                          : null,
+                      child:
+                          isSelected
+                              ? const Icon(
+                                Icons.circle,
+                                size: 8,
+                                color: Colors.white,
+                              )
+                              : null,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -1202,12 +1260,14 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                             model['name'],
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.w500
-                                  : FontWeight.normal,
-                              color: isSelected
-                                  ? const Color(0xFF3B82F6)
-                                  : Colors.black87,
+                              fontWeight:
+                                  isSelected
+                                      ? FontWeight.w500
+                                      : FontWeight.normal,
+                              color:
+                                  isSelected
+                                      ? const Color(0xFF3B82F6)
+                                      : Colors.black87,
                             ),
                           ),
                           if (model['object'] != null) ...[
@@ -1227,7 +1287,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 ),
               ),
             );
-          }).toList(),
+          }),
       ],
     );
   }
@@ -1309,7 +1369,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   CupertinoIcons.device_desktop,
                 ),
                 const SizedBox(height: 8), // 从12减少到8
-                
               ],
             ),
           ),
@@ -1366,28 +1425,33 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       case 1:
         // Ollama 可能不需要 API Key，其他提供商需要
         final apiKeyRequired = _selectedProvider != 'ollama';
-        final basicRequirementsMet = (apiKeyRequired ? _apiKeyController.text.trim().isNotEmpty : true) &&
+        final basicRequirementsMet =
+            (apiKeyRequired
+                ? _apiKeyController.text.trim().isNotEmpty
+                : true) &&
             _apiUrlController.text.trim().isNotEmpty &&
             _selectedOnlineModel.isNotEmpty;
-        
+
         // 如果是预设模型且有 size 选项，需要检查是否选择了 size
         if (!_isCustomModel && basicRequirementsMet) {
           final selectedProviderData = onlineProviders.firstWhere(
             (provider) => provider['id'] == _selectedProvider,
           );
           try {
-            final selectedModel = (selectedProviderData['models'] as List).firstWhere(
-              (model) => model['id'] == _selectedOnlineModel,
-            );
-            if (selectedModel != null && selectedModel['size'] != null && (selectedModel['size'] as List).isNotEmpty) {
-              return _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true;
+            final selectedModel = (selectedProviderData['models'] as List)
+                .firstWhere((model) => model['id'] == _selectedOnlineModel);
+            if (selectedModel != null &&
+                selectedModel['size'] != null &&
+                (selectedModel['size'] as List).isNotEmpty) {
+              return _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty ==
+                  true;
             }
           } catch (e) {
             // 如果找不到对应的模型，返回基本要求的结果
             return basicRequirementsMet;
           }
         }
-        
+
         return basicRequirementsMet;
       case 2:
         return _testCompleted && _testPassed; // 必须测试通过才能继续
@@ -1452,7 +1516,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         case 'ollama':
           // Ollama 需要自动添加 /chat 路径
           if (!finalApiUrl.endsWith('/chat')) {
-            finalApiUrl = finalApiUrl.endsWith('/') ? '${finalApiUrl}chat' : '$finalApiUrl/chat';
+            finalApiUrl =
+                finalApiUrl.endsWith('/')
+                    ? '${finalApiUrl}chat'
+                    : '$finalApiUrl/chat';
           }
           break;
         // 其他提供商使用通用格式
@@ -1467,9 +1534,11 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
       // 构建最终的模型标识符
       String finalModelId = _selectedOnlineModel;
-      if (!_isCustomModel && _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
+      if (!_isCustomModel &&
+          _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
         // 如果是预设模型且选择了 size，构建完整的模型标识符
-        finalModelId = '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
+        finalModelId =
+            '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
       }
 
       final newModel = {
@@ -1526,7 +1595,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-       
         Text(
           '测试模型连接和响应能力',
           style: TextStyle(fontSize: 11, color: Colors.grey[600]),
@@ -1788,7 +1856,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
       // Ollama 可能不需要 API Key，其他提供商需要
       final apiKeyRequired = _selectedProvider != 'ollama';
-      
+
       if (testApiUrl.isEmpty ||
           (apiKeyRequired && testApiKey.isEmpty) ||
           _selectedOnlineModel.isEmpty) {
@@ -1806,8 +1874,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
       // 构建最终的模型标识符（与创建时保持一致）
       String testModelId = _selectedOnlineModel;
-      if (!_isCustomModel && _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
-        testModelId = '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
+      if (!_isCustomModel &&
+          _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
+        testModelId =
+            '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
       }
 
       // 根据提供商自动补全API端点路径
@@ -1848,7 +1918,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         case 'ollama':
           // Ollama 需要自动添加 /chat 路径
           if (!finalApiUrl.endsWith('/chat')) {
-            finalApiUrl = finalApiUrl.endsWith('/') ? '${finalApiUrl}chat' : '$finalApiUrl/chat';
+            finalApiUrl =
+                finalApiUrl.endsWith('/')
+                    ? '${finalApiUrl}chat'
+                    : '$finalApiUrl/chat';
           }
           break;
         // 其他提供商使用通用格式
@@ -1895,7 +1968,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         hasReceived = true;
 
         final chunk = chunkMap['content'] ?? '';
-        
+
         // 检查是否是错误响应
         if (chunk.startsWith('错误:')) {
           setState(() {
@@ -1970,39 +2043,44 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     });
 
     try {
-      final apiUrl = _apiUrlController.text.trim().isNotEmpty 
-          ? _apiUrlController.text.trim()
-          : 'http://localhost:11434/api';
-      
+      final apiUrl =
+          _apiUrlController.text.trim().isNotEmpty
+              ? _apiUrlController.text.trim()
+              : 'http://localhost:11434/api';
+
       // 确保URL以/api结尾
       String baseUrl = apiUrl;
       if (!baseUrl.endsWith('/api')) {
         baseUrl = baseUrl.endsWith('/') ? '${baseUrl}api' : '$baseUrl/api';
       }
-      
-      final response = await http.get(
-        Uri.parse('$baseUrl/tags'),
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/tags'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['models'] != null) {
           setState(() {
-            _ollamaModels = (data['models'] as List).map((model) {
-              return {
-                'id': model['name'] ?? '',
-                'name': model['name'] ?? '',
-                'size': model['size'] ?? 0,
-                'modified_at': model['modified_at'] ?? '',
-              };
-            }).toList();
+            _ollamaModels =
+                (data['models'] as List).map((model) {
+                  return {
+                    'id': model['name'] ?? '',
+                    'name': model['name'] ?? '',
+                    'size': model['size'] ?? 0,
+                    'modified_at': model['modified_at'] ?? '',
+                  };
+                }).toList();
             _isLoadingOllamaModels = false;
           });
         }
       } else {
         setState(() {
-          _ollamaModelsError = 'HTTP ${response.statusCode}: ${response.reasonPhrase}';
+          _ollamaModelsError =
+              'HTTP ${response.statusCode}: ${response.reasonPhrase}';
           _isLoadingOllamaModels = false;
         });
       }
@@ -2024,10 +2102,11 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     });
 
     try {
-      final apiUrl = _apiUrlController.text.trim().isNotEmpty 
-          ? _apiUrlController.text.trim()
-          : 'https://api-inference.modelscope.cn/v1/';
-      
+      final apiUrl =
+          _apiUrlController.text.trim().isNotEmpty
+              ? _apiUrlController.text.trim()
+              : 'https://api-inference.modelscope.cn/v1/';
+
       // 确保URL以v1/结尾
       String baseUrl = apiUrl;
       if (!baseUrl.endsWith('/v1/')) {
@@ -2037,33 +2116,37 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           baseUrl = '$baseUrl/v1/';
         }
       }
-      
-      final response = await http.get(
-        Uri.parse('${baseUrl}models'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${_apiKeyController.text.trim()}',
-        },
-      ).timeout(const Duration(seconds: 10));
+
+      final response = await http
+          .get(
+            Uri.parse('${baseUrl}models'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${_apiKeyController.text.trim()}',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['data'] != null) {
           setState(() {
-            _modelScopeModels = (data['data'] as List).map((model) {
-              return {
-                'id': model['id'] ?? '',
-                'name': model['id'] ?? '',
-                'object': model['object'] ?? '',
-                'created': model['created'] ?? 0,
-              };
-            }).toList();
+            _modelScopeModels =
+                (data['data'] as List).map((model) {
+                  return {
+                    'id': model['id'] ?? '',
+                    'name': model['id'] ?? '',
+                    'object': model['object'] ?? '',
+                    'created': model['created'] ?? 0,
+                  };
+                }).toList();
             _isLoadingModelScopeModels = false;
           });
         }
       } else {
         setState(() {
-          _modelScopeModelsError = 'HTTP ${response.statusCode}: ${response.reasonPhrase}';
+          _modelScopeModelsError =
+              'HTTP ${response.statusCode}: ${response.reasonPhrase}';
           _isLoadingModelScopeModels = false;
         });
       }

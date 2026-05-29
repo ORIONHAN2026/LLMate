@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:objectbox/objectbox.dart';
 import '../../models/rag/rag_chunk.dart';
 import 'store_manager.dart';
 import '../../../objectbox.g.dart';
@@ -15,8 +14,6 @@ class VectorDatabaseService {
     _store = store ?? StoreManager.getStore(ragId);
     _chunkBox = _store.box<RagChunk>();
     _chunkBox.removeAllAsync();
-    
-
   }
 
   /// 释放资源
@@ -50,7 +47,7 @@ class VectorDatabaseService {
   }) async {
     // 使用索引直接查询指定 modelId 的文档
     final qBuilder = _chunkBox.query(RagChunk_.modelId.equals(modelId));
-    
+
     final query = qBuilder.build();
     final allChunks = query.find();
     query.close();
@@ -73,7 +70,7 @@ class VectorDatabaseService {
     final chunks = query.find();
     query.close();
     if (chunks.isNotEmpty) {
-      await _chunkBox.removeMany(chunks.map((c) => c.obxId).toList());
+      _chunkBox.removeMany(chunks.map((c) => c.obxId).toList());
       if (kDebugMode) {
         print('ObjectBox: 删除文档 $documentId 的 ${chunks.length} 个切片');
       }
@@ -83,18 +80,17 @@ class VectorDatabaseService {
   /// 获取数据库统计信息
   Future<VectorDatabaseStats> getStats() async {
     final totalChunks = _chunkBox.count();
-    
+
     // 获取所有不重复的文档ID
     final query = _chunkBox.query().build();
     final allChunks = query.find();
     query.close();
-    
+
     final uniqueDocIds = allChunks.map((c) => c.documentId).toSet();
     final totalDocuments = uniqueDocIds.length;
-    final averageChunksPerDocument = totalDocuments > 0 
-        ? (totalChunks / totalDocuments).toDouble() 
-        : 0.0;
-    
+    final averageChunksPerDocument =
+        totalDocuments > 0 ? (totalChunks / totalDocuments).toDouble() : 0.0;
+
     return VectorDatabaseStats(
       totalChunks: totalChunks,
       totalDocuments: totalDocuments,
@@ -116,10 +112,7 @@ class VectorSearchResult {
   final RagChunk chunk;
   final double similarity;
 
-  VectorSearchResult({
-    required this.chunk,
-    required this.similarity,
-  });
+  VectorSearchResult({required this.chunk, required this.similarity});
 }
 
 /// 向量数据库统计信息

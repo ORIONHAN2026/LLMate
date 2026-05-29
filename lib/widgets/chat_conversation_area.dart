@@ -4,10 +4,8 @@ import 'package:chathub/widgets/ai_message_widget.dart';
 import 'package:chathub/widgets/user_message_widget.dart';
 import 'package:chathub/widgets/tool_message_widget.dart';
 import 'package:chathub/utils/responsive_utils.dart';
-import '../models/chat/chat_message.dart';
 import '../models/bigmodel/models.dart';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart';
@@ -21,11 +19,11 @@ class ChatConversationArea extends StatefulWidget {
   final Map<String, GlobalKey> messageKeys;
 
   const ChatConversationArea({
-    Key? key,
+    super.key,
     required this.chatSession,
     required this.scrollController,
     required this.messageKeys,
-  }) : super(key: key);
+  });
 
   @override
   State<ChatConversationArea> createState() => _ChatConversationAreaState();

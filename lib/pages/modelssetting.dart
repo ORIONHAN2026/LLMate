@@ -69,7 +69,7 @@ class ModelSettingDialog extends StatelessWidget {
 
 class _ModelSettingPageState extends State<ModelSettingPage> {
   int _selectedTab = 0;
-  String _apiUrl = 'http://127.0.0.1:11434/api';
+  final String _apiUrl = 'http://127.0.0.1:11434/api';
 
   List<ChatModel> _availableModels = [];
   final sessionController = Get.find<SessionController>();
@@ -160,7 +160,8 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
       // 遍历所有会话，检查是否使用了被删除的模型
       for (final session in currentSessions) {
-        if (session.chatModel != null && session.chatModel!.modelId == modelId) {
+        if (session.chatModel != null &&
+            session.chatModel!.modelId == modelId) {
           // 创建清空模型的新会话对象
           final updatedSession = session.copyWith(clearChatModel: true);
           updatedSessions.add(updatedSession);
@@ -175,7 +176,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       // 如果有更新，保存会话数据
       if (hasUpdates) {
         await sessionController.setSessions(updatedSessions);
-        
+
         // 如果当前会话使用了被删除的模型，需要更新当前会话引用
         if (currentSession?.chatModel?.modelId == modelId) {
           final updatedCurrentSession = updatedSessions.firstWhere(
@@ -184,7 +185,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
           );
           await sessionController.setCurrentSession(updatedCurrentSession);
         }
-        
+
         debugPrint('已成功清理使用已删除模型的会话');
       }
     } catch (e) {
@@ -253,10 +254,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
-          right: BorderSide(
-            color: Theme.of(context).dividerColor, 
-            width: 1,
-          ),
+          right: BorderSide(color: Theme.of(context).dividerColor, width: 1),
         ),
       ),
       child: Column(
@@ -291,7 +289,6 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                 icon: const FaIcon(CupertinoIcons.plus, size: 10),
                 label: const Text('添加模型', style: TextStyle(fontSize: 11)),
                 style: ElevatedButton.styleFrom(
-                 
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -316,13 +313,17 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: isSelected 
-            ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-            : Colors.transparent,
+        color:
+            isSelected
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border:
             isSelected
-                ? Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3), width: 1)
+                ? Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  width: 1,
+                )
                 : null,
       ),
       child: GestureDetector(
@@ -337,80 +338,82 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
             });
           },
           child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            children: [
-              // 模型图标
-              Container(
-                width: 16,
-                height: 16,
-                child: _buildModelIconWidget(
-                  model.name,
-                  isSelected,
-                  provider: model.provider,
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                // 模型图标
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: _buildModelIconWidget(
+                    model.name,
+                    isSelected,
+                    provider: model.provider,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              // 模型信息
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        // 状态指示器
-                        Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color:
-                                isActive
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.outline.withOpacity(0.4),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        // 模型名称
-                        Expanded(
-                          child: Text(
-                            modelName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                             
+                const SizedBox(width: 8),
+                // 模型信息
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          // 状态指示器
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color:
+                                  isActive
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(
+                                        context,
+                                      ).colorScheme.outline.withOpacity(0.4),
+                              shape: BoxShape.circle,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    // 完整名称
-                    Text(
-                      fullName,
-                      style: TextStyle(
-                        fontSize: 9,
-                        
+                          const SizedBox(width: 4),
+                          // 模型名称
+                          Expanded(
+                            child: Text(
+                              modelName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      const SizedBox(height: 2),
+                      // 完整名称
+                      Text(
+                        fullName,
+                        style: TextStyle(fontSize: 9),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
 
-                    // 业务类型标签
-                  ],
+                      // 业务类型标签
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
   }
 
-  void _showModelContextMenu(BuildContext context, Offset position, ChatModel model) {
+  void _showModelContextMenu(
+    BuildContext context,
+    Offset position,
+    ChatModel model,
+  ) {
     showMenu(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -445,14 +448,14 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
   void _copyModel(ChatModel model) async {
     // 生成新的名称
     String newName = _generateCopyName(model.name);
-    
+
     // 调试：打印原模型的API密钥
     print('=== 复制模型调试信息 ===');
     print('原模型名称: ${model.name}');
     print('原模型API密钥: ${model.apiKey ?? "null"}');
     print('原模型API URL: ${model.apiUrl ?? "null"}');
     print('原模型provider: ${model.provider ?? "null"}');
-    
+
     // 创建模型副本，只保留基本配置，排除会话、MCP、知识库等设置
     ChatModel copiedModel = model.copyWith(
       modelId: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -476,7 +479,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       _availableModels.add(copiedModel);
     });
     await _saveModels();
-    
+
     // 显示成功提示
     SnackBarUtils.showSuccess(context, '模型 "$newName" 复制成功');
   }
@@ -484,7 +487,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
   String _generateCopyName(String originalName) {
     String baseName = originalName;
     int copyNumber = 1;
-    
+
     // 如果原名称已经包含 "的副本"，提取基础名称
     RegExp copyPattern = RegExp(r'^(.+?)(?:的副本(?:\s*\((\d+)\))?)?$');
     RegExpMatch? match = copyPattern.firstMatch(originalName);
@@ -494,18 +497,18 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         copyNumber = int.parse(match.group(2)!) + 1;
       }
     }
-    
+
     // 检查名称是否已存在，如果存在则递增数字
     String newName;
     do {
       if (copyNumber == 1) {
-        newName = '${baseName}的副本';
+        newName = '$baseName的副本';
       } else {
-        newName = '${baseName}的副本($copyNumber)';
+        newName = '$baseName的副本($copyNumber)';
       }
       copyNumber++;
     } while (_availableModels.any((model) => model.name == newName));
-    
+
     return newName;
   }
 
@@ -520,7 +523,11 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.smart_toy_outlined, size: 48, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+          Icon(
+            Icons.smart_toy_outlined,
+            size: 48,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+          ),
           const SizedBox(height: 16),
           Text(
             '暂无模型',
@@ -533,7 +540,10 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
           const SizedBox(height: 8),
           Text(
             '点击左下角"添加模型"按钮开始添加',
-            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            ),
           ),
         ],
       ),
@@ -570,7 +580,10 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
           //     backgroundColor: const Color(0xFF10B981),
           //   ),
           // );
-          SnackBarUtils.showSuccess(context, '模型 "${updatedModel.name}" 已更新，相关会话设置已同步');
+          SnackBarUtils.showSuccess(
+            context,
+            '模型 "${updatedModel.name}" 已更新，相关会话设置已同步',
+          );
         }
       },
       onModelDeleted: (modelId) async {
@@ -682,9 +695,10 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
           // 如果图片加载失败，回退到FontAwesome图标
           return Icon(
             CupertinoIcons.divide,
-            color: isSelected 
-                ? Theme.of(context).colorScheme.primary 
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color:
+                isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             size: 9,
           );
         },
@@ -693,9 +707,10 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       // 没有对应图标文件的模型使用FontAwesome图标
       return Icon(
         CupertinoIcons.device_laptop,
-        color: isSelected 
-            ? Theme.of(context).colorScheme.primary 
-            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+        color:
+            isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
         size: 9,
       );
     }

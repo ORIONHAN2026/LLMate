@@ -1,4 +1,3 @@
-import 'package:objectbox/objectbox.dart';
 import '../../../objectbox.g.dart';
 import 'package:path/path.dart';
 import 'dart:io';
@@ -26,7 +25,7 @@ class StoreManager {
   static void closeStore(String ragId) {
     if (_stores.containsKey(ragId)) {
       _referenceCount[ragId] = (_referenceCount[ragId] ?? 1) - 1;
-      
+
       if (_referenceCount[ragId]! <= 0) {
         _stores[ragId]?.close();
         _stores.remove(ragId);

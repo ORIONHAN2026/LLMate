@@ -103,19 +103,26 @@ class _SessionItemState extends State<_SessionItem>
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: widget.isSelected 
-            ? (Theme.of(context).brightness == Brightness.dark 
-                ? Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3)
-                : const Color(0xFFE5E7EB)) 
-            : Colors.transparent,
+        color:
+            widget.isSelected
+                ? (Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest.withOpacity(0.3)
+                    : const Color(0xFFE5E7EB))
+                : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         border:
             widget.isSelected
                 ? Border.all(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Theme.of(context).colorScheme.outline.withOpacity(0.2)
-                        : const Color(0xFFD1D5DB), 
-                    width: 1)
+                  color:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(
+                            context,
+                          ).colorScheme.outline.withOpacity(0.2)
+                          : const Color(0xFFD1D5DB),
+                  width: 1,
+                )
                 : null,
       ),
       child: MouseRegion(
@@ -178,8 +185,12 @@ class _SessionItemState extends State<_SessionItem>
                               fontSize: 10,
                               color:
                                   widget.isSelected
-                                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.7)
-                                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                      ? Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.7)
+                                      : Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.5),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -212,7 +223,9 @@ class _SessionItemState extends State<_SessionItem>
                         color:
                             widget.session.isFavorite
                                 ? Colors.amber[600]
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                : Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       padding: EdgeInsets.zero,
                       tooltip: widget.session.isFavorite ? '取消收藏' : '收藏会话',
@@ -239,7 +252,9 @@ class _SessionItemState extends State<_SessionItem>
                       icon: Icon(
                         CupertinoIcons.trash,
                         size: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       padding: EdgeInsets.zero,
                       tooltip: '删除会话',
@@ -314,9 +329,10 @@ class _SessionItemState extends State<_SessionItem>
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: widget.isSelected 
-              ? Theme.of(context).colorScheme.onSurface 
-              : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+          color:
+              widget.isSelected
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -332,9 +348,10 @@ class _SessionItemState extends State<_SessionItem>
       style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: widget.isSelected 
-            ? Theme.of(context).colorScheme.onSurface 
-            : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+        color:
+            widget.isSelected
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
       ),
       decoration: const InputDecoration(
         isDense: true,
@@ -476,7 +493,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
     return Container(
       constraints: const BoxConstraints(minWidth: 150),
       decoration: BoxDecoration(
-        color:Theme.of(context).scaffoldBackgroundColor ,
+        color: Theme.of(context).scaffoldBackgroundColor,
       ), // 适应主题的背景色
       child: Column(
         children: [
@@ -497,7 +514,9 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                         icon: Icon(
                           CupertinoIcons.fullscreen,
                           size: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
                         ),
                         tooltip: '全屏',
                         padding: const EdgeInsets.all(4),
@@ -513,7 +532,9 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                       icon: Icon(
                         CupertinoIcons.square_pencil,
                         size: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       tooltip: '新建对话',
                       padding: const EdgeInsets.all(4),
@@ -529,7 +550,9 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                       icon: Icon(
                         CupertinoIcons.sidebar_right,
                         size: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       tooltip: '收起边栏',
                       padding: const EdgeInsets.all(4),
@@ -783,13 +806,22 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            Icon(
+              icon,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
             if (title != null) ...[
               const SizedBox(width: 12),
               Flexible(
                 child: Text(
                   title,
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -803,10 +835,10 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
   // 构建主题切换按钮组件
   Widget _buildGreeting() {
     final themeController = Get.find<ThemeController>();
-    
+
     return Obx(() {
       final isDark = themeController.isDarkMode.value;
-      
+
       return InkWell(
         onTap: () {
           themeController.toggleTheme();

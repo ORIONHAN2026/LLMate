@@ -561,7 +561,7 @@ class McpService {
     if (toolCalls.isEmpty) {
       debugPrint('⚠️ 没有找到任何工具调用，响应内容前200字符：');
       debugPrint(
-        response.length > 200 ? response.substring(0, 200) + '...' : response,
+        response.length > 200 ? '${response.substring(0, 200)}...' : response,
       );
     }
 

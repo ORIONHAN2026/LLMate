@@ -142,11 +142,8 @@ class RagKnowledgeBase {
             (fileTypes[doc.fileExtension!] ?? 0) + 1;
       }
 
-   
       // 原始文件统计
-      if (doc.filePath != null) {
-        originalFiles.add(doc.filePath!);
-      }
+      originalFiles.add(doc.filePath);
     }
 
     return {
@@ -157,7 +154,6 @@ class RagKnowledgeBase {
       'last_updated': DateTime.now().toIso8601String(),
     };
   }
- 
 
   /// 获取文档数量
   int get documentCount => documents.length;
@@ -166,9 +162,7 @@ class RagKnowledgeBase {
   int get originalFilesCount {
     final files = <String>{};
     for (final doc in documents) {
-      if (doc.filePath != null) {
-        files.add(doc.filePath!);
-      }
+      files.add(doc.filePath);
     }
     return files.length;
   }

@@ -1,14 +1,15 @@
 /// 网页搜索相关的数据模型
+library;
 
 /// 搜索查询配置
 class WebSearchQuery {
-  final String keyword;           // 搜索关键词
-  final String searchEngine;      // 搜索引擎 (google, bing, duckduckgo, baidu)
-  final int maxResults;          // 最大结果数量
-  final String? language;        // 搜索语言
-  final String? region;          // 搜索地区
-  final bool safeSearch;         // 安全搜索
-  final DateTime timestamp;      // 搜索时间
+  final String keyword; // 搜索关键词
+  final String searchEngine; // 搜索引擎 (google, bing, duckduckgo, baidu)
+  final int maxResults; // 最大结果数量
+  final String? language; // 搜索语言
+  final String? region; // 搜索地区
+  final bool safeSearch; // 安全搜索
+  final DateTime timestamp; // 搜索时间
 
   const WebSearchQuery({
     required this.keyword,
@@ -67,13 +68,13 @@ class WebSearchQuery {
 
 /// 单个搜索结果
 class SearchResult {
-  final String title;            // 标题
-  final String url;              // 链接
-  final String snippet;          // 摘要
-  final String? thumbnail;       // 缩略图
-  final DateTime? publishDate;   // 发布时间
-  final String? source;          // 来源网站
-  final double? relevanceScore;  // 相关性评分
+  final String title; // 标题
+  final String url; // 链接
+  final String snippet; // 摘要
+  final String? thumbnail; // 缩略图
+  final DateTime? publishDate; // 发布时间
+  final String? source; // 来源网站
+  final double? relevanceScore; // 相关性评分
 
   const SearchResult({
     required this.title,
@@ -103,9 +104,10 @@ class SearchResult {
       url: map['url'] ?? '',
       snippet: map['snippet'] ?? '',
       thumbnail: map['thumbnail'],
-      publishDate: map['publishDate'] != null
-          ? DateTime.parse(map['publishDate'])
-          : null,
+      publishDate:
+          map['publishDate'] != null
+              ? DateTime.parse(map['publishDate'])
+              : null,
       source: map['source'],
       relevanceScore: map['relevanceScore']?.toDouble(),
     );
@@ -114,16 +116,16 @@ class SearchResult {
 
 /// 网页内容
 class WebContent {
-  final String url;              // 网页URL
-  final String title;            // 网页标题
-  final String content;          // 提取的文本内容
-  final String? summary;         // 内容摘要
-  final List<String>? images;    // 图片链接
-  final List<String>? links;     // 外链
+  final String url; // 网页URL
+  final String title; // 网页标题
+  final String content; // 提取的文本内容
+  final String? summary; // 内容摘要
+  final List<String>? images; // 图片链接
+  final List<String>? links; // 外链
   final Map<String, String>? metadata; // 元数据
-  final DateTime extractedAt;    // 提取时间
+  final DateTime extractedAt; // 提取时间
   final bool isContentTruncated; // 内容是否被截断
-  final int originalLength;      // 原始内容长度
+  final int originalLength; // 原始内容长度
 
   const WebContent({
     required this.url,
@@ -171,14 +173,14 @@ class WebContent {
 
 /// 搜索结果集合
 class WebSearchResults {
-  final WebSearchQuery query;           // 搜索查询
-  final List<SearchResult> results;     // 搜索结果列表
-  final List<WebContent> contents;      // 提取的网页内容
-  final String searchId;                // 搜索ID
-  final DateTime searchTime;            // 搜索时间
-  final Duration searchDuration;        // 搜索耗时
-  final String? errorMessage;           // 错误信息
-  final bool isSuccess;                 // 是否成功
+  final WebSearchQuery query; // 搜索查询
+  final List<SearchResult> results; // 搜索结果列表
+  final List<WebContent> contents; // 提取的网页内容
+  final String searchId; // 搜索ID
+  final DateTime searchTime; // 搜索时间
+  final Duration searchDuration; // 搜索耗时
+  final String? errorMessage; // 错误信息
+  final bool isSuccess; // 是否成功
 
   const WebSearchResults({
     required this.query,
@@ -207,12 +209,10 @@ class WebSearchResults {
   factory WebSearchResults.fromMap(Map<String, dynamic> map) {
     return WebSearchResults(
       query: WebSearchQuery.fromMap(map['query']),
-      results: (map['results'] as List)
-          .map((r) => SearchResult.fromMap(r))
-          .toList(),
-      contents: (map['contents'] as List)
-          .map((c) => WebContent.fromMap(c))
-          .toList(),
+      results:
+          (map['results'] as List).map((r) => SearchResult.fromMap(r)).toList(),
+      contents:
+          (map['contents'] as List).map((c) => WebContent.fromMap(c)).toList(),
       searchId: map['searchId'] ?? '',
       searchTime: DateTime.parse(map['searchTime']),
       searchDuration: Duration(milliseconds: map['searchDuration'] ?? 0),
@@ -254,7 +254,7 @@ class WebSearchResults {
   /// 获取所有网页内容的合并文本
   String getCombinedContent() {
     if (contents.isEmpty) return '';
-    
+
     final buffer = StringBuffer();
     for (int i = 0; i < contents.length; i++) {
       final content = contents[i];
@@ -264,20 +264,20 @@ class WebSearchResults {
       buffer.writeln(content.content);
       buffer.writeln();
     }
-    
+
     return buffer.toString();
   }
 }
 
 /// 搜索引擎配置
 class SearchEngineConfig {
-  final String name;             // 引擎名称
-  final String displayName;      // 显示名称
-  final String apiUrl;           // API地址
-  final String? apiKey;          // API密钥
-  final bool requiresAuth;       // 是否需要认证
+  final String name; // 引擎名称
+  final String displayName; // 显示名称
+  final String apiUrl; // API地址
+  final String? apiKey; // API密钥
+  final bool requiresAuth; // 是否需要认证
   final Map<String, dynamic> defaultParams; // 默认参数
-  final bool isEnabled;          // 是否启用
+  final bool isEnabled; // 是否启用
 
   const SearchEngineConfig({
     required this.name,

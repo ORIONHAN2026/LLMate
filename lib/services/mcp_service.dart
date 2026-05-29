@@ -370,6 +370,9 @@ class McpService {
     }
   }
 
+  /// 获取已连接的 MCP Client 实例（标准 mcp_client API）
+  static Client? getMCPClient(String serviceName) => _clients[serviceName];
+
   /// 关闭MCP客户端连接
   static Future<void> closeClient(String serviceName) async {
     await _cleanupClient(serviceName);

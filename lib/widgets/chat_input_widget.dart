@@ -13,6 +13,7 @@ import '../models/chat/skill.dart';
 import '../models/chat/chat_setting.dart';
 import '../framework/llm_framework.dart';
 import '../services/model_storage_service.dart';
+import 'package:mcp_client/mcp_client.dart' hide MessageRole;
 import '../services/mcp_service.dart';
 import '../services/mcp_storage_service.dart';
 import '../utils/snackbar_utils.dart';
@@ -114,10 +115,28 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     widget.scrollController.addListener(
       _onScrollChanged,
     ); // 监听当前会话的变化，确保附件状态及时更新
+    // 记录上一次会话的 MCP 服务名，用于生命周期管理
+    String? prevMcpServiceName;
+
     _sessionSubscription = sessionController.currentSession.listen((
       currentSession,
-    ) {
-      // debugPrint('会话监听器触发 - 消息数: ${currentSession?.messages.length} 消息');
+    ) async {
+      // MCP 客户端生命周期管理：切换会话时关闭旧客户端，初始化新客户端
+      final newMcpServiceName = currentSession?.mcpServer?.name;
+      if (prevMcpServiceName != null && prevMcpServiceName != newMcpServiceName) {
+        debugPrint('🔄 会话切换，关闭旧 MCP 客户端: $prevMcpServiceName');
+        await McpService.closeClient(prevMcpServiceName!);
+      }
+      prevMcpServiceName = newMcpServiceName;
+
+      // 如果新会话已配置 MCP 且客户端未初始化，则初始化
+      if (newMcpServiceName != null && newMcpServiceName.isNotEmpty) {
+        final existingClient = McpService.getMCPClient(newMcpServiceName);
+        if (existingClient == null) {
+          debugPrint('🔄 会话切换，初始化 MCP 客户端: $newMcpServiceName');
+          await McpService.initializeSessionMcpServices(currentSession!);
+        }
+      }
 
       if (mounted && currentSession != null) {
         // 附件状态变化时触发UI更新
@@ -154,6 +173,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     _sessionSubscription.cancel(); // 取消监听器
     _inputController.dispose();
     _inputFocusNode.dispose();
+    // 关闭所有 MCP 客户端连接
+    McpService.closeAllClients();
     // scrollController 由父组件管理，不需要在这里 dispose
     super.dispose();
   }
@@ -2580,6 +2601,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 如果开启了MCP，初始化选中的服务
     if (isEnabled) {
       _initializeMcpServices(updatedSession);
+    } else {
+      // 关闭 MCP 时清理客户端
+      final serviceName = currentSession.mcpServer?.name;
+      if (serviceName != null) {
+        McpService.closeClient(serviceName);
+      }
     }
   }
 
@@ -2916,6 +2943,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           debugPrint('初始化MCP服务失败: $e');
         }
       } else {
+        // 关闭 MCP 时清理客户端
+        final oldServiceName = currentSession.mcpServer?.name;
+        if (oldServiceName != null) {
+          McpService.closeClient(oldServiceName);
+        }
         SnackBarUtils.showInfo(context, '已关闭MCP工具');
       }
     }
@@ -4118,51 +4150,83 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       debugPrint('🔧 解析到 ${toolCallsList.length} 个 tool_calls');
 
-      // 初始化 MCP 服务
-      final initializedServices = await McpService.initializeSessionMcpServices(session);
-      if (initializedServices.isEmpty) {
-        debugPrint('⚠️ 无法初始化 MCP 服务');
+      // MCP client 应该在会话切换/选择 MCP 时已初始化，这里只做存在性检查
+      final serviceName = session.mcpServer?.name;
+      if (serviceName == null || McpService.getMCPClient(serviceName) == null) {
+        debugPrint('⚠️ MCP 客户端未初始化，尝试初始化: $serviceName');
+        final initializedServices = await McpService.initializeSessionMcpServices(session);
+        if (initializedServices.isEmpty) {
+          debugPrint('⚠️ 无法初始化 MCP 服务');
+          return;
+        }
+      }
+      if (serviceName == null) {
+        debugPrint('⚠️ 会话未绑定 MCP 服务');
         return;
       }
 
-      // 构建工具调用参数列表（兼容 executeSessionToolCalls 的格式）
-      final toolCallsForExecution = <Map<String, dynamic>>[];
+      final mcpClient = McpService.getMCPClient(serviceName);
+      if (mcpClient == null) {
+        debugPrint('❌ MCP 客户端未就绪: $serviceName');
+        return;
+      }
+
+      // 使用 mcp_client 标准 API 直接调用工具
+      final toolResults = <McpToolResult>[];
       for (final tc in toolCallsList) {
-        final func = tc['function'] as Map<String, dynamic>?;
-        if (func == null) continue;
-        
-        final toolName = func['name'] as String? ?? '';
-        Map<String, dynamic> arguments = {};
-        
+        final toolName = tc['name'] as String? ?? '';
+        final arguments = tc['arguments'] as Map<String, dynamic>? ?? {};
+
+        if (toolName.isEmpty) continue;
+
+        debugPrint('🔧 准备调用工具: $toolName, 参数: $arguments');
+
+        if (mounted) {
+          SnackBarUtils.showInfo(context, '正在执行工具调用: $toolName');
+        }
+
         try {
-          final argsStr = func['arguments'] as String? ?? '{}';
-          arguments = jsonDecode(argsStr) as Map<String, dynamic>;
+          // 标准 MCP client.callTool API
+          final callResult = await mcpClient.callTool(toolName, arguments);
+          final isError = callResult.isError == true;
+          
+          // 格式化 CallToolResult 内容
+          final buffer = StringBuffer();
+          for (final content in callResult.content) {
+            if (content is TextContent) {
+              buffer.writeln(content.text);
+            } else if (content is ImageContent) {
+              buffer.writeln('[图片: ${content.data ?? content.url}]');
+            } else {
+              buffer.writeln(content.toString());
+            }
+          }
+          final formattedResult = buffer.toString().trim();
+
+          toolResults.add(McpToolResult(
+            toolName: toolName,
+            arguments: arguments,
+            result: formattedResult,
+            isSuccess: !isError,
+            error: isError ? formattedResult : null,
+            timestamp: DateTime.now(),
+          ));
+
+          debugPrint(
+            '${isError ? "⚠️" : "✅"} 工具 $toolName: $formattedResult',
+          );
         } catch (e) {
-          debugPrint('⚠️ 解析工具参数失败: $e');
-          arguments = {};
+          debugPrint('❌ 工具调用失败: $toolName, 错误: $e');
+          toolResults.add(McpToolResult(
+            toolName: toolName,
+            arguments: arguments,
+            result: '',
+            isSuccess: false,
+            error: e.toString(),
+            timestamp: DateTime.now(),
+          ));
         }
-
-        if (toolName.isNotEmpty) {
-          toolCallsForExecution.add({'tool': toolName, 'args': arguments});
-          debugPrint('🔧 准备调用工具: $toolName, 参数: $arguments');
-        }
       }
-
-      if (toolCallsForExecution.isEmpty) {
-        debugPrint('⚠️ 没有有效的工具调用');
-        return;
-      }
-
-      // 显示工具调用提示
-      if (mounted) {
-        SnackBarUtils.showInfo(context, '正在执行 ${toolCallsForExecution.length} 个工具调用...');
-      }
-
-      // 执行 MCP 工具调用
-      final toolResults = await McpService.executeSessionToolCalls(
-        session: session,
-        toolCalls: toolCallsForExecution,
-      );
 
       if (toolResults.isEmpty) {
         debugPrint('⚠️ 没有成功执行任何工具调用');
@@ -4234,11 +4298,21 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           : '${userMessage.attachments.map((a) => '[${a.name}]\n${a.content ?? ""}').join('\n\n')}\n\n${userMessage.content}';
       messages.add({'role': 'user', 'content': userContent});
       
-      // 添加 assistant 消息（包含之前的 tool_calls）
+      // 添加 assistant 消息（包含之前的 tool_calls，转换为 OpenAI 兼容格式）
       messages.add({
         'role': 'assistant',
         'content': botMessage.content.isNotEmpty ? botMessage.content : null,
-        'tool_calls': toolCallsList,
+        'tool_calls': toolCallsList.map((tc) {
+          final m = tc as Map<String, dynamic>;
+          return {
+            'id': m['id'] ?? 'call_${m['index'] ?? 0}',
+            'type': 'function',
+            'function': {
+              'name': m['name'] ?? '',
+              'arguments': m['arguments'] is String ? m['arguments'] : jsonEncode(m['arguments'] ?? {}),
+            },
+          };
+        }).toList(),
       });
       
       // 添加 tool 结果消息
@@ -4386,16 +4460,19 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       debugPrint('🔍 开始分析AI响应中的工具调用...');
 
-      // 初始化会话的MCP服务
-      final initializedServices = await McpService.initializeSessionMcpServices(
-        session,
-      );
-      if (initializedServices.isEmpty) {
-        debugPrint('⚠️ 无法初始化任何MCP服务');
-        return;
+      // MCP client 应该在会话切换/选择 MCP 时已初始化，这里只做存在性检查
+      final serviceName = session.mcpServer!.name;
+      if (McpService.getMCPClient(serviceName) == null) {
+        debugPrint('⚠️ MCP 客户端未初始化，尝试初始化: $serviceName');
+        final initializedServices = await McpService.initializeSessionMcpServices(
+          session,
+        );
+        if (initializedServices.isEmpty) {
+          debugPrint('⚠️ 无法初始化任何MCP服务');
+          return;
+        }
+        debugPrint('✅ 已初始化 ${initializedServices.length} 个MCP服务');
       }
-
-      debugPrint('✅ 已初始化 ${initializedServices.length} 个MCP服务');
 
       // 解析AI响应中的工具调用请求
       final toolCalls = McpService.parseToolCallsFromResponse(aiResponse);

@@ -102,6 +102,11 @@ class DeepSeekProvider extends BaseLlmProvider {
         print('请求数据: ${jsonEncode(requestData)}');
       }
 
+      // 打印工具调用请求报文
+      if (requestData.containsKey('tools')) {
+        debugPrint('🔧 DeepSeek 工具调用请求 tools: ${jsonEncode(requestData['tools'])}');
+      }
+
       final response = await dio.post(
         model!.apiUrl!,
         data: requestData,
@@ -163,11 +168,32 @@ class DeepSeekProvider extends BaseLlmProvider {
     }
   }
 
+  /// 将累积的 tool_calls 转换为 MCP 标准协议格式输出
+  /// 将 OpenAI 流式格式的 function.arguments (JSON string) 解析为 Map
+  static List<Map<String, dynamic>> _buildMcpToolCallsOutput(
+    Map<int, Map<String, dynamic>> accumulated,
+  ) {
+    return accumulated.entries
+        .map((e) {
+          final tc = Map<String, dynamic>.from(e.value);
+          // 解析 arguments 从 JSON string 到 Map (MCP 标准格式)
+          try {
+            final argsStr = tc['arguments'] as String? ?? '{}';
+            tc['arguments'] = jsonDecode(argsStr);
+          } catch (_) {
+            tc['arguments'] = <String, dynamic>{};
+          }
+          return tc;
+        })
+        .toList()
+      ..sort((a, b) => (a['index'] as int).compareTo(b['index'] as int));
+  }
+
   /// 处理 DeepSeek 流式响应
   Stream<Map<String, String?>> _processDeepSeekStreamResponse(Stream<List<int>> stream) async* {
     String buffer = '';
     
-    // 用于累积 native tool_calls
+    // 用于累积 native tool_calls (MCP 标准协议格式: {index, id, name, arguments})
     final Map<int, Map<String, dynamic>> accumulatedToolCalls = {};
     bool hasToolCalls = false;
 
@@ -184,11 +210,10 @@ class DeepSeekProvider extends BaseLlmProvider {
           final dataStr = line.trim().substring(6);
           if (dataStr == '[DONE]') {
             // 流结束时，yield 累积的 tool_calls 信息
+            debugPrint('🔧 DeepSeek 流结束 [DONE], hasToolCalls=$hasToolCalls, accumulatedCount=${accumulatedToolCalls.length}');
             if (hasToolCalls && accumulatedToolCalls.isNotEmpty) {
-              final toolCallsList = accumulatedToolCalls.entries
-                  .map((e) => e.value)
-                  .toList()
-                ..sort((a, b) => (a['index'] as int).compareTo(b['index'] as int));
+              final toolCallsList = _buildMcpToolCallsOutput(accumulatedToolCalls);
+              debugPrint('🔧 [DONE] 累积的 tool_calls (MCP格式): ${jsonEncode(toolCallsList)}');
               yield {
                 'content': '',
                 'think': null,
@@ -214,10 +239,11 @@ class DeepSeekProvider extends BaseLlmProvider {
                   // 支持 DeepSeek R1 的推理内容
                   reasoningContent = delta['reasoning_content'] as String?;
                   
-                  // 处理 native tool_calls
+                  // 处理 native tool_calls (OpenAI streaming delta → MCP 标准格式累积)
                   final toolCalls = delta['tool_calls'] as List?;
                   if (toolCalls != null && toolCalls.isNotEmpty) {
                     hasToolCalls = true;
+                    debugPrint('🔧 DeepSeek 流式返回 tool_calls delta: ${jsonEncode(toolCalls)}');
                     for (final toolCall in toolCalls) {
                       final tc = toolCall as Map<String, dynamic>;
                       final index = tc['index'] as int? ?? 0;
@@ -225,11 +251,8 @@ class DeepSeekProvider extends BaseLlmProvider {
                       accumulatedToolCalls.putIfAbsent(index, () => {
                         'index': index,
                         'id': '',
-                        'type': 'function',
-                        'function': {
-                          'name': '',
-                          'arguments': '',
-                        },
+                        'name': '',
+                        'arguments': '',
                       });
                       
                       final accumulated = accumulatedToolCalls[index]!;
@@ -239,10 +262,10 @@ class DeepSeekProvider extends BaseLlmProvider {
                       if (tc['function'] != null) {
                         final func = tc['function'] as Map<String, dynamic>;
                         if (func['name'] != null && (func['name'] as String).isNotEmpty) {
-                          accumulated['function']['name'] += func['name'];
+                          accumulated['name'] += func['name'];
                         }
                         if (func['arguments'] != null) {
-                          accumulated['function']['arguments'] += func['arguments'];
+                          accumulated['arguments'] += func['arguments'];
                         }
                       }
                     }
@@ -251,11 +274,12 @@ class DeepSeekProvider extends BaseLlmProvider {
                 
                 // 检查 finish_reason 是否为 tool_calls
                 final finishReason = choice['finish_reason'] as String?;
+                if (finishReason != null) {
+                  debugPrint('🔧 DeepSeek finish_reason: $finishReason, hasToolCalls=$hasToolCalls, accumulatedCount=${accumulatedToolCalls.length}');
+                }
                 if (finishReason == 'tool_calls' && hasToolCalls && accumulatedToolCalls.isNotEmpty) {
-                  final toolCallsList = accumulatedToolCalls.entries
-                      .map((e) => e.value)
-                      .toList()
-                    ..sort((a, b) => (a['index'] as int).compareTo(b['index'] as int));
+                  final toolCallsList = _buildMcpToolCallsOutput(accumulatedToolCalls);
+                  debugPrint('🔧 累积的 tool_calls (MCP格式): ${jsonEncode(toolCallsList)}');
                   yield {
                     'content': content ?? '',
                     'think': reasoningContent,
@@ -289,10 +313,7 @@ class DeepSeekProvider extends BaseLlmProvider {
     
     // 流结束后，yield 累积的 tool_calls（如果没有在 finish_reason 中处理）
     if (hasToolCalls && accumulatedToolCalls.isNotEmpty) {
-      final toolCallsList = accumulatedToolCalls.entries
-          .map((e) => e.value)
-          .toList()
-        ..sort((a, b) => (a['index'] as int).compareTo(b['index'] as int));
+      final toolCallsList = _buildMcpToolCallsOutput(accumulatedToolCalls);
       yield {
         'content': '',
         'think': null,

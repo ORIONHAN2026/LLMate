@@ -223,7 +223,7 @@ abstract class BaseLlmProvider {
     return systemParts.join('\n\n');
   }
 
-  /// 构建消息列表
+  /// 构建消息列表（包含会话历史，实现"记忆"能力）
   List<Map<String, dynamic>> buildMessages({
     required ChatMessage userMessage,
     ChatSession? session,
@@ -236,11 +236,83 @@ abstract class BaseLlmProvider {
       messages.add({'role': 'system', 'content': systemPrompt});
     }
 
+    // 添加会话历史（当前用户消息之前的所有消息）
+    if (session != null && session.messages.isNotEmpty) {
+      _appendHistoryMessages(messages, session, userMessage);
+    }
+
     // 构建包含附件信息的用户消息内容
     final userContent = _buildUserContentWithAttachments(userMessage);
     messages.add({'role': 'user', 'content': userContent});
 
     return messages;
+  }
+
+  /// 将当前消息之前的会话历史追加到消息列表中（滑动窗口）
+  void _appendHistoryMessages(
+    List<Map<String, dynamic>> messages,
+    ChatSession session,
+    ChatMessage currentUserMessage,
+  ) {
+    // 找到当前用户消息在历史中的位置（从此位置之前截取历史）
+    int userMsgIndex = session.messages.length;
+    for (int i = session.messages.length - 1; i >= 0; i--) {
+      if (session.messages[i].msgId == currentUserMessage.msgId) {
+        userMsgIndex = i;
+        break;
+      }
+    }
+
+    // 没有有效历史则跳过
+    if (userMsgIndex <= 0) return;
+
+    final historyMessages = session.messages.sublist(0, userMsgIndex);
+
+    // 保留最近 20 轮对话（以 user 消息为轮次边界）
+    const int maxRounds = 20;
+    int roundCount = 0;
+    int historyStart = historyMessages.length;
+
+    for (int i = historyMessages.length - 1; i >= 0; i--) {
+      if (historyMessages[i].role == MessageRole.user) {
+        roundCount++;
+        if (roundCount >= maxRounds) {
+          historyStart = i;
+          break;
+        }
+      }
+    }
+
+    final included = historyMessages.sublist(historyStart);
+
+    // 按时间顺序添加历史消息
+    for (final msg in included) {
+      // 跳过空内容消息（如占位 bot 消息）
+      if (msg.content.isEmpty) continue;
+      final apiRole = _toOpenAIRole(msg.role);
+      if (apiRole == null) continue;
+
+      final msgData = <String, dynamic>{'role': apiRole, 'content': msg.content};
+
+      // tool 角色消息：附加 tool_call_id
+      if (msg.role == MessageRole.tool && msg.toolName != null) {
+        msgData['tool_call_id'] = msg.toolName;
+      }
+
+      messages.add(msgData);
+    }
+  }
+
+  /// 将内部角色映射为 OpenAI 兼容的 API 角色
+  String? _toOpenAIRole(MessageRole role) {
+    switch (role) {
+      case MessageRole.user:
+        return 'user';
+      case MessageRole.bot:
+        return 'assistant';
+      case MessageRole.tool:
+        return 'tool';
+    }
   }
 
   /// 构建包含附件信息的用户消息内容

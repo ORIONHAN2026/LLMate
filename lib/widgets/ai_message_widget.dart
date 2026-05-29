@@ -837,7 +837,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       String accumulatedThink = ''; // 累积思考内容
 
       // 使用 LLM Hub 创建客户端
-      client = LlmClient(session: currentSession);
+      client = LlmClient(currentSession);
       final responseStream = client.sendMessageStream(userMessage);
 
       await for (final chunkMap in responseStream) {

@@ -68,7 +68,7 @@ class LlmClient {
 
   // ── 构造 ──
 
-  LlmClient({required ChatSession session})
+  LlmClient(ChatSession session)
     : _session = session,
       _provider = LlmHub._resolve(session.chatModel!) {
     _provider.configure(session.chatModel!);
@@ -85,11 +85,159 @@ class LlmClient {
   String buildSystemPrompt({String? customPrompt, ChatSession? session}) =>
       _provider.buildSystemPrompt(customPrompt: customPrompt, session: session);
 
-  Stream<Map<String, String?>> sendMessageStream(ChatMessage userMessage) =>
-      _provider.sendMessageStream(
-        userMessage: userMessage,
-        session: _session,
+  /// 发送消息并获取流式响应（自动处理 MCP 工具调用 + follow-up）
+  Stream<Map<String, String?>> sendMessageStream(ChatMessage userMessage) async* {
+    _cancelled = false;
+
+    // 1. 首轮流式响应
+    String acc = '';
+    String? toolCallsJson;
+    final stream = _provider.sendMessageStream(
+      userMessage: userMessage,
+      session: _session,
+    );
+
+    await for (final chunk in stream) {
+      if (_cancelled) break;
+      final tc = chunk['mcpToolCalls'];
+      if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
+      final c = chunk['content'] ?? '';
+      if (c.isNotEmpty) acc += c;
+      yield chunk;
+    }
+
+    // 2. 执行 MCP 工具调用 + follow-up
+    if (!_cancelled && toolCallsJson != null && _session.mcpServer != null) {
+      final results = await _executeMcpToolsAndYield(toolCallsJson);
+      if (results == null || _cancelled) return;
+
+      // 构建 follow-up 消息
+      final msgs = _buildFollowUpMessages(
+        list: results.list,
+        results: results.data,
+        userMsg: userMessage,
+        assistantContent: acc,
       );
+
+      // 3. follow-up 流式响应
+      final s2 = _provider.sendMessageStreamWithMessages(msgs);
+      await for (final chunk in s2) {
+        if (_cancelled) break;
+        yield chunk;
+      }
+    }
+  }
+
+  // ── 内部: sendMessageStream 专用 ──
+
+  /// 执行 MCP 工具调用并通过回调通知，返回解析结果
+  Future<_McpToolResults?> _executeMcpToolsAndYield(
+    String toolCallsJson,
+  ) async {
+    final List<dynamic> list;
+    try {
+      list = jsonDecode(toolCallsJson);
+    } catch (e) {
+      onError?.call('解析 tool_calls 失败: $e');
+      return null;
+    }
+    if (list.isEmpty) return null;
+
+    final svc = _session.mcpServer?.name;
+    if (svc == null) return null;
+
+    Client? mc = McpService.getMCPClient(svc);
+    if (mc == null) {
+      final inited = await McpService.initializeSessionMcpServices(_session);
+      if (inited.isEmpty) {
+        onError?.call('MCP 未初始化: $svc');
+        return null;
+      }
+      mc = McpService.getMCPClient(svc);
+    }
+    if (mc == null) return null;
+
+    final results = <Map<String, dynamic>>[];
+    for (final raw in list) {
+      if (_cancelled) break;
+      final t = raw as Map<String, dynamic>;
+      final name = t['name'] as String? ?? '';
+      final args = t['arguments'] as Map<String, dynamic>? ?? {};
+      if (name.isEmpty) continue;
+
+      onToolCall?.call(name, args);
+      try {
+        final r = await mc.callTool(name, args);
+        final ok = r.isError != true;
+        final buf = StringBuffer();
+        for (final c in r.content) {
+          if (c is TextContent) {
+            buf.writeln(c.text);
+          } else if (c is ImageContent) {
+            buf.writeln('[图片: ${c.data ?? c.url}]');
+          }
+        }
+        final text = buf.toString().trim();
+        onToolResult?.call(name, ok, text);
+        results.add({
+          'id': t['id'] ?? 'call_${t['index'] ?? 0}',
+          'result': text,
+          'isError': !ok,
+        });
+      } catch (e) {
+        onToolResult?.call(name, false, '$e');
+        results.add({
+          'id': t['id'] ?? 'call_${t['index'] ?? 0}',
+          'result': '$e',
+          'isError': true,
+        });
+      }
+    }
+    if (results.isEmpty) return null;
+
+    return _McpToolResults(list: list, data: results);
+  }
+
+  /// 构建 MCP 工具调用的 follow-up 消息列表
+  List<Map<String, dynamic>> _buildFollowUpMessages({
+    required List<dynamic> list,
+    required List<Map<String, dynamic>> results,
+    required ChatMessage userMsg,
+    required String assistantContent,
+  }) {
+    final msgs = <Map<String, dynamic>>[];
+    final sp = _provider.buildSystemPrompt(session: _session);
+    if (sp.isNotEmpty) msgs.add({'role': 'system', 'content': sp});
+    msgs.add({'role': 'user', 'content': userMsg.content});
+    msgs.add({
+      'role': 'assistant',
+      'content': assistantContent.isNotEmpty ? assistantContent : null,
+      'tool_calls':
+          list.map((tc) {
+            final m = tc as Map<String, dynamic>;
+            return {
+              'id': m['id'] ?? 'call_${m['index'] ?? 0}',
+              'type': 'function',
+              'function': {
+                'name': m['name'] ?? '',
+                'arguments':
+                    m['arguments'] is String
+                        ? m['arguments']
+                        : jsonEncode(m['arguments'] ?? {}),
+              },
+            };
+          }).toList(),
+    });
+    for (final r in results) {
+      msgs.add({
+        'role': 'tool',
+        'tool_call_id': r['id'],
+        'content':
+            r['isError'] == true ? '错误: ${r['result']}' : r['result'],
+      });
+    }
+    return msgs;
+  }
 
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
     List<Map<String, dynamic>> messages,
@@ -257,4 +405,11 @@ class LlmClient {
       if (t.isNotEmpty) onThink?.call(t);
     }
   }
+}
+
+/// MCP 工具调用执行结果
+class _McpToolResults {
+  final List<dynamic> list;
+  final List<Map<String, dynamic>> data;
+  const _McpToolResults({required this.list, required this.data});
 }

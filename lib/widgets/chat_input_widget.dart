@@ -123,7 +123,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     ) async {
       // MCP 客户端生命周期管理：切换会话时关闭旧客户端，初始化新客户端
       final newMcpServiceName = currentSession?.mcpServer?.name;
-      if (prevMcpServiceName != null && prevMcpServiceName != newMcpServiceName) {
+      if (prevMcpServiceName != null &&
+          prevMcpServiceName != newMcpServiceName) {
         debugPrint('🔄 会话切换，关闭旧 MCP 客户端: $prevMcpServiceName');
         await McpService.closeClient(prevMcpServiceName!);
       }
@@ -1035,9 +1036,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final hasSelectedService = mcpServer != null;
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
-    final displayText = hasSelectedService
-        ? mcpServer.name
-        : (hasMcpServices ? '请选择' : '无MCP服务');
+    final displayText =
+        hasSelectedService
+            ? mcpServer.name
+            : (hasMcpServices ? '请选择' : '无MCP服务');
 
     return Tooltip(
       message: hasMcpServices ? '点击选择MCP服务' : '当前模型未配置MCP服务',
@@ -1055,8 +1057,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     hasMcpServices && !_isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6)
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3),
               ),
               if (hasMcpServices) ...[
                 const SizedBox(width: 4),
@@ -1069,7 +1075,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ),
@@ -2385,9 +2393,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             ),
                             const Spacer(),
                             Text(
-                              currentSession?.mcpServer != null
-                                  ? '已启用'
-                                  : '已禁用',
+                              currentSession?.mcpServer != null ? '已启用' : '已禁用',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -2551,9 +2557,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(
-                                currentSession?.mcpServer != null
-                                    ? '禁用'
-                                    : '启用',
+                                currentSession?.mcpServer != null ? '禁用' : '启用',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color:
@@ -2734,7 +2738,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 return InkWell(
                                   onTap: () {
                                     Navigator.of(dialogContext).pop();
-                                    _applyMcpSelection(isSelected ? null : service);
+                                    _applyMcpSelection(
+                                      isSelected ? null : service,
+                                    );
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
@@ -2753,7 +2759,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     ),
                                     child: Row(
                                       children: [
-
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
@@ -2849,7 +2854,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                             ],
                                           ),
                                         ),
-
                                       ],
                                     ),
                                   ),
@@ -2874,7 +2878,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    selectedName != null ? '已选 $selectedName' : '未选择',
+                                    selectedName != null
+                                        ? '已选 $selectedName'
+                                        : '未选择',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color:
@@ -2928,9 +2934,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
 
-    final updatedSession = currentSession.copyWith(
-      mcpServer: service,
-    );
+    final updatedSession = currentSession.copyWith(mcpServer: service);
 
     await sessionController.updateSession(updatedSession);
 
@@ -3260,8 +3264,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     Skill? selectedSkill;
     if (skillId != null) {
-      selectedSkill = currentSession.chatModel?.skills
-          ?.firstWhere((s) => s.id == skillId);
+      selectedSkill = currentSession.chatModel?.skills?.firstWhere(
+        (s) => s.id == skillId,
+      );
     }
 
     final updatedSession = currentSession.copyWith(
@@ -3485,7 +3490,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 调用API生成流式响应
       String accumulatedContent = '';
       String accumulatedThink = '';
-      String? accumulatedMcpToolCalls; // 累积的 native tool_calls JSON
+
 
       // 直接使用LLM Hub框架
       final model = updateSession.chatModel;
@@ -3499,7 +3504,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       }
 
       // 创建 LLM 客户端
-      client = LlmClient(session: updateSession);
+      client = LlmClient(updateSession);
 
       // // 验证配置
       // final isValid = await client.validateConfiguration();
@@ -3510,7 +3515,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 发送消息并获取流式响应
       final responseStream = client.sendMessageStream(userMessage);
 
-      // 处理流式响应并更新UI
+      // 处理流式响应并更新UI（LlmClient 已在内部处理 MCP 工具调用和 follow-up）
       await for (final chunkMap in responseStream) {
         // 检查用户是否要求停止响应
         final latestSession = sessionController.sessions.firstWhere(
@@ -3518,42 +3523,25 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           orElse: () => updateSession,
         );
         if (latestSession.shouldStopResponse == true) break;
-        debugPrint('聊天处理后内容: ${chunkMap['content']}');
-        debugPrint('聊天处理后思考: ${chunkMap['think']}');
-        
-        // 检查是否有 native tool_calls (MCP 工具调用)
-        final toolCallsJson = chunkMap['mcpToolCalls'];
-        if (toolCallsJson != null && toolCallsJson.isNotEmpty) {
-          debugPrint('🔧 检测到 native tool_calls: $toolCallsJson');
-          accumulatedMcpToolCalls = toolCallsJson;
-        }
-        
-        // 处理content和think内容
+
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
 
-        accumulatedContent += contentChunk;
-        accumulatedThink += thinkChunk;
-
-        debugPrint('累积内容: $accumulatedContent');
-        debugPrint('累积思考: $accumulatedThink');
-
-        // 更新AI消息内容 - 只要有任何内容变化就更新
         if (contentChunk.isNotEmpty || thinkChunk.isNotEmpty) {
+          accumulatedContent += contentChunk;
+          accumulatedThink += thinkChunk;
+
           final messageIndex = updateSession.messages.indexWhere(
             (msg) => msg.msgId == botMessageId,
           );
 
           if (messageIndex != -1) {
-            final updatedMessages = List<ChatMessage>.from(
-              updateSession.messages,
-            );
-
             botMessage.content = accumulatedContent;
             botMessage.think = accumulatedThink;
 
-            debugPrint('更新消息 - think内容: ${botMessage.think}');
-
+            final updatedMessages = List<ChatMessage>.from(
+              updateSession.messages,
+            );
             updatedMessages[messageIndex] = botMessage;
 
             updateSession = updateSession.copyWith(
@@ -3562,10 +3550,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             );
 
             sessionController.updateSession(updateSession);
-
             setState(() {});
 
-            // 实时滚动到底部
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _scrollToBottom();
             });
@@ -3615,31 +3601,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         _streamingMessageIds.remove(botMessageId);
       });
       widget.onStreamingChanged?.call(_streamingMessageIds);
-      debugPrint('准备检查调用工具');
-      //打印完整的返回数据
-      debugPrint('AI响应完成，内容长度: $accumulatedContent');
-
-      // 判断是 native tool_calls 还是 text-based tool calls
-      if (accumulatedMcpToolCalls != null && updateSession.mcpServer != null) {
-        // Native tool calling: 通过 API 原生 tools 参数返回的 tool_calls
-        debugPrint('🔧 检测到 native tool_calls，开始执行 MCP 工具调用...');
-        await _handleNativeMcpToolCalls(
-          client,
-          updateSession,
-          userMessage,
-          accumulatedMcpToolCalls,
-          botMessageId,
-        );
-      } else {
-        // Text-based fallback: 解析 AI 文本回复中的 tool_call 标记
-        await _processMcpToolCalls(
-          updateSession,
-          accumulatedContent,
-          botMessageId,
-        );
-      }
-
-      setState(() {});
     } catch (e) {
       rethrow;
     } finally {
@@ -4113,7 +4074,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   ) async {
     try {
       debugPrint('🔧 开始处理 native tool_calls...');
-      
+
       // 解析 tool_calls JSON
       final List<dynamic> toolCallsList;
       try {
@@ -4148,7 +4109,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final serviceName = session.mcpServer?.name;
       if (serviceName == null || McpService.getMCPClient(serviceName) == null) {
         debugPrint('⚠️ MCP 客户端未初始化，尝试初始化: $serviceName');
-        final initializedServices = await McpService.initializeSessionMcpServices(session);
+        final initializedServices =
+            await McpService.initializeSessionMcpServices(session);
         if (initializedServices.isEmpty) {
           debugPrint('⚠️ 无法初始化 MCP 服务');
           return;
@@ -4183,7 +4145,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           // 标准 MCP client.callTool API
           final callResult = await mcpClient.callTool(toolName, arguments);
           final isError = callResult.isError == true;
-          
+
           // 格式化 CallToolResult 内容
           final buffer = StringBuffer();
           for (final content in callResult.content) {
@@ -4197,28 +4159,30 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           }
           final formattedResult = buffer.toString().trim();
 
-          toolResults.add(McpToolResult(
-            toolName: toolName,
-            arguments: arguments,
-            result: formattedResult,
-            isSuccess: !isError,
-            error: isError ? formattedResult : null,
-            timestamp: DateTime.now(),
-          ));
-
-          debugPrint(
-            '${isError ? "⚠️" : "✅"} 工具 $toolName: $formattedResult',
+          toolResults.add(
+            McpToolResult(
+              toolName: toolName,
+              arguments: arguments,
+              result: formattedResult,
+              isSuccess: !isError,
+              error: isError ? formattedResult : null,
+              timestamp: DateTime.now(),
+            ),
           );
+
+          debugPrint('${isError ? "⚠️" : "✅"} 工具 $toolName: $formattedResult');
         } catch (e) {
           debugPrint('❌ 工具调用失败: $toolName, 错误: $e');
-          toolResults.add(McpToolResult(
-            toolName: toolName,
-            arguments: arguments,
-            result: '',
-            isSuccess: false,
-            error: e.toString(),
-            timestamp: DateTime.now(),
-          ));
+          toolResults.add(
+            McpToolResult(
+              toolName: toolName,
+              arguments: arguments,
+              result: '',
+              isSuccess: false,
+              error: e.toString(),
+              timestamp: DateTime.now(),
+            ),
+          );
         }
       }
 
@@ -4227,7 +4191,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         return;
       }
 
-      debugPrint('✅ 工具调用完成: ${toolResults.where((r) => r.isSuccess).length}/${toolResults.length} 成功');
+      debugPrint(
+        '✅ 工具调用完成: ${toolResults.where((r) => r.isSuccess).length}/${toolResults.length} 成功',
+      );
 
       // 将工具结果追加到当前 AI 消息中
       await _appendMcpToolResults(session, toolResults, botMessageId);
@@ -4279,46 +4245,57 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       // 构建包含工具结果的消息列表
       final messages = <Map<String, dynamic>>[];
-      
+
       // 系统提示词（包含 MCP 工具信息）
       final systemPrompt = client.buildSystemPrompt(session: session);
       if (systemPrompt.isNotEmpty) {
         messages.add({'role': 'system', 'content': systemPrompt});
       }
-      
+
       // 用户消息（包含附件信息）
-      final userContent = userMessage.attachments.isEmpty
-          ? userMessage.content
-          : '${userMessage.attachments.map((a) => '[${a.name}]\n${a.content ?? ""}').join('\n\n')}\n\n${userMessage.content}';
+      final userContent =
+          userMessage.attachments.isEmpty
+              ? userMessage.content
+              : '${userMessage.attachments.map((a) => '[${a.name}]\n${a.content ?? ""}').join('\n\n')}\n\n${userMessage.content}';
       messages.add({'role': 'user', 'content': userContent});
-      
+
       // 添加 assistant 消息（包含之前的 tool_calls，转换为 OpenAI 兼容格式）
       messages.add({
         'role': 'assistant',
         'content': botMessage.content.isNotEmpty ? botMessage.content : null,
-        'tool_calls': toolCallsList.map((tc) {
-          final m = tc as Map<String, dynamic>;
-          return {
-            'id': m['id'] ?? 'call_${m['index'] ?? 0}',
-            'type': 'function',
-            'function': {
-              'name': m['name'] ?? '',
-              'arguments': m['arguments'] is String ? m['arguments'] : jsonEncode(m['arguments'] ?? {}),
-            },
-          };
-        }).toList(),
+        'tool_calls':
+            toolCallsList.map((tc) {
+              final m = tc as Map<String, dynamic>;
+              return {
+                'id': m['id'] ?? 'call_${m['index'] ?? 0}',
+                'type': 'function',
+                'function': {
+                  'name': m['name'] ?? '',
+                  'arguments':
+                      m['arguments'] is String
+                          ? m['arguments']
+                          : jsonEncode(m['arguments'] ?? {}),
+                },
+              };
+            }).toList(),
       });
-      
+
       // 添加 tool 结果消息
       for (int i = 0; i < toolResults.length; i++) {
         final result = toolResults[i];
-        final tc = i < toolCallsList.length ? toolCallsList[i] as Map<String, dynamic>? : null;
+        final tc =
+            i < toolCallsList.length
+                ? toolCallsList[i] as Map<String, dynamic>?
+                : null;
         final toolCallId = tc?['id'] as String? ?? 'call_$i';
-        
+
         messages.add({
           'role': 'tool',
           'tool_call_id': toolCallId,
-          'content': result.isSuccess ? result.result : '错误: ${result.error ?? "未知错误"}',
+          'content':
+              result.isSuccess
+                  ? result.result
+                  : '错误: ${result.error ?? "未知错误"}',
         });
       }
 
@@ -4406,10 +4383,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         final msgs = List<ChatMessage>.from(followUpSession.messages);
         msgs[msgIdx] = followUpMessage.copyWith(
           generationEndTime: followUpEndTime,
-          generationDuration: followUpEndTime.difference(followUpMessage.generationStartTime!),
+          generationDuration: followUpEndTime.difference(
+            followUpMessage.generationStartTime!,
+          ),
           inputTokens: _estimateTokenCount(userMessage.content),
           outputTokens: _estimateTokenCount(followUpContent),
-          totalTokens: _estimateTokenCount(userMessage.content) + _estimateTokenCount(followUpContent),
+          totalTokens:
+              _estimateTokenCount(userMessage.content) +
+              _estimateTokenCount(followUpContent),
         );
         followUpSession = followUpSession.copyWith(
           messages: msgs,
@@ -4419,7 +4400,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       }
 
       setState(() {
-        _thinkingTimes[followUpMsgId] = followUpEndTime.difference(followUpMessage.generationStartTime!);
+        _thinkingTimes[followUpMsgId] = followUpEndTime.difference(
+          followUpMessage.generationStartTime!,
+        );
         _streamingMessageIds.remove(followUpMsgId);
       });
       widget.onStreamingChanged?.call(_streamingMessageIds);
@@ -4458,9 +4441,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final serviceName = session.mcpServer!.name;
       if (McpService.getMCPClient(serviceName) == null) {
         debugPrint('⚠️ MCP 客户端未初始化，尝试初始化: $serviceName');
-        final initializedServices = await McpService.initializeSessionMcpServices(
-          session,
-        );
+        final initializedServices =
+            await McpService.initializeSessionMcpServices(session);
         if (initializedServices.isEmpty) {
           debugPrint('⚠️ 无法初始化任何MCP服务');
           return;

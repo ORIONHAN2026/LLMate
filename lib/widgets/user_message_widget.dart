@@ -596,7 +596,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       String accumulatedContent = '';
 
       // 使用 LLM Hub 创建客户端
-      client = LlmClient(session: currentSession);
+      client = LlmClient(currentSession);
       final responseStream = client.sendMessageStream(widget.message);
 
       await for (final chunkMap in responseStream) {

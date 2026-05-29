@@ -104,9 +104,6 @@ class ApiService {
           case 'folder':
             buffer.write('[文件夹: ${attachment.name}');
             break;
-          case 'web_search':
-            buffer.write('[网页搜索结果: ${attachment.name}');
-            break;
           default:
             buffer.write('[文件: ${attachment.name}');
         }

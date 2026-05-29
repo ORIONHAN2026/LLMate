@@ -1,13 +1,11 @@
 import 'dart:io';
 import 'package:chathub/models/bigmodel/chat_model.dart';
 import 'package:chathub/models/bigmodel/mcp_config.dart';
+import 'package:chathub/models/chat/skill.dart';
 
 import 'chat_message.dart';
 import 'chat_attachment.dart';
 import 'chat_setting.dart';
-import 'skill_session_config.dart';
-import 'web_search_session_config.dart';
-import 'rag_session_config.dart';
 
 // 聊天会话类
 class ChatSession {
@@ -27,14 +25,8 @@ class ChatSession {
   /// 绑定的 MCP 服务（null = 未绑定）
   final McpServerConfig? mcpServer;
 
-  /// 联网搜索配置
-  final WebSearchSessionConfig webSearchConfig;
-
-  /// RAG 搜索配置
-  final RagSessionConfig ragConfig;
-
-  /// 技能配置
-  final SkillSessionConfig skillConfig;
+  /// 绑定的技能（null = 未绑定）
+  final Skill? skill;
 
   // ============================
 
@@ -56,9 +48,7 @@ class ChatSession {
     this.scrollPosition = 0.0,
     this.lastSelectedDirectory,
     this.mcpServer,
-    this.webSearchConfig = const WebSearchSessionConfig(),
-    this.ragConfig = const RagSessionConfig(),
-    this.skillConfig = const SkillSessionConfig(),
+    this.skill,
     this.sessionQuickCommands = const [],
   });
 
@@ -108,9 +98,8 @@ class ChatSession {
     String? lastSelectedDirectory,
     McpServerConfig? mcpServer,
     bool clearMcpServer = false,
-    WebSearchSessionConfig? webSearchConfig,
-    RagSessionConfig? ragConfig,
-    SkillSessionConfig? skillConfig,
+    Skill? skill,
+    bool clearSkill = false,
     ChatModel? chatModel,
     bool clearChatModel = false,
     List<ChatCommand>? sessionQuickCommands,
@@ -129,9 +118,7 @@ class ChatSession {
       lastSelectedDirectory:
           lastSelectedDirectory ?? this.lastSelectedDirectory,
       mcpServer: clearMcpServer ? null : (mcpServer ?? this.mcpServer),
-      webSearchConfig: webSearchConfig ?? this.webSearchConfig,
-      ragConfig: ragConfig ?? this.ragConfig,
-      skillConfig: skillConfig ?? this.skillConfig,
+      skill: clearSkill ? null : (skill ?? this.skill),
       chatModel: clearChatModel ? null : (chatModel ?? this.chatModel),
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
     );
@@ -164,15 +151,9 @@ class ChatSession {
       mcpServer: json['mcpServer'] is Map<String, dynamic>
           ? McpServerConfig.fromMap(json['mcpServer'])
           : null,
-      webSearchConfig: json['webSearchConfig'] is Map<String, dynamic>
-          ? WebSearchSessionConfig.fromJson(json['webSearchConfig'])
-          : const WebSearchSessionConfig(),
-      ragConfig: json['ragConfig'] is Map<String, dynamic>
-          ? RagSessionConfig.fromJson(json['ragConfig'])
-          : const RagSessionConfig(),
-      skillConfig: json['skillConfig'] is Map<String, dynamic>
-          ? SkillSessionConfig.fromJson(json['skillConfig'])
-          : const SkillSessionConfig(),
+      skill: json['skill'] is Map<String, dynamic>
+          ? Skill.fromJson(json['skill'])
+          : null,
       sessionQuickCommands:
           (json['sessionQuickCommands'] as List<dynamic>?)
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
@@ -199,9 +180,7 @@ class ChatSession {
       'scrollPosition': scrollPosition,
       'lastSelectedDirectory': lastSelectedDirectory,
       if (mcpServer != null) 'mcpServer': mcpServer!.toJson(),
-      'webSearchConfig': webSearchConfig.toJson(),
-      'ragConfig': ragConfig.toJson(),
-      'skillConfig': skillConfig.toJson(),
+      if (skill != null) 'skill': skill!.toJson(),
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
       'chatModel': chatModel?.toMap(),

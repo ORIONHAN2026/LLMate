@@ -176,8 +176,6 @@ class AttachmentChipWidget extends StatelessWidget {
         return CupertinoIcons.doc;
       case 'web':
         return CupertinoIcons.globe;
-      case 'web_search':
-        return CupertinoIcons.search;
       case 'folder':
         return CupertinoIcons.folder;
       default:
@@ -199,8 +197,6 @@ class AttachmentChipWidget extends StatelessWidget {
         return Colors.indigo;
       case 'web':
         return Colors.orange;
-      case 'web_search':
-        return Colors.deepOrange;
       case 'folder':
         return Colors.amber;
       default:

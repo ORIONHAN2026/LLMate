@@ -5,7 +5,6 @@ import 'package:chathub/widgets/model_detail_widget/model_config_tab.dart';
 import 'package:chathub/widgets/model_detail_widget/chat_settings_tab.dart';
 import 'package:chathub/widgets/model_detail_widget/chat_commands_tab.dart';
 import 'package:chathub/widgets/model_detail_widget/mcp_tab.dart';
-import 'package:chathub/widgets/model_detail_widget/rag_tab.dart';
 import 'package:chathub/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -352,16 +351,6 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
           },
         );
       case 3:
-        return RagTab(
-          model: _currentModel,
-          onModelUpdated: (model) {
-            setState(() {
-              _currentModel = model;
-            });
-            widget.onModelUpdated(model);
-          },
-        );
-      case 4:
         return McpTab(
           model: _currentModel,
           onModelUpdated: (model) {

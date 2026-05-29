@@ -312,9 +312,6 @@ class ChatModel {
   /// 是否为活跃状态
   bool get isActive => status == 'active';
 
-  /// 获取 RAG ID，现在使用 modelId
-  String get ragId => modelId;
-
   /// 获取显示名称（如果有自定义名称则使用自定义名称，否则使用模型名称）
   String get displayName => name.isNotEmpty ? name : model;
 

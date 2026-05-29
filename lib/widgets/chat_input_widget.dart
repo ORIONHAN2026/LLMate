@@ -9,14 +9,12 @@ import 'dart:convert';
 
 import '../controllers/session_controller.dart';
 import '../models/bigmodel/models.dart';
-import '../models/chat/web_search_models.dart';
+import '../models/chat/skill.dart';
 import '../models/chat/chat_setting.dart';
 import '../framework/llm_framework.dart';
 import '../services/model_storage_service.dart';
-import '../services/web_search_service.dart';
 import '../services/mcp_service.dart';
 import '../services/mcp_storage_service.dart';
-import '../models/chat/web_search_session_config.dart';
 import '../utils/snackbar_utils.dart';
 import 'attachment_list_widget.dart';
 
@@ -292,7 +290,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       chatModel: selectedModelObject,
       inputContent: '',
       attachments: [],
-      webSearchConfig: const WebSearchSessionConfig(isEnabled: false),
     );
 
     // 添加新会话到顶部并设为当前会话
@@ -844,10 +841,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
                       const SizedBox(width: 8),
 
-                      _buildWebSearchToggle(),
-
-                      const SizedBox(width: 8),
-
                       _buildMcpToolsToggle(),
                       const SizedBox(width: 8),
 
@@ -1005,42 +998,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  // （已移除未使用的 RAG toggle 按钮）
-
-  /// 构建联网搜索切换按钮
-  Widget _buildWebSearchToggle() {
-    final currentSession = sessionController.currentSession.value;
-    final isEnabled = currentSession?.webSearchConfig.isEnabled ?? false;
-
-    return Tooltip(
-      message: isEnabled ? '关闭联网搜索' : '开启联网搜索',
-      child: InkWell(
-        onTap: _isSending ? null : _toggleWebSearch,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            color:
-                isEnabled
-                    ? Theme.of(context).colorScheme.surfaceContainerHighest
-                    : Colors.transparent, // 开启时加深背景
-          ),
-          child: Icon(
-            CupertinoIcons.globe,
-            size: 13,
-            color:
-                _isSending
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                    : Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.6), // 保持一致的图标颜色
-          ),
-        ),
-      ),
-    );
-  }
-
   /// 构建MCP工具切换按钮
   Widget _buildMcpToolsToggle() {
     final currentSession = sessionController.currentSession.value;
@@ -1104,7 +1061,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 检查当前模型是否配置了技能
     final hasSkills = currentModel?.skills?.isNotEmpty == true;
-    final isEnabled = hasSkills && (currentSession?.skillConfig.isEnabled ?? false);
+    final isEnabled = hasSkills && (currentSession?.skill != null);
 
     return Tooltip(
       message: hasSkills ? '点击显示技能列表' : '当前模型未配置技能',
@@ -2595,30 +2552,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  // _toggleRagSearch 已彻底移除（旧 RAG 功能清理）
-  /// 构建发送/停止按钮
-  void _toggleWebSearch() {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final updatedSession = currentSession.copyWith(
-      webSearchConfig: currentSession.webSearchConfig.copyWith(
-        isEnabled: !currentSession.webSearchConfig.isEnabled,
-      ),
-    );
-
-    sessionController.updateSession(updatedSession);
-
-    // 显示状态提示
-    // final isEnabled = updatedSession.webSearchConfig.isEnabled;
-    // if (mounted) {
-    //   SnackBarUtils.showInfo(
-    //     context,
-    //     isEnabled ? '已开启联网搜索，发送消息时将自动搜索网页内容' : '已关闭联网搜索',
-    //   );
-    // }
-  }
-
   /// 切换MCP工具状态
   void _toggleMcpTools() {
     final currentSession = sessionController.currentSession.value;
@@ -3006,10 +2939,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final session = sessionController.currentSession.value;
-            final selectedIds = List<String>.from(
-              session?.skillConfig.selectedSkillIds ?? [],
-            );
-            final isEnabled = session?.skillConfig.isEnabled ?? false;
+            String? selectedId = session?.skill?.id;
 
             return Stack(
               children: [
@@ -3081,11 +3011,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 ),
                                 const Spacer(),
                                 Text(
-                                  isEnabled ? '已启用' : '已禁用',
+                                  selectedId != null ? '已启用' : '已禁用',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color:
-                                        isEnabled
+                                        selectedId != null
                                             ? Theme.of(
                                               context,
                                             ).colorScheme.primary
@@ -3111,18 +3041,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   ),
                               itemBuilder: (context, index) {
                                 final skill = skills[index];
-                                final isSelected = selectedIds.contains(
-                                  skill.id,
-                                );
+                                final isSelected = selectedId == skill.id;
 
                                 return InkWell(
                                   onTap: () {
                                     setDialogState(() {
-                                      if (isSelected) {
-                                        selectedIds.remove(skill.id);
-                                      } else {
-                                        selectedIds.add(skill.id);
-                                      }
+                                      selectedId = isSelected ? null : skill.id;
                                     });
                                   },
                                   child: Container(
@@ -3244,7 +3168,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '已选 ${selectedIds.length}/${skills.length} 项',
+                                    selectedId != null
+                                        ? '已选: ${skills.firstWhere((s) => s.id == selectedId).name}'
+                                        : '未选择',
                                     style: TextStyle(
                                       fontSize: 11,
                                       color:
@@ -3257,10 +3183,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 TextButton(
                                   onPressed: () {
                                     Navigator.of(dialogContext).pop();
-                                    _applySkillSelection(
-                                      selectedIds,
-                                      isEnabled,
-                                    );
+                                    _applySkillSelection(selectedId);
                                   },
                                   style: TextButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
@@ -3293,15 +3216,19 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   /// 应用技能选择
-  void _applySkillSelection(List<String> selectedIds, bool isEnabled) {
+  void _applySkillSelection(String? skillId) {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
 
+    Skill? selectedSkill;
+    if (skillId != null) {
+      selectedSkill = currentSession.chatModel?.skills
+          ?.firstWhere((s) => s.id == skillId);
+    }
+
     final updatedSession = currentSession.copyWith(
-      skillConfig: currentSession.skillConfig.copyWith(
-        selectedSkillIds: selectedIds,
-        isEnabled: isEnabled || selectedIds.isNotEmpty,
-      ),
+      skill: selectedSkill,
+      clearSkill: skillId == null,
     );
 
     sessionController.updateSession(updatedSession);
@@ -3309,7 +3236,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
-        selectedIds.isNotEmpty ? '已选择 ${selectedIds.length} 个技能' : '已清空技能选择',
+        selectedSkill != null ? '已选择技能: ${selectedSkill.name}' : '已清空技能选择',
       );
     }
   }
@@ -3359,191 +3286,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       return;
     }
 
-    // 检查是否开启了联网搜索，如果开启且有文本内容，则先执行搜索
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession?.webSearchConfig.isEnabled == true && text.isNotEmpty) {
-      await _performWebSearchBeforeSending(text);
-      // 搜索完成后继续执行发送逻辑，不返回
-    }
-    // RAG 逻辑已移除
-
     // 直接发送消息，MCP工具调用将在AI响应过程中处理
     await _doSendMessage(text);
-  }
-
-  // （已移除未使用的 RAG 搜索方法）
-
-  /// 在发送消息前执行联网搜索
-  Future<void> _performWebSearchBeforeSending(String query) async {
-    // 生成唯一的搜索附件ID
-    final searchAttachmentId =
-        '${DateTime.now().millisecondsSinceEpoch}_websearch';
-
-    try {
-      // 显示搜索提示
-      SnackBarUtils.showInfo(context, '正在进行联网搜索...');
-      debugPrint('🔍 开始联网搜索: $query');
-
-      // 立即创建"搜索中"状态的附件，content 为 null 表示处理中
-      final searchingAttachment = ChatAttachment(
-        id: searchAttachmentId,
-        name: '🔍 正在搜索: $query',
-        type: 'web_search',
-        filePath: '', // 网页搜索没有文件路径
-        size: 0, // 搜索中大小为0
-        createdAt: DateTime.now(),
-        content: null, // null 表示正在处理中
-      );
-
-      // 立即将"搜索中"附件添加到当前附件列表和会话中
-      final currentSession = sessionController.currentSession.value;
-      if (currentSession != null) {
-        final updatedAttachments = [
-          ..._currentAttachments,
-          searchingAttachment,
-        ];
-        final updatedSession = currentSession.copyWith(
-          attachments: updatedAttachments,
-        );
-        sessionController.updateSession(updatedSession);
-
-        debugPrint('� 已添加"搜索中"附件: ${searchingAttachment.name}');
-        debugPrint('🔄 当前会话附件数量: ${updatedSession.attachments.length}');
-      }
-
-      // 创建搜索查询
-      final searchQuery = WebSearchQuery(
-        keyword: query,
-        searchEngine: 'duckduckgo', // 默认使用 DuckDuckGo 搜索（免费）
-        maxResults: 5,
-        language: 'zh-CN',
-        region: 'CN',
-        timestamp: DateTime.now(),
-      );
-
-      // 执行搜索
-      final searchResults = await WebSearchService.performSearch(searchQuery);
-
-      if (searchResults.isSuccess && searchResults.contents.isNotEmpty) {
-        // 搜索成功，更新附件内容
-        final searchContent = _formatSearchResults(searchResults.contents);
-        final completedAttachment = ChatAttachment(
-          id: searchAttachmentId, // 使用相同的ID
-          name: '🔍 $query (联网搜索)',
-          type: 'web_search',
-          filePath: '',
-          size: searchContent.length,
-          createdAt: searchingAttachment.createdAt,
-          content: searchContent,
-        );
-
-        // 更新会话中的搜索附件
-        final currentSessionAfterSearch =
-            sessionController.currentSession.value;
-        if (currentSessionAfterSearch != null) {
-          // 替换搜索中的附件为完成的附件
-          final updatedAttachments =
-              currentSessionAfterSearch.attachments
-                  .map(
-                    (attachment) =>
-                        attachment.id == searchAttachmentId
-                            ? completedAttachment
-                            : attachment,
-                  )
-                  .toList();
-
-          final updatedSession = currentSessionAfterSearch.copyWith(
-            attachments: updatedAttachments,
-          );
-          sessionController.updateSession(updatedSession);
-
-          debugPrint('✅ 联网搜索完成，找到 ${searchResults.contents.length} 个结果');
-          debugPrint('✅ 搜索附件已更新: ${completedAttachment.name}');
-          debugPrint('✅ 当前会话附件数量: ${updatedSession.attachments.length}');
-
-          if (mounted) {
-            SnackBarUtils.showSuccess(
-              context,
-              '联网搜索完成，找到 ${searchResults.contents.length} 个结果',
-            );
-          }
-          // 短暂延迟确保UI更新
-          await Future.delayed(const Duration(milliseconds: 300));
-        }
-      } else {
-        debugPrint('❌ 联网搜索未找到结果');
-        if (mounted) {
-          SnackBarUtils.showWarning(context, '联网搜索未找到相关结果');
-        }
-
-        // 搜索未找到结果，移除搜索中的附件
-        final currentSessionAfterSearch =
-            sessionController.currentSession.value;
-        if (currentSessionAfterSearch != null) {
-          final updatedAttachments =
-              currentSessionAfterSearch.attachments
-                  .where((attachment) => attachment.id != searchAttachmentId)
-                  .toList();
-
-          final updatedSession = currentSessionAfterSearch.copyWith(
-            attachments: updatedAttachments,
-          );
-          sessionController.updateSession(updatedSession);
-
-          debugPrint('🗑️ 已移除未找到结果的搜索附件');
-        }
-      }
-
-      // 搜索完成，方法结束，返回到调用方继续执行发送逻辑
-    } catch (e) {
-      debugPrint('❌ 联网搜索失败: $e');
-      if (mounted) {
-        SnackBarUtils.showError(context, '联网搜索失败: ${e.toString()}');
-      }
-
-      // 搜索失败，移除搜索中的附件
-      final currentSession = sessionController.currentSession.value;
-      if (currentSession != null) {
-        final updatedAttachments =
-            currentSession.attachments
-                .where((attachment) => attachment.id != searchAttachmentId)
-                .toList();
-
-        final updatedSession = currentSession.copyWith(
-          attachments: updatedAttachments,
-        );
-        sessionController.updateSession(updatedSession);
-
-        debugPrint('🗑️ 搜索失败，已移除搜索中的附件');
-      }
-
-      // 搜索失败，但仍然返回到调用方继续执行发送逻辑
-    }
-  }
-
-  /// 格式化搜索结果为附件内容
-  String _formatSearchResults(List<WebContent> contents) {
-    final StringBuffer contentBuffer = StringBuffer();
-    contentBuffer.writeln('🔍 联网搜索结果');
-    contentBuffer.writeln(
-      '🕒 搜索时间: ${DateTime.now().toString().substring(0, 19)}',
-    );
-    contentBuffer.writeln('📊 找到 ${contents.length} 个相关网页\n');
-
-    // 添加每个网页的内容
-    for (int i = 0; i < contents.length; i++) {
-      final content = contents[i];
-      contentBuffer.writeln('--- 网页 ${i + 1}: ${content.title} ---');
-      contentBuffer.writeln('🔗 链接: ${content.url}');
-      if (content.summary != null && content.summary!.isNotEmpty) {
-        contentBuffer.writeln('📝 摘要: ${content.summary}');
-      }
-      contentBuffer.writeln('📄 内容:');
-      contentBuffer.writeln(content.content);
-      contentBuffer.writeln('');
-    }
-
-    return contentBuffer.toString();
   }
 
   /// 实际执行发送消息的方法

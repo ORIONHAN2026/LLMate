@@ -283,7 +283,6 @@ abstract class BaseLlmProvider {
       'code': '代码文件',
       'web': '网页链接',
       'folder': '文件夹',
-      'web_search': '网页搜索结果',
     };
     
     final label = typeLabels[attachment.type] ?? '文件';
@@ -487,5 +486,4 @@ class LlmFeatures {
   static const String functionCalling = 'function_calling';
   static const String embeddings = 'embeddings';
   static const String fineTuning = 'fine_tuning';
-  static const String rag = 'rag';
 }

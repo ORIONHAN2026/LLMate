@@ -86,7 +86,8 @@ class LlmClient {
       _provider.buildSystemPrompt(customPrompt: customPrompt, session: session);
 
   /// 发送消息并获取流式响应（自动处理 MCP 工具调用 + follow-up）
-  Stream<Map<String, String?>> sendMessageStream(ChatMessage userMessage) async* {
+  /// chunk: {content,think,tool}  三个字段互斥，每次必有一个有值
+  Stream<Map<String, dynamic>> sendMessageStream(ChatMessage userMessage) async* {
     _cancelled = false;
 
     // 1. 首轮流式响应
@@ -103,13 +104,20 @@ class LlmClient {
       if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
       final c = chunk['content'] ?? '';
       if (c.isNotEmpty) acc += c;
-      yield chunk;
+      yield Map<String, dynamic>.from(chunk);
     }
 
     // 2. 执行 MCP 工具调用 + follow-up
     if (!_cancelled && toolCallsJson != null && _session.mcpServer != null) {
       final results = await _executeMcpToolsAndYield(toolCallsJson);
       if (results == null || _cancelled) return;
+
+      // 向 UI 透传工具执行描述（和 content/think 同级）
+      for (final r in results.data) {
+        final name = r['name'] as String;
+        final ok = !(r['isError'] == true);
+        yield {'tool': ok ? '已完成: $name' : '失败: $name'};
+      }
 
       // 构建 follow-up 消息
       final msgs = _buildFollowUpMessages(
@@ -123,7 +131,7 @@ class LlmClient {
       final s2 = _provider.sendMessageStreamWithMessages(msgs);
       await for (final chunk in s2) {
         if (_cancelled) break;
-        yield chunk;
+        yield Map<String, dynamic>.from(chunk);
       }
     }
   }
@@ -181,6 +189,8 @@ class LlmClient {
         onToolResult?.call(name, ok, text);
         results.add({
           'id': t['id'] ?? 'call_${t['index'] ?? 0}',
+          'name': name,
+          'args': args,
           'result': text,
           'isError': !ok,
         });
@@ -188,6 +198,8 @@ class LlmClient {
         onToolResult?.call(name, false, '$e');
         results.add({
           'id': t['id'] ?? 'call_${t['index'] ?? 0}',
+          'name': name,
+          'args': args,
           'result': '$e',
           'isError': true,
         });

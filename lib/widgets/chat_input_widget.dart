@@ -3490,6 +3490,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 调用API生成流式响应
       String accumulatedContent = '';
       String accumulatedThink = '';
+      String accumulatedTool = '';
 
 
       // 直接使用LLM Hub框架
@@ -3516,6 +3517,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final responseStream = client.sendMessageStream(userMessage);
 
       // 处理流式响应并更新UI（LlmClient 已在内部处理 MCP 工具调用和 follow-up）
+      // chunk 格式: {content,think,tool}  三个字段互斥，每次必有一个有值
       await for (final chunkMap in responseStream) {
         // 检查用户是否要求停止响应
         final latestSession = sessionController.sessions.firstWhere(
@@ -3526,10 +3528,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
+        final toolChunk = chunkMap['tool'] ?? '';
 
-        if (contentChunk.isNotEmpty || thinkChunk.isNotEmpty) {
+        if (contentChunk.isNotEmpty || thinkChunk.isNotEmpty || toolChunk.isNotEmpty) {
           accumulatedContent += contentChunk;
           accumulatedThink += thinkChunk;
+          accumulatedTool += toolChunk;
 
           final messageIndex = updateSession.messages.indexWhere(
             (msg) => msg.msgId == botMessageId,
@@ -3538,6 +3542,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           if (messageIndex != -1) {
             botMessage.content = accumulatedContent;
             botMessage.think = accumulatedThink;
+            botMessage.toolContent = accumulatedTool;
 
             final updatedMessages = List<ChatMessage>.from(
               updateSession.messages,

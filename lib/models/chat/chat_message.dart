@@ -14,6 +14,7 @@ class ChatMessage {
   final MessageRole role;
   String content;
   String think; // 思考内容，必填字段，默认为空字符串
+  String toolContent; // 工具执行描述，和 content/think 同级，独立展示
   final DateTime timestamp;
   final String? repoId;
   final bool? isTyping;
@@ -44,6 +45,7 @@ class ChatMessage {
     required this.role,
     required this.content,
     this.think = '', // 思考内容，默认为空字符串
+    this.toolContent = '', // 工具执行描述，默认为空字符串
     required this.timestamp,
     this.repoId,
     this.isTyping = false,
@@ -211,6 +213,7 @@ class ChatMessage {
     MessageRole? role,
     String? content,
     String? think, // 思考内容
+    String? toolContent, // 工具执行描述
     DateTime? timestamp,
     String? repoId,
     bool? isTyping,
@@ -233,6 +236,7 @@ class ChatMessage {
       role: role ?? this.role,
       content: content ?? this.content,
       think: think ?? this.think, // 思考内容
+      toolContent: toolContent ?? this.toolContent, // 工具执行描述
       timestamp: timestamp ?? this.timestamp,
       repoId: repoId ?? this.repoId,
       isTyping: isTyping ?? this.isTyping,

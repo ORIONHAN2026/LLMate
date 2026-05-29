@@ -49,7 +49,7 @@ class QwenProvider extends BaseLlmProvider {
       };
 
       // 添加工具调用支持
-      if (session != null && session.isMcpToolsEnabled) {
+      if (session != null && session.mcpServer != null) {
         final tools = buildTools(session);
         if (tools.isNotEmpty) {
           requestData['tools'] = tools;
@@ -154,7 +154,7 @@ class QwenProvider extends BaseLlmProvider {
       };
 
       // 添加工具调用支持
-      if (session != null && session.isMcpToolsEnabled) {
+      if (session != null && session.mcpServer != null) {
         final tools = buildTools(session);
         if (tools.isNotEmpty) {
           requestData['tools'] = tools;

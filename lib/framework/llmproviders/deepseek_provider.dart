@@ -89,7 +89,7 @@ class DeepSeekProvider extends BaseLlmProvider {
       };
 
       // 添加工具调用支持（仅在首次请求时，follow-up 不重复发送 tools）
-      if (session != null && session.isMcpToolsEnabled) {
+      if (session != null && session.mcpServer != null) {
         final tools = buildTools(session);
         if (tools.isNotEmpty) {
           requestData['tools'] = tools;
@@ -325,7 +325,7 @@ class DeepSeekProvider extends BaseLlmProvider {
       };
 
       // 添加工具调用支持
-      if (session != null && session.isMcpToolsEnabled) {
+      if (session != null && session.mcpServer != null) {
         final tools = buildTools(session);
         if (tools.isNotEmpty) {
           requestData['tools'] = tools;

@@ -345,7 +345,7 @@ class CustomProvider extends BaseLlmProvider {
 // 在会话中启用工具调用
 final session = ChatSession(
   // ... 其他配置
-  isMcpToolsEnabled: true,
+  mcpConfig: const McpSessionConfig(isEnabled: true),
 );
 
 // 框架会自动处理工具调用
@@ -492,7 +492,7 @@ class LlmConfigManager {
    - 检查提供商名称拼写
 
 3. **工具调用失败**
-   - 确认会话启用了 `isMcpToolsEnabled`
+   - 确认会话启用了 `mcpConfig.isEnabled`
    - 检查 MCP 服务配置
 
 4. **内存泄漏**

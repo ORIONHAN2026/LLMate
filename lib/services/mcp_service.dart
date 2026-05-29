@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mcp_client/mcp_client.dart';
 import '../models/chat/chat_session.dart';
 import '../models/bigmodel/mcp_config.dart';
+import 'mcp_storage_service.dart';
 
 /// MCP工具调用结果
 class McpToolResult {
@@ -79,6 +80,26 @@ class McpService {
 
   /// 缓存的配置信息
   static final Map<String, McpServerConfig> _cachedConfigs = {};
+  
+  /// 全局 MCP 配置列表（从 McpStorageService 加载）
+  static List<McpServerConfig> _globalMcpConfigs = [];
+  static bool _globalConfigsLoaded = false;
+
+  /// 确保全局 MCP 配置已加载到内存
+  static Future<void> _ensureGlobalConfigsLoaded() async {
+    if (_globalConfigsLoaded) return;
+    _globalMcpConfigs = await McpStorageService.loadMcpServices();
+    _globalConfigsLoaded = true;
+    debugPrint('📦 从存储加载了 ${_globalMcpConfigs.length} 个全局 MCP 服务配置');
+  }
+
+  /// 是否有全局 MCP 服务（同步，用于快速判断）
+  static bool get hasGlobalMcpServices {
+    // 如果已加载，用内存中的结果
+    if (_globalConfigsLoaded) return _globalMcpConfigs.isNotEmpty;
+    // 否则也检查缓存中是否有数据（通过 refresh/connect 等填入的）
+    return _cachedConfigs.isNotEmpty;
+  }
 
   /// 刷新单个 MCP 服务的工具列表（支持 stdio 和 SSE 两种传输方式）
   /// 返回获取到的工具信息列表，失败时抛出异常
@@ -350,28 +371,18 @@ class McpService {
     }
   }
 
-  /// 获取会话中实际启用的MCP服务列表
+  /// 获取会话中实际启用的MCP服务列表（直接从 session 获取）
   static List<McpServerConfig> _getEnabledServices(ChatSession session) {
-    final chatModel = session.chatModel;
-    if (chatModel?.mcpServices == null || chatModel!.mcpServices!.isEmpty) {
-      return [];
-    }
-
-    final selectedIds = session.selectedMcpServiceIds;
-    if (selectedIds.isEmpty) {
-      // 未选择时使用全部服务（向后兼容）
-      return chatModel.mcpServices!;
-    }
-
-    return chatModel.mcpServices!
-        .where((config) => selectedIds.contains(config.name))
-        .toList();
+    return session.mcpServer != null ? [session.mcpServer!] : [];
   }
 
   /// 初始化会话的MCP服务
   static Future<List<String>> initializeSessionMcpServices(
     ChatSession session,
   ) async {
+    // 确保全局配置已从存储中加载
+    await _ensureGlobalConfigsLoaded();
+
     final enabledServices = _getEnabledServices(session);
     if (enabledServices.isEmpty) {
       debugPrint('📝 会话 ${session.name} 未配置MCP服务');
@@ -429,12 +440,28 @@ class McpService {
       // 调用工具
       final result = await client.callTool(toolName, arguments);
 
+      // 检查服务端是否返回了错误标志
+      final isError = result.isError == true;
+      final formattedResult = _formatToolResult(result);
+
+      if (isError) {
+        debugPrint('⚠️ MCP工具调用返回错误: $serviceName.$toolName, 内容: $formattedResult');
+        return McpToolResult(
+          toolName: toolName,
+          arguments: arguments,
+          result: formattedResult,
+          isSuccess: false,
+          error: formattedResult,
+          timestamp: DateTime.now(),
+        );
+      }
+
       debugPrint('✅ MCP工具调用成功: $serviceName.$toolName');
 
       return McpToolResult(
         toolName: toolName,
         arguments: arguments,
-        result: _formatToolResult(result),
+        result: formattedResult,
         isSuccess: true,
         timestamp: DateTime.now(),
       );
@@ -1086,8 +1113,8 @@ class McpService {
 
   /// 检查会话是否有可用的MCP工具
   static bool hasAvailableTools(ChatSession session) {
-    if (!session.isMcpToolsEnabled) return false;
-    if (session.chatModel?.mcpServices?.isEmpty ?? true) return false;
+    if (session.mcpServer == null) return false;
+    if (!hasGlobalMcpServices) return false;
 
     final tools = getSessionAvailableTools(session);
     return tools.isNotEmpty;

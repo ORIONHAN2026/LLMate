@@ -271,7 +271,7 @@ for (final provider in providers) {
 // 启用工具调用的会话
 final session = ChatSession(
   // ... 其他配置
-  isMcpToolsEnabled: true,
+  mcpConfig: const McpSessionConfig(isEnabled: true),
 );
 
 final client = LlmHub.instance.createClientFromSession(session);

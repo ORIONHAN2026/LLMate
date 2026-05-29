@@ -85,8 +85,16 @@ class McpServerConfig {
     );
   }
 
+  /// 从包含 name 字段的 Map 反序列化（用于独立存储）
+  factory McpServerConfig.fromMap(Map<String, dynamic> json) {
+    return McpServerConfig.fromJson(
+      json['name'] as String? ?? '',
+      json,
+    );
+  }
+
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {'command': command, 'args': args};
+    final Map<String, dynamic> data = {'name': name, 'command': command, 'args': args};
 
     if (env != null) data['env'] = env;
     if (workingDirectory != null) data['workingDirectory'] = workingDirectory;

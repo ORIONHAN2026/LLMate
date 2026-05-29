@@ -15,6 +15,8 @@ import '../framework/llm_framework.dart';
 import '../services/model_storage_service.dart';
 import '../services/web_search_service.dart';
 import '../services/mcp_service.dart';
+import '../services/mcp_storage_service.dart';
+import '../models/chat/web_search_session_config.dart';
 import '../utils/snackbar_utils.dart';
 import 'attachment_list_widget.dart';
 
@@ -290,7 +292,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       chatModel: selectedModelObject,
       inputContent: '',
       attachments: [],
-      isWebSearchEnabled: false, // 新会话默认关闭联网搜索
+      webSearchConfig: const WebSearchSessionConfig(isEnabled: false),
     );
 
     // 添加新会话到顶部并设为当前会话
@@ -1008,7 +1010,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 构建联网搜索切换按钮
   Widget _buildWebSearchToggle() {
     final currentSession = sessionController.currentSession.value;
-    final isEnabled = currentSession?.isWebSearchEnabled ?? false;
+    final isEnabled = currentSession?.webSearchConfig.isEnabled ?? false;
 
     return Tooltip(
       message: isEnabled ? '关闭联网搜索' : '开启联网搜索',
@@ -1042,18 +1044,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 构建MCP工具切换按钮
   Widget _buildMcpToolsToggle() {
     final currentSession = sessionController.currentSession.value;
-    final currentModel = currentSession?.chatModel;
 
-    // 检查当前模型是否配置了MCP服务
-    final hasMcpServices = currentModel?.mcpServices?.isNotEmpty == true;
-    final selectedServiceIds = currentSession?.selectedMcpServiceIds ?? [];
-    final hasSelectedServices = selectedServiceIds.isNotEmpty;
+    // MCP 服务已全局存储，不依赖 ChatModel
+    final hasMcpServices = McpService.hasGlobalMcpServices;
+    final mcpServer = currentSession?.mcpServer;
+    final hasSelectedService = mcpServer != null;
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
-    final displayText = hasSelectedServices
-        ? (selectedServiceIds.length == 1
-            ? selectedServiceIds.first
-            : '${selectedServiceIds.first} +${selectedServiceIds.length - 1}')
+    final displayText = hasSelectedService
+        ? mcpServer.name
         : (hasMcpServices ? '请选择' : '无MCP服务');
 
     return Tooltip(
@@ -1105,7 +1104,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 检查当前模型是否配置了技能
     final hasSkills = currentModel?.skills?.isNotEmpty == true;
-    final isEnabled = hasSkills && (currentSession?.isSkillEnabled ?? false);
+    final isEnabled = hasSkills && (currentSession?.skillConfig.isEnabled ?? false);
 
     return Tooltip(
       message: hasSkills ? '点击显示技能列表' : '当前模型未配置技能',
@@ -2311,13 +2310,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   /// 显示MCP服务列表弹窗
-  void _showMcpServicesList() {
+  Future<void> _showMcpServicesList() async {
     final currentSession = sessionController.currentSession.value;
-    final currentModel = currentSession?.chatModel;
-    final mcpServices = currentModel?.mcpServices ?? [];
+
+    // MCP 服务已全局存储，从 McpStorageService 读取
+    final mcpServices = await McpStorageService.loadMcpServices();
 
     if (mcpServices.isEmpty) {
-      SnackBarUtils.showInfo(context, '当前模型未配置MCP服务');
+      SnackBarUtils.showInfo(context, '当前未配置MCP服务');
       return;
     }
 
@@ -2401,13 +2401,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             ),
                             const Spacer(),
                             Text(
-                              currentSession?.isMcpToolsEnabled == true
+                              currentSession?.mcpServer != null
                                   ? '已启用'
                                   : '已禁用',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
-                                    currentSession?.isMcpToolsEnabled == true
+                                    currentSession?.mcpServer != null
                                         ? Theme.of(context).colorScheme.primary
                                         : Theme.of(
                                           context,
@@ -2567,13 +2567,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(
-                                currentSession?.isMcpToolsEnabled == true
+                                currentSession?.mcpServer != null
                                     ? '禁用'
                                     : '启用',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color:
-                                      currentSession?.isMcpToolsEnabled == true
+                                      currentSession?.mcpServer != null
                                           ? Theme.of(context).colorScheme.error
                                           : Theme.of(
                                             context,
@@ -2602,13 +2602,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (currentSession == null) return;
 
     final updatedSession = currentSession.copyWith(
-      isWebSearchEnabled: !currentSession.isWebSearchEnabled,
+      webSearchConfig: currentSession.webSearchConfig.copyWith(
+        isEnabled: !currentSession.webSearchConfig.isEnabled,
+      ),
     );
 
     sessionController.updateSession(updatedSession);
 
     // 显示状态提示
-    // final isEnabled = updatedSession.isWebSearchEnabled;
+    // final isEnabled = updatedSession.webSearchConfig.isEnabled;
     // if (mounted) {
     //   SnackBarUtils.showInfo(
     //     context,
@@ -2622,12 +2624,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
 
+    // toggle: 如果已有 MCP 服务则清空，否则保持当前状态（需先选择服务）
     final updatedSession = currentSession.copyWith(
-      isMcpToolsEnabled: !currentSession.isMcpToolsEnabled,
+      clearMcpServer: currentSession.mcpServer != null,
     );
     sessionController.updateSession(updatedSession);
 
-    final isEnabled = updatedSession.isMcpToolsEnabled;
+    final isEnabled = updatedSession.mcpServer != null;
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
@@ -2651,13 +2654,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   /// 显示MCP服务选择弹窗
-  void _showMcpServiceSelection() {
-    final currentSession = sessionController.currentSession.value;
-    final currentModel = currentSession?.chatModel;
-    final mcpServices = currentModel?.mcpServices ?? [];
+  Future<void> _showMcpServiceSelection() async {
+    // MCP 服务已全局存储，从 McpStorageService 读取
+    final mcpServices = await McpStorageService.loadMcpServices();
 
     if (mcpServices.isEmpty) {
-      SnackBarUtils.showInfo(context, '当前模型未配置MCP服务');
+      SnackBarUtils.showInfo(context, '当前未配置MCP服务');
       return;
     }
 
@@ -2674,9 +2676,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final session = sessionController.currentSession.value;
-            final selectedIds = List<String>.from(
-              session?.selectedMcpServiceIds ?? [],
-            );
+            final selectedName = session?.mcpServer?.name;
 
             return Stack(
               children: [
@@ -2747,32 +2747,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   ),
                                 ),
                                 const Spacer(),
-                                GestureDetector(
-                                  onTap: () {
-                                    setDialogState(() {
-                                      if (selectedIds.length ==
-                                          mcpServices.length) {
-                                        selectedIds.clear();
-                                      } else {
-                                        selectedIds.clear();
-                                        for (final srv in mcpServices) {
-                                          selectedIds.add(srv.name);
-                                        }
-                                      }
-                                    });
-                                  },
-                                  child: Text(
-                                    selectedIds.length == mcpServices.length
-                                        ? '取消全选'
-                                        : '全选',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -2789,21 +2763,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   ),
                               itemBuilder: (context, index) {
                                 final service = mcpServices[index];
-                                final isSelected = selectedIds.contains(
-                                  service.name,
-                                );
+                                final isSelected = service.name == selectedName;
                                 final toolCount = service.tools?.length ?? 0;
                                 return InkWell(
                                   onTap: () {
-                                    setDialogState(() {
-                                      if (isSelected) {
-                                        selectedIds.remove(service.name);
-                                      } else {
-                                        selectedIds.add(service.name);
-                                      }
-                                    });
                                     Navigator.of(dialogContext).pop();
-                                    _applyMcpSelection(selectedIds);
+                                    _applyMcpSelection(isSelected ? null : service);
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
@@ -2943,7 +2908,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '已选 ${selectedIds.length}/${mcpServices.length} 个服务',
+                                    selectedName != null ? '已选 $selectedName' : '未选择',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color:
@@ -2956,7 +2921,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 TextButton(
                                   onPressed: () {
                                     Navigator.of(dialogContext).pop();
-                                    _applyMcpSelection(selectedIds);
                                   },
                                   style: TextButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
@@ -2994,21 +2958,19 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   /// 应用MCP服务选择
-  void _applyMcpSelection(List<String> selectedIds) async {
+  void _applyMcpSelection(McpServerConfig? service) async {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
 
     final updatedSession = currentSession.copyWith(
-      selectedMcpServiceIds: selectedIds,
-      isMcpToolsEnabled: selectedIds.isNotEmpty,
+      mcpServer: service,
     );
 
     await sessionController.updateSession(updatedSession);
 
     if (mounted) {
-      if (selectedIds.isNotEmpty) {
-        SnackBarUtils.showInfo(context, '已选择 ${selectedIds.length} 个MCP服务');
-        // 初始化选中的MCP服务
+      if (service != null) {
+        SnackBarUtils.showInfo(context, '已选择 MCP 服务: ${service.name}');
         try {
           await McpService.initializeSessionMcpServices(updatedSession);
         } catch (e) {
@@ -3045,9 +3007,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           builder: (context, setDialogState) {
             final session = sessionController.currentSession.value;
             final selectedIds = List<String>.from(
-              session?.selectedSkillIds ?? [],
+              session?.skillConfig.selectedSkillIds ?? [],
             );
-            final isEnabled = session?.isSkillEnabled ?? false;
+            final isEnabled = session?.skillConfig.isEnabled ?? false;
 
             return Stack(
               children: [
@@ -3336,8 +3298,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (currentSession == null) return;
 
     final updatedSession = currentSession.copyWith(
-      selectedSkillIds: selectedIds,
-      isSkillEnabled: isEnabled || selectedIds.isNotEmpty,
+      skillConfig: currentSession.skillConfig.copyWith(
+        selectedSkillIds: selectedIds,
+        isEnabled: isEnabled || selectedIds.isNotEmpty,
+      ),
     );
 
     sessionController.updateSession(updatedSession);
@@ -3397,7 +3361,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 检查是否开启了联网搜索，如果开启且有文本内容，则先执行搜索
     final currentSession = sessionController.currentSession.value;
-    if (currentSession?.isWebSearchEnabled == true && text.isNotEmpty) {
+    if (currentSession?.webSearchConfig.isEnabled == true && text.isNotEmpty) {
       await _performWebSearchBeforeSending(text);
       // 搜索完成后继续执行发送逻辑，不返回
     }
@@ -3880,7 +3844,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       debugPrint('AI响应完成，内容长度: $accumulatedContent');
 
       // 判断是 native tool_calls 还是 text-based tool calls
-      if (accumulatedMcpToolCalls != null && updateSession.isMcpToolsEnabled) {
+      if (accumulatedMcpToolCalls != null && updateSession.mcpServer != null) {
         // Native tool calling: 通过 API 原生 tools 参数返回的 tool_calls
         debugPrint('🔧 检测到 native tool_calls，开始执行 MCP 工具调用...');
         await _handleNativeMcpToolCalls(
@@ -4659,15 +4623,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   ) async {
     try {
       // 检查会话是否启用了MCP工具
-      if (!session.isMcpToolsEnabled) {
+      if (session.mcpServer == null) {
         debugPrint('📝 会话未启用MCP工具，跳过工具调用');
         return;
       }
 
-      // 检查模型是否配置了MCP服务
-      final chatModel = session.chatModel;
-      if (chatModel?.mcpServices == null || chatModel!.mcpServices!.isEmpty) {
-        debugPrint('📝 模型未配置MCP服务，跳过工具调用');
+      // 检查是否配置了全局 MCP 服务
+      if (!McpService.hasGlobalMcpServices) {
+        debugPrint('📝 未配置 MCP 服务，跳过工具调用');
         return;
       }
 

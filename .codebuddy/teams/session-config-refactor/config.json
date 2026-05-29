@@ -1,0 +1,18 @@
+{
+  "name": "session-config-refactor",
+  "leadAgentId": "7501a94dbfaa4267a6491715adc8c4bd",
+  "workspacePath": "/Users/orion/Documents/Flutter/llmchat",
+  "createdAt": "2026-05-29T09:02:50.501Z",
+  "options": {
+    "workspacePath": "/Users/orion/Documents/Flutter/llmchat",
+    "isAutoTeam": false
+  },
+  "members": [
+    {
+      "memberId": "team-lead@session-config-refactor",
+      "name": "team-lead",
+      "role": "Team Lead - coordinates the team and interacts with the user"
+    }
+  ],
+  "isAutoTeam": false
+}

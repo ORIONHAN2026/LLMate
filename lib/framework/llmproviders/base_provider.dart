@@ -211,7 +211,7 @@ abstract class BaseLlmProvider {
     }
 
     // MCP 工具信息：将可用工具的描述注入到系统提示词中
-    if (session != null && session.isMcpToolsEnabled) {
+    if (session != null && session.mcpServer != null) {
       final mcpToolsInfo = McpService.buildMcpToolsInfoForApi(session);
       if (mcpToolsInfo.isNotEmpty) {
         systemParts.add(mcpToolsInfo);
@@ -333,7 +333,7 @@ abstract class BaseLlmProvider {
 
   /// 构建工具列表（MCP支持）
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
-    if (session == null || !session.isMcpToolsEnabled) {
+    if (session == null || session.mcpServer == null) {
       return [];
     }
 

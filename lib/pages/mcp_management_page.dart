@@ -2,19 +2,16 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
-import '../controllers/session_controller.dart';
-import '../models/bigmodel/chat_model.dart';
 import '../models/bigmodel/mcp_config.dart';
 import '../services/mcp_service.dart';
-import '../services/model_storage_service.dart';
+import '../services/mcp_storage_service.dart';
 import '../utils/snackbar_utils.dart';
 import 'mcp_marketplace_page.dart';
 
 /// MCP 管理页面
 ///
-/// 只显示用户自行添加的 MCP 服务，从零开始构建。
+/// MCP 服务与会话/模型解耦，全局独立管理。
 /// - 列表显示已添加服务，支持查看详情和删除
 /// - 右上角 + 号自定义添加
 /// - 右上角搜索按钮进入应用市场
@@ -26,29 +23,34 @@ class McpManagementPage extends StatefulWidget {
 }
 
 class _McpManagementPageState extends State<McpManagementPage> {
-  final sessionController = Get.find<SessionController>();
+  List<McpServerConfig> _services = [];
+  bool _isLoading = true;
 
-  ChatModel? get _currentModel => sessionController.currentSession.value?.chatModel;
+  @override
+  void initState() {
+    super.initState();
+    _loadServices();
+  }
 
-  List<McpServerConfig> get _addedServices => _currentModel?.mcpServices ?? [];
+  Future<void> _loadServices() async {
+    final services = await McpStorageService.loadMcpServices();
+    if (mounted) {
+      setState(() {
+        _services = services;
+        _isLoading = false;
+      });
+    }
+  }
 
   Future<void> _removeService(String serviceName) async {
-    final model = _currentModel;
-    if (model == null) return;
-
-    final updatedModel = model.removeMcpService(serviceName);
-    await _saveModel(updatedModel);
-
+    await McpStorageService.removeMcpService(serviceName);
+    await _loadServices();
     if (mounted) {
       SnackBarUtils.showInfo(context, '已移除服务: $serviceName');
     }
   }
 
   void _showAddMcpDialog() {
-    if (_currentModel == null) {
-      SnackBarUtils.showInfo(context, '请先选择一个会话并绑定模型');
-      return;
-    }
 
     // 默认提供两个示例模板
     final jsonCtrl = TextEditingController(text: const JsonEncoder.withIndent('  ').convert({
@@ -196,37 +198,15 @@ class _McpManagementPageState extends State<McpManagementPage> {
   }
 
   Future<void> _addServiceWithInfo(McpServerConfig config, {required int toolCount}) async {
-    final model = _currentModel!;
-    if (_addedServices.any((s) => s.name == config.name)) {
+    if (_services.any((s) => s.name == config.name)) {
       SnackBarUtils.showInfo(context, '服务 "${config.name}" 已存在');
       return;
     }
-    await _saveModel(model.addMcpService(config));
+    await McpStorageService.addMcpService(config);
+    await _loadServices();
     if (mounted) {
-      setState(() {}); // 刷新列表
       SnackBarUtils.showSuccess(context, '已添加: ${config.name} (${toolCount} 个工具)');
     }
-  }
-
-  Future<void> _saveModel(ChatModel updatedModel) async {
-    // 更新当前会话
-    final session = sessionController.currentSession.value;
-    if (session != null) {
-      sessionController.updateSession(
-        session.copyWith(chatModel: updatedModel),
-      );
-    }
-
-    // 持久化
-    final models = await ModelStorageService.loadModels();
-    final updatedModels = models.map((m) {
-      final cm = ChatModel.fromMap(m);
-      if (cm.modelId == updatedModel.modelId) {
-        return updatedModel.toMap();
-      }
-      return m;
-    }).toList();
-    await ModelStorageService.saveModels(updatedModels);
   }
 
   @override
@@ -259,39 +239,14 @@ class _McpManagementPageState extends State<McpManagementPage> {
           const SizedBox(width: 4),
         ],
       ),
-      body: _currentModel == null
-          ? _buildNoModelState()
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
           : _buildServiceGrid(),
     );
   }
 
-  Widget _buildNoModelState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            CupertinoIcons.cube_box,
-            size: 48,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '请先选择一个会话并绑定模型',
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildServiceGrid() {
-    final services = _addedServices;
-
-    if (services.isEmpty) {
+    if (_services.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -331,7 +286,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           Row(
             children: [
               Text(
-                '已添加 ${services.length} 个服务',
+                '已添加 ${_services.length} 个服务',
                 style: TextStyle(
                   fontSize: 13,
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
@@ -368,10 +323,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: services.length,
+            itemCount: _services.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
-              final service = services[index];
+              final service = _services[index];
               return _buildAddedServiceCard(service);
             },
           ),
@@ -554,19 +509,14 @@ class _McpManagementPageState extends State<McpManagementPage> {
     try {
       final tools = await McpService.refreshServiceTools(service);
 
-      // 更新模型中的服务配置
-      final model = _currentModel;
-      if (model == null) return;
-
       final updatedService = service.copyWith(
         tools: tools,
         lastUpdated: DateTime.now(),
       );
-      final updatedModel = model.updateMcpService(service.name, updatedService);
-      await _saveModel(updatedModel);
+      await McpStorageService.updateMcpService(service.name, updatedService);
 
-      // 立即刷新 UI 以显示工具
-      if (mounted) setState(() {});
+      // 重新加载列表以刷新 UI
+      await _loadServices();
 
       if (mounted) {
         SnackBarUtils.showSuccess(context, '已获取 ${tools.length} 个工具');
@@ -696,18 +646,14 @@ class _McpManagementPageState extends State<McpManagementPage> {
                             onTap: () async {
                               try {
                                 final newTools = await McpService.refreshServiceTools(service);
-                                final model = _currentModel;
-                                if (model != null) {
-                                  final updatedService = service.copyWith(tools: newTools, lastUpdated: DateTime.now());
-                                  final updatedModel = model.updateMcpService(service.name, updatedService);
-                                  await _saveModel(updatedModel);
-                                  service = updatedService;
-                                  setSheetState(() {});
-                                  if (ctx.mounted) {
-                                    setState(() {});
-                                  }
-                                  SnackBarUtils.showSuccess(ctx, '已刷新 ${newTools.length} 个工具');
+                                final updatedService = service.copyWith(tools: newTools, lastUpdated: DateTime.now());
+                                await McpStorageService.updateMcpService(service.name, updatedService);
+                                service = updatedService;
+                                setSheetState(() {});
+                                if (ctx.mounted) {
+                                  await _loadServices();
                                 }
+                                SnackBarUtils.showSuccess(ctx, '已刷新 ${newTools.length} 个工具');
                               } catch (e) {
                                 if (ctx.mounted) {
                                   SnackBarUtils.showError(ctx, '刷新失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}');
@@ -774,18 +720,14 @@ class _McpManagementPageState extends State<McpManagementPage> {
                           onPressed: () async {
                             try {
                               final newTools = await McpService.refreshServiceTools(service);
-                              final model = _currentModel;
-                              if (model != null) {
-                                final updatedService = service.copyWith(tools: newTools, lastUpdated: DateTime.now());
-                                final updatedModel = model.updateMcpService(service.name, updatedService);
-                                await _saveModel(updatedModel);
-                                service = updatedService;
-                                setSheetState(() {});
-                                if (ctx.mounted) {
-                                  setState(() {});
-                                }
-                                SnackBarUtils.showSuccess(ctx, '已获取 ${newTools.length} 个工具');
+                              final updatedService = service.copyWith(tools: newTools, lastUpdated: DateTime.now());
+                              await McpStorageService.updateMcpService(service.name, updatedService);
+                              service = updatedService;
+                              setSheetState(() {});
+                              if (ctx.mounted) {
+                                await _loadServices();
                               }
+                              SnackBarUtils.showSuccess(ctx, '已获取 ${newTools.length} 个工具');
                             } catch (e) {
                               if (ctx.mounted) {
                                 SnackBarUtils.showError(ctx, '获取失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}');

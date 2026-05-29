@@ -207,19 +207,25 @@ class LlmClient {
     }
     if (list.isEmpty) return null;
 
-    final svc = _session.mcpServer?.name;
-    if (svc == null) return null;
-
-    Client? mc = McpService.getMCPClient(svc);
+    // 优先从 session 取已缓存的 MCP Client
+    Client? mc = _session.mcpClient;
     if (mc == null) {
-      final inited = await McpService.initializeSessionMcpServices(_session);
-      if (inited.isEmpty) {
-        onError?.call('MCP 未初始化: $svc');
-        return null;
-      }
+      final svc = _session.mcpServer?.name;
+      if (svc == null) return null;
+
       mc = McpService.getMCPClient(svc);
+      if (mc == null) {
+        final inited = await McpService.initializeSessionMcpServices(_session);
+        if (inited.isEmpty) {
+          onError?.call('MCP 未初始化: $svc');
+          return null;
+        }
+        mc = McpService.getMCPClient(svc);
+      }
+      if (mc == null) return null;
+      // 缓存到 session，后续调用直接用
+      _session.mcpClient = mc;
     }
-    if (mc == null) return null;
 
     final results = <Map<String, dynamic>>[];
     for (final raw in list) {
@@ -388,19 +394,24 @@ class LlmClient {
     }
     if (list.isEmpty) return;
 
-    final svc = _session.mcpServer?.name;
-    if (svc == null) return;
-
-    Client? mc = McpService.getMCPClient(svc);
+    // 优先从 session 取已缓存的 MCP Client
+    Client? mc = _session.mcpClient;
     if (mc == null) {
-      final inited = await McpService.initializeSessionMcpServices(_session);
-      if (inited.isEmpty) {
-        onError?.call('MCP 未初始化: $svc');
-        return;
-      }
+      final svc = _session.mcpServer?.name;
+      if (svc == null) return;
+
       mc = McpService.getMCPClient(svc);
+      if (mc == null) {
+        final inited = await McpService.initializeSessionMcpServices(_session);
+        if (inited.isEmpty) {
+          onError?.call('MCP 未初始化: $svc');
+          return;
+        }
+        mc = McpService.getMCPClient(svc);
+      }
+      if (mc == null) return;
+      _session.mcpClient = mc;
     }
-    if (mc == null) return;
 
     // 执行
     final results = <Map<String, dynamic>>[];

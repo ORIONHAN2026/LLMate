@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:chathub/models/bigmodel/chat_model.dart';
 import 'package:chathub/models/bigmodel/mcp_config.dart';
 import 'package:chathub/models/chat/skill.dart';
+import 'package:mcp_client/mcp_client.dart' hide MessageRole;
 
 import 'chat_message.dart';
 import 'chat_attachment.dart';
@@ -27,6 +28,9 @@ class ChatSession {
 
   /// 绑定的技能（null = 未绑定）
   final Skill? skill;
+
+  /// 已初始化的 MCP Client（运行时懒加载，不序列化）
+  Client? mcpClient;
 
   // ============================
 

@@ -199,23 +199,17 @@ class _ConfigurationValidationPageState
         apiKey: config['apiKey'].isNotEmpty ? config['apiKey'] : null,
       );
 
-      // 创建客户端
-      final client = LlmHub.instance.createClient(testModel);
-
-      // 配置模型
-      client.configure(testModel);
+      // 创建并配置 provider
+      final providerInstance = LlmHub.createProvider(testModel);
 
       // 执行验证
-      final isValid = await client.validateConfiguration();
+      final isValid = await providerInstance.validateConfiguration();
 
       setState(() {
         _validationResults[provider] = isValid;
         _validationMessages[provider] =
             isValid ? '✅ 配置验证成功！' : '❌ 配置验证失败，请检查API Key和URL设置';
       });
-
-      // 释放资源
-      client.dispose();
 
       if (kDebugMode) {
         print('$provider 配置验证结果: ${isValid ? '成功' : '失败'}');
@@ -259,11 +253,9 @@ class ConfigurationValidator {
         apiKey: apiKey,
       );
 
-      final client = LlmHub.instance.createClient(testModel);
-      client.configure(testModel);
+      final providerInstance = LlmHub.createProvider(testModel);
 
-      final isValid = await client.validateConfiguration();
-      client.dispose();
+      final isValid = await providerInstance.validateConfiguration();
 
       return {
         'success': isValid,

@@ -1952,8 +1952,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         createdAt: DateTime.now(),
       );
 
-      // 使用 LLM Hub 创建客户端进行测试
-      final client = LlmHub.instance.createClient(tempModel);
+      // 使用 LLM Hub 创建 provider 进行测试
+      final provider = LlmHub.createProvider(tempModel);
 
       // 创建测试消息
       final testMessage = ChatMessage(
@@ -1967,7 +1967,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       String accumulatedResponse = '';
       bool hasReceived = false;
 
-      await for (final chunkMap in client.sendMessageStream(
+      await for (final chunkMap in provider.sendMessageStream(
         userMessage: testMessage,
         session: null,
       )) {
@@ -2019,8 +2019,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         });
       }
 
-      // 清理资源
-      client.dispose();
+      // 测试完成
     } catch (e) {
       setState(() {
         _isTesting = false;

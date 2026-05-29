@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:mcp_client/mcp_client.dart' hide MessageRole;
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/chat_message.dart';
+import '../services/mcp_service.dart';
 import 'llmproviders/base_provider.dart';
 import 'llmproviders/openai_provider.dart';
 import 'llmproviders/deepseek_provider.dart';
@@ -12,25 +15,17 @@ import 'llmproviders/qwen_provider.dart';
 import 'llmproviders/zhipu_provider.dart';
 import 'llmproviders/ollama_provider.dart';
 
-/// LLM Hub - 大模型统一调用框架
+/// LLM Hub - provider 注册中心
 class LlmHub {
   final Map<String, BaseLlmProvider> _providers = {};
 
-  /// 私有构造函数
   LlmHub._internal() {
     _initializeProviders();
   }
-
-  /// 单例实例
   static final LlmHub _instance = LlmHub._internal();
-
-  /// 获取单例实例
   static LlmHub get instance => _instance;
-
-  /// 工厂构造函数
   factory LlmHub() => _instance;
 
-  /// 初始化所有提供商
   void _initializeProviders() {
     _providers['openai'] = OpenAiProvider();
     _providers['deepseek'] = DeepSeekProvider();
@@ -42,249 +37,224 @@ class LlmHub {
     _providers['ollama'] = OllamaProvider();
   }
 
- 
-  /// 直接通过 ChatModel 创建客户端（推荐方式）
-  LlmClient createClient(ChatModel model) {
-    print("=== LlmHub.createClient 被调用 ===");
-    print("模型提供商: ${model.provider}");
-    print("模型名称: ${model.name}");
-    print("模型ID: ${model.model}");
-    print("可用提供商: ${_providers.keys.toList()}");
-    
-    if (model.provider == null || model.provider!.isEmpty) {
-      throw ArgumentError('模型必须指定提供商');
-    }
-    
-    final llmProvider = _providers[model.provider];
-    print("找到的提供商: ${llmProvider.runtimeType}");
-    
-    if (llmProvider == null) {
-      throw UnsupportedError('不支持的提供商: ${model.provider}');
-    }
-    
-    final client = LlmClient._(llmProvider);
-    client.configure(model);
-    print("客户端配置完成");
-    return client;
+  /// 解析 provider
+  static BaseLlmProvider _resolve(ChatModel model) {
+    final p = instance._providers[model.provider];
+    if (p == null) throw UnsupportedError('不支持的提供商: ${model.provider}');
+    return p;
   }
 
-  /// 根据 ChatSession 创建客户端
-  LlmClient createClientFromSession(ChatSession session) {
-    if (session.chatModel == null) {
-      throw ArgumentError('会话必须绑定模型');
-    }
-    return createClient(session.chatModel!);
-  }
-
-  /// 获取所有支持的提供商
-  List<String> getSupportedProviders() {
-    return _providers.keys.toList();
-  }
-
-  /// 检查提供商是否支持
-  bool isProviderSupported(String provider) {
-    return _providers.containsKey(provider);
+  /// 创建并配置 provider（用于直接调用 provider API 的场景）
+  static BaseLlmProvider createProvider(ChatModel model) {
+    final p = _resolve(model);
+    p.configure(model);
+    return p;
   }
 }
 
-/// LLM 客户端 - 用于具体的模型调用
 class LlmClient {
-  final BaseLlmProvider _llmProvider;
-  ChatModel? _model;
+  final ChatSession _session;
+  final BaseLlmProvider _provider;
+  bool _cancelled = false;
 
-  /// 内部构造函数
-  LlmClient._(this._llmProvider);
+  // ── 回调 ──
 
-  /// 清理资源
-  Future<void> dispose() async {}
+  void Function(String text)? onText;
+  void Function(String think)? onThink;
+  void Function(String toolName, Map<String, dynamic> args)? onToolCall;
+  void Function(String toolName, bool success, String result)? onToolResult;
+  void Function(String error)? onError;
+  void Function()? onDone;
 
-  /// 便捷的静态工厂方法 - 直接通过 ChatModel 创建客户端
-  static LlmClient fromModel(ChatModel model) {
-    return LlmHub.instance.createClient(model);
+  // ── 构造 ──
+
+  LlmClient({required ChatSession session})
+    : _session = session,
+      _provider = LlmHub._resolve(session.chatModel!) {
+    _provider.configure(session.chatModel!);
   }
 
- 
-  /// 便捷的静态工厂方法 - 通过 ChatSession 创建客户端
-  static LlmClient fromSession(ChatSession session) {
-    return LlmHub.instance.createClientFromSession(session);
-  }
+  ChatModel? get model => _session.chatModel;
 
-  /// 配置模型
-  void configure(ChatModel model, {String? ragId}) {
-    _model = model;
-    _llmProvider.configure(model);
-  }
+  void dispose() {}
 
-  /// 设置RAG知识库（已废弃，保留兼容性）
-  @Deprecated('RAG功能已移除')
-  void setRagKnowledgeBase(String? ragId) {}
+  void configure(ChatModel model) => _provider.configure(model);
 
-  /// 获取当前配置的模型
-  ChatModel? get model => _model;
+  Future<bool> validateConfiguration() => _provider.validateConfiguration();
 
-  /// 发送消息 - 流式响应
-  Stream<Map<String, String?>> sendMessageStream({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) {
-    print("=== LlmClient.sendMessageStream 被调用 ===");
-    print("提供商类型: ${_llmProvider.runtimeType}");
-    print("用户消息: ${userMessage.content}");
-    
-    if (_model == null) {
-      print("错误: 客户端未配置模型");
-      throw StateError('客户端未配置模型');
-    }
+  String buildSystemPrompt({String? customPrompt, ChatSession? session}) =>
+      _provider.buildSystemPrompt(customPrompt: customPrompt, session: session);
 
-    print("准备调用提供商的 sendMessageStream 方法");
-    return _llmProvider.sendMessageStream(
-      userMessage: userMessage,
-      session: session,
-    );
-  }
+  Stream<Map<String, String?>> sendMessageStream(ChatMessage userMessage) =>
+      _provider.sendMessageStream(
+        userMessage: userMessage,
+        session: _session,
+      );
 
-  /// 发送消息 - 一次性响应
-  Future<String> sendMessage({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) async {
-    final buffer = StringBuffer();
-    await for (final chunkMap in sendMessageStream(
-      userMessage: userMessage,
-      session: session,
-    )) {
-      buffer.write(chunkMap['content'] ?? '');
-    }
-    return buffer.toString();
-  }
-
-  /// 验证配置
-  Future<bool> validateConfiguration() async {
-    print("=== LlmClient.validateConfiguration 被调用 ===");
-    
-    if (_model == null) {
-      print('LlmClient 验证失败: 客户端未配置模型');
-      throw StateError('客户端未配置模型');
-    }
-
-    print('开始验证配置...');
-    print('提供商: ${_model!.provider}');
-    print('模型: ${_model!.model}');
-    print('API URL: ${_model!.apiUrl}');
-    if (_model!.apiKey != null && _model!.apiKey!.isNotEmpty) {
-      print('API Key: ${_model!.apiKey!.substring(0, _model!.apiKey!.length > 10 ? 10 : _model!.apiKey!.length)}...');
-    } else {
-      print('API Key: 未设置或为空');
-    }
-
-    try {
-      print('调用提供商的 validateConfiguration 方法...');
-      final isValid = await _llmProvider.validateConfiguration();
-
-      print('配置验证结果: ${isValid ? '成功' : '失败'}');
-
-      return isValid;
-    } catch (e) {
-      print('配置验证过程中发生错误: $e');
-      return false;
-    }
-  }
-
-  /// 获取模型信息
-  Future<Map<String, dynamic>?> getModelInfo() async {
-    if (_model == null) {
-      throw StateError('客户端未配置模型');
-    }
-    return _llmProvider.getModelInfo();
-  }
-
-  /// 获取支持的功能
-  List<String> getSupportedFeatures() {
-    return _llmProvider.getSupportedFeatures();
-  }
-
-  /// 检查是否支持某项功能
-  bool supportsFeature(String feature) {
-    return _llmProvider.supportsFeature(feature);
-  }
-
-  /// 构建系统提示词
-  String buildSystemPrompt({String? customPrompt, ChatSession? session}) {
-    return _llmProvider.buildSystemPrompt(customPrompt: customPrompt, session: session);
-  }
-
-  /// 构建消息列表
-  List<Map<String, dynamic>> buildMessages({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) {
-    return _llmProvider.buildMessages(userMessage: userMessage, session: session);
-  }
-
-  /// 发送预构建的消息列表（用于 MCP tool call follow-up 等场景）
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
     List<Map<String, dynamic>> messages,
-  ) {
-    if (_model == null) {
-      throw StateError('客户端未配置模型');
+  ) =>
+      _provider.sendMessageStreamWithMessages(messages);
+
+  // ── 高级 API ──
+
+  void cancel() => _cancelled = true;
+
+  /// 发送消息，自动处理工具调用 + follow-up
+  Future<void> send(String userText) async {
+    _cancelled = false;
+    try {
+      // 1. 组装用户消息
+      final userMsg = ChatMessage(
+        msgId: '${DateTime.now().millisecondsSinceEpoch}_user',
+        role: MessageRole.user,
+        content: userText,
+        timestamp: DateTime.now(),
+        sessionId: _session.sessionId,
+      );
+
+      // 2. 发送流式请求 (provider 内部组装 tools)
+      final stream = _provider.sendMessageStream(
+        userMessage: userMsg,
+        session: _session,
+      );
+
+      // 3. 监听流式响应
+      String acc = '';
+      String? toolCallsJson;
+      await for (final chunk in stream) {
+        if (_cancelled) break;
+        final c = chunk['content'] ?? '';
+        final t = chunk['think'] ?? '';
+        final tc = chunk['mcpToolCalls'];
+        if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
+        if (c.isNotEmpty) {
+          acc += c;
+          onText?.call(c);
+        }
+        if (t.isNotEmpty) onThink?.call(t);
+      }
+
+      // 4. 工具调用
+      if (!_cancelled && toolCallsJson != null && _session.mcpServer != null) {
+        await _toolsAndFollowUp(toolCallsJson, userMsg, acc);
+      }
+    } catch (e) {
+      onError?.call('$e');
+    } finally {
+      onDone?.call();
     }
-    return _llmProvider.sendMessageStreamWithMessages(messages);
   }
 
-  /// 处理工具调用（MCP）
-  Future<Map<String, dynamic>?> handleToolCall({
-    required Map<String, dynamic> toolCall,
-    ChatSession? session,
-  }) async {
-    if (!supportsFeature('tool_calling')) {
-      return null;
-    }
-    return _llmProvider.handleToolCall(toolCall: toolCall, session: session);
-  }
-}
+  // ── 内部: 工具执行 + follow-up ──
 
-/// 使用示例和便捷方法
-class LlmHubExamples {
-  /// 示例：使用新的简化方式创建客户端（推荐）
-  static Future<void> simplifiedExample() async {
-    // 创建模型配置
-    final model = ChatModel.create(
-      name: 'GPT-4',
-      model: 'gpt-4',
-      provider: 'openai',
-      apiKey: 'your-api-key',
-      apiUrl: 'https://api.openai.com/v1',
-    );
-
-    // 方式1：使用静态工厂方法（最简单）
-    final client = LlmClient.fromModel(model);
-
-    // 方式2：使用 LlmHub（等价于方式1）
-    // final client = LlmHub.instance.createClientFromModel(model);
-
-    // 验证配置
-    final isValid = await client.validateConfiguration();
-    if (!isValid) {
-      print('配置验证失败');
+  Future<void> _toolsAndFollowUp(
+    String toolCallsJson,
+    ChatMessage userMsg,
+    String assistantContent,
+  ) async {
+    final List<dynamic> list;
+    try {
+      list = jsonDecode(toolCallsJson);
+    } catch (e) {
+      onError?.call('解析 tool_calls 失败: $e');
       return;
     }
+    if (list.isEmpty) return;
 
-    // 发送消息
-    final userMessage = ChatMessage(
-      msgId: 'test_${DateTime.now().millisecondsSinceEpoch}',
-      content: '你好！请简单介绍一下你自己。',
-      role: MessageRole.user,
-      timestamp: DateTime.now(),
-    );
+    final svc = _session.mcpServer?.name;
+    if (svc == null) return;
 
-    // 流式响应
-    print('AI回复: ');
-    await for (final chunkMap in client.sendMessageStream(userMessage: userMessage)) {
-      print(chunkMap['content'] ?? '');
+    Client? mc = McpService.getMCPClient(svc);
+    if (mc == null) {
+      final inited = await McpService.initializeSessionMcpServices(_session);
+      if (inited.isEmpty) {
+        onError?.call('MCP 未初始化: $svc');
+        return;
+      }
+      mc = McpService.getMCPClient(svc);
+    }
+    if (mc == null) return;
+
+    // 执行
+    final results = <Map<String, dynamic>>[];
+    for (final raw in list) {
+      if (_cancelled) break;
+      final t = raw as Map<String, dynamic>;
+      final name = t['name'] as String? ?? '';
+      final args = t['arguments'] as Map<String, dynamic>? ?? {};
+      if (name.isEmpty) continue;
+
+      onToolCall?.call(name, args);
+      try {
+        final r = await mc.callTool(name, args);
+        final ok = r.isError != true;
+        final buf = StringBuffer();
+        for (final c in r.content) {
+          if (c is TextContent) {
+            buf.writeln(c.text);
+          } else if (c is ImageContent) {
+            buf.writeln('[图片: ${c.data ?? c.url}]');
+          }
+        }
+        final text = buf.toString().trim();
+        onToolResult?.call(name, ok, text);
+        results.add({
+          'id': t['id'] ?? 'call_${t['index'] ?? 0}',
+          'result': text,
+          'isError': !ok,
+        });
+      } catch (e) {
+        onToolResult?.call(name, false, '$e');
+        results.add({
+          'id': t['id'] ?? 'call_${t['index'] ?? 0}',
+          'result': '$e',
+          'isError': true,
+        });
+      }
+    }
+    if (results.isEmpty || _cancelled) return;
+
+    // 组装 follow-up 消息
+    final msgs = <Map<String, dynamic>>[];
+    final sp = _provider.buildSystemPrompt(session: _session);
+    if (sp.isNotEmpty) msgs.add({'role': 'system', 'content': sp});
+    msgs.add({'role': 'user', 'content': userMsg.content});
+    msgs.add({
+      'role': 'assistant',
+      'content': assistantContent.isNotEmpty ? assistantContent : null,
+      'tool_calls':
+          list.map((tc) {
+            final m = tc as Map<String, dynamic>;
+            return {
+              'id': m['id'] ?? 'call_${m['index'] ?? 0}',
+              'type': 'function',
+              'function': {
+                'name': m['name'] ?? '',
+                'arguments':
+                    m['arguments'] is String
+                        ? m['arguments']
+                        : jsonEncode(m['arguments'] ?? {}),
+              },
+            };
+          }).toList(),
+    });
+    for (final r in results) {
+      msgs.add({
+        'role': 'tool',
+        'tool_call_id': r['id'],
+        'content': r['isError'] == true ? '错误: ${r['result']}' : r['result'],
+      });
     }
 
-    // 释放资源
-    client.dispose();
+    // follow-up 流式
+    final s2 = _provider.sendMessageStreamWithMessages(msgs);
+    await for (final chunk in s2) {
+      if (_cancelled) break;
+      final c = chunk['content'] ?? '';
+      final t = chunk['think'] ?? '';
+      if (c.isNotEmpty) onText?.call(c);
+      if (t.isNotEmpty) onThink?.call(t);
+    }
   }
-
-  }
+}

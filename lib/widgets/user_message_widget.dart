@@ -595,12 +595,9 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       // 调用API生成流式响应
       String accumulatedContent = '';
 
-      // 使用新的 LLM Hub 方法
-      client = LlmHub.instance.createClientFromSession(currentSession);
-      final responseStream = client.sendMessageStream(
-        userMessage: widget.message,
-        session: currentSession,
-      );
+      // 使用 LLM Hub 创建客户端
+      client = LlmClient(session: currentSession);
+      final responseStream = client.sendMessageStream(widget.message);
 
       await for (final chunkMap in responseStream) {
         // 检查是否被停止 - 通过查找会话列表中的会话状态

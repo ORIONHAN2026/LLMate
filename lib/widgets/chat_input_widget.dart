@@ -3498,11 +3498,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         throw Exception('模型提供商未配置');
       }
 
-      // 创建LLM客户端
-      client = LlmHub.instance.createClient(model);
-
-      // 配置模型
-      client.configure(model);
+      // 创建 LLM 客户端
+      client = LlmClient(session: updateSession);
 
       // // 验证配置
       // final isValid = await client.validateConfiguration();
@@ -3511,10 +3508,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // }
 
       // 发送消息并获取流式响应
-      final responseStream = client.sendMessageStream(
-        userMessage: userMessage,
-        session: updateSession,
-      );
+      final responseStream = client.sendMessageStream(userMessage);
 
       // 处理流式响应并更新UI
       await for (final chunkMap in responseStream) {
@@ -3649,7 +3643,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     } catch (e) {
       rethrow;
     } finally {
-      // 确保释放客户端资源
+      // 释放客户端资源
       try {
         client?.dispose();
       } catch (e) {

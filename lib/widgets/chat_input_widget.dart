@@ -3540,7 +3540,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           );
 
           if (messageIndex != -1) {
-            botMessage.content = accumulatedContent;
+            botMessage.content = _stripToolCallXml(accumulatedContent);
             botMessage.think = accumulatedThink;
             botMessage.toolContent = accumulatedTool;
 
@@ -3843,6 +3843,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       debugPrint('✅ 已结合 --- 分隔完成正文抽取，最终长度=${result.length}');
     }
     return result;
+  }
+
+  /// 过滤文本中的 tool_call XML 标签，不在 UI 中展示
+  static final RegExp _toolCallXmlRegex = RegExp(
+    r'<tool_call>\s*<tool_name>[^<]*</tool_name>\s*<arguments>\s*{.*?}\s*</arguments>\s*</tool_call>',
+    dotAll: true,
+  );
+
+  String _stripToolCallXml(String text) {
+    return text.replaceAll(_toolCallXmlRegex, '').replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
   }
 
   /// 估算文本的token数量

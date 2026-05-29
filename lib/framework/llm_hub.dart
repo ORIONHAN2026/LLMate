@@ -114,6 +114,18 @@ class LlmClient {
       if (toolCallsJson != null) {
         // 原生 tool_calls
         results = await _executeMcpToolsAndYield(toolCallsJson);
+        if (results == null) {
+          // 执行失败，尝试解析 tool name 告知 UI
+          try {
+            final list = jsonDecode(toolCallsJson) as List;
+            for (final raw in list) {
+              final name = (raw as Map)['name'] as String? ?? '未知工具';
+              yield {'tool': '失败: $name'};
+            }
+          } catch (_) {
+            yield {'tool': '失败: 工具调用解析错误'};
+          }
+        }
       } else {
         // 回退：文本格式 tool_calls（如 <tool_call>...</tool_call>）
         final textCalls = McpService.parseToolCallsFromResponse(acc);
@@ -293,6 +305,16 @@ class LlmClient {
       });
     }
     return msgs;
+  }
+
+  /// 从文本中移除原始 tool_call XML 标签
+  static final RegExp _toolCallXmlRegex = RegExp(
+    r'<tool_call>\s*<tool_name>[^<]*</tool_name>\s*<arguments>\s*{.*?}\s*</arguments>\s*</tool_call>',
+    dotAll: true,
+  );
+
+  static String _stripTextToolCalls(String text) {
+    return text.replaceAll(_toolCallXmlRegex, '').replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
   }
 
   Stream<Map<String, String?>> sendMessageStreamWithMessages(

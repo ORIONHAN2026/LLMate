@@ -296,13 +296,25 @@ class McpService {
         version: '1.0.0',
       );
 
-      // 创建并连接传输层
-      final transport = await StdioClientTransport.create(
-        command: config.command,
-        arguments: config.args,
-        environment: config.env,
-        workingDirectory: config.workingDirectory,
-      );
+      // 创建并连接传输层 - 根据配置选择传输方式
+      ClientTransport transport;
+      if (config.url != null && config.url!.isNotEmpty) {
+        // SSE (URL-based) 传输
+        debugPrint('🔗 使用 SSE 传输: ${config.url}');
+        transport = await SseClientTransport.create(
+          serverUrl: config.url!,
+          headers: config.headers,
+        );
+      } else {
+        // stdio 传输
+        debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
+        transport = await StdioClientTransport.create(
+          command: config.command,
+          arguments: config.args,
+          environment: config.env,
+          workingDirectory: config.workingDirectory,
+        );
+      }
 
       // 连接客户端到传输层
       await client.connect(transport);

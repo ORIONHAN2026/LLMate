@@ -101,6 +101,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   @override
   void initState() {
     super.initState();
+
+    // 提前加载全局 MCP 配置，确保按钮状态正确
+    McpService.ensureGlobalConfigsLoaded().then((_) {
+      if (mounted) setState(() {});
+    });
+
     _inputController = TextEditingController();
     _inputFocusNode = FocusNode();
     _hasText = _inputController.text.isNotEmpty;

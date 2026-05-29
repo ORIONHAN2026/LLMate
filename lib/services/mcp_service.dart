@@ -86,7 +86,7 @@ class McpService {
   static bool _globalConfigsLoaded = false;
 
   /// 确保全局 MCP 配置已加载到内存
-  static Future<void> _ensureGlobalConfigsLoaded() async {
+  static Future<void> ensureGlobalConfigsLoaded() async {
     if (_globalConfigsLoaded) return;
     _globalMcpConfigs = await McpStorageService.loadMcpServices();
     _globalConfigsLoaded = true;
@@ -381,7 +381,7 @@ class McpService {
     ChatSession session,
   ) async {
     // 确保全局配置已从存储中加载
-    await _ensureGlobalConfigsLoaded();
+    await ensureGlobalConfigsLoaded();
 
     final enabledServices = _getEnabledServices(session);
     if (enabledServices.isEmpty) {

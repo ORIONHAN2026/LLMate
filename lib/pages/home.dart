@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/pages/modelssetting.dart';
+import 'package:chathub/pages/skill_management_page.dart';
+import 'package:chathub/pages/mcp_management_page.dart';
 import 'package:chathub/widgets/model_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -506,6 +508,60 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 );
                 // 从设置页面返回时重新加载模型列表
                 _loadModels();
+              }
+            });
+          },
+        ),
+        // MCP 工具管理
+        PopupMenuItem(
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.gear,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('MCP 工具管理', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const McpManagementPage(),
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        // 技能管理
+        PopupMenuItem(
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.wand_stars,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('技能管理', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SkillManagementPage(),
+                  ),
+                );
               }
             });
           },

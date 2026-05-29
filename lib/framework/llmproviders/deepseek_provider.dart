@@ -42,15 +42,53 @@ class DeepSeekProvider extends BaseLlmProvider {
         session: session,
       );
 
+      yield* _sendStreamRequest(requestMessages, session);
+    } catch (e) {
+      if (kDebugMode) {
+        print('DeepSeek 流式响应错误: $e');
+      }
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
+    }
+  }
+
+  @override
+  Stream<Map<String, String?>> sendMessageStreamWithMessages(
+    List<Map<String, dynamic>> messages,
+  ) async* {
+    if (model == null) {
+      throw StateError('DeepSeek 提供商未配置');
+    }
+
+    try {
+      // 对于 MCP follow-up，通常不需要再次发送 tools（已经执行过了）
+      yield* _sendStreamRequest(messages, null);
+    } catch (e) {
+      if (kDebugMode) {
+        print('DeepSeek 流式响应错误 (withMessages): $e');
+      }
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
+    }
+  }
+
+  /// 发送流式请求的通用方法
+  Stream<Map<String, String?>> _sendStreamRequest(
+    List<Map<String, dynamic>> messages,
+    ChatSession? session,
+  ) async* {
+    if (model == null) {
+      throw StateError('DeepSeek 提供商未配置');
+    }
+
+    try {
       final requestData = {
         'model': model!.model,
-        'messages': requestMessages,
+        'messages': messages,
         'stream': true,
         'max_tokens': 4000,
         'temperature': 0.7,
       };
 
-      // 添加工具调用支持
+      // 添加工具调用支持（仅在首次请求时，follow-up 不重复发送 tools）
       if (session != null && session.isMcpToolsEnabled) {
         final tools = buildTools(session);
         if (tools.isNotEmpty) {
@@ -128,6 +166,10 @@ class DeepSeekProvider extends BaseLlmProvider {
   /// 处理 DeepSeek 流式响应
   Stream<Map<String, String?>> _processDeepSeekStreamResponse(Stream<List<int>> stream) async* {
     String buffer = '';
+    
+    // 用于累积 native tool_calls
+    final Map<int, Map<String, dynamic>> accumulatedToolCalls = {};
+    bool hasToolCalls = false;
 
     await for (final chunk in stream) {
       final chunkString = utf8.decode(chunk);
@@ -141,6 +183,18 @@ class DeepSeekProvider extends BaseLlmProvider {
         if (line.trim().startsWith('data: ')) {
           final dataStr = line.trim().substring(6);
           if (dataStr == '[DONE]') {
+            // 流结束时，yield 累积的 tool_calls 信息
+            if (hasToolCalls && accumulatedToolCalls.isNotEmpty) {
+              final toolCallsList = accumulatedToolCalls.entries
+                  .map((e) => e.value)
+                  .toList()
+                ..sort((a, b) => (a['index'] as int).compareTo(b['index'] as int));
+              yield {
+                'content': '',
+                'think': null,
+                'mcpToolCalls': jsonEncode(toolCallsList),
+              };
+            }
             return;
           }
 
@@ -159,6 +213,55 @@ class DeepSeekProvider extends BaseLlmProvider {
                   content = delta['content'] as String?;
                   // 支持 DeepSeek R1 的推理内容
                   reasoningContent = delta['reasoning_content'] as String?;
+                  
+                  // 处理 native tool_calls
+                  final toolCalls = delta['tool_calls'] as List?;
+                  if (toolCalls != null && toolCalls.isNotEmpty) {
+                    hasToolCalls = true;
+                    for (final toolCall in toolCalls) {
+                      final tc = toolCall as Map<String, dynamic>;
+                      final index = tc['index'] as int? ?? 0;
+                      
+                      accumulatedToolCalls.putIfAbsent(index, () => {
+                        'index': index,
+                        'id': '',
+                        'type': 'function',
+                        'function': {
+                          'name': '',
+                          'arguments': '',
+                        },
+                      });
+                      
+                      final accumulated = accumulatedToolCalls[index]!;
+                      if (tc['id'] != null) {
+                        accumulated['id'] = tc['id'];
+                      }
+                      if (tc['function'] != null) {
+                        final func = tc['function'] as Map<String, dynamic>;
+                        if (func['name'] != null && (func['name'] as String).isNotEmpty) {
+                          accumulated['function']['name'] += func['name'];
+                        }
+                        if (func['arguments'] != null) {
+                          accumulated['function']['arguments'] += func['arguments'];
+                        }
+                      }
+                    }
+                  }
+                }
+                
+                // 检查 finish_reason 是否为 tool_calls
+                final finishReason = choice['finish_reason'] as String?;
+                if (finishReason == 'tool_calls' && hasToolCalls && accumulatedToolCalls.isNotEmpty) {
+                  final toolCallsList = accumulatedToolCalls.entries
+                      .map((e) => e.value)
+                      .toList()
+                    ..sort((a, b) => (a['index'] as int).compareTo(b['index'] as int));
+                  yield {
+                    'content': content ?? '',
+                    'think': reasoningContent,
+                    'mcpToolCalls': jsonEncode(toolCallsList),
+                  };
+                  return; // 结束流
                 }
               }
             } catch (e) {
@@ -182,6 +285,19 @@ class DeepSeekProvider extends BaseLlmProvider {
           }
         }
       }
+    }
+    
+    // 流结束后，yield 累积的 tool_calls（如果没有在 finish_reason 中处理）
+    if (hasToolCalls && accumulatedToolCalls.isNotEmpty) {
+      final toolCallsList = accumulatedToolCalls.entries
+          .map((e) => e.value)
+          .toList()
+        ..sort((a, b) => (a['index'] as int).compareTo(b['index'] as int));
+      yield {
+        'content': '',
+        'think': null,
+        'mcpToolCalls': jsonEncode(toolCallsList),
+      };
     }
   }
 

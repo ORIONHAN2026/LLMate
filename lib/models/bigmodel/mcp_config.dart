@@ -42,6 +42,8 @@ class McpServerConfig {
   final Map<String, String>? env;
   final String? workingDirectory;
   final int? timeout;
+  final String? url; // URL 型 MCP（HTTP/SSE 传输）
+  final Map<String, String>? headers; // URL 型请求头
   final List<McpToolInfo>? tools; // 新增：工具信息列表
   final DateTime? lastUpdated; // 新增：最后更新时间
 
@@ -52,6 +54,8 @@ class McpServerConfig {
     this.env,
     this.workingDirectory,
     this.timeout,
+    this.url,
+    this.headers,
     this.tools,
     this.lastUpdated,
   });
@@ -74,6 +78,8 @@ class McpServerConfig {
       env: json['env'] != null ? Map<String, String>.from(json['env']) : null,
       workingDirectory: json['workingDirectory'] as String?,
       timeout: json['timeout'] as int?,
+      url: json['url'] as String?,
+      headers: json['headers'] != null ? Map<String, String>.from(json['headers']) : null,
       tools: tools,
       lastUpdated: lastUpdated,
     );
@@ -85,6 +91,8 @@ class McpServerConfig {
     if (env != null) data['env'] = env;
     if (workingDirectory != null) data['workingDirectory'] = workingDirectory;
     if (timeout != null) data['timeout'] = timeout;
+    if (url != null) data['url'] = url;
+    if (headers != null) data['headers'] = headers;
     if (tools != null) {
       data['tools'] = tools!.map((tool) => tool.toJson()).toList();
     }
@@ -103,6 +111,8 @@ class McpServerConfig {
     Map<String, String>? env,
     String? workingDirectory,
     int? timeout,
+    String? url,
+    Map<String, String>? headers,
     List<McpToolInfo>? tools,
     DateTime? lastUpdated,
   }) {
@@ -113,6 +123,8 @@ class McpServerConfig {
       env: env ?? this.env,
       workingDirectory: workingDirectory ?? this.workingDirectory,
       timeout: timeout ?? this.timeout,
+      url: url ?? this.url,
+      headers: headers ?? this.headers,
       tools: tools ?? this.tools,
       lastUpdated: lastUpdated ?? this.lastUpdated,
     );

@@ -239,8 +239,8 @@ class LlmClient {
   }
 
   /// 构建系统提示词
-  String buildSystemPrompt({String? customPrompt}) {
-    return _llmProvider.buildSystemPrompt(customPrompt: customPrompt);
+  String buildSystemPrompt({String? customPrompt, ChatSession? session}) {
+    return _llmProvider.buildSystemPrompt(customPrompt: customPrompt, session: session);
   }
 
   /// 构建消息列表
@@ -249,6 +249,16 @@ class LlmClient {
     ChatSession? session,
   }) {
     return _llmProvider.buildMessages(userMessage: userMessage, session: session);
+  }
+
+  /// 发送预构建的消息列表（用于 MCP tool call follow-up 等场景）
+  Stream<Map<String, String?>> sendMessageStreamWithMessages(
+    List<Map<String, dynamic>> messages,
+  ) {
+    if (_model == null) {
+      throw StateError('客户端未配置模型');
+    }
+    return _llmProvider.sendMessageStreamWithMessages(messages);
   }
 
   /// 处理工具调用（MCP）

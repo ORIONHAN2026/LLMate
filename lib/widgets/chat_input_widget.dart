@@ -846,9 +846,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
                       const SizedBox(width: 8),
 
-                      // _buildRagToggle(),
-                      // const SizedBox(width: 8),
-                      // _buildMcpToolsToggle(),
+                      _buildMcpToolsToggle(),
+                      const SizedBox(width: 8),
+
+                      _buildSkillToggle(),
                       const SizedBox(width: 8),
                       _buildQuickCommandToggle(),
                       const SizedBox(width: 8),
@@ -1045,15 +1046,72 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 检查当前模型是否配置了MCP服务
     final hasMcpServices = currentModel?.mcpServices?.isNotEmpty == true;
-    final isEnabled =
-        hasMcpServices && (currentSession?.isMcpToolsEnabled ?? false);
+    final selectedServiceIds = currentSession?.selectedMcpServiceIds ?? [];
+    final hasSelectedServices = selectedServiceIds.isNotEmpty;
+
+    // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
+    final displayText = hasSelectedServices
+        ? (selectedServiceIds.length == 1
+            ? selectedServiceIds.first
+            : '${selectedServiceIds.first} +${selectedServiceIds.length - 1}')
+        : (hasMcpServices ? '请选择' : '无MCP服务');
 
     return Tooltip(
-      message: hasMcpServices ? '点击显示MCP工具列表' : '当前模型未配置MCP服务',
+      message: hasMcpServices ? '点击选择MCP服务' : '当前模型未配置MCP服务',
       child: GestureDetector(
-        onTap: hasMcpServices && !_isSending ? _toggleMcpTools : null,
+        onTap: hasMcpServices && !_isSending ? _showMcpServiceSelection : null,
         onDoubleTap:
             hasMcpServices && !_isSending ? _showMcpServicesList : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                CupertinoIcons.gear,
+                size: 13,
+                color:
+                    hasMcpServices && !_isSending
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+              ),
+              if (hasMcpServices) ...[
+                const SizedBox(width: 4),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 100),
+                  child: Text(
+                    displayText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建技能切换按钮
+  Widget _buildSkillToggle() {
+    final currentSession = sessionController.currentSession.value;
+    final currentModel = currentSession?.chatModel;
+
+    // 检查当前模型是否配置了技能
+    final hasSkills = currentModel?.skills?.isNotEmpty == true;
+    final isEnabled = hasSkills && (currentSession?.isSkillEnabled ?? false);
+
+    return Tooltip(
+      message: hasSkills ? '点击显示技能列表' : '当前模型未配置技能',
+      child: InkWell(
+        onTap: hasSkills && !_isSending ? _showSkillSelectionList : null,
+        borderRadius: BorderRadius.circular(4),
         child: Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
@@ -1061,13 +1119,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             color:
                 isEnabled
                     ? Theme.of(context).colorScheme.surfaceContainerHighest
-                    : Colors.transparent, // 开启时加深背景
+                    : Colors.transparent,
           ),
           child: Icon(
-            CupertinoIcons.gear, // 使用齿轮图标表示工具
+            CupertinoIcons.wand_stars, // 使用魔法棒图标表示技能
             size: 13,
             color:
-                hasMcpServices && !_isSending
+                hasSkills && !_isSending
                     ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
                     : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
           ),
@@ -2567,16 +2625,754 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final updatedSession = currentSession.copyWith(
       isMcpToolsEnabled: !currentSession.isMcpToolsEnabled,
     );
-
     sessionController.updateSession(updatedSession);
 
-    // 显示状态提示
     final isEnabled = updatedSession.isMcpToolsEnabled;
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
         isEnabled ? '已开启MCP工具，发送消息时可自动调用相关工具' : '已关闭MCP工具',
       );
+    }
+
+    // 如果开启了MCP，初始化选中的服务
+    if (isEnabled) {
+      _initializeMcpServices(updatedSession);
+    }
+  }
+
+  /// 初始化会话的MCP服务
+  Future<void> _initializeMcpServices(chatSession) async {
+    try {
+      await McpService.initializeSessionMcpServices(chatSession);
+    } catch (e) {
+      debugPrint('初始化MCP服务失败: $e');
+    }
+  }
+
+  /// 显示MCP服务选择弹窗
+  void _showMcpServiceSelection() {
+    final currentSession = sessionController.currentSession.value;
+    final currentModel = currentSession?.chatModel;
+    final mcpServices = currentModel?.mcpServices ?? [];
+
+    if (mcpServices.isEmpty) {
+      SnackBarUtils.showInfo(context, '当前模型未配置MCP服务');
+      return;
+    }
+
+    // 计算弹窗位置 - 在MCP按钮上方
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final offset = renderBox.localToGlobal(Offset.zero);
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final session = sessionController.currentSession.value;
+            final selectedIds = List<String>.from(
+              session?.selectedMcpServiceIds ?? [],
+            );
+
+            return Stack(
+              children: [
+                // 透明背景，点击关闭
+                GestureDetector(
+                  onTap: () => Navigator.of(dialogContext).pop(),
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    color: Colors.transparent,
+                  ),
+                ),
+                // MCP服务选择弹窗
+                Positioned(
+                  left: offset.dx + 20,
+                  bottom: MediaQuery.of(context).size.height - offset.dy + 10,
+                  child: Material(
+                    elevation: 8,
+                    borderRadius: BorderRadius.circular(12),
+                    shadowColor: Theme.of(context).shadowColor.withOpacity(0.2),
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        maxWidth: 320,
+                        maxHeight: 400,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 标题栏
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(12),
+                                topRight: Radius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  CupertinoIcons.gear,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'MCP服务 (${mcpServices.length})',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const Spacer(),
+                                GestureDetector(
+                                  onTap: () {
+                                    setDialogState(() {
+                                      if (selectedIds.length ==
+                                          mcpServices.length) {
+                                        selectedIds.clear();
+                                      } else {
+                                        selectedIds.clear();
+                                        for (final srv in mcpServices) {
+                                          selectedIds.add(srv.name);
+                                        }
+                                      }
+                                    });
+                                  },
+                                  child: Text(
+                                    selectedIds.length == mcpServices.length
+                                        ? '取消全选'
+                                        : '全选',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 服务选择列表
+                          Flexible(
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.all(8),
+                              itemCount: mcpServices.length,
+                              separatorBuilder:
+                                  (context, index) => Divider(
+                                    height: 1,
+                                    color: Theme.of(context).dividerColor,
+                                  ),
+                              itemBuilder: (context, index) {
+                                final service = mcpServices[index];
+                                final isSelected = selectedIds.contains(
+                                  service.name,
+                                );
+                                final toolCount = service.tools?.length ?? 0;
+                                return InkWell(
+                                  onTap: () {
+                                    setDialogState(() {
+                                      if (isSelected) {
+                                        selectedIds.remove(service.name);
+                                      } else {
+                                        selectedIds.add(service.name);
+                                      }
+                                    });
+                                    Navigator.of(dialogContext).pop();
+                                    _applyMcpSelection(selectedIds);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      color:
+                                          isSelected
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .primaryContainer
+                                                  .withOpacity(0.3)
+                                              : null,
+                                    ),
+                                    child: Row(
+                                      children: [
+
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                service.name,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color:
+                                                      Theme.of(
+                                                        context,
+                                                      ).colorScheme.onSurface,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Row(
+                                                children: [
+                                                  if (service.url != null &&
+                                                      service.url!.isNotEmpty)
+                                                    Flexible(
+                                                      child: Text(
+                                                        service.url!,
+                                                        maxLines: 1,
+                                                        overflow:
+                                                            TextOverflow
+                                                                .ellipsis,
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          color: Theme.of(
+                                                                context,
+                                                              )
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withOpacity(0.5),
+                                                        ),
+                                                      ),
+                                                    )
+                                                  else
+                                                    Flexible(
+                                                      child: Text(
+                                                        '${service.command} ${service.args.join(' ')}',
+                                                        maxLines: 1,
+                                                        overflow:
+                                                            TextOverflow
+                                                                .ellipsis,
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          color: Theme.of(
+                                                                context,
+                                                              )
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withOpacity(0.5),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  if (toolCount > 0) ...[
+                                                    const SizedBox(width: 8),
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 4,
+                                                            vertical: 1,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color:
+                                                            Theme.of(context)
+                                                                .colorScheme
+                                                                .primaryContainer,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              4,
+                                                            ),
+                                                      ),
+                                                      child: Text(
+                                                        '$toolCount个工具',
+                                                        style: TextStyle(
+                                                          fontSize: 9,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .onPrimaryContainer,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          // 底部操作栏
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
+                              borderRadius: const BorderRadius.only(
+                                bottomLeft: Radius.circular(12),
+                                bottomRight: Radius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '已选 ${selectedIds.length}/${mcpServices.length} 个服务',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(dialogContext).pop();
+                                    _applyMcpSelection(selectedIds);
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 6,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Text(
+                                    '确认',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// 应用MCP服务选择
+  void _applyMcpSelection(List<String> selectedIds) async {
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
+
+    final updatedSession = currentSession.copyWith(
+      selectedMcpServiceIds: selectedIds,
+      isMcpToolsEnabled: selectedIds.isNotEmpty,
+    );
+
+    await sessionController.updateSession(updatedSession);
+
+    if (mounted) {
+      if (selectedIds.isNotEmpty) {
+        SnackBarUtils.showInfo(context, '已选择 ${selectedIds.length} 个MCP服务');
+        // 初始化选中的MCP服务
+        try {
+          await McpService.initializeSessionMcpServices(updatedSession);
+        } catch (e) {
+          debugPrint('初始化MCP服务失败: $e');
+        }
+      } else {
+        SnackBarUtils.showInfo(context, '已关闭MCP工具');
+      }
+    }
+  }
+
+  /// 显示技能选择列表弹窗
+  void _showSkillSelectionList() {
+    final currentSession = sessionController.currentSession.value;
+    final currentModel = currentSession?.chatModel;
+    final skills = currentModel?.skills ?? [];
+
+    if (skills.isEmpty) {
+      SnackBarUtils.showInfo(context, '当前模型未配置技能');
+      return;
+    }
+
+    // 计算弹窗位置 - 在技能按钮上方
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final offset = renderBox.localToGlobal(Offset.zero);
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final session = sessionController.currentSession.value;
+            final selectedIds = List<String>.from(
+              session?.selectedSkillIds ?? [],
+            );
+            final isEnabled = session?.isSkillEnabled ?? false;
+
+            return Stack(
+              children: [
+                // 透明背景，点击关闭
+                GestureDetector(
+                  onTap: () => Navigator.of(dialogContext).pop(),
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    color: Colors.transparent,
+                  ),
+                ),
+                // 技能选择弹窗
+                Positioned(
+                  left: offset.dx + 20,
+                  bottom: MediaQuery.of(context).size.height - offset.dy + 10,
+                  child: Material(
+                    elevation: 8,
+                    borderRadius: BorderRadius.circular(12),
+                    shadowColor: Theme.of(context).shadowColor.withOpacity(0.2),
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        maxWidth: 320,
+                        maxHeight: 400,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 标题栏
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(12),
+                                topRight: Radius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  CupertinoIcons.wand_stars,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '技能列表 (${skills.length})',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  isEnabled ? '已启用' : '已禁用',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        isEnabled
+                                            ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                            : Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 技能列表
+                          Flexible(
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.all(8),
+                              itemCount: skills.length,
+                              separatorBuilder:
+                                  (context, index) => Divider(
+                                    height: 1,
+                                    color: Theme.of(context).dividerColor,
+                                  ),
+                              itemBuilder: (context, index) {
+                                final skill = skills[index];
+                                final isSelected = selectedIds.contains(
+                                  skill.id,
+                                );
+
+                                return InkWell(
+                                  onTap: () {
+                                    setDialogState(() {
+                                      if (isSelected) {
+                                        selectedIds.remove(skill.id);
+                                      } else {
+                                        selectedIds.add(skill.id);
+                                      }
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // 选中状态图标
+                                        Container(
+                                          width: 20,
+                                          height: 20,
+                                          margin: const EdgeInsets.only(top: 1),
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color:
+                                                isSelected
+                                                    ? Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary
+                                                    : Colors.transparent,
+                                            border: Border.all(
+                                              color:
+                                                  isSelected
+                                                      ? Theme.of(
+                                                        context,
+                                                      ).colorScheme.primary
+                                                      : Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurface
+                                                          .withOpacity(0.3),
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child:
+                                              isSelected
+                                                  ? Icon(
+                                                    CupertinoIcons
+                                                        .checkmark_alt,
+                                                    size: 12,
+                                                    color:
+                                                        Theme.of(
+                                                          context,
+                                                        ).colorScheme.onPrimary,
+                                                  )
+                                                  : null,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        // 技能信息
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    _getSkillIconName(
+                                                      skill.icon,
+                                                    ),
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Expanded(
+                                                    child: Text(
+                                                      skill.name,
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            Theme.of(context)
+                                                                .colorScheme
+                                                                .onSurface,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                skill.description,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withOpacity(0.6),
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          // 底部操作栏
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
+                              borderRadius: const BorderRadius.only(
+                                bottomLeft: Radius.circular(12),
+                                bottomRight: Radius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '已选 ${selectedIds.length}/${skills.length} 项',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(dialogContext).pop();
+                                    _applySkillSelection(
+                                      selectedIds,
+                                      isEnabled,
+                                    );
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    '确定',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// 应用技能选择
+  void _applySkillSelection(List<String> selectedIds, bool isEnabled) {
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
+
+    final updatedSession = currentSession.copyWith(
+      selectedSkillIds: selectedIds,
+      isSkillEnabled: isEnabled || selectedIds.isNotEmpty,
+    );
+
+    sessionController.updateSession(updatedSession);
+
+    if (mounted) {
+      SnackBarUtils.showInfo(
+        context,
+        selectedIds.isNotEmpty ? '已选择 ${selectedIds.length} 个技能' : '已清空技能选择',
+      );
+    }
+  }
+
+  /// 获取技能图标显示字符
+  String _getSkillIconName(String icon) {
+    switch (icon) {
+      case 'code':
+        return '💻';
+      case 'globe':
+        return '🌐';
+      case 'pencil':
+        return '✏️';
+      case 'chart':
+        return '📊';
+      case 'lightbulb':
+        return '💡';
+      case 'doc':
+        return '📄';
+      case 'star':
+        return '⭐';
+      case 'search':
+        return '🔍';
+      case 'image':
+        return '🖼️';
+      default:
+        return '⭐';
     }
   }
 
@@ -2943,6 +3739,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 调用API生成流式响应
       String accumulatedContent = '';
       String accumulatedThink = '';
+      String? accumulatedMcpToolCalls; // 累积的 native tool_calls JSON
 
       // 直接使用LLM Hub框架
       final model = updateSession.chatModel;
@@ -2983,6 +3780,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         if (latestSession.shouldStopResponse == true) break;
         debugPrint('聊天处理后内容: ${chunkMap['content']}');
         debugPrint('聊天处理后思考: ${chunkMap['think']}');
+        
+        // 检查是否有 native tool_calls (MCP 工具调用)
+        final toolCallsJson = chunkMap['mcpToolCalls'];
+        if (toolCallsJson != null && toolCallsJson.isNotEmpty) {
+          debugPrint('🔧 检测到 native tool_calls: $toolCallsJson');
+          accumulatedMcpToolCalls = toolCallsJson;
+        }
+        
         // 处理content和think内容
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
@@ -3073,12 +3878,26 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       debugPrint('准备检查调用工具');
       //打印完整的返回数据
       debugPrint('AI响应完成，内容长度: $accumulatedContent');
-      // 在AI响应完成后，检查是否需要执行MCP工具调用
-      await _processMcpToolCalls(
-        updateSession,
-        accumulatedContent,
-        botMessageId,
-      );
+
+      // 判断是 native tool_calls 还是 text-based tool calls
+      if (accumulatedMcpToolCalls != null && updateSession.isMcpToolsEnabled) {
+        // Native tool calling: 通过 API 原生 tools 参数返回的 tool_calls
+        debugPrint('🔧 检测到 native tool_calls，开始执行 MCP 工具调用...');
+        await _handleNativeMcpToolCalls(
+          client,
+          updateSession,
+          userMessage,
+          accumulatedMcpToolCalls,
+          botMessageId,
+        );
+      } else {
+        // Text-based fallback: 解析 AI 文本回复中的 tool_call 标记
+        await _processMcpToolCalls(
+          updateSession,
+          accumulatedContent,
+          botMessageId,
+        );
+      }
 
       setState(() {});
     } catch (e) {
@@ -3539,6 +4358,297 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 清除历史记录后自动聚焦到输入框
       _inputFocusNode.requestFocus();
     });
+  }
+
+  /// 处理 native tool_calls（API 原生返回的 tool_calls）
+  ///
+  /// 当 LLM 通过原生 tools 参数返回 tool_calls 时，
+  /// 执行 MCP 工具调用并将结果发送回 LLM 以获取最终回复。
+  Future<void> _handleNativeMcpToolCalls(
+    LlmClient? client,
+    ChatSession session,
+    ChatMessage userMessage,
+    String toolCallsJson,
+    String botMessageId,
+  ) async {
+    try {
+      debugPrint('🔧 开始处理 native tool_calls...');
+      
+      // 解析 tool_calls JSON
+      final List<dynamic> toolCallsList;
+      try {
+        toolCallsList = jsonDecode(toolCallsJson) as List<dynamic>;
+      } catch (e) {
+        debugPrint('❌ 解析 tool_calls JSON 失败: $e');
+        // 回退到文本解析方式
+        final currentSession = sessionController.currentSession.value;
+        if (currentSession != null) {
+          final messageIndex = currentSession.messages.indexWhere(
+            (msg) => msg.msgId == botMessageId,
+          );
+          if (messageIndex != -1) {
+            await _processMcpToolCalls(
+              currentSession,
+              currentSession.messages[messageIndex].content,
+              botMessageId,
+            );
+          }
+        }
+        return;
+      }
+
+      if (toolCallsList.isEmpty) {
+        debugPrint('📝 tool_calls 列表为空');
+        return;
+      }
+
+      debugPrint('🔧 解析到 ${toolCallsList.length} 个 tool_calls');
+
+      // 初始化 MCP 服务
+      final initializedServices = await McpService.initializeSessionMcpServices(session);
+      if (initializedServices.isEmpty) {
+        debugPrint('⚠️ 无法初始化 MCP 服务');
+        return;
+      }
+
+      // 构建工具调用参数列表（兼容 executeSessionToolCalls 的格式）
+      final toolCallsForExecution = <Map<String, dynamic>>[];
+      for (final tc in toolCallsList) {
+        final func = tc['function'] as Map<String, dynamic>?;
+        if (func == null) continue;
+        
+        final toolName = func['name'] as String? ?? '';
+        Map<String, dynamic> arguments = {};
+        
+        try {
+          final argsStr = func['arguments'] as String? ?? '{}';
+          arguments = jsonDecode(argsStr) as Map<String, dynamic>;
+        } catch (e) {
+          debugPrint('⚠️ 解析工具参数失败: $e');
+          arguments = {};
+        }
+
+        if (toolName.isNotEmpty) {
+          toolCallsForExecution.add({'tool': toolName, 'args': arguments});
+          debugPrint('🔧 准备调用工具: $toolName, 参数: $arguments');
+        }
+      }
+
+      if (toolCallsForExecution.isEmpty) {
+        debugPrint('⚠️ 没有有效的工具调用');
+        return;
+      }
+
+      // 显示工具调用提示
+      if (mounted) {
+        SnackBarUtils.showInfo(context, '正在执行 ${toolCallsForExecution.length} 个工具调用...');
+      }
+
+      // 执行 MCP 工具调用
+      final toolResults = await McpService.executeSessionToolCalls(
+        session: session,
+        toolCalls: toolCallsForExecution,
+      );
+
+      if (toolResults.isEmpty) {
+        debugPrint('⚠️ 没有成功执行任何工具调用');
+        return;
+      }
+
+      debugPrint('✅ 工具调用完成: ${toolResults.where((r) => r.isSuccess).length}/${toolResults.length} 成功');
+
+      // 将工具结果追加到当前 AI 消息中
+      await _appendMcpToolResults(session, toolResults, botMessageId);
+
+      // 发送工具结果回 LLM 以获取最终回复
+      if (client != null) {
+        await _sendMcpResultsToLLMForFinalResponse(
+          client,
+          session,
+          userMessage,
+          toolCallsList,
+          toolResults,
+          botMessageId,
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ native tool_calls 处理失败: $e');
+      if (mounted) {
+        SnackBarUtils.showError(context, 'MCP工具调用失败: ${e.toString()}');
+      }
+    }
+  }
+
+  /// 将 MCP 工具调用结果发送回 LLM 并流式获取最终回复
+  Future<void> _sendMcpResultsToLLMForFinalResponse(
+    LlmClient client,
+    ChatSession session,
+    ChatMessage userMessage,
+    List<dynamic> toolCallsList,
+    List<McpToolResult> toolResults,
+    String botMessageId,
+  ) async {
+    try {
+      debugPrint('🔄 发送工具结果回 LLM 以获取最终回复...');
+
+      // 获取当前会话
+      final currentSession = sessionController.currentSession.value;
+      if (currentSession == null) return;
+
+      final messageIndex = currentSession.messages.indexWhere(
+        (msg) => msg.msgId == botMessageId,
+      );
+      if (messageIndex == -1) {
+        debugPrint('❌ 无法找到对应的 AI 消息: $botMessageId');
+        return;
+      }
+
+      final botMessage = currentSession.messages[messageIndex];
+
+      // 构建包含工具结果的消息列表
+      final messages = <Map<String, dynamic>>[];
+      
+      // 系统提示词（包含 MCP 工具信息）
+      final systemPrompt = client.buildSystemPrompt(session: session);
+      if (systemPrompt.isNotEmpty) {
+        messages.add({'role': 'system', 'content': systemPrompt});
+      }
+      
+      // 用户消息（包含附件信息）
+      final userContent = userMessage.attachments.isEmpty
+          ? userMessage.content
+          : '${userMessage.attachments.map((a) => '[${a.name}]\n${a.content ?? ""}').join('\n\n')}\n\n${userMessage.content}';
+      messages.add({'role': 'user', 'content': userContent});
+      
+      // 添加 assistant 消息（包含之前的 tool_calls）
+      messages.add({
+        'role': 'assistant',
+        'content': botMessage.content.isNotEmpty ? botMessage.content : null,
+        'tool_calls': toolCallsList,
+      });
+      
+      // 添加 tool 结果消息
+      for (int i = 0; i < toolResults.length; i++) {
+        final result = toolResults[i];
+        final tc = i < toolCallsList.length ? toolCallsList[i] as Map<String, dynamic>? : null;
+        final toolCallId = tc?['id'] as String? ?? 'call_$i';
+        
+        messages.add({
+          'role': 'tool',
+          'tool_call_id': toolCallId,
+          'content': result.isSuccess ? result.result : '错误: ${result.error ?? "未知错误"}',
+        });
+      }
+
+      // 创建新的流式 AI 消息
+      final followUpTimestamp = DateTime.now().millisecondsSinceEpoch;
+      final followUpMsgId = '${followUpTimestamp}_bot_followup';
+      final followUpMessage = ChatMessage(
+        msgId: followUpMsgId,
+        role: MessageRole.bot,
+        content: '',
+        think: '',
+        timestamp: DateTime.now(),
+        repoId: null,
+        sessionId: session.sessionId,
+        isError: false,
+        generationStartTime: DateTime.now(),
+      );
+
+      widget.messageKeys[followUpMsgId] = GlobalKey();
+      _streamingMessageIds.add(followUpMsgId);
+      widget.onStreamingChanged?.call(_streamingMessageIds);
+
+      // 添加消息到会话
+      var followUpSession = currentSession;
+      final updatedMessages = List<ChatMessage>.from(followUpSession.messages)
+        ..add(followUpMessage);
+      followUpSession = followUpSession.copyWith(
+        messages: updatedMessages,
+        isSending: true,
+      );
+      sessionController.updateSession(followUpSession);
+      setState(() {});
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom(force: true);
+      });
+
+      // 构建 follow-up API 请求并发送流式响应
+      final followUpStream = client.sendMessageStreamWithMessages(messages);
+
+      String followUpContent = '';
+      String followUpThink = '';
+
+      await for (final chunkMap in followUpStream) {
+        final latestSession = sessionController.sessions.firstWhere(
+          (s) => s.sessionId == followUpSession.sessionId,
+          orElse: () => followUpSession,
+        );
+        if (latestSession.shouldStopResponse == true) break;
+
+        final contentChunk = chunkMap['content'] ?? '';
+        final thinkChunk = chunkMap['think'] ?? '';
+
+        followUpContent += contentChunk;
+        followUpThink += thinkChunk;
+
+        if (contentChunk.isNotEmpty || thinkChunk.isNotEmpty) {
+          final msgIndex = followUpSession.messages.indexWhere(
+            (msg) => msg.msgId == followUpMsgId,
+          );
+          if (msgIndex != -1) {
+            followUpMessage.content = followUpContent;
+            followUpMessage.think = followUpThink;
+            final msgs = List<ChatMessage>.from(followUpSession.messages);
+            msgs[msgIndex] = followUpMessage;
+            followUpSession = followUpSession.copyWith(
+              messages: msgs,
+              isSending: true,
+            );
+            sessionController.updateSession(followUpSession);
+            setState(() {});
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _scrollToBottom();
+            });
+          }
+        }
+      }
+
+      // 完成 follow-up 响应
+      final followUpEndTime = DateTime.now();
+      final msgIdx = followUpSession.messages.indexWhere(
+        (msg) => msg.msgId == followUpMsgId,
+      );
+      if (msgIdx != -1) {
+        final msgs = List<ChatMessage>.from(followUpSession.messages);
+        msgs[msgIdx] = followUpMessage.copyWith(
+          generationEndTime: followUpEndTime,
+          generationDuration: followUpEndTime.difference(followUpMessage.generationStartTime!),
+          inputTokens: _estimateTokenCount(userMessage.content),
+          outputTokens: _estimateTokenCount(followUpContent),
+          totalTokens: _estimateTokenCount(userMessage.content) + _estimateTokenCount(followUpContent),
+        );
+        followUpSession = followUpSession.copyWith(
+          messages: msgs,
+          isSending: false,
+        );
+        sessionController.updateSession(followUpSession);
+      }
+
+      setState(() {
+        _thinkingTimes[followUpMsgId] = followUpEndTime.difference(followUpMessage.generationStartTime!);
+        _streamingMessageIds.remove(followUpMsgId);
+      });
+      widget.onStreamingChanged?.call(_streamingMessageIds);
+
+      debugPrint('✅ MCP 工具调用 follow-up 完成: 内容长度 ${followUpContent.length}');
+    } catch (e) {
+      debugPrint('❌ 发送工具结果回 LLM 失败: $e');
+      if (mounted) {
+        SnackBarUtils.showError(context, '获取工具调用结果失败: ${e.toString()}');
+      }
+    }
   }
 
   /// 处理MCP工具调用

@@ -77,6 +77,11 @@ abstract class BaseLlmProvider {
     ChatSession? session,
   });
 
+  /// 发送预构建消息列表 - 流式响应（用于 MCP tool call follow-up 等场景）
+  Stream<Map<String, String?>> sendMessageStreamWithMessages(
+    List<Map<String, dynamic>> messages,
+  );
+
   /// 发送消息 - 非流式响应（必须实现）
   /// 返回完整的响应内容
   Future<String?> sendMessage({
@@ -187,7 +192,7 @@ abstract class BaseLlmProvider {
   }
 
   /// 构建系统提示词
-  String buildSystemPrompt({String? customPrompt}) {
+  String buildSystemPrompt({String? customPrompt, ChatSession? session}) {
     final List<String> systemParts = [];
     final chatModel = _model;
 
@@ -205,6 +210,14 @@ abstract class BaseLlmProvider {
       systemParts.add('请使用 ${chatModel.chatSettings!.replyLanguage} 回复。');
     }
 
+    // MCP 工具信息：将可用工具的描述注入到系统提示词中
+    if (session != null && session.isMcpToolsEnabled) {
+      final mcpToolsInfo = McpService.buildMcpToolsInfoForApi(session);
+      if (mcpToolsInfo.isNotEmpty) {
+        systemParts.add(mcpToolsInfo);
+      }
+    }
+
     systemParts.add('请严格遵照系统提示词进行回答。');
 
     return systemParts.join('\n\n');
@@ -217,8 +230,8 @@ abstract class BaseLlmProvider {
   }) {
     final messages = <Map<String, dynamic>>[];
 
-    // 添加系统提示词
-    final systemPrompt = buildSystemPrompt();
+    // 添加系统提示词（传入 session 以支持 MCP 工具信息注入）
+    final systemPrompt = buildSystemPrompt(session: session);
     if (systemPrompt.isNotEmpty) {
       messages.add({'role': 'system', 'content': systemPrompt});
     }

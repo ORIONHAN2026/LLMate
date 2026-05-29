@@ -77,6 +77,48 @@ class OllamaProvider extends BaseLlmProvider {
   }
 
   @override
+  Stream<Map<String, String?>> sendMessageStreamWithMessages(
+    List<Map<String, dynamic>> messages,
+  ) async* {
+    if (model == null) {
+      throw StateError('Ollama 提供商未配置');
+    }
+
+    try {
+      final requestData = {
+        'model': model!.model,
+        'messages': messages,
+        'stream': true,
+        'options': {'temperature': model!.chatSettings?.temperature ?? 0.7},
+      };
+
+      String apiUrl = model!.apiUrl ?? 'http://localhost:11434/api';
+      if (!apiUrl.endsWith('/chat')) {
+        apiUrl = apiUrl.endsWith('/') ? '${apiUrl}chat' : '$apiUrl/chat';
+      }
+
+      debugPrint('Ollama (withMessages) API 请求数据: ${jsonEncode(requestData)}');
+
+      final response = await dio.post<ResponseBody>(
+        apiUrl,
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          responseType: ResponseType.stream,
+        ),
+        data: requestData,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        yield* _processOllamaStreamResponse(response.data!.stream);
+      } else {
+        yield {'content': '错误: API 请求失败，状态码: ${response.statusCode}', 'think': null};
+      }
+    } catch (e) {
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
+    }
+  }
+
+  @override
   Future<String?> sendMessage({
     required ChatMessage userMessage,
     ChatSession? session,

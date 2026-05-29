@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../chat/chat_setting.dart';
+import '../chat/skill.dart';
 import 'mcp_config.dart';
 
 /// 聊天模型数据结构
@@ -28,7 +29,9 @@ class ChatModel {
 
   // 快捷指令列表 - 模型绑定的快捷指令配置
   final List<ChatCommand>? chatCommands;
-  
+
+  // Skill 技能列表 - 模型绑定的技能配置
+  final List<Skill>? skills;
 
 
   const ChatModel({
@@ -46,6 +49,7 @@ class ChatModel {
     this.chatSettings,
     this.mcpServices,
     this.chatCommands,
+    this.skills,
   });
 
   /// 生成唯一的模型ID
@@ -139,6 +143,30 @@ class ChatModel {
                   })
                   .toList()
               : null,
+      skills:
+          map['skills'] != null
+              ? (map['skills'] as List)
+                  .where((item) => item != null)
+                  .map((item) {
+                    try {
+                      return Skill.fromJson(
+                        item is Map<String, dynamic>
+                            ? item
+                            : Map<String, dynamic>.from(item),
+                      );
+                    } catch (e) {
+                      print('Error parsing skill: $e');
+                      print('Item data: $item');
+                      return Skill.create(
+                        name: item['name'] ?? '未知技能',
+                        description: item['description'] ?? '',
+                        prompt: item['prompt'] ?? '',
+                        icon: item['icon'] ?? 'star',
+                      );
+                    }
+                  })
+                  .toList()
+              : null,
     );
   }
 
@@ -177,6 +205,12 @@ class ChatModel {
     if (chatCommands != null) {
       result['chatCommands'] =
           chatCommands!.map((command) => command.toJson()).toList();
+    }
+
+    // 保存技能列表
+    if (skills != null) {
+      result['skills'] =
+          skills!.map((skill) => skill.toJson()).toList();
     }
 
     return result;
@@ -227,6 +261,7 @@ class ChatModel {
       chatSettings: chatSettings,
       mcpServices: null, // 新模型默认没有MCP服务
       chatCommands: null, // 新模型默认没有快捷指令
+      skills: null, // 新模型默认没有技能
     );
   }
 
@@ -247,6 +282,7 @@ class ChatModel {
     ChatSettings? chatSettings,
     List<McpServerConfig>? mcpServices,
     List<ChatCommand>? chatCommands,
+    List<Skill>? skills,
   }) {
     return ChatModel(
       modelId: modelId ?? this.modelId,
@@ -263,6 +299,7 @@ class ChatModel {
       chatSettings: chatSettings ?? this.chatSettings,
       mcpServices: mcpServices ?? this.mcpServices,
       chatCommands: chatCommands ?? this.chatCommands,
+      skills: skills ?? this.skills,
     );
   }
 
@@ -620,6 +657,78 @@ class ChatModel {
   /// 将快捷指令配置导出为 JSON
   List<Map<String, dynamic>> getChatCommandsJson() {
     return chatCommands?.map((command) => command.toJson()).toList() ?? [];
+  }
+
+  // ========== Skill 技能管理方法 ==========
+
+  /// 添加技能
+  ChatModel addSkill(Skill skill) {
+    final currentSkills = skills?.toList() ?? <Skill>[];
+    if (!currentSkills.any((s) => s.id == skill.id)) {
+      currentSkills.add(skill);
+    }
+    return copyWith(skills: currentSkills);
+  }
+
+  /// 移除技能
+  ChatModel removeSkill(String skillId) {
+    final currentSkills = skills?.toList() ?? <Skill>[];
+    currentSkills.removeWhere((s) => s.id == skillId);
+    return copyWith(skills: currentSkills);
+  }
+
+  /// 更新技能
+  ChatModel updateSkill(String skillId, Skill newSkill) {
+    final currentSkills = skills?.toList() ?? <Skill>[];
+    final index = currentSkills.indexWhere((s) => s.id == skillId);
+    if (index != -1) {
+      currentSkills[index] = newSkill;
+    }
+    return copyWith(skills: currentSkills);
+  }
+
+  /// 获取指定ID的技能
+  Skill? getSkill(String skillId) {
+    return skills?.firstWhere(
+      (s) => s.id == skillId,
+      orElse: () => throw StateError('Skill not found'),
+    );
+  }
+
+  /// 检查是否存在指定的技能
+  bool hasSkill(String skillId) {
+    return skills?.any((s) => s.id == skillId) ?? false;
+  }
+
+  /// 获取所有技能ID
+  List<String> getSkillIds() {
+    return skills?.map((s) => s.id).toList() ?? [];
+  }
+
+  /// 清空所有技能
+  ChatModel clearSkills() {
+    return copyWith(skills: <Skill>[]);
+  }
+
+  /// 从 JSON 配置批量添加技能
+  ChatModel addSkillsFromJson(List<Map<String, dynamic>> skillsJson) {
+    final currentSkills = skills?.toList() ?? <Skill>[];
+    for (final skillJson in skillsJson) {
+      try {
+        final skill = Skill.fromJson(skillJson);
+        if (!currentSkills.any((s) => s.id == skill.id)) {
+          currentSkills.add(skill);
+        }
+      } catch (e) {
+        print('Invalid skill configuration: $e');
+      }
+    }
+    return copyWith(skills: currentSkills);
+  }
+
+  /// 将技能配置导出为 JSON
+  List<Map<String, dynamic>> getSkillsJson() {
+    return skills?.map((skill) => skill.toJson()).toList() ?? [];
   }
 }
 

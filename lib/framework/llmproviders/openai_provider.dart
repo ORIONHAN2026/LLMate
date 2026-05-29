@@ -90,6 +90,53 @@ class OpenAiProvider extends BaseLlmProvider {
     }
   }
 
+  @override
+  Stream<Map<String, String?>> sendMessageStreamWithMessages(
+    List<Map<String, dynamic>> messages,
+  ) async* {
+    if (model == null) {
+      throw StateError('OpenAI 提供商未配置');
+    }
+
+    try {
+      final requestData = {
+        'model': model!.model,
+        'messages': messages,
+        'stream': true,
+        'max_tokens': 4000,
+        'temperature': 0.7,
+      };
+
+      if (kDebugMode) {
+        print('OpenAI (withMessages) 发送请求到: ${model!.apiUrl}');
+        print('请求数据: ${jsonEncode(requestData)}');
+      }
+
+      final response = await dio.post<ResponseBody>(
+        model!.apiUrl!,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${model!.apiKey}',
+            'Content-Type': 'application/json',
+          },
+          responseType: ResponseType.stream,
+        ),
+        data: requestData,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        yield* _processOpenAIStreamResponse(response.data!.stream);
+      } else {
+        yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('OpenAI 流式响应错误 (withMessages): $e');
+      }
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
+    }
+  }
+
   /// 处理 OpenAI 流式响应
   Stream<Map<String, String?>> _processOpenAIStreamResponse(Stream<List<int>> stream) async* {
     String buffer = '';

@@ -90,6 +90,49 @@ class ModelScopeProvider extends BaseLlmProvider {
   }
 
   @override
+  Stream<Map<String, String?>> sendMessageStreamWithMessages(
+    List<Map<String, dynamic>> messages,
+  ) async* {
+    if (model == null) {
+      throw StateError('ModelScope 提供商未配置');
+    }
+
+    try {
+      final requestData = {
+        'model': model!.model,
+        'messages': messages,
+        'stream': true,
+        'max_tokens': 4000,
+        'temperature': 0.7,
+      };
+
+      if (kDebugMode) {
+        print('ModelScope (withMessages) 发送请求到: ${model!.apiUrl}');
+      }
+
+      final response = await dio.post<ResponseBody>(
+        model!.apiUrl!,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${model!.apiKey}',
+            'Content-Type': 'application/json',
+          },
+          responseType: ResponseType.stream,
+        ),
+        data: requestData,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        yield* _processModelScopeStreamResponse(response.data!.stream);
+      } else {
+        yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
+      }
+    } catch (e) {
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
+    }
+  }
+
+  @override
   Future<String?> sendMessage({
     required ChatMessage userMessage,
     ChatSession? session,

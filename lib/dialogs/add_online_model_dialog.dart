@@ -315,16 +315,20 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
-                          _getProviderIcon(provider),
-                          const SizedBox(width: 6), // 从8减少到6
-                          Expanded(
+                          SizedBox(
+                            width: 18,
+                            child: _getProviderIcon(provider),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
                             child: Text(
                               provider['name'],
                               style: TextStyle(
-                                fontSize: 12, // 从14减少到12，与home页面一致
+                                fontSize: 12,
                                 fontWeight: FontWeight.w500,
                                 color:
                                     isSelected
@@ -334,20 +338,22 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                             .onSurface
                                             .withOpacity(0.8),
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6), // 从8减少到6
-                      Expanded(
+                      const SizedBox(height: 6),
+                      Flexible(
                         child: Text(
                           provider['description'],
                           style: TextStyle(
-                            fontSize: 11, // 从12减少到11
+                            fontSize: 11,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withOpacity(0.6),
-                            height: 1.3, // 添加行高以更好的显示
+                            height: 1.3,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,

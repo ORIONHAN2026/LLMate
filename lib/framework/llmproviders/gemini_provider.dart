@@ -112,6 +112,72 @@ class GeminiProvider extends BaseLlmProvider {
   }
 
   @override
+  Stream<Map<String, String?>> sendMessageStreamWithMessages(
+    List<Map<String, dynamic>> messages,
+  ) async* {
+    if (model == null) {
+      throw StateError('Gemini 提供商未配置');
+    }
+
+    try {
+      // 转换为 Gemini 的 contents 格式
+      final contents = messages.where((msg) => msg['role'] != 'system').map((msg) {
+        return {
+          'role': msg['role'] == 'user' ? 'user' : 'model',
+          'parts': [{'text': msg['content']}],
+        };
+      }).toList();
+
+      final requestData = {
+        'contents': contents,
+        'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 4000},
+      };
+
+      // 处理系统消息
+      final systemMessage = messages.firstWhere(
+        (msg) => msg['role'] == 'system',
+        orElse: () => {'content': ''},
+      );
+      if (systemMessage['content'].toString().isNotEmpty) {
+        requestData['systemInstruction'] = {
+          'parts': [{'text': systemMessage['content']}],
+        };
+      }
+
+      if (kDebugMode) {
+        print('Gemini (withMessages) 发送请求到: ${model!.apiUrl}');
+      }
+
+      final response = await dio.post(
+        model!.apiUrl!,
+        options: Options(headers: {'Content-Type': 'application/json'}),
+        data: requestData,
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['candidates'] != null && data['candidates'].isNotEmpty) {
+          final content = data['candidates'][0]['content'];
+          if (content['parts'] != null && content['parts'].isNotEmpty) {
+            yield {'content': content['parts'][0]['text'] ?? '抱歉，没有收到回复', 'think': null};
+          } else {
+            yield {'content': '抱歉，没有收到回复', 'think': null};
+          }
+        } else {
+          yield {'content': '抱歉，没有收到回复', 'think': null};
+        }
+      } else {
+        yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Gemini 流式响应错误 (withMessages): $e');
+      }
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
+    }
+  }
+
+  @override
   Future<String?> sendMessage({
     required ChatMessage userMessage,
     ChatSession? session,

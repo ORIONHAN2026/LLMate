@@ -19,7 +19,11 @@ class ChatSession {
   final String? lastSelectedDirectory; // 会话绑定的最后选择的文件目录
   final bool isWebSearchEnabled; // 会话绑定的联网搜索开关
   final bool isMcpToolsEnabled; // 会话绑定的MCP工具开关
+  final List<String> selectedMcpServiceIds; // 会话绑定的已选MCP服务名称列表 (服务级选择，向下兼容)
+  final List<String> selectedMcpToolIds; // 会话绑定的已选MCP工具ID列表 (工具级选择，格式: "serviceName::toolName")
   final bool isRagEnabled; // 会话绑定的RAG功能开关
+  final bool isSkillEnabled; // 会话绑定的技能开关
+  final List<String> selectedSkillIds; // 会话绑定的已选技能ID列表
 
   final ChatModel? chatModel; // 会话绑定的模型信息
   final List<ChatMessage> messages;
@@ -40,7 +44,11 @@ class ChatSession {
     this.lastSelectedDirectory, // 允许为空，默认为null
     this.isWebSearchEnabled = false, // 默认为false
     this.isMcpToolsEnabled = false, // 默认为false
+    this.selectedMcpServiceIds = const [], // 默认为空列表
+    this.selectedMcpToolIds = const [], // 默认为空列表
     this.isRagEnabled = false, // 默认为false
+    this.isSkillEnabled = false, // 默认为false
+    this.selectedSkillIds = const [], // 默认为空列表
 
     this.sessionQuickCommands = const [], // 默认为空列表
   });
@@ -101,8 +109,12 @@ class ChatSession {
     bool? isWebSearchEnabled,
     bool? isRagEnabled,
     bool? isMcpToolsEnabled,
+    List<String>? selectedMcpServiceIds,
+    List<String>? selectedMcpToolIds,
     ChatModel? chatModel,
     bool clearChatModel = false, // 用于显式清空chatModel
+    bool? isSkillEnabled,
+    List<String>? selectedSkillIds,
     List<ChatCommand>? sessionQuickCommands,
   }) {
     return ChatSession(
@@ -120,7 +132,11 @@ class ChatSession {
           lastSelectedDirectory ?? this.lastSelectedDirectory,
       isWebSearchEnabled: isWebSearchEnabled ?? this.isWebSearchEnabled,
       isMcpToolsEnabled: isMcpToolsEnabled ?? this.isMcpToolsEnabled,
+      selectedMcpServiceIds: selectedMcpServiceIds ?? this.selectedMcpServiceIds,
+      selectedMcpToolIds: selectedMcpToolIds ?? this.selectedMcpToolIds,
       isRagEnabled: isRagEnabled ?? this.isRagEnabled,
+      isSkillEnabled: isSkillEnabled ?? this.isSkillEnabled,
+      selectedSkillIds: selectedSkillIds ?? this.selectedSkillIds,
       chatModel: clearChatModel ? null : (chatModel ?? this.chatModel),
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
     );
@@ -159,7 +175,24 @@ class ChatSession {
           json['isWebSearchEnabled'] ?? false, // 从JSON加载联网搜索开关，默认为false
       isMcpToolsEnabled:
           json['isMcpToolsEnabled'] ?? false, // 从JSON加载MCP工具开关，默认为false
+      selectedMcpServiceIds:
+          (json['selectedMcpServiceIds'] as List<dynamic>?)
+              ?.map((id) => id.toString())
+              .toList() ??
+          [], // 从JSON加载已选MCP服务ID列表，默认为空
+      selectedMcpToolIds:
+          (json['selectedMcpToolIds'] as List<dynamic>?)
+              ?.map((id) => id.toString())
+              .toList() ??
+          [], // 从JSON加载已选MCP工具ID列表，默认为空
       isRagEnabled: json['isRagEnabled'] ?? false, // 从JSON加载RAG搜索开关，默认为false
+      isSkillEnabled:
+          json['isSkillEnabled'] ?? false, // 从JSON加载技能开关，默认为false
+      selectedSkillIds:
+          (json['selectedSkillIds'] as List<dynamic>?)
+              ?.map((id) => id.toString())
+              .toList() ??
+          [], // 从JSON加载已选技能ID列表，默认为空
       sessionQuickCommands:
           (json['sessionQuickCommands'] as List<dynamic>?)
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
@@ -190,7 +223,11 @@ class ChatSession {
       'lastSelectedDirectory': lastSelectedDirectory, // 保存最后选择的目录到JSON，允许为null
       'isWebSearchEnabled': isWebSearchEnabled, // 保存联网搜索开关到JSON
       'isMcpToolsEnabled': isMcpToolsEnabled, // 保存MCP工具开关到JSON
+      'selectedMcpServiceIds': selectedMcpServiceIds, // 保存已选MCP服务ID列表到JSON
+      'selectedMcpToolIds': selectedMcpToolIds, // 保存已选MCP工具ID列表到JSON
       'isRagEnabled': isRagEnabled, // 保存RAG搜索开关到JSON
+      'isSkillEnabled': isSkillEnabled, // 保存技能开关到JSON
+      'selectedSkillIds': selectedSkillIds, // 保存已选技能ID列表到JSON
       'sessionQuickCommands':
           sessionQuickCommands
               .map((command) => command.toJson())

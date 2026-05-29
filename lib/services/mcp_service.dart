@@ -33,6 +33,14 @@ class McpToolResult {
   };
 }
 
+/// MCP 连接信息（初始化后获取的服务器信息 + 工具列表）
+class McpConnectionInfo {
+  final String serverName;
+  final List<McpToolInfo> tools;
+
+  const McpConnectionInfo({required this.serverName, required this.tools});
+}
+
 /// MCP服务管理类
 class McpService {
   static final Map<String, Client> _clients = {};
@@ -71,6 +79,173 @@ class McpService {
 
   /// 缓存的配置信息
   static final Map<String, McpServerConfig> _cachedConfigs = {};
+
+  /// 刷新单个 MCP 服务的工具列表（支持 stdio 和 SSE 两种传输方式）
+  /// 返回获取到的工具信息列表，失败时抛出异常
+  static Future<List<McpToolInfo>> refreshServiceTools(
+    McpServerConfig config,
+  ) async {
+    debugPrint('🔄 ====== 开始刷新 MCP 服务工具: ${config.name} ======');
+    debugPrint('   配置详情: name=${config.name}, url=${config.url}, command=${config.command}');
+    debugPrint('   args=${config.args}, headers=${config.headers}');
+    debugPrint('   timeout=${config.timeout}');
+
+    // 清理旧连接
+    debugPrint('   🧹 清理旧连接...');
+    await _cleanupClient(config.name);
+
+    // 创建客户端
+    final client = Client(
+      name: 'aidock-client-${config.name}',
+      version: '1.0.0',
+    );
+    debugPrint('   📦 创建 Client: aidock-client-${config.name} v1.0.0');
+
+    // 根据配置类型选择传输方式
+    ClientTransport transport;
+    if (config.url != null && config.url!.isNotEmpty) {
+      // SSE (URL-based) 传输
+      debugPrint('🔗 使用 SSE 传输: ${config.url}');
+      final startTime = DateTime.now();
+      transport = await SseClientTransport.create(
+        serverUrl: config.url!,
+        headers: config.headers,
+      );
+      debugPrint('   ⏱ SSE Transport 创建耗时: ${DateTime.now().difference(startTime).inMilliseconds}ms');
+    } else {
+      // stdio 传输
+      debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
+      transport = await StdioClientTransport.create(
+        command: config.command,
+        arguments: config.args,
+        environment: config.env,
+        workingDirectory: config.workingDirectory,
+      );
+    }
+
+    try {
+      // 连接（connect 内部会自动调用 initialize）
+      debugPrint('🔌 调用 client.connect(transport)...');
+      final connectStart = DateTime.now();
+      await client.connect(transport);
+      debugPrint('   ⏱ connect 耗时: ${DateTime.now().difference(connectStart).inMilliseconds}ms');
+
+      // 获取工具列表
+      debugPrint('📋 调用 client.listTools()...');
+      final listStart = DateTime.now();
+      final tools = await client.listTools();
+      debugPrint('   ⏱ listTools 耗时: ${DateTime.now().difference(listStart).inMilliseconds}ms');
+      debugPrint('   📊 获取到 ${tools.length} 个工具');
+
+      for (var i = 0; i < tools.length; i++) {
+        final t = tools[i];
+        debugPrint('      [${i + 1}] ${t.name}: ${t.description}');
+      }
+
+      // 转为 McpToolInfo 列表
+      final toolInfos = tools.map((tool) {
+        return McpToolInfo(
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema as Map<String, dynamic>? ?? {},
+        );
+      }).toList();
+
+      // 缓存
+      _clients[config.name] = client;
+      _availableTools[config.name] = tools;
+      _cachedConfigs[config.name] = config.copyWith(
+        tools: toolInfos,
+        lastUpdated: DateTime.now(),
+      );
+
+      debugPrint('✅ ====== 刷新成功: ${config.name}, 工具数: ${toolInfos.length} ======');
+      return toolInfos;
+    } catch (e, stack) {
+      // 清理失败的连接
+      try { _cleanupClient(config.name); } catch (_) {}
+      debugPrint('❌ ====== 刷新失败: ${config.name} ======');
+      debugPrint('   错误类型: ${e.runtimeType}');
+      debugPrint('   错误信息: $e');
+      debugPrint('   堆栈: $stack');
+      rethrow;
+    }
+  }
+
+  /// 连接 MCP 服务器并获取服务器名称和工具列表
+  /// 用于首次添加服务时，从远程获取服务器信息
+  static Future<McpConnectionInfo> connectAndGetInfo(
+    McpServerConfig config,
+  ) async {
+    debugPrint('🔗 ====== 连接 MCP 服务器并获取信息 ======');
+    debugPrint('   配置: url=${config.url}, command=${config.command}');
+    debugPrint('   args=${config.args}, headers=${config.headers}');
+
+    // 清理旧连接
+    await _cleanupClient(config.name);
+
+    final client = Client(
+      name: 'aidock-client-${config.name}',
+      version: '1.0.0',
+    );
+
+    ClientTransport transport;
+    if (config.url != null && config.url!.isNotEmpty) {
+      debugPrint('🔗 使用 SSE 传输: ${config.url}');
+      transport = await SseClientTransport.create(
+        serverUrl: config.url!,
+        headers: config.headers,
+      );
+    } else {
+      debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
+      transport = await StdioClientTransport.create(
+        command: config.command,
+        arguments: config.args,
+        environment: config.env,
+        workingDirectory: config.workingDirectory,
+      );
+    }
+
+    try {
+      await client.connect(transport);
+
+      // 从 initialize 响应中获取服务器名称
+      final serverInfo = client.serverInfo;
+      final serverName = serverInfo != null
+          ? (serverInfo['name'] as String? ?? config.name)
+          : config.name;
+      debugPrint('📋 服务器名称: $serverName');
+
+      // 获取工具列表
+      final tools = await client.listTools();
+      debugPrint('📊 获取到 ${tools.length} 个工具');
+
+      final toolInfos = tools.map((tool) {
+        return McpToolInfo(
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema as Map<String, dynamic>? ?? {},
+        );
+      }).toList();
+
+      // 缓存
+      _clients[serverName] = client;
+      _availableTools[serverName] = tools;
+      _cachedConfigs[serverName] = config.copyWith(
+        tools: toolInfos,
+        lastUpdated: DateTime.now(),
+      );
+
+      debugPrint('✅ ====== 连接成功: $serverName ======');
+      return McpConnectionInfo(serverName: serverName, tools: toolInfos);
+    } catch (e, stack) {
+      try { _cleanupClient(config.name); } catch (_) {}
+      debugPrint('❌ ====== 连接失败: ${config.name} ======');
+      debugPrint('   错误: $e');
+      debugPrint('   堆栈: $stack');
+      rethrow;
+    }
+  }
 
   /// 初始化MCP客户端
   static Future<bool> initializeClient(McpServerConfig config) async {
@@ -175,19 +350,37 @@ class McpService {
     }
   }
 
+  /// 获取会话中实际启用的MCP服务列表
+  static List<McpServerConfig> _getEnabledServices(ChatSession session) {
+    final chatModel = session.chatModel;
+    if (chatModel?.mcpServices == null || chatModel!.mcpServices!.isEmpty) {
+      return [];
+    }
+
+    final selectedIds = session.selectedMcpServiceIds;
+    if (selectedIds.isEmpty) {
+      // 未选择时使用全部服务（向后兼容）
+      return chatModel.mcpServices!;
+    }
+
+    return chatModel.mcpServices!
+        .where((config) => selectedIds.contains(config.name))
+        .toList();
+  }
+
   /// 初始化会话的MCP服务
   static Future<List<String>> initializeSessionMcpServices(
     ChatSession session,
   ) async {
-    final chatModel = session.chatModel;
-    if (chatModel?.mcpServices == null || chatModel!.mcpServices!.isEmpty) {
-      debugPrint('📝 会话 ${session.name} 的模型未配置MCP服务');
+    final enabledServices = _getEnabledServices(session);
+    if (enabledServices.isEmpty) {
+      debugPrint('📝 会话 ${session.name} 未配置MCP服务');
       return [];
     }
 
     final initializedServices = <String>[];
 
-    for (final config in chatModel.mcpServices!) {
+    for (final config in enabledServices) {
       final success = await initializeClient(config);
       if (success) {
         initializedServices.add(config.name);
@@ -202,13 +395,13 @@ class McpService {
 
   /// 获取会话可用的MCP工具列表
   static List<Tool> getSessionAvailableTools(ChatSession session) {
-    final chatModel = session.chatModel;
-    if (chatModel?.mcpServices == null || chatModel!.mcpServices!.isEmpty) {
+    final enabledServices = _getEnabledServices(session);
+    if (enabledServices.isEmpty) {
       return [];
     }
 
     final allTools = <Tool>[];
-    for (final config in chatModel.mcpServices!) {
+    for (final config in enabledServices) {
       final tools = _availableTools[config.name];
       if (tools != null) {
         allTools.addAll(tools);
@@ -284,9 +477,9 @@ class McpService {
     required List<Map<String, dynamic>> toolCalls,
   }) async {
     final results = <McpToolResult>[];
-    final chatModel = session.chatModel;
+    final enabledServices = _getEnabledServices(session);
 
-    if (chatModel?.mcpServices == null || chatModel!.mcpServices!.isEmpty) {
+    if (enabledServices.isEmpty) {
       debugPrint('📝 会话模型未配置MCP服务，跳过工具调用');
       return results;
     }
@@ -309,7 +502,7 @@ class McpService {
         if (toolParts.length >= 2) {
           final serviceName = toolParts[0];
           final serviceConfig =
-              chatModel.mcpServices!
+              enabledServices
                   .where((config) => config.name == serviceName)
                   .firstOrNull;
 
@@ -323,7 +516,7 @@ class McpService {
 
         // 如果通过服务名称没有找到，在所有服务中搜索工具
         if (targetService == null) {
-          for (final config in chatModel.mcpServices!) {
+          for (final config in enabledServices) {
             final tools = _availableTools[config.name];
             if (tools != null && tools.any((tool) => tool.name == toolName)) {
               targetService = config.name;
@@ -624,8 +817,8 @@ class McpService {
 
   /// 获取会话的真实MCP工具信息用于API调用
   static String buildMcpToolsInfoForApi(ChatSession session) {
-    final chatModel = session.chatModel;
-    if (chatModel?.mcpServices == null || chatModel!.mcpServices!.isEmpty) {
+    final enabledServices = _getEnabledServices(session);
+    if (enabledServices.isEmpty) {
       return '';
     }
 
@@ -680,7 +873,7 @@ class McpService {
     buffer.writeln('- ❌ 不要在工具调用前后添加额外的标记或说明');
     buffer.writeln();
 
-    for (final config in chatModel.mcpServices!) {
+    for (final config in enabledServices) {
       // 首先尝试从缓存中获取最新的配置信息
       final cachedConfig = _cachedConfigs[config.name];
       final toolInfos = cachedConfig?.tools ?? config.tools;

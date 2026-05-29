@@ -60,6 +60,10 @@ dependencies:
   url_launcher: ^6.2.5  # URL启动器
   flutter_quill: ^11.4.2  # 升级修复与新 Flutter SDK 的兼容性问题
 
+dependency_overrides:
+  mcp_client:
+    path: packages/mcp_client
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -544,8 +544,8 @@ class McpService {
 
     for (final toolCall in toolCalls) {
       try {
-        final toolName = toolCall['tool'] as String?;
-        final args = toolCall['args'] as Map<String, dynamic>? ?? {};
+        final toolName = toolCall['name'] as String?;
+        final args = toolCall['arguments'] as Map<String, dynamic>? ?? {};
 
         if (toolName == null || toolName.isEmpty) {
           debugPrint('❌ 工具调用缺少工具名称');
@@ -727,7 +727,7 @@ class McpService {
           }
         }
 
-        toolCalls.add({'tool': toolName, 'args': args});
+        toolCalls.add({'name': toolName, 'arguments': args});
         debugPrint('✅ 解析工具调用: $toolName, 参数: $args');
       } catch (e) {
         debugPrint('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');

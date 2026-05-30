@@ -92,23 +92,30 @@ class LlmClient {
   ) async* {
     _cancelled = false;
 
-    // 1. 首轮流式响应（缓冲所有 content，不直接 yield）
+    // 1. 首轮流式响应：实时 yield content，检测到 <tool_calls> 后停止透传
     String acc = '';
     String? toolCallsJson;
+    bool suppressContent = false;
     final stream = _provider.sendMessageStream(
       userMessage: userMessage,
       session: _session,
     );
 
     await for (final chunk in stream) {
-      print('传递给UI $chunk');
-
       if (_cancelled) break;
       final tc = chunk['mcpToolCalls'];
       if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
       final c = chunk['content'] ?? '';
-      if (c.isNotEmpty) acc += c;
-      // think 直接透传（不包含工具调用文本）
+      if (c.isNotEmpty) {
+        acc += c;
+        if (!suppressContent) {
+          if (acc.contains('<tool_calls>')) {
+            suppressContent = true;
+          } else {
+            yield {'content': c};
+          }
+        }
+      }
       final t = chunk['think'] ?? '';
       if (t.isNotEmpty) yield {'think': t};
     }
@@ -117,26 +124,26 @@ class LlmClient {
     if (acc.isNotEmpty) {
       try {
         final parsed = jsonDecode(acc);
-        if (parsed is Map && parsed.containsKey('response')) {
-          acc = (parsed['response'] as String?) ?? acc;
+        String? extracted;
+        if (parsed is Map) {
+          extracted = (parsed['response'] ?? parsed['content'] ?? parsed['text'] ?? parsed['message'])?.toString();
+        } else if (parsed is String) {
+          extracted = parsed;
         }
+        if (extracted != null) acc = extracted;
       } catch (_) {}
     }
 
-    // 2. 检测并执行 MCP 工具调用（解析/执行全部委派给 McpService）
-    String cleanContent = acc;
+    // 2. 始终剥离 <tool_calls> XML（native mcpToolCalls 也可能来自文本检测）
+    String cleanContent = McpService.stripToolCallXml(acc);
     McpExecutionResult? toolResult;
 
     if (!_cancelled && _session.mcpServer != null) {
-      // 文本格式工具调用：先解析出名称以便向 UI 透传"执行中"状态
+      // 文本格式工具调用：先解析名称以便向 UI 透传"执行中"状态
       if (toolCallsJson == null) {
         final textCalls = McpService.parseToolCallsFromResponse(acc);
-        if (textCalls.isNotEmpty) {
-          cleanContent = McpService.stripToolCallXml(acc);
-          // 工具调用可能较慢，提前告知用户
-          for (final tc in textCalls) {
-            yield {'tool': '执行: ${tc['tool']}'};
-          }
+        for (final tc in textCalls) {
+          yield {'tool': '执行: ${tc['tool']}'};
         }
       }
 
@@ -145,9 +152,12 @@ class LlmClient {
         accumulatedContent: acc,
         nativeToolCallsJson: toolCallsJson,
       );
+      if (toolResult != null) {
+        cleanContent = toolResult.cleanContent;
+      }
     }
 
-    // yield 干净的正文
+    // yield 干净的正文（suppressContent 时 overwrite 之前透传的片段）
     if (cleanContent.isNotEmpty) {
       yield {'content': cleanContent};
     }

@@ -3492,7 +3492,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       String accumulatedThink = '';
       String accumulatedTool = '';
 
-
       // 直接使用LLM Hub框架
       final model = updateSession.chatModel;
       if (model == null) {
@@ -3530,9 +3529,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         final thinkChunk = chunkMap['think'] ?? '';
         final toolChunk = chunkMap['tool'] ?? '';
 
-        if (contentChunk.isNotEmpty || thinkChunk.isNotEmpty || toolChunk.isNotEmpty) {
+        if (contentChunk.isNotEmpty ||
+            thinkChunk.isNotEmpty ||
+            toolChunk.isNotEmpty) {
           accumulatedContent += contentChunk;
-          accumulatedThink += thinkChunk;
+          accumulatedThink += thinkChunk + toolChunk; // tool 和 think 一样显示
           accumulatedTool += toolChunk;
 
           final messageIndex = updateSession.messages.indexWhere(

@@ -84,45 +84,58 @@ class LlmClient {
   String buildSystemPrompt({String? customPrompt, ChatSession? session}) =>
       _provider.buildSystemPrompt(customPrompt: customPrompt, session: session);
 
-  /// 发送消息并获取流式响应（自动处理 MCP 工具调用 + follow-up）
+  /// 发送消息并获取流式响应（递归处理 MCP 工具调用，直到无工具调用为止）
   /// chunk: {content,think,tool}  三个字段互斥，每次必有一个有值
-  /// 工具调用已由 provider 层解析好，此处只负责直接 yield + 执行
   Stream<Map<String, dynamic>> sendMessageStream(
     ChatMessage userMessage,
   ) async* {
     _cancelled = false;
 
+    // 构建初始消息列表
+    final messages = <Map<String, dynamic>>[];
+    final sp = _provider.buildSystemPrompt(session: _session);
+    if (sp.isNotEmpty) messages.add({'role': 'system', 'content': sp});
+    messages.add({'role': 'user', 'content': userMessage.content});
+
+    yield* _sendWithToolLoop(messages);
+  }
+
+  /// 发送消息 + 递归处理工具调用
+  /// [messages] 会随每次工具调用追加 assistant + tool 消息，递归传递
+  Stream<Map<String, dynamic>> _sendWithToolLoop(
+    List<Map<String, dynamic>> messages,
+  ) async* {
     String? toolCallsJson;
 
-    final stream = _provider.sendMessageStream(
-      userMessage: userMessage,
-      session: _session,
-    );
+    final stream = _provider.sendMessageStreamWithMessages(messages);
 
     await for (final chunk in stream) {
       if (_cancelled) break;
-
       final tc = chunk['toolcall'];
       if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
 
       final c = chunk['content'] ?? '';
-      if (c.isNotEmpty) {
-        yield {'content': c};
-      }
+      if (c.isNotEmpty) yield {'content': c};
 
       final t = chunk['think'] ?? '';
       if (t.isNotEmpty) yield {'think': t};
     }
 
-    // 工具调用已由 provider 解析好，直接执行
+    // 有工具调用且未取消 → 执行工具，追加到 messages 后递归
     if (!_cancelled && toolCallsJson != null && _session.mcpServer != null) {
-      // yield 执行中状态
+      List<Map<String, dynamic>> parsed;
       try {
-        final parsed = jsonDecode(toolCallsJson) as List;
-        for (final tc in parsed) {
-          yield {'tool': '执行: ${tc['tool']}'};
-        }
-      } catch (_) {}
+        parsed =
+            (jsonDecode(toolCallsJson) as List)
+                .map((e) => e as Map<String, dynamic>)
+                .toList();
+      } catch (_) {
+        return;
+      }
+
+      for (final tc in parsed) {
+        yield {'tool': '执行: ${tc['tool']}'};
+      }
 
       final toolResult = await McpService.processAndExecuteToolCalls(
         session: _session,
@@ -137,18 +150,41 @@ class LlmClient {
           yield {'tool': ok ? '已完成: $name' : '失败: $name'};
         }
 
-        final msgs = _buildFollowUpMessages(
-          list: toolResult.toolCallList,
-          results: toolResult.executionResults,
-          userMsg: userMessage,
-          assistantContent: toolResult.cleanContent,
-        );
+        // 追加 assistant(tool_calls) 消息
+        messages.add({
+          'role': 'assistant',
+          'content':
+              toolResult.cleanContent.isNotEmpty
+                  ? toolResult.cleanContent
+                  : null,
+          'tool_calls':
+              toolResult.toolCallList.map((tc) {
+                return {
+                  'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
+                  'type': 'function',
+                  'function': {
+                    'name': tc['name'] ?? '',
+                    'arguments':
+                        tc['arguments'] is String
+                            ? tc['arguments']
+                            : jsonEncode(tc['arguments'] ?? {}),
+                  },
+                };
+              }).toList(),
+        });
 
-        final s2 = _provider.sendMessageStreamWithMessages(msgs);
-        await for (final chunk in s2) {
-          if (_cancelled) break;
-          yield Map<String, dynamic>.from(chunk);
+        // 追加 tool_result 消息
+        for (final r in toolResult.executionResults) {
+          messages.add({
+            'role': 'tool',
+            'tool_call_id': r['id'],
+            'content':
+                r['isError'] == true ? '错误: ${r['result']}' : r['result'],
+          });
         }
+
+        // 递归：大模型可能再次返回工具调用
+        yield* _sendWithToolLoop(messages);
       }
     }
   }

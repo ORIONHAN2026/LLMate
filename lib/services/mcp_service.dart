@@ -1055,7 +1055,7 @@ class McpService {
     String cleanContent = accumulatedContent;
 
     if (nativeToolCallsJson != null && nativeToolCallsJson.isNotEmpty) {
-      // 原生 JSON tool_calls
+      // JSON tool_calls（原生格式 name/arguments 或文本解析格式 tool/args 均可）
       try {
         final List<dynamic> list = jsonDecode(nativeToolCallsJson);
         toolCalls =
@@ -1063,8 +1063,10 @@ class McpService {
                 .map((raw) {
                   final m = raw as Map<String, dynamic>;
                   return {
-                    'tool': m['name'] as String? ?? '',
-                    'args': m['arguments'] as Map<String, dynamic>? ?? {},
+                    'tool': (m['name'] ?? m['tool'] ?? '') as String,
+                    'args':
+                        (m['arguments'] ?? m['args'] ??
+                            <String, dynamic>{}) as Map<String, dynamic>,
                     'id': m['id'],
                     'index': m['index'],
                   };

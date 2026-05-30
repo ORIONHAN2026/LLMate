@@ -33,39 +33,33 @@ class DeepSeekProvider extends BaseLlmProvider {
     required ChatMessage userMessage,
     ChatSession? session,
   }) async* {
-    if (model == null) {
-      throw StateError('DeepSeek 提供商未配置');
-    }
-
-    try {
-      final requestMessages = buildMessages(
-        userMessage: userMessage,
-        session: session,
-      );
-
-      yield* _sendStreamRequest(requestMessages, session);
-    } catch (e) {
-      if (kDebugMode) {
-        print('DeepSeek 流式响应错误: $e');
-      }
-      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
-    }
+    final requestMessages = buildMessages(
+      userMessage: userMessage,
+      session: session,
+    );
+    yield* _sendWithErrorHandling(requestMessages, session);
   }
 
   @override
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
     List<Map<String, dynamic>> messages,
   ) async* {
+    yield* _sendWithErrorHandling(messages, null);
+  }
+
+  /// 发送流式请求的通用方法（统一错误处理）
+  Stream<Map<String, String?>> _sendWithErrorHandling(
+    List<Map<String, dynamic>> messages,
+    ChatSession? session,
+  ) async* {
     if (model == null) {
       throw StateError('DeepSeek 提供商未配置');
     }
-
     try {
-      // 对于 MCP follow-up，通常不需要再次发送 tools（已经执行过了）
-      yield* _sendStreamRequest(messages, null);
+      yield* _sendStreamRequest(messages, session);
     } catch (e) {
       if (kDebugMode) {
-        print('DeepSeek 流式响应错误 (withMessages): $e');
+        print('DeepSeek 流式响应错误: $e');
       }
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
     }

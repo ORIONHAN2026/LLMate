@@ -111,7 +111,6 @@ class LlmClient {
 
     await for (final chunk in stream) {
       if (_cancelled) break;
-      yield {'tool': '模拟思考'};
       final tc = chunk['toolcall'];
       if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
 

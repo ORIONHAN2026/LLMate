@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:mcp_client/mcp_client.dart' hide MessageRole;
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/chat_message.dart';
@@ -87,10 +86,13 @@ class LlmClient {
 
   /// 发送消息并获取流式响应（自动处理 MCP 工具调用 + follow-up）
   /// chunk: {content,think,tool}  三个字段互斥，每次必有一个有值
-  Stream<Map<String, dynamic>> sendMessageStream(ChatMessage userMessage) async* {
+  /// 所有 MCP 工具调用解析/执行/过滤均在此完成，UI 收到的即是可直接展示的数据
+  Stream<Map<String, dynamic>> sendMessageStream(
+    ChatMessage userMessage,
+  ) async* {
     _cancelled = false;
 
-    // 1. 首轮流式响应
+    // 1. 首轮流式响应（缓冲所有 content，不直接 yield）
     String acc = '';
     String? toolCallsJson;
     final stream = _provider.sendMessageStream(
@@ -99,91 +101,72 @@ class LlmClient {
     );
 
     await for (final chunk in stream) {
+      print('传递给UI $chunk');
+
       if (_cancelled) break;
       final tc = chunk['mcpToolCalls'];
       if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
       final c = chunk['content'] ?? '';
       if (c.isNotEmpty) acc += c;
-      yield Map<String, dynamic>.from(chunk);
+      // think 直接透传（不包含工具调用文本）
+      final t = chunk['think'] ?? '';
+      if (t.isNotEmpty) yield {'think': t};
     }
 
-    // 2. 执行 MCP 工具调用 + follow-up
-    if (!_cancelled && _session.mcpServer != null) {
-      _McpToolResults? results;
-
-      if (toolCallsJson != null) {
-        // 原生 tool_calls
-        results = await _executeMcpToolsAndYield(toolCallsJson);
-        if (results == null) {
-          // 执行失败，尝试解析 tool name 告知 UI
-          try {
-            final list = jsonDecode(toolCallsJson) as List;
-            for (final raw in list) {
-              final name = (raw as Map)['name'] as String? ?? '未知工具';
-              yield {'tool': '失败: $name'};
-            }
-          } catch (_) {
-            yield {'tool': '失败: 工具调用解析错误'};
-          }
+    // JSON 格式提取（response_format: json_object 时模型返回 {"response":"..."} ）
+    if (acc.isNotEmpty) {
+      try {
+        final parsed = jsonDecode(acc);
+        if (parsed is Map && parsed.containsKey('response')) {
+          acc = (parsed['response'] as String?) ?? acc;
         }
-      } else {
-        // 回退：文本格式 tool_calls（如 <tool_call>...</tool_call>）
+      } catch (_) {}
+    }
+
+    // 2. 检测并执行 MCP 工具调用（解析/执行全部委派给 McpService）
+    String cleanContent = acc;
+    McpExecutionResult? toolResult;
+
+    if (!_cancelled && _session.mcpServer != null) {
+      // 文本格式工具调用：先解析出名称以便向 UI 透传"执行中"状态
+      if (toolCallsJson == null) {
         final textCalls = McpService.parseToolCallsFromResponse(acc);
         if (textCalls.isNotEmpty) {
-          // 从累积内容中移除原始 tool_call 文本，避免展示到 UI
-          acc = _stripTextToolCalls(acc);
-          // 告知 UI 开始执行
+          cleanContent = McpService.stripToolCallXml(acc);
+          // 工具调用可能较慢，提前告知用户
           for (final tc in textCalls) {
             yield {'tool': '执行: ${tc['tool']}'};
           }
-          // 执行工具调用
-          final execResults = await McpService.executeSessionToolCalls(
-            session: _session,
-            toolCalls: textCalls,
-          );
-          // 转换为统一格式供 follow-up 使用
-          final list = <Map<String, dynamic>>[];
-          final data = <Map<String, dynamic>>[];
-          for (int i = 0; i < textCalls.length; i++) {
-            final tc = textCalls[i];
-            final callId = 'call_$i';
-            list.add({
-              'id': callId,
-              'name': tc['tool'],
-              'arguments': tc['args'],
-              'index': i,
-            });
-            final tr = i < execResults.length ? execResults[i] : null;
-            data.add({
-              'id': callId,
-              'name': tc['tool'],
-              'args': tc['args'],
-              'result': tr?.result ?? '',
-              'isError': tr?.isSuccess != true,
-            });
-          }
-          results = _McpToolResults(list: list, data: data);
         }
       }
 
-      if (results == null || _cancelled) return;
+      toolResult = await McpService.processAndExecuteToolCalls(
+        session: _session,
+        accumulatedContent: acc,
+        nativeToolCallsJson: toolCallsJson,
+      );
+    }
 
-      // 向 UI 透传工具执行描述（和 content/think 同级）
-      for (final r in results.data) {
+    // yield 干净的正文
+    if (cleanContent.isNotEmpty) {
+      yield {'content': cleanContent};
+    }
+
+    // 3. 工具执行结果 + follow-up
+    if (toolResult != null && !_cancelled) {
+      for (final r in toolResult.executionResults) {
         final name = r['name'] as String;
         final ok = !(r['isError'] == true);
         yield {'tool': ok ? '已完成: $name' : '失败: $name'};
       }
 
-      // 构建 follow-up 消息
       final msgs = _buildFollowUpMessages(
-        list: results.list,
-        results: results.data,
+        list: toolResult.toolCallList,
+        results: toolResult.executionResults,
         userMsg: userMessage,
-        assistantContent: acc,
+        assistantContent: cleanContent,
       );
 
-      // 3. follow-up 流式响应
       final s2 = _provider.sendMessageStreamWithMessages(msgs);
       await for (final chunk in s2) {
         if (_cancelled) break;
@@ -192,85 +175,7 @@ class LlmClient {
     }
   }
 
-  // ── 内部: sendMessageStream 专用 ──
-
-  /// 执行 MCP 工具调用并通过回调通知，返回解析结果
-  Future<_McpToolResults?> _executeMcpToolsAndYield(
-    String toolCallsJson,
-  ) async {
-    final List<dynamic> list;
-    try {
-      list = jsonDecode(toolCallsJson);
-    } catch (e) {
-      onError?.call('解析 tool_calls 失败: $e');
-      return null;
-    }
-    if (list.isEmpty) return null;
-
-    // 优先从 session 取已缓存的 MCP Client
-    Client? mc = _session.mcpClient;
-    if (mc == null) {
-      final svc = _session.mcpServer?.name;
-      if (svc == null) return null;
-
-      mc = McpService.getMCPClient(svc);
-      if (mc == null) {
-        final inited = await McpService.initializeSessionMcpServices(_session);
-        if (inited.isEmpty) {
-          onError?.call('MCP 未初始化: $svc');
-          return null;
-        }
-        mc = McpService.getMCPClient(svc);
-      }
-      if (mc == null) return null;
-      // 缓存到 session，后续调用直接用
-      _session.mcpClient = mc;
-    }
-
-    final results = <Map<String, dynamic>>[];
-    for (final raw in list) {
-      if (_cancelled) break;
-      final t = raw as Map<String, dynamic>;
-      final name = t['name'] as String? ?? '';
-      final args = t['arguments'] as Map<String, dynamic>? ?? {};
-      if (name.isEmpty) continue;
-
-      onToolCall?.call(name, args);
-      try {
-        final r = await mc.callTool(name, args);
-        final ok = r.isError != true;
-        final buf = StringBuffer();
-        for (final c in r.content) {
-          if (c is TextContent) {
-            buf.writeln(c.text);
-          } else if (c is ImageContent) {
-            buf.writeln('[图片: ${c.data ?? c.url}]');
-          }
-        }
-        final text = buf.toString().trim();
-        onToolResult?.call(name, ok, text);
-        results.add({
-          'id': t['id'] ?? 'call_${t['index'] ?? 0}',
-          'name': name,
-          'args': args,
-          'result': text,
-          'isError': !ok,
-        });
-      } catch (e) {
-        onToolResult?.call(name, false, '$e');
-        results.add({
-          'id': t['id'] ?? 'call_${t['index'] ?? 0}',
-          'name': name,
-          'args': args,
-          'result': '$e',
-          'isError': true,
-        });
-      }
-    }
-    if (results.isEmpty) return null;
-
-    return _McpToolResults(list: list, data: results);
-  }
+  // ── 内部: sendMessageStream / send 共用 ──
 
   /// 构建 MCP 工具调用的 follow-up 消息列表
   List<Map<String, dynamic>> _buildFollowUpMessages({
@@ -306,27 +211,15 @@ class LlmClient {
       msgs.add({
         'role': 'tool',
         'tool_call_id': r['id'],
-        'content':
-            r['isError'] == true ? '错误: ${r['result']}' : r['result'],
+        'content': r['isError'] == true ? '错误: ${r['result']}' : r['result'],
       });
     }
     return msgs;
   }
 
-  /// 从文本中移除原始 tool_call XML 标签
-  static final RegExp _toolCallXmlRegex = RegExp(
-    r'<tool_call>\s*<tool_name>[^<]*</tool_name>\s*<arguments>\s*{.*?}\s*</arguments>\s*</tool_call>',
-    dotAll: true,
-  );
-
-  static String _stripTextToolCalls(String text) {
-    return text.replaceAll(_toolCallXmlRegex, '').replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
-  }
-
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
     List<Map<String, dynamic>> messages,
-  ) =>
-      _provider.sendMessageStreamWithMessages(messages);
+  ) => _provider.sendMessageStreamWithMessages(messages);
 
   // ── 高级 API ──
 
@@ -385,106 +278,29 @@ class LlmClient {
     ChatMessage userMsg,
     String assistantContent,
   ) async {
-    final List<dynamic> list;
-    try {
-      list = jsonDecode(toolCallsJson);
-    } catch (e) {
-      onError?.call('解析 tool_calls 失败: $e');
-      return;
-    }
-    if (list.isEmpty) return;
+    final result = await McpService.processAndExecuteToolCalls(
+      session: _session,
+      accumulatedContent: assistantContent,
+      nativeToolCallsJson: toolCallsJson,
+    );
 
-    // 优先从 session 取已缓存的 MCP Client
-    Client? mc = _session.mcpClient;
-    if (mc == null) {
-      final svc = _session.mcpServer?.name;
-      if (svc == null) return;
+    if (result == null || _cancelled) return;
 
-      mc = McpService.getMCPClient(svc);
-      if (mc == null) {
-        final inited = await McpService.initializeSessionMcpServices(_session);
-        if (inited.isEmpty) {
-          onError?.call('MCP 未初始化: $svc');
-          return;
-        }
-        mc = McpService.getMCPClient(svc);
-      }
-      if (mc == null) return;
-      _session.mcpClient = mc;
+    // 通过回调通知
+    for (final r in result.executionResults) {
+      final name = r['name'] as String;
+      final ok = !(r['isError'] == true);
+      onToolResult?.call(name, ok, r['result'] as String);
     }
 
-    // 执行
-    final results = <Map<String, dynamic>>[];
-    for (final raw in list) {
-      if (_cancelled) break;
-      final t = raw as Map<String, dynamic>;
-      final name = t['name'] as String? ?? '';
-      final args = t['arguments'] as Map<String, dynamic>? ?? {};
-      if (name.isEmpty) continue;
+    // 组装 follow-up 消息并流式输出
+    final msgs = _buildFollowUpMessages(
+      list: result.toolCallList,
+      results: result.executionResults,
+      userMsg: userMsg,
+      assistantContent: result.cleanContent,
+    );
 
-      onToolCall?.call(name, args);
-      try {
-        final r = await mc.callTool(name, args);
-        final ok = r.isError != true;
-        final buf = StringBuffer();
-        for (final c in r.content) {
-          if (c is TextContent) {
-            buf.writeln(c.text);
-          } else if (c is ImageContent) {
-            buf.writeln('[图片: ${c.data ?? c.url}]');
-          }
-        }
-        final text = buf.toString().trim();
-        onToolResult?.call(name, ok, text);
-        results.add({
-          'id': t['id'] ?? 'call_${t['index'] ?? 0}',
-          'result': text,
-          'isError': !ok,
-        });
-      } catch (e) {
-        onToolResult?.call(name, false, '$e');
-        results.add({
-          'id': t['id'] ?? 'call_${t['index'] ?? 0}',
-          'result': '$e',
-          'isError': true,
-        });
-      }
-    }
-    if (results.isEmpty || _cancelled) return;
-
-    // 组装 follow-up 消息
-    final msgs = <Map<String, dynamic>>[];
-    final sp = _provider.buildSystemPrompt(session: _session);
-    if (sp.isNotEmpty) msgs.add({'role': 'system', 'content': sp});
-    msgs.add({'role': 'user', 'content': userMsg.content});
-    msgs.add({
-      'role': 'assistant',
-      'content': assistantContent.isNotEmpty ? assistantContent : null,
-      'tool_calls':
-          list.map((tc) {
-            final m = tc as Map<String, dynamic>;
-            return {
-              'id': m['id'] ?? 'call_${m['index'] ?? 0}',
-              'type': 'function',
-              'function': {
-                'name': m['name'] ?? '',
-                'arguments':
-                    m['arguments'] is String
-                        ? m['arguments']
-                        : jsonEncode(m['arguments'] ?? {}),
-              },
-            };
-          }).toList(),
-    });
-    for (final r in results) {
-      msgs.add({
-        'role': 'tool',
-        'tool_call_id': r['id'],
-        'content': r['isError'] == true ? '错误: ${r['result']}' : r['result'],
-      });
-    }
-
-    // follow-up 流式
     final s2 = _provider.sendMessageStreamWithMessages(msgs);
     await for (final chunk in s2) {
       if (_cancelled) break;
@@ -494,11 +310,4 @@ class LlmClient {
       if (t.isNotEmpty) onThink?.call(t);
     }
   }
-}
-
-/// MCP 工具调用执行结果
-class _McpToolResults {
-  final List<dynamic> list;
-  final List<Map<String, dynamic>> data;
-  const _McpToolResults({required this.list, required this.data});
 }

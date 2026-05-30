@@ -6,6 +6,22 @@ import '../models/chat/chat_session.dart';
 import '../models/bigmodel/mcp_config.dart';
 import 'mcp_storage_service.dart';
 
+/// MCP 工具执行结果（统一返回）
+class McpExecutionResult {
+  /// 已剥离工具调用 XML 的干净文本
+  final String cleanContent;
+  /// 用于 OpenAI 兼容 follow-up 消息构建的工具调用列表
+  final List<Map<String, dynamic>> toolCallList;
+  /// 每个工具的调用执行结果
+  final List<Map<String, dynamic>> executionResults;
+
+  const McpExecutionResult({
+    required this.cleanContent,
+    required this.toolCallList,
+    required this.executionResults,
+  });
+}
+
 /// MCP工具调用结果
 class McpToolResult {
   final String toolName;
@@ -632,6 +648,7 @@ class McpService {
   }
 
   /// 解析AI响应中的工具调用请求
+  /// 唯一格式: `<tool_calls><invoke name="工具名"><arguments>{json}</arguments></invoke></tool_calls>`
   static List<Map<String, dynamic>> parseToolCallsFromResponse(
     String response,
   ) {
@@ -640,221 +657,74 @@ class McpService {
     debugPrint('🔍 开始解析AI响应中的工具调用...');
     debugPrint('🔍 响应内容长度: ${response.length}');
 
-    // 格式1: XML标签格式 <tool_call><tool_name>工具名</tool_name><arguments>{...}</arguments></tool_call>
-    final xmlNewRegex = RegExp(
-      r'<tool_call>\s*<tool_name>([^<]+)</tool_name>\s*<arguments>\s*({.*?})\s*</arguments>\s*</tool_call>',
+    final blockRegex = RegExp(
+      r'<tool_calls>\s*(.*?)\s*</tool_calls>',
       dotAll: true,
     );
-    final xmlNewMatches = xmlNewRegex.allMatches(response);
-
-    for (final match in xmlNewMatches) {
-      try {
-        final toolName = match.group(1)?.trim();
-        final argsJson = match.group(2)?.trim();
-        if (toolName != null && argsJson != null) {
-          final args = jsonDecode(argsJson) as Map<String, dynamic>;
-          toolCalls.add({'tool': toolName, 'args': args});
-          debugPrint('✅ 解析新XML格式工具调用: $toolName, 参数: $args');
-        }
-      } catch (e) {
-        debugPrint('❌ 解析新XML格式工具调用失败: ${match.group(0)}, 错误: $e');
-      }
-    }
-
-    // 格式2: 方括号格式 [TOOL_CALL: 工具名称] {json} [/TOOL_CALL]
-    final bracketNewRegex = RegExp(
-      r'\[TOOL_CALL:\s*([^\]]+)\]\s*({.*?})\s*\[/TOOL_CALL\]',
-      dotAll: true,
-    );
-    final bracketNewMatches = bracketNewRegex.allMatches(response);
-
-    for (final match in bracketNewMatches) {
-      try {
-        final toolName = match.group(1)?.trim();
-        final argsJson = match.group(2)?.trim();
-        if (toolName != null && argsJson != null) {
-          final args = jsonDecode(argsJson) as Map<String, dynamic>;
-          toolCalls.add({'tool': toolName, 'args': args});
-          debugPrint('✅ 解析新方括号格式工具调用: $toolName, 参数: $args');
-        }
-      } catch (e) {
-        debugPrint('❌ 解析新方括号格式工具调用失败: ${match.group(0)}, 错误: $e');
-      }
-    }
-
-    // 格式3: 花括号格式 {"tool_name": "工具名", "arguments": {...}}
-    final braceNewRegex = RegExp(
-      r'{\s*"tool_name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*({.*?})\s*}',
-      dotAll: true,
-    );
-    final braceNewMatches = braceNewRegex.allMatches(response);
-
-    for (final match in braceNewMatches) {
-      try {
-        final toolName = match.group(1)?.trim();
-        final argsJson = match.group(2)?.trim();
-        if (toolName != null && argsJson != null) {
-          final args = jsonDecode(argsJson) as Map<String, dynamic>;
-          toolCalls.add({'tool': toolName, 'args': args});
-          debugPrint('✅ 解析新花括号格式工具调用: $toolName, 参数: $args');
-        }
-      } catch (e) {
-        debugPrint('❌ 解析新花括号格式工具调用失败: ${match.group(0)}, 错误: $e');
-      }
-    }
-
-    // 兼容性支持 - 原有的XML格式: <tool_call>{"tool": "get_weather", "args": {"city": "北京"}}</tool_call>
-    if (toolCalls.isEmpty) {
-      final xmlOldRegex = RegExp(r'<tool_call>(.*?)</tool_call>', dotAll: true);
-      final xmlOldMatches = xmlOldRegex.allMatches(response);
-
-      for (final match in xmlOldMatches) {
-        try {
-          final jsonStr = match.group(1)?.trim();
-          if (jsonStr != null && jsonStr.isNotEmpty) {
-            final toolCall = jsonDecode(jsonStr) as Map<String, dynamic>;
-            // 转换为统一格式
-            if (toolCall.containsKey('tool') && toolCall.containsKey('args')) {
-              toolCalls.add({
-                'tool': toolCall['tool'],
-                'args': toolCall['args'] as Map<String, dynamic>,
-              });
-              debugPrint(
-                '✅ 解析旧XML格式工具调用: ${toolCall['tool']}, 参数: ${toolCall['args']}',
-              );
-            }
-          }
-        } catch (e) {
-          debugPrint('❌ 解析旧XML格式工具调用失败: ${match.group(1)}, 错误: $e');
-        }
-      }
-    }
-
-    // 兼容性支持 - 旧的方括号格式: [TOOL_CALL: toolname.method(args)]
-    if (toolCalls.isEmpty) {
-      final bracketOldRegex = RegExp(
-        r'\[TOOL_CALL:\s*([^.]+)\.([^(]+)\(([^)]*)\)\]',
+    final blockMatch = blockRegex.firstMatch(response);
+    if (blockMatch == null) {
+      debugPrint('⚠️ 没有找到 <tool_calls> 标签，响应内容前200字符：');
+      debugPrint(
+        response.length > 200 ? '${response.substring(0, 200)}...' : response,
       );
-      final bracketOldMatches = bracketOldRegex.allMatches(response);
-
-      for (final match in bracketOldMatches) {
-        try {
-          final service = match.group(1)?.trim();
-          final method = match.group(2)?.trim();
-          final argsStr = match.group(3)?.trim() ?? '';
-
-          if (service != null && method != null) {
-            final toolName = '$service.$method';
-            final args = <String, dynamic>{};
-
-            // 解析参数字符串
-            if (argsStr.isNotEmpty) {
-              _parseArgumentString(argsStr, args);
-            }
-
-            toolCalls.add({'tool': toolName, 'args': args});
-            debugPrint('✅ 解析旧方括号格式工具调用: $toolName, 参数: $args');
-          }
-        } catch (e) {
-          debugPrint('❌ 解析旧方括号格式工具调用失败: ${match.group(0)}, 错误: $e');
-        }
-      }
+      return toolCalls;
     }
 
-    // 兼容性支持 - 旧的花括号格式: {tool_call: toolname(args)}
-    if (toolCalls.isEmpty) {
-      final braceOldRegex = RegExp(
-        r'\{tool_call:\s*([^(]+)\(([^)]*)\)\}',
-        caseSensitive: false,
-      );
-      final braceOldMatches = braceOldRegex.allMatches(response);
+    final inner = blockMatch.group(1);
+    if (inner == null) return toolCalls;
 
-      for (final match in braceOldMatches) {
-        try {
-          final toolName = match.group(1)?.trim();
-          final argsStr = match.group(2)?.trim() ?? '';
+    final invokeRegex = RegExp(
+      r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
+      dotAll: true,
+    );
 
-          if (toolName != null && toolName.isNotEmpty) {
-            final args = <String, dynamic>{};
+    for (final im in invokeRegex.allMatches(inner)) {
+      try {
+        final toolName = im.group(1)?.trim();
+        final invokeBody = im.group(2);
+        if (toolName == null || invokeBody == null) continue;
 
-            if (argsStr.isNotEmpty) {
-              _parseArgumentString(argsStr, args);
-            }
+        final args = <String, dynamic>{};
 
-            toolCalls.add({'tool': toolName, 'args': args});
-            debugPrint('✅ 解析旧花括号格式工具调用: $toolName, 参数: $args');
+        // 子格式 A: <parameter name="x">value</parameter>
+        final paramRegex = RegExp(
+          r'<parameter\s+name="([^"]+)"[^>]*>([^<]*)</parameter>',
+        );
+        for (final pm in paramRegex.allMatches(invokeBody)) {
+          final name = pm.group(1)?.trim();
+          final value = pm.group(2)?.trim() ?? '';
+          if (name != null && name.isNotEmpty) {
+            args[name] = value;
           }
-        } catch (e) {
-          debugPrint('❌ 解析旧花括号格式工具调用失败: ${match.group(0)}, 错误: $e');
         }
+
+        // 子格式 B: <arguments>{json}</arguments>
+        if (args.isEmpty) {
+          final argsJsonRegex = RegExp(
+            r'<arguments>\s*(\{.*?\})\s*</arguments>',
+            dotAll: true,
+          );
+          final argsJsonMatch = argsJsonRegex.firstMatch(invokeBody);
+          if (argsJsonMatch != null) {
+            final argsJson = argsJsonMatch.group(1)?.trim();
+            if (argsJson != null) {
+              try {
+                final parsed = jsonDecode(argsJson) as Map<String, dynamic>;
+                args.addAll(parsed);
+              } catch (_) {}
+            }
+          }
+        }
+
+        toolCalls.add({'tool': toolName, 'args': args});
+        debugPrint('✅ 解析工具调用: $toolName, 参数: $args');
+      } catch (e) {
+        debugPrint('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
       }
     }
 
     debugPrint('🔍 工具调用解析完成，找到 ${toolCalls.length} 个工具调用');
-
-    // 如果没有找到任何工具调用，输出调试信息
-    if (toolCalls.isEmpty) {
-      debugPrint('⚠️ 没有找到任何工具调用，响应内容前200字符：');
-      debugPrint(
-        response.length > 200 ? '${response.substring(0, 200)}...' : response,
-      );
-    }
-
     return toolCalls;
-  }
-
-  /// 解析参数字符串的辅助方法
-  static void _parseArgumentString(String argsStr, Map<String, dynamic> args) {
-    // 先尝试JSON格式
-    try {
-      if (argsStr.startsWith('{') && argsStr.endsWith('}')) {
-        final jsonArgs = jsonDecode(argsStr) as Map<String, dynamic>;
-        args.addAll(jsonArgs);
-        return;
-      }
-    } catch (e) {
-      debugPrint('🔍 非JSON格式参数，尝试键值对解析');
-    }
-
-    // 尝试key="value"格式
-    final argRegex = RegExp(r'(\w+)="([^"]*)"');
-    final argMatches = argRegex.allMatches(argsStr);
-
-    for (final argMatch in argMatches) {
-      final key = argMatch.group(1);
-      final value = argMatch.group(2);
-      if (key != null && value != null) {
-        args[key] = value;
-      }
-    }
-
-    // 如果没有匹配到，尝试key='value'格式
-    if (args.isEmpty) {
-      final argRegex2 = RegExp(r"(\w+)='([^']*)'");
-      final argMatches2 = argRegex2.allMatches(argsStr);
-
-      for (final argMatch in argMatches2) {
-        final key = argMatch.group(1);
-        final value = argMatch.group(2);
-        if (key != null && value != null) {
-          args[key] = value;
-        }
-      }
-    }
-
-    // 如果还是没有匹配到，尝试key:value格式
-    if (args.isEmpty) {
-      final argRegex3 = RegExp(r'(\w+):\s*"([^"]*)"');
-      final argMatches3 = argRegex3.allMatches(argsStr);
-
-      for (final argMatch in argMatches3) {
-        final key = argMatch.group(1);
-        final value = argMatch.group(2);
-        if (key != null && value != null) {
-          args[key] = value;
-        }
-      }
-    }
   }
 
   /// 获取会话的真实MCP工具信息用于API调用
@@ -868,50 +738,35 @@ class McpService {
     buffer.writeln('## 可用的MCP工具');
     buffer.writeln();
 
-    // 更严格的格式要求说明
+    // 工具调用格式要求
     buffer.writeln('### 🚨 工具调用格式要求 - 必须严格遵守');
     buffer.writeln();
-    buffer.writeln('**支持的调用格式（任选其一）：**');
+    buffer.writeln('**工具调用必须使用以下 `<tool_calls>` 格式：**');
     buffer.writeln();
-
-    buffer.writeln('1. **XML标签格式（推荐）**：');
-    buffer.writeln('```');
-    buffer.writeln('<tool_call>');
-    buffer.writeln('<tool_name>工具名称</tool_name>');
+    buffer.writeln('```xml');
+    buffer.writeln('<tool_calls>');
+    buffer.writeln('<invoke name="工具名称">');
     buffer.writeln('<arguments>');
     buffer.writeln('{"参数名1": "参数值1", "参数名2": "参数值2"}');
     buffer.writeln('</arguments>');
-    buffer.writeln('</tool_call>');
+    buffer.writeln('</invoke>');
+    buffer.writeln('</tool_calls>');
     buffer.writeln('```');
     buffer.writeln();
-
-    buffer.writeln('2. **方括号格式**：');
-    buffer.writeln('```');
-    buffer.writeln('[TOOL_CALL: 工具名称]');
-    buffer.writeln('{"参数名1": "参数值1", "参数名2": "参数值2"}');
-    buffer.writeln('[/TOOL_CALL]');
-    buffer.writeln('```');
-    buffer.writeln();
-
-    buffer.writeln('3. **花括号格式**：');
-    buffer.writeln('```');
-    buffer.writeln('{');
-    buffer.writeln('  "tool_name": "工具名称",');
-    buffer.writeln('  "arguments": {');
-    buffer.writeln('    "参数名1": "参数值1",');
-    buffer.writeln('    "参数名2": "参数值2"');
-    buffer.writeln('  }');
-    buffer.writeln('}');
+    buffer.writeln('**无参数的工具调用：**');
+    buffer.writeln('```xml');
+    buffer.writeln('<tool_calls>');
+    buffer.writeln('<invoke name="工具名称">');
+    buffer.writeln('</invoke>');
+    buffer.writeln('</tool_calls>');
     buffer.writeln('```');
     buffer.writeln();
-
     buffer.writeln('**关键要求：**');
     buffer.writeln('- ✅ 工具名称必须与下方列出的工具名**完全匹配**（区分大小写）');
     buffer.writeln('- ✅ 参数必须是**有效的JSON格式**，字符串值用双引号包围');
     buffer.writeln('- ✅ 必须提供所有**必需参数**，可选参数可以省略');
     buffer.writeln('- ✅ 参数类型必须正确（字符串、数字、布尔值、数组、对象）');
     buffer.writeln('- ✅ 每次只能调用**一个工具**，等待结果后再调用下一个');
-    buffer.writeln('- ❌ 不要混合使用不同格式');
     buffer.writeln('- ❌ 不要在工具调用前后添加额外的标记或说明');
     buffer.writeln();
 
@@ -1018,20 +873,23 @@ class McpService {
               }
             }
 
-            // 生成三种格式的示例
+            // 生成示例
             buffer.writeln('```xml');
-            buffer.writeln('<tool_call>');
-            buffer.writeln('<tool_name>${tool.name}</tool_name>');
-            buffer.writeln('<arguments>');
-            try {
-              const encoder = JsonEncoder.withIndent('  ');
-              final jsonString = encoder.convert(exampleArgs);
-              buffer.writeln(jsonString);
-            } catch (e) {
-              buffer.writeln('{}');
+            buffer.writeln('<tool_calls>');
+            buffer.writeln('<invoke name="${tool.name}">');
+            if (exampleArgs.isNotEmpty) {
+              buffer.writeln('<arguments>');
+              try {
+                const encoder = JsonEncoder.withIndent('  ');
+                final jsonString = encoder.convert(exampleArgs);
+                buffer.writeln(jsonString);
+              } catch (e) {
+                buffer.writeln('{}');
+              }
+              buffer.writeln('</arguments>');
             }
-            buffer.writeln('</arguments>');
-            buffer.writeln('</tool_call>');
+            buffer.writeln('</invoke>');
+            buffer.writeln('</tool_calls>');
             buffer.writeln('```');
             buffer.writeln();
           } else {
@@ -1039,12 +897,10 @@ class McpService {
             buffer.writeln();
             buffer.writeln('**调用示例**:');
             buffer.writeln('```xml');
-            buffer.writeln('<tool_call>');
-            buffer.writeln('<tool_name>${tool.name}</tool_name>');
-            buffer.writeln('<arguments>');
-            buffer.writeln('{}');
-            buffer.writeln('</arguments>');
-            buffer.writeln('</tool_call>');
+            buffer.writeln('<tool_calls>');
+            buffer.writeln('<invoke name="${tool.name}">');
+            buffer.writeln('</invoke>');
+            buffer.writeln('</tool_calls>');
             buffer.writeln('```');
             buffer.writeln();
           }
@@ -1126,6 +982,23 @@ class McpService {
     return openAITools;
   }
 
+  // ──────────────────────────────────────────────
+  // 工具调用 XML 剥离（从模型输出中移除 <tool_calls> 块）
+  // ──────────────────────────────────────────────
+
+  static final RegExp _stripToolCallsBlockRegex = RegExp(
+    r'<tool_calls>.*?</tool_calls>',
+    dotAll: true,
+  );
+
+  /// 从文本中移除 `<tool_calls>` 标签块，返回干净的可显示文本
+  static String stripToolCallXml(String text) {
+    return text
+        .replaceAll(_stripToolCallsBlockRegex, '')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+  }
+
   /// 检查会话是否有可用的MCP工具
   static bool hasAvailableTools(ChatSession session) {
     if (session.mcpServer == null) return false;
@@ -1133,5 +1006,135 @@ class McpService {
 
     final tools = getSessionAvailableTools(session);
     return tools.isNotEmpty;
+  }
+
+  // ──────────────────────────────────────────────
+  // 统一工具调用处理入口
+  // ──────────────────────────────────────────────
+
+  /// 处理模型响应中的工具调用：解析 → 获取 MCP 客户端 → 执行 → 返回
+  ///
+  /// [nativeToolCallsJson] 不为空时走原生 JSON tool_calls 解析；
+  /// 否则从 [accumulatedContent] 中解析文本格式的工具调用。
+  ///
+  /// 返回 null 表示没有工具调用或 MCP 未配置。
+  static Future<McpExecutionResult?> processAndExecuteToolCalls({
+    required ChatSession session,
+    required String accumulatedContent,
+    String? nativeToolCallsJson,
+  }) async {
+    if (session.mcpServer == null) return null;
+
+    // 1. 获取或初始化 MCP 客户端
+    final mc = await _getOrInitClient(session);
+    if (mc == null) return null;
+
+    // 2. 解析工具调用
+    List<Map<String, dynamic>> toolCalls;
+    String cleanContent = accumulatedContent;
+
+    if (nativeToolCallsJson != null && nativeToolCallsJson.isNotEmpty) {
+      // 原生 JSON tool_calls
+      try {
+        final List<dynamic> list = jsonDecode(nativeToolCallsJson);
+        toolCalls =
+            list
+                .map((raw) {
+                  final m = raw as Map<String, dynamic>;
+                  return {
+                    'tool': m['name'] as String? ?? '',
+                    'args': m['arguments'] as Map<String, dynamic>? ?? {},
+                    'id': m['id'],
+                    'index': m['index'],
+                  };
+                })
+                .where((tc) => (tc['tool'] as String).isNotEmpty)
+                .toList();
+      } catch (_) {
+        return null;
+      }
+    } else {
+      // 文本格式 tool_calls
+      toolCalls = parseToolCallsFromResponse(accumulatedContent);
+      if (toolCalls.isEmpty) return null;
+      cleanContent = stripToolCallXml(accumulatedContent);
+    }
+
+    if (toolCalls.isEmpty) return null;
+
+    // 3. 逐个执行工具
+    final executionResults = <Map<String, dynamic>>[];
+    final toolCallList = <Map<String, dynamic>>[];
+
+    for (int i = 0; i < toolCalls.length; i++) {
+      final tc = toolCalls[i];
+      final name = tc['tool'] as String;
+      final args = tc['args'] as Map<String, dynamic>;
+      final callId = (tc['id'] as String?) ?? 'call_$i';
+
+      toolCallList.add({
+        'id': callId,
+        'name': name,
+        'arguments': args,
+        'index': i,
+      });
+
+      try {
+        final r = await mc.callTool(name, args);
+        final ok = r.isError != true;
+        final buf = StringBuffer();
+        for (final c in r.content) {
+          if (c is TextContent) {
+            buf.writeln(c.text);
+          } else if (c is ImageContent) {
+            buf.writeln('[图片: ${c.data ?? c.url}]');
+          }
+        }
+        final text = buf.toString().trim();
+        executionResults.add({
+          'id': callId,
+          'name': name,
+          'args': args,
+          'result': text,
+          'isError': !ok,
+        });
+      } catch (e) {
+        executionResults.add({
+          'id': callId,
+          'name': name,
+          'args': args,
+          'result': '$e',
+          'isError': true,
+        });
+      }
+    }
+
+    return McpExecutionResult(
+      cleanContent: cleanContent,
+      toolCallList: toolCallList,
+      executionResults: executionResults,
+    );
+  }
+
+  /// 获取或初始化会话的 MCP 客户端（带 session 级缓存）
+  static Future<Client?> _getOrInitClient(ChatSession session) async {
+    Client? mc = session.mcpClient;
+    if (mc != null) return mc;
+
+    final svc = session.mcpServer?.name;
+    if (svc == null) return null;
+
+    mc = getMCPClient(svc);
+    if (mc == null) {
+      await ensureGlobalConfigsLoaded();
+      final inited = await initializeSessionMcpServices(session);
+      if (inited.isEmpty) return null;
+      mc = getMCPClient(svc);
+    }
+
+    if (mc != null) {
+      session.mcpClient = mc;
+    }
+    return mc;
   }
 }

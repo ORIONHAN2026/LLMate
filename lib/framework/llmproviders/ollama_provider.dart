@@ -10,6 +10,8 @@ import 'base_provider.dart';
 
 /// Ollama 本地模型提供商
 class OllamaProvider extends BaseLlmProvider {
+  @override
+  String get providerName => 'Ollama';
 
 
   @override
@@ -408,48 +410,7 @@ class OllamaProvider extends BaseLlmProvider {
     return [];
   }
 
-  @override
-  Future<String?> sendSimpleMessage(String prompt) async {
-    if (model == null) {
-      return null;
-    }
 
-    try {
-      final requestData = {
-        'model': model!.model,
-        'messages': [
-          {'role': 'user', 'content': prompt},
-        ],
-        'stream': false,
-        'options': {'temperature': model!.chatSettings?.temperature ?? 0.7},
-      };
-
-      // 构建完整的 API 端点
-      String apiUrl = model!.apiUrl ?? 'http://localhost:11434/api';
-      if (!apiUrl.endsWith('/chat')) {
-        apiUrl = apiUrl.endsWith('/') ? '${apiUrl}chat' : '$apiUrl/chat';
-      }
-
-      final response = await http
-          .post(
-            Uri.parse(apiUrl),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(requestData),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final rawContent = data['message']?['content']?.toString();
-        if (rawContent != null) {
-          return _processThinkContent(rawContent);
-        }
-      }
-    } catch (e) {
-      debugPrint('Ollama sendSimpleMessage 失败: $e');
-    }
-    return null;
-  }
 
   /// 处理内容块，分离思考内容和正文内容
   /// 
@@ -513,16 +474,5 @@ class OllamaProvider extends BaseLlmProvider {
     };
   }
 
-  /// 处理 <think> 标签内容，将其从正文中移除（用于非流式响应）
-  String _processThinkContent(String content) {
-    // 检查是否包含 <think> 标签
-    if (!content.contains('<think>')) {
-      return content;
-    }
-
-    // 使用正则表达式移除 <think> 标签及其内容
-    final thinkRegex = RegExp(r'<think>\s*(.*?)\s*</think>', dotAll: true);
-    return content.replaceAll(thinkRegex, '').trim();
-  }
 
  }

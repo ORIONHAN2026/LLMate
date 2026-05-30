@@ -605,8 +605,8 @@ class McpService {
         }
       } catch (e) {
         debugPrint('❌ 执行工具调用失败: $e');
-        final toolName = toolCall['tool'] as String? ?? 'unknown';
-        final args = toolCall['args'] as Map<String, dynamic>? ?? {};
+        final toolName = toolCall['name'] as String? ?? 'unknown';
+        final args = toolCall['arguments'] as Map<String, dynamic>? ?? {};
         results.add(
           McpToolResult(
             toolName: toolName,
@@ -1055,7 +1055,7 @@ class McpService {
     String cleanContent = accumulatedContent;
 
     if (nativeToolCallsJson != null && nativeToolCallsJson.isNotEmpty) {
-      // JSON tool_calls（原生格式 name/arguments 或文本解析格式 tool/args 均可）
+      // JSON tool_calls（统一使用 name/arguments 格式）
       try {
         final List<dynamic> list = jsonDecode(nativeToolCallsJson);
         toolCalls =
@@ -1063,15 +1063,13 @@ class McpService {
                 .map((raw) {
                   final m = raw as Map<String, dynamic>;
                   return {
-                    'tool': (m['name'] ?? m['tool'] ?? '') as String,
-                    'args':
-                        (m['arguments'] ?? m['args'] ??
-                            <String, dynamic>{}) as Map<String, dynamic>,
+                    'name': (m['name'] ?? '') as String,
+                    'arguments': (m['arguments'] ?? <String, dynamic>{}) as Map<String, dynamic>,
                     'id': m['id'],
                     'index': m['index'],
                   };
                 })
-                .where((tc) => (tc['tool'] as String).isNotEmpty)
+                .where((tc) => (tc['name'] as String).isNotEmpty)
                 .toList();
       } catch (_) {
         return null;
@@ -1091,8 +1089,8 @@ class McpService {
 
     for (int i = 0; i < toolCalls.length; i++) {
       final tc = toolCalls[i];
-      final name = tc['tool'] as String;
-      final args = tc['args'] as Map<String, dynamic>;
+      final name = tc['name'] as String;
+      final args = tc['arguments'] as Map<String, dynamic>;
       final callId = (tc['id'] as String?) ?? 'call_$i';
 
       toolCallList.add({

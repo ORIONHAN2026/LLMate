@@ -373,55 +373,76 @@ class SseClientTransport implements ClientTransport {
       );
     }
 
-    try {
-      final jsonMessage = jsonEncode(message);
-      print('[MCP-SSE] 📤 POST $_messageEndpoint');
-      print('[MCP-SSE]    Body: $jsonMessage');
+    const maxRetries = 3;
+    final retryableStatusCodes = {502, 503, 504};
 
-      final url = Uri.parse(_messageEndpoint!);
-      final client = HttpClient();
-      final request = await client.postUrl(url);
-
-      // Set headers
-      request.headers.contentType = ContentType.json;
-      if (headers != null) {
-        headers!.forEach((name, value) {
-          request.headers.add(name, value);
-        });
-      }
-
-      // Send the request
-      request.write(jsonMessage);
-      final response = await request.close();
-
-      // Check for successful delivery (200 OK or 202 Accepted)
-      if (response.statusCode == 200 || response.statusCode == 202) {
-        final responseBody = await response.transform(utf8.decoder).join();
-        print('[MCP-SSE] ✅ POST 响应 ${response.statusCode}: $responseBody');
-        
-        // Some MCP servers return JSON-RPC responses in the POST body directly
-        // instead of via the SSE stream. Forward it to the message controller.
-        try {
-          final parsed = jsonDecode(responseBody);
-          if (parsed is Map && parsed.containsKey('jsonrpc') && parsed.containsKey('id')) {
-            print('[MCP-SSE] 📥 从 POST 响应中提取到 JSON-RPC 响应，转发到 controller');
-            _messageController.add(parsed);
-          }
-        } catch (_) {
-          // Not valid JSON or not a JSON-RPC response, ignore
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        final jsonMessage = jsonEncode(message);
+        if (attempt > 0) {
+          final delay = Duration(seconds: 1 << (attempt - 1)); // 1s, 2s, 4s
+          print('[MCP-SSE] 🔄 重试 $attempt/$maxRetries (${delay.inSeconds}s 后)...');
+          await Future.delayed(delay);
         }
-      } else {
-        final responseBody = await response.transform(utf8.decoder).join();
-        print('[MCP-SSE] ❌ POST 错误响应 ${response.statusCode}: $responseBody');
-        throw McpError('Error sending message: ${response.statusCode}');
-      }
+        print('[MCP-SSE] 📤 POST $_messageEndpoint (attempt ${attempt + 1})');
+        print('[MCP-SSE]    Body: $jsonMessage');
 
-      // Close the HTTP client
-      client.close();
-      _logger.debug('Message sent successfully');
-    } catch (e) {
-      _logger.debug('Error sending message: $e');
-      rethrow;
+        final url = Uri.parse(_messageEndpoint!);
+        final client = HttpClient();
+        final request = await client.postUrl(url);
+
+        // Set headers
+        request.headers.contentType = ContentType.json;
+        if (headers != null) {
+          headers!.forEach((name, value) {
+            request.headers.add(name, value);
+          });
+        }
+
+        // Send the request
+        request.write(jsonMessage);
+        final response = await request.close();
+
+        // Check for successful delivery (200 OK or 202 Accepted)
+        if (response.statusCode == 200 || response.statusCode == 202) {
+          final responseBody = await response.transform(utf8.decoder).join();
+          print('[MCP-SSE] ✅ POST 响应 ${response.statusCode}: $responseBody');
+
+          // Some MCP servers return JSON-RPC responses in the POST body directly
+          // instead of via the SSE stream. Forward it to the message controller.
+          try {
+            final parsed = jsonDecode(responseBody);
+            if (parsed is Map && parsed.containsKey('jsonrpc') && parsed.containsKey('id')) {
+              print('[MCP-SSE] 📥 从 POST 响应中提取到 JSON-RPC 响应，转发到 controller');
+              _messageController.add(parsed);
+            }
+          } catch (_) {
+            // Not valid JSON or not a JSON-RPC response, ignore
+          }
+
+          client.close();
+          _logger.debug('Message sent successfully');
+          return; // 成功，退出方法
+        } else {
+          final responseBody = await response.transform(utf8.decoder).join();
+          client.close();
+          print('[MCP-SSE] ❌ POST 错误响应 ${response.statusCode}: $responseBody');
+
+          if (retryableStatusCodes.contains(response.statusCode) &&
+              attempt < maxRetries) {
+            continue; // 可重试的状态码，继续下一次尝试
+          }
+          throw McpError('Error sending message: ${response.statusCode}: $responseBody');
+        }
+      } catch (e) {
+        if (e is McpError) rethrow; // 已经是 McpError，直接抛出
+        print('[MCP-SSE] ❌ 发送异常: $e');
+        if (attempt < maxRetries) {
+          continue; // 网络异常，重试
+        }
+        _logger.debug('Error sending message after $maxRetries retries: $e');
+        rethrow;
+      }
     }
   }
 

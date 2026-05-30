@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
@@ -15,15 +16,63 @@ abstract class BaseLlmProvider {
   /// 当前配置的模型
   ChatModel? _model;
 
+  /// 提供商显示名称（子类重写，用于错误/调试信息）
+  String get providerName => 'API';
+
   /// 代码文件类型集合
   static const Set<String> codeFileExtensions = {
-    '.dart', '.js', '.ts', '.py', '.java', '.cpp', '.c', '.h', '.hpp',
-    '.go', '.mod', '.sum', '.rs', '.rb', '.php', '.swift', '.kt', '.scala',
-    '.html', '.css', '.json', '.xml', '.yaml', '.yml', '.toml', '.ini',
-    '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd',
-    '.sql', '.r', '.m', '.mm', '.pl', '.lua', '.vim', '.asm',
-    '.conf', '.config', '.cfg', '.env', '.properties',
-    '.dockerfile', '.gitignore', '.gitattributes', '.makefile', '.cmake', '.gradle'
+    '.dart',
+    '.js',
+    '.ts',
+    '.py',
+    '.java',
+    '.cpp',
+    '.c',
+    '.h',
+    '.hpp',
+    '.go',
+    '.mod',
+    '.sum',
+    '.rs',
+    '.rb',
+    '.php',
+    '.swift',
+    '.kt',
+    '.scala',
+    '.html',
+    '.css',
+    '.json',
+    '.xml',
+    '.yaml',
+    '.yml',
+    '.toml',
+    '.ini',
+    '.sh',
+    '.bash',
+    '.zsh',
+    '.fish',
+    '.ps1',
+    '.bat',
+    '.cmd',
+    '.sql',
+    '.r',
+    '.m',
+    '.mm',
+    '.pl',
+    '.lua',
+    '.vim',
+    '.asm',
+    '.conf',
+    '.config',
+    '.cfg',
+    '.env',
+    '.properties',
+    '.dockerfile',
+    '.gitignore',
+    '.gitattributes',
+    '.makefile',
+    '.cmake',
+    '.gradle',
   };
 
   /// 构造函数
@@ -89,25 +138,200 @@ abstract class BaseLlmProvider {
     ChatSession? session,
   });
 
-  /// 发送简单文本消息并获取完整响应（用于代码描述等场景）
-  Future<String?> sendSimpleMessage(String prompt) async {
+  // ──────────────────────────────────────────────
+  // OpenAI 兼容 API 的共享请求/响应管道
+  // 子类可以选择使用这些方法，或完全自定义实现
+  // ──────────────────────────────────────────────
+
+  /// 检查 provider 是否已配置
+  void _ensureConfigured() {
+    if (model == null) throw StateError('$providerName 提供商未配置');
+  }
+
+  /// 构建 OpenAI 兼容的请求体（子类可传入 extra 追加字段）
+  Map<String, dynamic> buildRequestData({
+    required List<Map<String, dynamic>> messages,
+    required bool stream,
+    ChatSession? session,
+    Map<String, dynamic>? extra,
+  }) {
+    final data = <String, dynamic>{
+      'model': model!.model,
+      'messages': messages,
+      'stream': stream,
+      'max_tokens': 4000,
+      'temperature': 0.7,
+    };
+
+    // MCP 工具调用
+    if (session != null && session.mcpServer != null) {
+      final tools = buildTools(session);
+      if (tools.isNotEmpty) {
+        data['tools'] = tools;
+        data['tool_choice'] = 'auto';
+      }
+    }
+
+    if (extra != null) data.addAll(extra);
+    return data;
+  }
+
+  /// 构建标准 Bearer token 认证头（子类重写以适配不同认证方式）
+  Map<String, String> buildAuthHeaders() {
+    return {
+      'Authorization': 'Bearer ${model!.apiKey}',
+      'Content-Type': 'application/json',
+    };
+  }
+
+  /// 从 SSE 数据块中提取 content / think / toolcall / finish_reason
+  /// 子类重写以支持 provider 特有字段（如 DeepSeek reasoning_content、文本工具调用）
+  Map<String, String?> extractStreamChunk(Map<String, dynamic> data) {
+    String? content;
+    String? reasoningContent;
+    String? toolCall;
+    String? finishReason;
+
     try {
-      // 创建临时消息
-      final message = ChatMessage(
-        msgId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
-        content: prompt,
-        role: MessageRole.user,
-        timestamp: DateTime.now(),
+      final choices = data['choices'] as List?;
+      if (choices != null && choices.isNotEmpty) {
+        final choice = choices[0] as Map<String, dynamic>;
+        final delta = choice['delta'] as Map<String, dynamic>?;
+        if (delta != null) {
+          content = delta['content'] as String?;
+          reasoningContent = delta['reasoning_content'] as String?;
+          // 原生 JSON tool_calls（标准 OpenAI format）
+          if (delta['tool_calls'] != null) {
+            toolCall = jsonEncode(delta['tool_calls']);
+          }
+        }
+        finishReason = choice['finish_reason'] as String?;
+      }
+    } catch (_) {}
+
+    return {
+      if (content != null && content.isNotEmpty) 'content': content,
+      if (reasoningContent != null && reasoningContent.isNotEmpty)
+        'think': reasoningContent,
+      if (toolCall != null && toolCall.isNotEmpty && toolCall != 'null')
+        'toolcall': toolCall,
+      if (finishReason != null) 'finish_reason': finishReason,
+    };
+  }
+
+  /// 处理 OpenAI 兼容的 SSE 流，逐行解析 data: 块并调用 [extractStreamChunk]
+  Stream<Map<String, String?>> processSSEStream(Stream<List<int>> stream) async* {
+    String buffer = '';
+    await for (final chunk in stream) {
+      buffer += utf8.decode(chunk);
+      final lines = buffer.split('\n');
+      buffer = lines.removeLast(); // 保留可能不完整的最后一行
+
+      for (final line in lines) {
+        if (!line.trim().startsWith('data: ')) continue;
+        final dataStr = line.trim().substring(6);
+        if (dataStr == '[DONE]') return;
+
+        try {
+          final data = jsonDecode(dataStr) as Map<String, dynamic>;
+          yield extractStreamChunk(data);
+        } catch (e) {
+          if (kDebugMode) print('$providerName JSON 解析错误: $e');
+        }
+      }
+    }
+  }
+
+  /// 处理流式响应（子类重写以实现 provider 特有的流处理，如 DeepSeek 的文本工具调用解析）
+  /// 默认实现使用标准 SSE 协议逐行解析
+  Stream<Map<String, String?>> transformStreamResponse(Stream<List<int>> stream) =>
+      processSSEStream(stream);
+
+  /// 发送 OpenAI 兼容的流式请求（POST → SSE → yield chunks）
+  Stream<Map<String, String?>> sendOpenAIStreamRequest({
+    required List<Map<String, dynamic>> messages,
+    ChatSession? session,
+    Map<String, dynamic>? extra,
+  }) async* {
+    _ensureConfigured();
+
+    try {
+      final requestData = buildRequestData(
+        messages: messages,
+        stream: true,
+        session: session,
+        extra: extra,
       );
-      
-      // 直接使用非流式请求
-      final result = await sendMessage(userMessage: message);
-      return result?.trim().isNotEmpty == true ? result!.trim() : null;
-    } catch (e) {
+
       if (kDebugMode) {
-        print('简单消息发送失败: $e');
+        print('$providerName 发送请求到: ${model!.apiUrl}');
+        print('请求数据: ${jsonEncode(requestData)}');
+      }
+
+      // 调试：打印 tools
+      if (requestData.containsKey('tools') && kDebugMode) {
+        debugPrint(
+          '🔧 $providerName 工具调用请求: ${jsonEncode(requestData['tools'])}',
+        );
+      }
+
+      final response = await dio.post<ResponseBody>(
+        model!.apiUrl!,
+        options: Options(
+          headers: buildAuthHeaders(),
+          responseType: ResponseType.stream,
+        ),
+        data: requestData,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        yield* transformStreamResponse(response.data!.stream);
+      } else {
+        yield {
+          'content': 'API 请求失败：${response.statusCode}',
+          'think': null,
+        };
+      }
+    } catch (e) {
+      if (kDebugMode) print('$providerName 流式响应错误: $e');
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
+    }
+  }
+
+  /// 发送 OpenAI 兼容的非流式请求，返回 response.data
+  Future<Map<String, dynamic>?> sendOpenAINonStreamRequest({
+    required List<Map<String, dynamic>> messages,
+    ChatSession? session,
+    Map<String, dynamic>? extra,
+  }) async {
+    _ensureConfigured();
+
+    try {
+      final requestData = buildRequestData(
+        messages: messages,
+        stream: false,
+        session: session,
+        extra: extra,
+      );
+
+      if (kDebugMode) {
+        print('$providerName 发送非流式请求到: ${model!.apiUrl}');
+        print('请求数据: ${jsonEncode(requestData)}');
+      }
+
+      final response = await dio.post(
+        model!.apiUrl!,
+        options: Options(headers: buildAuthHeaders()),
+        data: requestData,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as Map<String, dynamic>;
       }
       return null;
+    } catch (e) {
+      if (kDebugMode) print('$providerName 非流式响应错误: $e');
+      rethrow;
     }
   }
 
@@ -192,22 +416,20 @@ abstract class BaseLlmProvider {
   }
 
   /// 构建系统提示词
-  String buildSystemPrompt({String? customPrompt, ChatSession? session}) {
+  String buildSystemPrompt(ChatSession? session) {
     final List<String> systemParts = [];
     final chatModel = _model;
 
-    // 用户自定义系统提示词
-    if (customPrompt != null && customPrompt.isNotEmpty) {
-      systemParts.add(customPrompt);
-    } else if (chatModel?.chatSettings?.systemPrompt != null &&
+    // 用户自定义系统提示词（取自模型配置）
+    if (chatModel?.chatSettings?.systemPrompt != null &&
         chatModel!.chatSettings!.systemPrompt.isNotEmpty) {
       systemParts.add(chatModel.chatSettings!.systemPrompt);
     }
 
-    // 语言指令
-    if (chatModel?.chatSettings?.replyLanguage != null &&
-        chatModel!.chatSettings!.replyLanguage.isNotEmpty) {
-      systemParts.add('请使用 ${chatModel.chatSettings!.replyLanguage} 回复。');
+    // Provider 特有的提示词（子类重写注入）
+    final providerPrompt = buildProviderPrompt();
+    if (providerPrompt.isNotEmpty) {
+      systemParts.add(providerPrompt);
     }
 
     // MCP 工具信息：将可用工具的描述注入到系统提示词中
@@ -218,10 +440,12 @@ abstract class BaseLlmProvider {
       }
     }
 
-    systemParts.add('请严格遵照系统提示词进行回答。');
-
     return systemParts.join('\n\n');
   }
+
+  /// Provider 特有的系统提示词片段，子类可重写以注入平台特定指令
+  /// 在用户自定义提示词之后、MCP 工具信息之前插入
+  String buildProviderPrompt() => '';
 
   /// 构建消息列表（包含会话历史，实现"记忆"能力）
   List<Map<String, dynamic>> buildMessages({
@@ -231,7 +455,7 @@ abstract class BaseLlmProvider {
     final messages = <Map<String, dynamic>>[];
 
     // 添加系统提示词（传入 session 以支持 MCP 工具信息注入）
-    final systemPrompt = buildSystemPrompt(session: session);
+    final systemPrompt = buildSystemPrompt(session);
     if (systemPrompt.isNotEmpty) {
       messages.add({'role': 'system', 'content': systemPrompt});
     }
@@ -292,7 +516,10 @@ abstract class BaseLlmProvider {
       final apiRole = _toOpenAIRole(msg.role);
       if (apiRole == null) continue;
 
-      final msgData = <String, dynamic>{'role': apiRole, 'content': msg.content};
+      final msgData = <String, dynamic>{
+        'role': apiRole,
+        'content': msg.content,
+      };
 
       // tool 角色消息：附加 tool_call_id
       if (msg.role == MessageRole.tool && msg.toolName != null) {
@@ -321,9 +548,8 @@ abstract class BaseLlmProvider {
       return userMessage.content;
     }
 
-    final attachmentInfos = userMessage.attachments
-        .map(_buildSingleAttachmentInfo)
-        .toList();
+    final attachmentInfos =
+        userMessage.attachments.map(_buildSingleAttachmentInfo).toList();
 
     return '${attachmentInfos.join('\n\n')}\n\n ${userMessage.content}';
   }
@@ -331,18 +557,18 @@ abstract class BaseLlmProvider {
   /// 构建单个附件信息
   String _buildSingleAttachmentInfo(ChatAttachment attachment) {
     final buffer = StringBuffer();
-    
+
     // 添加文件类型和基本信息
     _addAttachmentHeader(buffer, attachment);
-    
+
     // 添加文件大小信息
     _addAttachmentSize(buffer, attachment);
-    
+
     buffer.write(']\n');
-    
+
     // 添加文件内容
     _addAttachmentContent(buffer, attachment);
-    
+
     return buffer.toString();
   }
 
@@ -351,12 +577,12 @@ abstract class BaseLlmProvider {
     final typeLabels = {
       'image': '图片文件',
       'document': '文档文件',
-      'text': '文档文件', 
+      'text': '文档文件',
       'code': '代码文件',
       'web': '网页链接',
       'folder': '文件夹',
     };
-    
+
     final label = typeLabels[attachment.type] ?? '文件';
     buffer.write('[$label: ${attachment.name}');
   }
@@ -387,19 +613,6 @@ abstract class BaseLlmProvider {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
     }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
-  }
-
-  /// 处理工具调用（MCP支持）
-  Future<Map<String, dynamic>?> handleToolCall({
-    required Map<String, dynamic> toolCall,
-    ChatSession? session,
-  }) async {
-    if (!supportsFeature('tool_calling')) {
-      return null;
-    }
-
-    // 默认实现 - 子类可以重写
-    return null;
   }
 
   /// 构建工具列表（MCP支持）
@@ -466,8 +679,8 @@ abstract class BaseLlmProvider {
 
   /// 检查是否是DioException
   bool _isDioException(String errorString) {
-    return errorString.contains('DioException') || 
-           errorString.contains('DioError');
+    return errorString.contains('DioException') ||
+        errorString.contains('DioError');
   }
 
   /// 处理DioException错误
@@ -493,11 +706,16 @@ abstract class BaseLlmProvider {
   /// 检查是否是HTTP状态码错误
   bool _isHttpStatusError(String errorString) {
     final statusCodes = ['401', '403', '404', '429', '500'];
-    final statusMessages = ['Unauthorized', 'Forbidden', 'Not Found', 
-                           'Too Many Requests', 'Internal Server Error'];
-    
+    final statusMessages = [
+      'Unauthorized',
+      'Forbidden',
+      'Not Found',
+      'Too Many Requests',
+      'Internal Server Error',
+    ];
+
     return statusCodes.any((code) => errorString.contains(code)) ||
-           statusMessages.any((msg) => errorString.contains(msg));
+        statusMessages.any((msg) => errorString.contains(msg));
   }
 
   /// 处理HTTP状态码错误
@@ -527,19 +745,19 @@ abstract class BaseLlmProvider {
   /// 检查是否是网络错误
   bool _isNetworkError(String errorString) {
     return errorString.contains('SocketException') ||
-           errorString.contains('HandshakeException') ||
-           errorString.contains('FormatException') ||
-           errorString.contains('Invalid JSON');
+        errorString.contains('HandshakeException') ||
+        errorString.contains('FormatException') ||
+        errorString.contains('Invalid JSON');
   }
 
   /// 处理网络错误
   String _handleNetworkError(String errorString) {
-    if (errorString.contains('SocketException') || 
+    if (errorString.contains('SocketException') ||
         errorString.contains('HandshakeException')) {
       return '网络连接失败，请检查网络设置和证书配置';
     }
-    
-    if (errorString.contains('FormatException') || 
+
+    if (errorString.contains('FormatException') ||
         errorString.contains('Invalid JSON')) {
       return 'API 响应格式错误，请检查API配置';
     }

@@ -10,6 +10,9 @@ import 'base_provider.dart';
 /// Anthropic (Claude) API 提供商
 class AnthropicProvider extends BaseLlmProvider {
   @override
+  String get providerName => 'Anthropic';
+
+  @override
   List<String> getSupportedFeatures() {
     return [
       LlmFeatures.textGeneration,
@@ -228,7 +231,6 @@ class AnthropicProvider extends BaseLlmProvider {
     }
   }
 
-  @override
   @override
   Future<Map<String, dynamic>?> getModelInfo() async {
     if (model == null) {

@@ -55,6 +55,8 @@ dependencies:
   html: ^0.15.4  # HTML解析库
   url_launcher: ^6.2.5  # URL启动器
   flutter_quill: ^11.4.2  # 升级修复与新 Flutter SDK 的兼容性问题
+  isar: ^3.1.0+1  # Isar 本地数据库
+  isar_flutter_libs: ^3.1.0+1  # Isar Flutter 原生库
 
 dependency_overrides:
   mcp_client:
@@ -71,6 +73,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  build_runner: ^2.4.0  # 代码生成
+  isar_generator: ^3.1.0+1  # Isar 代码生成器
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

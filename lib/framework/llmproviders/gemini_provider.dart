@@ -10,6 +10,9 @@ import 'base_provider.dart';
 /// Google Gemini API 提供商
 class GeminiProvider extends BaseLlmProvider {
   @override
+  String get providerName => 'Gemini';
+
+  @override
   List<String> getSupportedFeatures() {
     return [
       LlmFeatures.textGeneration,

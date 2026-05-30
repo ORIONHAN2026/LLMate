@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:async';
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
@@ -10,6 +9,9 @@ import 'base_provider.dart';
 
 /// DeepSeek API 提供商
 class DeepSeekProvider extends BaseLlmProvider {
+  @override
+  String get providerName => 'DeepSeek';
+
   @override
   List<String> getSupportedFeatures() {
     return [
@@ -22,151 +24,31 @@ class DeepSeekProvider extends BaseLlmProvider {
   }
 
   @override
-  void onConfigure(ChatModel model) {
-    // 验证 DeepSeek 特定的配置（宽松模式）
-    // 如果配置有问题，会在实际调用时显示错误，而不是在配置时立即抛出异常
-    // 这样可以保持与原有 ApiService 的兼容性
-  }
+  void onConfigure(ChatModel model) {}
+
+  @override
+  String buildProviderPrompt() =>
+      '对tools工具的调用，请严格使用<tool_calls>标签返回，禁止使用DMSL';
 
   @override
   Stream<Map<String, String?>> sendMessageStream({
     required ChatMessage userMessage,
     ChatSession? session,
   }) async* {
-    final requestMessages = buildMessages(
-      userMessage: userMessage,
-      session: session,
-    );
-    yield* _sendWithErrorHandling(requestMessages, session);
+    final messages = buildMessages(userMessage: userMessage, session: session);
+    yield* sendOpenAIStreamRequest(messages: messages, session: session);
   }
 
   @override
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
     List<Map<String, dynamic>> messages,
   ) async* {
-    yield* _sendWithErrorHandling(messages, null);
+    yield* sendOpenAIStreamRequest(messages: messages);
   }
 
-  /// 发送流式请求的通用方法（统一错误处理）
-  Stream<Map<String, String?>> _sendWithErrorHandling(
-    List<Map<String, dynamic>> messages,
-    ChatSession? session,
-  ) async* {
-    if (model == null) {
-      throw StateError('DeepSeek 提供商未配置');
-    }
-    try {
-      yield* _sendStreamRequest(messages, session);
-    } catch (e) {
-      if (kDebugMode) {
-        print('DeepSeek 流式响应错误: $e');
-      }
-      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
-    }
-  }
-
-  /// 发送流式请求的通用方法
-  Stream<Map<String, String?>> _sendStreamRequest(
-    List<Map<String, dynamic>> messages,
-    ChatSession? session,
-  ) async* {
-    if (model == null) {
-      throw StateError('DeepSeek 提供商未配置');
-    }
-
-    try {
-      final requestData = {
-        'model': model!.model,
-        'messages': messages,
-        'stream': true,
-        'max_tokens': 4000,
-        'temperature': 0.7,
-      };
-
-      // 添加工具调用支持（仅在首次请求时，follow-up 不重复发送 tools）
-      if (session != null && session.mcpServer != null) {
-        final tools = buildTools(session);
-        if (tools.isNotEmpty) {
-          requestData['tools'] = tools;
-          requestData['tool_choice'] = 'auto';
-        }
-      }
-
-      if (kDebugMode) {
-        print('DeepSeek 发送请求到: ${model!.apiUrl}');
-        print('请求数据: ${jsonEncode(requestData)}');
-      }
-
-      // 打印工具调用请求报文
-      if (requestData.containsKey('tools')) {
-        debugPrint(
-          '🔧 DeepSeek 工具调用请求 tools: ${jsonEncode(requestData['tools'])}',
-        );
-      }
-
-      final response = await dio.post(
-        model!.apiUrl!,
-        data: requestData,
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer ${model!.apiKey}',
-            'Content-Type': 'application/json',
-          },
-          responseType: ResponseType.stream,
-        ),
-      );
-
-      // 处理流式响应
-      yield* _processDeepSeekStreamResponse(response.data.stream);
-    } catch (e) {
-      if (kDebugMode) {
-        print('DeepSeek 流式响应错误: $e');
-      }
-      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
-    }
-  }
-
+  /// DeepSeek 特有：累积正文内容，在 finish_reason=stop 时解析 <tool_calls> 文本
   @override
-  Future<Map<String, dynamic>?> getModelInfo() async {
-    if (model == null) {
-      return null;
-    }
-
-    try {
-      return {
-        'provider': 'deepseek',
-        'model': model!.model,
-        'name': model!.name,
-        'features': getSupportedFeatures(),
-        'configured': true,
-        'supports_reasoning': model!.model.contains('r1'), // DeepSeek R1 支持推理
-      };
-    } catch (e) {
-      debugPrint('获取 DeepSeek 模型信息失败: $e');
-      return null;
-    }
-  }
-
-  @override
-  Future<Map<String, dynamic>?> handleToolCall({
-    required Map<String, dynamic> toolCall,
-    ChatSession? session,
-  }) async {
-    if (!supportsFeature(LlmFeatures.toolCalling) || session == null) {
-      return null;
-    }
-
-    try {
-      // DeepSeek 的工具调用处理
-      return {'tool_call_id': toolCall['id'], 'content': '工具调用结果'};
-    } catch (e) {
-      debugPrint('DeepSeek 工具调用处理失败: $e');
-      return null;
-    }
-  }
-
-  /// 处理 DeepSeek 流式响应
-  Stream<Map<String, String?>> _processDeepSeekStreamResponse(
+  Stream<Map<String, String?>> transformStreamResponse(
     Stream<List<int>> stream,
   ) async* {
     String buffer = '';
@@ -175,84 +57,57 @@ class DeepSeekProvider extends BaseLlmProvider {
 
     await for (final chunk in stream) {
       final chunkString = utf8.decode(chunk);
-      debugPrint('接收到 DeepSeek 数据块: $chunkString');
       buffer += chunkString;
-
       final lines = buffer.split('\n');
-      buffer = lines.removeLast(); // 保留可能不完整的最后一行
+      buffer = lines.removeLast();
 
       for (final line in lines) {
-        if (line.trim().startsWith('data: ')) {
-          final dataStr = line.trim().substring(6);
-          if (dataStr == '[DONE]') {
-            continue;
+        if (!line.trim().startsWith('data: ')) continue;
+        final dataStr = line.trim().substring(6);
+        if (dataStr == '[DONE]') continue;
+
+        try {
+          final data = jsonDecode(dataStr) as Map<String, dynamic>;
+          final chunk = extractStreamChunk(data);
+
+          // 透传 content / think 到 UI
+          if (chunk['content'] != null || chunk['think'] != null) {
+            yield {
+              'content': chunk['content'] ?? '',
+              'think': chunk['think'],
+            };
           }
 
-          try {
-            final data = jsonDecode(dataStr);
+          // 累积正文
+          if (chunk['content'] != null && chunk['content']!.isNotEmpty) {
+            accContent += chunk['content']!;
+          }
 
-            // 从 SSE delta 中提取字段
-            String? content;
-            String? reasoningContent;
-            String? finishReason;
-            try {
-              final choices = data['choices'] as List?;
-              if (choices != null && choices.isNotEmpty) {
-                final choice = choices[0] as Map<String, dynamic>;
-                final delta = choice['delta'] as Map<String, dynamic>?;
-                if (delta != null) {
-                  content = delta['content'] as String?;
-                  reasoningContent = delta['reasoning_content'] as String?;
+          final finishReason = chunk['finish_reason'];
+          if (finishReason != null && kDebugMode) {
+            debugPrint('🔧 $providerName finish_reason: $finishReason');
+          }
+
+          // finish_reason == 'stop': 从累积文本中解析工具调用
+          if (finishReason == 'stop' && !isFinished) {
+            isFinished = true;
+            if (kDebugMode) debugPrint('接收到完整数据 : $accContent');
+
+            if (accContent.isNotEmpty) {
+              final textCalls = McpService.parseToolCallsFromResponse(accContent);
+              if (textCalls.isNotEmpty) {
+                if (kDebugMode) {
+                  debugPrint(
+                    '🔧 finish_reason=stop 从文本中检测到 tool_calls: ${jsonEncode(textCalls)}',
+                  );
                 }
-                finishReason = choice['finish_reason'] as String?;
-              }
-            } catch (e) {
-              if (kDebugMode) {
-                print('提取 DeepSeek 内容失败: $e');
-              }
-            }
-
-            //1、将内容和思考先展示给UI
-            yield {'content': content ?? '', 'think': reasoningContent};
-
-            // 累积文本内容（DeepSeek 将工具调用放在正文 <tool_calls> 中）
-
-            if (content != null && content.isNotEmpty) {
-              accContent += content;
-            }
-
-            // 检查 finish_reason
-            if (finishReason != null) {
-              debugPrint('🔧 DeepSeek finish_reason: $finishReason');
-            }
-
-            // finish_reason == 'stop': 响应正常结束
-            if (finishReason == 'stop' && !isFinished) {
-              isFinished = true;
-
-              // 逐个解析器尝试识别工具调用
-              List<Map<String, dynamic>>? textCalls;
-              if (accContent.isNotEmpty) {
-                textCalls = McpService.parseToolCallsXml(accContent);
-                if (textCalls.isEmpty) {
-                  textCalls = McpService.parseDSMLXml(accContent);
-                }
-              }
-
-              if (textCalls != null && textCalls.isNotEmpty) {
-                debugPrint(
-                  '🔧 finish_reason=stop 从文本中检测到 tool_calls: ${jsonEncode(textCalls)}',
-                );
                 yield {'toolcall': jsonEncode(textCalls)};
               }
-
-              return;
             }
-          } catch (e) {
-            if (kDebugMode) {
-              print('DeepSeek JSON解析错误: $e, 行内容: $line');
-            }
+            return;
           }
+        } catch (e) {
+          if (kDebugMode) print('$providerName JSON 解析错误: $e');
         }
       }
     }
@@ -263,66 +118,53 @@ class DeepSeekProvider extends BaseLlmProvider {
     required ChatMessage userMessage,
     ChatSession? session,
   }) async {
-    if (model == null) {
-      throw StateError('DeepSeek 提供商未配置');
-    }
-
+    final messages = buildMessages(userMessage: userMessage, session: session);
     try {
-      final requestMessages = buildMessages(
-        userMessage: userMessage,
+      final data = await sendOpenAINonStreamRequest(
+        messages: messages,
         session: session,
+        extra: {'response_format': {'type': 'json_object'}},
       );
-
-      final requestData = {
-        'model': model!.model,
-        'messages': requestMessages,
-        'stream': false, // 非流式请求
-        'max_tokens': 4000,
-        'temperature': 0.7,
-        'response_format': {'type': 'json_object'},
-      };
-
-      // 添加工具调用支持
-      if (session != null && session.mcpServer != null) {
-        final tools = buildTools(session);
-        if (tools.isNotEmpty) {
-          requestData['tools'] = tools;
-          requestData['tool_choice'] = 'auto';
-        }
-      }
-
-      if (kDebugMode) {
-        print('DeepSeek 发送非流式请求到: ${model!.apiUrl}');
-        print('请求数据: ${jsonEncode(requestData)}');
-      }
-
-      final response = await dio.post(
-        model!.apiUrl!,
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer ${model!.apiKey}',
-            'Content-Type': 'application/json',
-          },
-        ),
-        data: requestData,
-      );
-
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data;
-        if (data['choices'] != null && data['choices'].isNotEmpty) {
-          final message = data['choices'][0]['message'];
+      if (data != null) {
+        final choices = data['choices'] as List?;
+        if (choices != null && choices.isNotEmpty) {
+          final message = choices[0]['message'];
           if (message != null && message['content'] != null) {
             return message['content'] as String;
           }
         }
       }
-
       return null;
     } catch (e) {
-      if (kDebugMode) {
-        print('DeepSeek 非流式响应错误: $e');
-      }
+      if (kDebugMode) print('$providerName 非流式响应错误: $e');
       throw Exception('错误: ${handleApiError(e)}');
     }
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getModelInfo() async {
+    if (model == null) return null;
+    try {
+      return {
+        'provider': 'deepseek',
+        'model': model!.model,
+        'name': model!.name,
+        'features': getSupportedFeatures(),
+        'configured': true,
+        'supports_reasoning': model!.model.contains('r1'),
+      };
+    } catch (e) {
+      debugPrint('获取 $providerName 模型信息失败: $e');
+      return null;
+    }
+  }
+
+  /// 重写 SSE chunk 提取以支持 reasoning_content
+  @override
+  Map<String, String?> extractStreamChunk(Map<String, dynamic> data) {
+    final chunk = super.extractStreamChunk(data);
+    // 基类已处理 reasoning_content → 'think'，但这里确保非空的空字符串不被 yield
+    // （基类 extractStreamChunk 已过滤空值）
+    return chunk;
   }
 }

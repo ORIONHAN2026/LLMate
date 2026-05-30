@@ -9,6 +9,7 @@ import 'pages/home.dart';
 import 'pages/loading_page.dart';
 import 'services/model_storage_service.dart';
 import 'models/bigmodel/chat_model.dart';
+import 'storage/isar_service.dart';
 
 // 最小窗口宽度组成: 左侧边栏最小 200 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
 const double kMinLeftSidebarWidth = 200;
@@ -44,6 +45,9 @@ void main() async {
       await windowManager.focus();
     });
   }
+
+  // 初始化 Isar 数据库（必须在 ThemeController 之前）
+  await IsarService.instance.initialize();
 
   // 在应用启动前初始化 ThemeController
   Get.put(ThemeController());

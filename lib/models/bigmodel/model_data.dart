@@ -171,9 +171,8 @@ final List<Map<String, dynamic>> onlineProviders = [
     'color': const Color(0xFF3B82F6),
     'defaultUrl': 'https://api.deepseek.com/v1',
     'models': [
-      {'id': 'deepseek-chat', 'name': 'DeepSeek Chat', 'specs': '67B • 通用对话 • 高性价比', },
-      {'id': 'deepseek-coder', 'name': 'DeepSeek Coder', 'specs': '33B • 代码专用 • 编程助手',},
-      {'id': 'deepseek-reasoner', 'name': 'DeepSeek Reasoner', 'specs': '推理模型 • 复杂问题 • 思维链',},
+      {'id': 'deepseek-chat', 'name': 'DeepSeek-V4-Flash', 'specs': '快速响应 • 高性价比 • 通用对话', },
+      {'id': 'deepseek-reasoner', 'name': 'DeepSeek-V4-Pro', 'specs': '深度推理 • 复杂问题 • 思维链',},
     ],
   },
   {

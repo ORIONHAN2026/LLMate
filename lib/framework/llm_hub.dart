@@ -86,16 +86,14 @@ class LlmClient {
 
   /// 发送消息并获取流式响应（自动处理 MCP 工具调用 + follow-up）
   /// chunk: {content,think,tool}  三个字段互斥，每次必有一个有值
-  /// 所有 MCP 工具调用解析/执行/过滤均在此完成，UI 收到的即是可直接展示的数据
+  /// 工具调用已由 provider 层解析好，此处只负责直接 yield + 执行
   Stream<Map<String, dynamic>> sendMessageStream(
     ChatMessage userMessage,
   ) async* {
     _cancelled = false;
 
-    // 1. 首轮流式响应：实时 yield content，检测到 <tool_calls> 后停止透传
-    String acc = '';
     String? toolCallsJson;
-    bool suppressContent = false;
+
     final stream = _provider.sendMessageStream(
       userMessage: userMessage,
       session: _session,
@@ -103,84 +101,54 @@ class LlmClient {
 
     await for (final chunk in stream) {
       if (_cancelled) break;
-      final tc = chunk['mcpToolCalls'];
+
+      final tc = chunk['toolcall'];
       if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
+
       final c = chunk['content'] ?? '';
       if (c.isNotEmpty) {
-        acc += c;
-        if (!suppressContent) {
-          if (acc.contains('<tool_calls>')) {
-            suppressContent = true;
-          } else {
-            yield {'content': c};
-          }
-        }
+        yield {'content': c};
       }
+
       final t = chunk['think'] ?? '';
       if (t.isNotEmpty) yield {'think': t};
     }
 
-    // JSON 格式提取（response_format: json_object 时模型返回 {"response":"..."} ）
-    if (acc.isNotEmpty) {
+    // 工具调用已由 provider 解析好，直接执行
+    if (!_cancelled && toolCallsJson != null && _session.mcpServer != null) {
+      // yield 执行中状态
       try {
-        final parsed = jsonDecode(acc);
-        String? extracted;
-        if (parsed is Map) {
-          extracted = (parsed['response'] ?? parsed['content'] ?? parsed['text'] ?? parsed['message'])?.toString();
-        } else if (parsed is String) {
-          extracted = parsed;
-        }
-        if (extracted != null) acc = extracted;
-      } catch (_) {}
-    }
-
-    // 2. 始终剥离 <tool_calls> XML（native mcpToolCalls 也可能来自文本检测）
-    String cleanContent = McpService.stripToolCallXml(acc);
-    McpExecutionResult? toolResult;
-
-    if (!_cancelled && _session.mcpServer != null) {
-      // 文本格式工具调用：先解析名称以便向 UI 透传"执行中"状态
-      if (toolCallsJson == null) {
-        final textCalls = McpService.parseToolCallsFromResponse(acc);
-        for (final tc in textCalls) {
+        final parsed = jsonDecode(toolCallsJson) as List;
+        for (final tc in parsed) {
           yield {'tool': '执行: ${tc['tool']}'};
         }
-      }
+      } catch (_) {}
 
-      toolResult = await McpService.processAndExecuteToolCalls(
+      final toolResult = await McpService.processAndExecuteToolCalls(
         session: _session,
-        accumulatedContent: acc,
+        accumulatedContent: '',
         nativeToolCallsJson: toolCallsJson,
       );
-      if (toolResult != null) {
-        cleanContent = toolResult.cleanContent;
-      }
-    }
 
-    // yield 干净的正文（suppressContent 时 overwrite 之前透传的片段）
-    if (cleanContent.isNotEmpty) {
-      yield {'content': cleanContent};
-    }
+      if (toolResult != null && !_cancelled) {
+        for (final r in toolResult.executionResults) {
+          final name = r['name'] as String;
+          final ok = !(r['isError'] == true);
+          yield {'tool': ok ? '已完成: $name' : '失败: $name'};
+        }
 
-    // 3. 工具执行结果 + follow-up
-    if (toolResult != null && !_cancelled) {
-      for (final r in toolResult.executionResults) {
-        final name = r['name'] as String;
-        final ok = !(r['isError'] == true);
-        yield {'tool': ok ? '已完成: $name' : '失败: $name'};
-      }
+        final msgs = _buildFollowUpMessages(
+          list: toolResult.toolCallList,
+          results: toolResult.executionResults,
+          userMsg: userMessage,
+          assistantContent: toolResult.cleanContent,
+        );
 
-      final msgs = _buildFollowUpMessages(
-        list: toolResult.toolCallList,
-        results: toolResult.executionResults,
-        userMsg: userMessage,
-        assistantContent: cleanContent,
-      );
-
-      final s2 = _provider.sendMessageStreamWithMessages(msgs);
-      await for (final chunk in s2) {
-        if (_cancelled) break;
-        yield Map<String, dynamic>.from(chunk);
+        final s2 = _provider.sendMessageStreamWithMessages(msgs);
+        await for (final chunk in s2) {
+          if (_cancelled) break;
+          yield Map<String, dynamic>.from(chunk);
+        }
       }
     }
   }
@@ -261,13 +229,17 @@ class LlmClient {
         if (_cancelled) break;
         final c = chunk['content'] ?? '';
         final t = chunk['think'] ?? '';
-        final tc = chunk['mcpToolCalls'];
+        final tc = chunk['toolcall'];
         if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
         if (c.isNotEmpty) {
           acc += c;
           onText?.call(c);
         }
         if (t.isNotEmpty) onThink?.call(t);
+        final cf = chunk['content_finish'];
+        if (cf != null && cf.isNotEmpty) {
+          acc = cf;
+        }
       }
 
       // 4. 工具调用

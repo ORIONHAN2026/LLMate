@@ -647,15 +647,23 @@ class McpService {
     return buffer.toString().trim();
   }
 
-  /// 解析AI响应中的工具调用请求
-  /// 唯一格式: `<tool_calls><invoke name="工具名"><arguments>{json}</arguments></invoke></tool_calls>`
+  // ── 解析器注册：按标签类型分发 ──
+
+  /// 解析 AI 响应中的工具调用（组合所有解析器，保持向后兼容）
   static List<Map<String, dynamic>> parseToolCallsFromResponse(
     String response,
   ) {
-    final toolCalls = <Map<String, dynamic>>[];
+    var calls = parseToolCallsXml(response);
+    if (calls.isEmpty) {
+      calls = parseDSMLXml(response);
+    }
+    return calls;
+  }
 
-    debugPrint('🔍 开始解析AI响应中的工具调用...');
-    debugPrint('🔍 响应内容长度: ${response.length}');
+  /// 解析 `<tool_calls>` 标签格式
+  /// `<tool_calls><invoke name="工具名"><parameter name="x" string="true">value</parameter></invoke></tool_calls>`
+  static List<Map<String, dynamic>> parseToolCallsXml(String response) {
+    final toolCalls = <Map<String, dynamic>>[];
 
     final blockRegex = RegExp(
       r'<tool_calls>\s*(.*?)\s*</tool_calls>',
@@ -663,16 +671,34 @@ class McpService {
     );
     final blockMatch = blockRegex.firstMatch(response);
     if (blockMatch == null) {
-      debugPrint('⚠️ 没有找到 <tool_calls> 标签，响应内容前200字符：');
-      debugPrint(
-        response.length > 200 ? '${response.substring(0, 200)}...' : response,
-      );
+      debugPrint('⚠️ parseToolCallsXml: 没有找到 <tool_calls> 标签');
       return toolCalls;
     }
 
     final inner = blockMatch.group(1);
     if (inner == null) return toolCalls;
 
+    _parseInvokeBlocks(inner, toolCalls);
+    debugPrint('🔍 parseToolCallsXml: 找到 ${toolCalls.length} 个工具调用');
+    return toolCalls;
+  }
+
+  /// 解析 DSML 标签格式（占位，待补充具体正则）
+  static List<Map<String, dynamic>> parseDSMLXml(String response) {
+    final toolCalls = <Map<String, dynamic>>[];
+
+    // TODO: 补充 DSML 标签正则
+    debugPrint('⚠️ parseDSMLXml: DSML 解析器待实现');
+
+    return toolCalls;
+  }
+
+  // ── 内部：invoke 块解析（<invoke name="x"><parameter .../></invoke>） ──
+
+  static void _parseInvokeBlocks(
+    String inner,
+    List<Map<String, dynamic>> toolCalls,
+  ) {
     final invokeRegex = RegExp(
       r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
       dotAll: true,
@@ -686,33 +712,18 @@ class McpService {
 
         final args = <String, dynamic>{};
 
-        // 子格式 A: <parameter name="x">value</parameter>
+        // <parameter name="x" string="true">value</parameter>
+        // <parameter name="y" number="true">42</parameter>
+        // <parameter name="z" boolean="true">true</parameter>
         final paramRegex = RegExp(
-          r'<parameter\s+name="([^"]+)"[^>]*>([^<]*)</parameter>',
+          r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>([^<]*)</parameter>',
         );
         for (final pm in paramRegex.allMatches(invokeBody)) {
           final name = pm.group(1)?.trim();
-          final value = pm.group(2)?.trim() ?? '';
+          final type = pm.group(2)?.trim();
+          final rawValue = pm.group(3)?.trim() ?? '';
           if (name != null && name.isNotEmpty) {
-            args[name] = value;
-          }
-        }
-
-        // 子格式 B: <arguments>{json}</arguments>
-        if (args.isEmpty) {
-          final argsJsonRegex = RegExp(
-            r'<arguments>\s*(\{.*?\})\s*</arguments>',
-            dotAll: true,
-          );
-          final argsJsonMatch = argsJsonRegex.firstMatch(invokeBody);
-          if (argsJsonMatch != null) {
-            final argsJson = argsJsonMatch.group(1)?.trim();
-            if (argsJson != null) {
-              try {
-                final parsed = jsonDecode(argsJson) as Map<String, dynamic>;
-                args.addAll(parsed);
-              } catch (_) {}
-            }
+            args[name] = _parseParamValue(rawValue, type);
           }
         }
 
@@ -722,9 +733,19 @@ class McpService {
         debugPrint('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
       }
     }
+  }
 
-    debugPrint('🔍 工具调用解析完成，找到 ${toolCalls.length} 个工具调用');
-    return toolCalls;
+  /// 根据类型属性解析参数值
+  static dynamic _parseParamValue(String rawValue, String? type) {
+    switch (type) {
+      case 'number':
+        final n = num.tryParse(rawValue);
+        return n ?? rawValue;
+      case 'boolean':
+        return rawValue.toLowerCase() == 'true';
+      default: // string or unknown
+        return rawValue;
+    }
   }
 
   /// 获取会话的真实MCP工具信息用于API调用

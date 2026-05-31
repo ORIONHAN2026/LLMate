@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'dart:async';
 import '../models/bigmodel/models.dart';
 import '../services/model_storage_service.dart';
+import '../services/skill_service.dart';
 import '../widgets/chat_left_sidebar.dart';
 import '../widgets/chat_input_widget.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
@@ -63,6 +64,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
 
     _loadModels();
     _loadSessions(); // 加载保存的会话
+    SkillService.ensureLoaded(); // 异步加载技能（无需 await，有缓存机制）
 
     // 添加滚动监听器来保存滚动位置
     _scrollController.addListener(_onScrollChanged);

@@ -81,12 +81,14 @@ class LlmClient {
   Stream<Map<String, dynamic>> LLMChat(ChatMessage userMessage) async* {
     _cancelled = false;
 
-    // messages 会随每次工具调用追加 assistant + tool 消息，
-    // system prompt 始终在 [0] 位，每次 LLM 请求都会携带
-    final messages = <Map<String, dynamic>>[];
-    final sp = _provider.buildSystemPrompt(_session);
-    if (sp.isNotEmpty) messages.add({'role': 'system', 'content': sp});
-    messages.add({'role': 'user', 'content': userMessage.content});
+    // 使用 buildMessages 构建初始消息列表：
+    //   [system 提示词] + [当前会话历史] + [当前用户消息]
+    // 每个会话的消息历史完全独立，不会与其他会话混合。
+    // MCP 工具调用循环中会在此基础上追加 assistant + tool 消息。
+    final messages = _provider.buildMessages(
+      userMessage: userMessage,
+      session: _session,
+    );
 
     // 循环：LLM 返回工具调用后追加结果并重发，直到无工具调用
     while (true) {

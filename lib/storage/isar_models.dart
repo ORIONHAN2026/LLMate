@@ -85,3 +85,4 @@ class IsarSettings {
 
   late String value;
 }
+

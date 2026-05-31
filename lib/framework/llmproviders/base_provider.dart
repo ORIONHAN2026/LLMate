@@ -7,6 +7,7 @@ import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import '../../models/chat/chat_attachment.dart';
 import '../../services/mcp_service.dart';
+import '../../services/skill_service.dart';
 
 /// 基础LLM提供商抽象类
 /// 定义了所有LLM提供商必须实现的接口
@@ -430,6 +431,21 @@ abstract class BaseLlmProvider {
     final providerPrompt = buildProviderPrompt();
     if (providerPrompt.isNotEmpty) {
       systemParts.add(providerPrompt);
+    }
+
+    // 技能提示词注入：将当前会话绑定的技能 prompt 注入到系统提示词
+    if (session?.skill != null) {
+      final skillPrompt = SkillService.buildSkillPrompt(session!.skill);
+      if (skillPrompt.isNotEmpty) {
+        if (kDebugMode) {
+          debugPrint('🔧 [Skill] 注入技能 "${session.skill!.name}", prompt 长度: ${session.skill!.prompt.length} 字符');
+        }
+        systemParts.add(skillPrompt);
+      } else {
+        if (kDebugMode) {
+          debugPrint('⚠️ [Skill] 技能 "${session.skill!.name}" 的 prompt 为空，跳过注入');
+        }
+      }
     }
 
     // MCP 工具信息：将可用工具的描述注入到系统提示词中

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../models/chat/chat_session.dart';
+import '../models/chat/skill.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/bigmodel/mcp_config.dart';
 import '../storage/isar_models.dart';
@@ -369,6 +370,15 @@ class SessionController extends GetxController {
       } catch (_) {}
     }
 
+    // 解析 Skill
+    Skill? skill;
+    if (entity.skillJson != null && entity.skillJson!.isNotEmpty) {
+      try {
+        final map = jsonDecode(entity.skillJson!) as Map<String, dynamic>;
+        skill = Skill.fromJson(map);
+      } catch (_) {}
+    }
+
     return ChatSession(
       sessionId: entity.sessionId,
       name: entity.name,
@@ -382,6 +392,7 @@ class SessionController extends GetxController {
       lastSelectedDirectory: entity.lastSelectedDirectory,
       chatModel: chatModel,
       mcpServer: mcpServer,
+      skill: skill,
     );
   }
 }

@@ -157,11 +157,16 @@ class ChatModel {
                     } catch (e) {
                       print('Error parsing skill: $e');
                       print('Item data: $item');
-                      return Skill.create(
+                      final now = DateTime.now();
+                      return Skill(
+                        id: item['id'] ?? '',
                         name: item['name'] ?? '未知技能',
                         description: item['description'] ?? '',
                         prompt: item['prompt'] ?? '',
                         icon: item['icon'] ?? 'star',
+                        createdAt: now,
+                        updatedAt: now,
+                        folderPath: '',
                       );
                     }
                   })

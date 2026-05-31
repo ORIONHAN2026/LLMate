@@ -3491,6 +3491,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       String accumulatedContent = '';
       String accumulatedThink = '';
       String accumulatedTool = '';
+      final List<ContentBlock> blocks = [];
 
       // 直接使用LLM Hub框架
       final model = updateSession.chatModel;
@@ -3533,8 +3534,25 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             thinkChunk.isNotEmpty ||
             toolChunk.isNotEmpty) {
           accumulatedContent += contentChunk;
-          accumulatedThink += thinkChunk + toolChunk; // tool 和 think 一样显示
+          accumulatedThink += thinkChunk;
           accumulatedTool += toolChunk;
+
+          // 按顺序构建内容块（tool 不再混入 think）
+          void appendBlock(ContentBlockType type, String text) {
+            if (blocks.isNotEmpty && blocks.last.type == type) {
+              blocks.last.text += text;
+            } else {
+              blocks.add(ContentBlock(type: type, text: text));
+            }
+          }
+
+          if (thinkChunk.isNotEmpty) {
+            appendBlock(ContentBlockType.think, thinkChunk);
+          } else if (toolChunk.isNotEmpty) {
+            appendBlock(ContentBlockType.tool, toolChunk);
+          } else if (contentChunk.isNotEmpty) {
+            appendBlock(ContentBlockType.content, contentChunk);
+          }
 
           final messageIndex = updateSession.messages.indexWhere(
             (msg) => msg.msgId == botMessageId,
@@ -3544,6 +3562,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             botMessage.content = accumulatedContent;
             botMessage.think = accumulatedThink;
             botMessage.toolContent = accumulatedTool;
+            botMessage.contentBlocks = List<ContentBlock>.from(blocks);
 
             final updatedMessages = List<ChatMessage>.from(
               updateSession.messages,

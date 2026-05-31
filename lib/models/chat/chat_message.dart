@@ -1,4 +1,5 @@
 import 'chat_attachment.dart';
+import 'content_block.dart';
 
 enum MessageRole { user, bot, tool }
 
@@ -15,6 +16,7 @@ class ChatMessage {
   String content;
   String think; // 思考内容，必填字段，默认为空字符串
   String toolContent; // 工具执行描述，和 content/think 同级，独立展示
+  List<ContentBlock> contentBlocks; // 按时间顺序排列的内容块（think/tool/content）
   final DateTime timestamp;
   final String? repoId;
   final bool? isTyping;
@@ -46,6 +48,7 @@ class ChatMessage {
     required this.content,
     this.think = '', // 思考内容，默认为空字符串
     this.toolContent = '', // 工具执行描述，默认为空字符串
+    this.contentBlocks = const [], // 内容块列表，默认为空
     required this.timestamp,
     this.repoId,
     this.isTyping = false,
@@ -129,6 +132,11 @@ class ChatMessage {
           json['generationDurationMs'] != null
               ? Duration(milliseconds: json['generationDurationMs'])
               : null,
+      contentBlocks:
+          (json['contentBlocks'] as List<dynamic>?)
+              ?.map((b) => ContentBlock.fromJson(b as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 
@@ -181,6 +189,7 @@ class ChatMessage {
       'inputTokens': inputTokens,
       'outputTokens': outputTokens,
       'generationDurationMs': generationDuration?.inMilliseconds,
+      'contentBlocks': contentBlocks.map((b) => b.toJson()).toList(),
     };
   }
 
@@ -214,6 +223,7 @@ class ChatMessage {
     String? content,
     String? think, // 思考内容
     String? toolContent, // 工具执行描述
+    List<ContentBlock>? contentBlocks, // 内容块列表
     DateTime? timestamp,
     String? repoId,
     bool? isTyping,
@@ -237,6 +247,7 @@ class ChatMessage {
       content: content ?? this.content,
       think: think ?? this.think, // 思考内容
       toolContent: toolContent ?? this.toolContent, // 工具执行描述
+      contentBlocks: contentBlocks ?? this.contentBlocks, // 内容块列表
       timestamp: timestamp ?? this.timestamp,
       repoId: repoId ?? this.repoId,
       isTyping: isTyping ?? this.isTyping,

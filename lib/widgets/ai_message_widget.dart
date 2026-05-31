@@ -37,6 +37,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   final sessionController = Get.find<SessionController>();
   final GlobalKey _messageKey = GlobalKey();
 
+  // 工具执行块的展开状态（存储已展开的工具块索引）
+  final Set<int> _expandedToolIndices = {};
+
   // 内部动画控制器和动画
   late AnimationController _breathingAnimationController;
   late Animation<double> _breathingAnimation;
@@ -233,70 +236,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                             ),
                           )
                         else
-                          // 显示消息内容
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 显示思考内容（如果有的话）
-                              if (widget.message.think.isNotEmpty) ...[
-                                Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest
-                                        .withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.outline.withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '💭 思考中...',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withOpacity(0.4),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        widget.message.think,
-                                        style: TextStyle(
-                                          fontSize: 11, // 更小的字体
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withOpacity(0.6), // 更淡的颜色
-                                          fontStyle: FontStyle.italic,
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                              MarkdownBody(
-                                data: widget.message.content,
-                                styleSheet: _buildMarkdownStyleSheet(),
-                                selectable: true,
-                                onTapLink: (text, href, title) {
-                                  if (href != null) _openLink(href);
-                                },
-                              ),
-                            ],
-                          ),
+                          // 显示消息内容（按 contentBlocks 顺序渲染）
+                          _buildContentBlocks(),
                         // 底部时间信息和操作按钮 - 悬停时显示，但保持布局高度
                         SizedBox(
                           height: 32, // 固定高度避免飘动
@@ -835,6 +776,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       // 调用API生成流式响应
       String accumulatedContent = '';
       String accumulatedThink = ''; // 累积思考内容
+      String accumulatedTool = ''; // 累积工具执行内容
+      final List<ContentBlock> blocks = [];
 
       // 使用 LLM Hub 创建客户端
       client = LlmClient(currentSession);
@@ -850,12 +793,31 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           break;
         }
 
-        // 处理content和think内容
+        // 处理content、think、tool内容
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
+        final toolChunk = chunkMap['tool'] ?? '';
 
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
+        accumulatedTool += toolChunk;
+
+        // 按顺序构建内容块
+        void appendBlock(ContentBlockType type, String text) {
+          if (blocks.isNotEmpty && blocks.last.type == type) {
+            blocks.last.text += text;
+          } else {
+            blocks.add(ContentBlock(type: type, text: text));
+          }
+        }
+
+        if (thinkChunk.isNotEmpty) {
+          appendBlock(ContentBlockType.think, thinkChunk);
+        } else if (toolChunk.isNotEmpty) {
+          appendBlock(ContentBlockType.tool, toolChunk);
+        } else if (contentChunk.isNotEmpty) {
+          appendBlock(ContentBlockType.content, contentChunk);
+        }
 
         // 更新消息内容
         final messageIndex = currentSession.messages.indexWhere(
@@ -879,6 +841,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             content: accumulatedContent,
             think:
                 accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
+            toolContent: accumulatedTool,
+            contentBlocks: List<ContentBlock>.from(blocks),
             timestamp: botMessage.timestamp,
             repoId: null,
             sessionId: session.sessionId,
@@ -922,6 +886,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           role: MessageRole.bot,
           content: accumulatedContent,
           think: accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
+          toolContent: accumulatedTool,
+          contentBlocks: List<ContentBlock>.from(blocks),
           timestamp: botMessage.timestamp,
           repoId: null,
           sessionId: session.sessionId,
@@ -1231,6 +1197,230 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         border: Border(top: BorderSide(color: Colors.grey[300]!, width: 1)),
       ),
     );
+  }
+
+  // ========== 内容块渲染 ==========
+
+  /// 按 contentBlocks 顺序构建 UI（think / tool / content）
+  /// 如果 contentBlocks 为空，回退到旧版渲染方式
+  Widget _buildContentBlocks() {
+    final blocks = widget.message.contentBlocks;
+
+    // 回退兼容：旧消息没有 contentBlocks
+    if (blocks.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.message.think.isNotEmpty) _buildThinkBlock(widget.message.think),
+          if (widget.message.content.isNotEmpty)
+            MarkdownBody(
+              data: widget.message.content,
+              styleSheet: _buildMarkdownStyleSheet(),
+              selectable: true,
+              onTapLink: (text, href, title) {
+                if (href != null) _openLink(href);
+              },
+            ),
+        ],
+      );
+    }
+
+    final children = <Widget>[];
+    for (int i = 0; i < blocks.length; i++) {
+      final block = blocks[i];
+      switch (block.type) {
+        case ContentBlockType.think:
+          children.add(_buildThinkBlock(block.text));
+        case ContentBlockType.tool:
+          children.add(_buildToolBlock(i, block.text));
+        case ContentBlockType.content:
+          children.add(
+            MarkdownBody(
+              data: block.text,
+              styleSheet: _buildMarkdownStyleSheet(),
+              selectable: true,
+              onTapLink: (text, href, title) {
+                if (href != null) _openLink(href);
+              },
+            ),
+          );
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  /// 思考块（保持原有样式）
+  Widget _buildThinkBlock(String text) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '💭 思考中...',
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withOpacity(0.4),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withOpacity(0.6),
+              fontStyle: FontStyle.italic,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 工具执行块（折叠/展开，默认折叠显示扳手图标+描述）
+  Widget _buildToolBlock(int index, String text) {
+    final isExpanded = _expandedToolIndices.contains(index);
+    final description = _parseToolDescription(text);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 折叠态：扳手图标 + 一句话描述
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedToolIndices.remove(index);
+                } else {
+                  _expandedToolIndices.add(index);
+                }
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withOpacity(0.25),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.15),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.build_outlined,
+                    size: 14,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.5),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.55),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    isExpanded
+                        ? CupertinoIcons.chevron_up
+                        : CupertinoIcons.chevron_down,
+                    size: 10,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.35),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 展开态：显示工具执行详情
+          if (isExpanded)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withOpacity(0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withOpacity(0.55),
+                  fontStyle: FontStyle.italic,
+                  height: 1.4,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 从工具文本中提取一句话描述
+  /// "执行: product_list" → "执行: product_list"
+  /// "已完成: product_list" → "已完成: product_list"
+  String _parseToolDescription(String text) {
+    // 取第一行作为摘要描述
+    final lines = text.split('\n');
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isNotEmpty) {
+        return trimmed;
+      }
+    }
+    return '工具执行';
   }
 
   Widget _buildActionButton({

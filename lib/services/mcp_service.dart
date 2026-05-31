@@ -10,8 +10,10 @@ import 'mcp_storage_service.dart';
 class McpExecutionResult {
   /// 已剥离工具调用 XML 的干净文本
   final String cleanContent;
+
   /// 用于 OpenAI 兼容 follow-up 消息构建的工具调用列表
   final List<Map<String, dynamic>> toolCallList;
+
   /// 每个工具的调用执行结果
   final List<Map<String, dynamic>> executionResults;
 
@@ -96,7 +98,7 @@ class McpService {
 
   /// 缓存的配置信息
   static final Map<String, McpServerConfig> _cachedConfigs = {};
-  
+
   /// 全局 MCP 配置列表（从 McpStorageService 加载）
   static List<McpServerConfig> _globalMcpConfigs = [];
   static bool _globalConfigsLoaded = false;
@@ -123,7 +125,9 @@ class McpService {
     McpServerConfig config,
   ) async {
     debugPrint('🔄 ====== 开始刷新 MCP 服务工具: ${config.name} ======');
-    debugPrint('   配置详情: name=${config.name}, url=${config.url}, command=${config.command}');
+    debugPrint(
+      '   配置详情: name=${config.name}, url=${config.url}, command=${config.command}',
+    );
     debugPrint('   args=${config.args}, headers=${config.headers}');
     debugPrint('   timeout=${config.timeout}');
 
@@ -148,7 +152,9 @@ class McpService {
         serverUrl: config.url!,
         headers: config.headers,
       );
-      debugPrint('   ⏱ SSE Transport 创建耗时: ${DateTime.now().difference(startTime).inMilliseconds}ms');
+      debugPrint(
+        '   ⏱ SSE Transport 创建耗时: ${DateTime.now().difference(startTime).inMilliseconds}ms',
+      );
     } else {
       // stdio 传输
       debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
@@ -165,13 +171,17 @@ class McpService {
       debugPrint('🔌 调用 client.connect(transport)...');
       final connectStart = DateTime.now();
       await client.connect(transport);
-      debugPrint('   ⏱ connect 耗时: ${DateTime.now().difference(connectStart).inMilliseconds}ms');
+      debugPrint(
+        '   ⏱ connect 耗时: ${DateTime.now().difference(connectStart).inMilliseconds}ms',
+      );
 
       // 获取工具列表
       debugPrint('📋 调用 client.listTools()...');
       final listStart = DateTime.now();
       final tools = await client.listTools();
-      debugPrint('   ⏱ listTools 耗时: ${DateTime.now().difference(listStart).inMilliseconds}ms');
+      debugPrint(
+        '   ⏱ listTools 耗时: ${DateTime.now().difference(listStart).inMilliseconds}ms',
+      );
       debugPrint('   📊 获取到 ${tools.length} 个工具');
 
       for (var i = 0; i < tools.length; i++) {
@@ -180,13 +190,14 @@ class McpService {
       }
 
       // 转为 McpToolInfo 列表
-      final toolInfos = tools.map((tool) {
-        return McpToolInfo(
-          name: tool.name,
-          description: tool.description,
-          inputSchema: tool.inputSchema as Map<String, dynamic>? ?? {},
-        );
-      }).toList();
+      final toolInfos =
+          tools.map((tool) {
+            return McpToolInfo(
+              name: tool.name,
+              description: tool.description,
+              inputSchema: tool.inputSchema as Map<String, dynamic>? ?? {},
+            );
+          }).toList();
 
       // 缓存
       _clients[config.name] = client;
@@ -196,11 +207,15 @@ class McpService {
         lastUpdated: DateTime.now(),
       );
 
-      debugPrint('✅ ====== 刷新成功: ${config.name}, 工具数: ${toolInfos.length} ======');
+      debugPrint(
+        '✅ ====== 刷新成功: ${config.name}, 工具数: ${toolInfos.length} ======',
+      );
       return toolInfos;
     } catch (e, stack) {
       // 清理失败的连接
-      try { _cleanupClient(config.name); } catch (_) {}
+      try {
+        _cleanupClient(config.name);
+      } catch (_) {}
       debugPrint('❌ ====== 刷新失败: ${config.name} ======');
       debugPrint('   错误类型: ${e.runtimeType}');
       debugPrint('   错误信息: $e');
@@ -248,22 +263,24 @@ class McpService {
 
       // 从 initialize 响应中获取服务器名称
       final serverInfo = client.serverInfo;
-      final serverName = serverInfo != null
-          ? (serverInfo['name'] as String? ?? config.name)
-          : config.name;
+      final serverName =
+          serverInfo != null
+              ? (serverInfo['name'] as String? ?? config.name)
+              : config.name;
       debugPrint('📋 服务器名称: $serverName');
 
       // 获取工具列表
       final tools = await client.listTools();
       debugPrint('📊 获取到 ${tools.length} 个工具');
 
-      final toolInfos = tools.map((tool) {
-        return McpToolInfo(
-          name: tool.name,
-          description: tool.description,
-          inputSchema: tool.inputSchema as Map<String, dynamic>? ?? {},
-        );
-      }).toList();
+      final toolInfos =
+          tools.map((tool) {
+            return McpToolInfo(
+              name: tool.name,
+              description: tool.description,
+              inputSchema: tool.inputSchema as Map<String, dynamic>? ?? {},
+            );
+          }).toList();
 
       // 缓存
       _clients[serverName] = client;
@@ -276,7 +293,9 @@ class McpService {
       debugPrint('✅ ====== 连接成功: $serverName ======');
       return McpConnectionInfo(serverName: serverName, tools: toolInfos);
     } catch (e, stack) {
-      try { _cleanupClient(config.name); } catch (_) {}
+      try {
+        _cleanupClient(config.name);
+      } catch (_) {}
       debugPrint('❌ ====== 连接失败: ${config.name} ======');
       debugPrint('   错误: $e');
       debugPrint('   堆栈: $stack');
@@ -323,7 +342,9 @@ class McpService {
         );
       } else {
         // stdio 传输
-        debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
+        debugPrint(
+          '🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}',
+        );
         transport = await StdioClientTransport.create(
           command: config.command,
           arguments: config.args,
@@ -476,7 +497,9 @@ class McpService {
       final formattedResult = _formatToolResult(result);
 
       if (isError) {
-        debugPrint('⚠️ MCP工具调用返回错误: $serviceName.$toolName, 内容: $formattedResult');
+        debugPrint(
+          '⚠️ MCP工具调用返回错误: $serviceName.$toolName, 内容: $formattedResult',
+        );
         return McpToolResult(
           toolName: toolName,
           arguments: arguments,
@@ -683,13 +706,38 @@ class McpService {
     return toolCalls;
   }
 
-  /// 解析 DSML 标签格式（占位，待补充具体正则）
+  /// 解析 DSML 标签格式
+  /// `<|tool_calls|> <|invoke name="工具名"> [<|parameter ...>值</|parameter|>] </|invoke|> </|tool_calls|>`
   static List<Map<String, dynamic>> parseDSMLXml(String response) {
     final toolCalls = <Map<String, dynamic>>[];
 
-    // TODO: 补充 DSML 标签正则
-    debugPrint('⚠️ parseDSMLXml: DSML 解析器待实现');
+    // 匹配 DSML 外层包裹：<|tool_calls|> ... </|tool_calls|>
+    final blockRegex = RegExp(
+      r'<\|\s*tool_calls\s*\|>\s*(.*?)\s*</\|\s*tool_calls\s*\|>',
+      dotAll: true,
+    );
+    final blockMatch = blockRegex.firstMatch(response);
+    if (blockMatch == null) {
+      debugPrint('🔍 parseDSMLXml: 没有找到可用工具');
 
+      return toolCalls;
+    }
+
+    final inner = blockMatch.group(1);
+    if (inner == null) return toolCalls;
+
+    final normalized = inner
+        .replaceAllMapped(
+          RegExp(r'<\|\s*(invoke|parameter)\b'),
+          (m) => '<${m.group(1)}',
+        )
+        .replaceAllMapped(
+          RegExp(r'</\|\s*(invoke|parameter)\s*\|?\s*>'),
+          (m) => '</${m.group(1)}>',
+        );
+
+    _parseInvokeBlocks(normalized, toolCalls);
+    debugPrint('🔍 parseDSMLXml: 找到 ${toolCalls.length} 个工具调用');
     return toolCalls;
   }
 
@@ -1064,7 +1112,9 @@ class McpService {
                   final m = raw as Map<String, dynamic>;
                   return {
                     'name': (m['name'] ?? '') as String,
-                    'arguments': (m['arguments'] ?? <String, dynamic>{}) as Map<String, dynamic>,
+                    'arguments':
+                        (m['arguments'] ?? <String, dynamic>{})
+                            as Map<String, dynamic>,
                     'id': m['id'],
                     'index': m['index'],
                   };
@@ -1137,10 +1187,20 @@ class McpService {
     );
   }
 
-  /// 获取或初始化会话的 MCP 客户端（带 session 级缓存）
+  /// 获取或初始化会话的 MCP 客户端（带 session 级缓存 + 存活检测）
   static Future<Client?> _getOrInitClient(ChatSession session) async {
     Client? mc = session.mcpClient;
-    if (mc != null) return mc;
+    if (mc != null) {
+      // 存活检测：缓存的客户端可能已断开（服务端重启、网络中断等）
+      try {
+        await mc.listTools();
+        return mc;
+      } catch (_) {
+        debugPrint('⚠️ 缓存的 MCP 客户端已断开，清理后重新初始化');
+        session.mcpClient = null;
+        mc = null;
+      }
+    }
 
     final svc = session.mcpServer?.name;
     if (svc == null) return null;

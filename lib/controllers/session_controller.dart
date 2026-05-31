@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../models/chat/chat_session.dart';
 import '../models/bigmodel/chat_model.dart';
+import '../models/bigmodel/mcp_config.dart';
 import '../storage/isar_models.dart';
 import '../storage/isar_service.dart';
 
@@ -359,6 +360,15 @@ class SessionController extends GetxController {
       } catch (_) {}
     }
 
+    // 解析 McpServerConfig
+    McpServerConfig? mcpServer;
+    if (entity.mcpServerJson != null && entity.mcpServerJson!.isNotEmpty) {
+      try {
+        final map = jsonDecode(entity.mcpServerJson!) as Map<String, dynamic>;
+        mcpServer = McpServerConfig.fromMap(map);
+      } catch (_) {}
+    }
+
     return ChatSession(
       sessionId: entity.sessionId,
       name: entity.name,
@@ -371,8 +381,7 @@ class SessionController extends GetxController {
       inputContent: entity.inputContent,
       lastSelectedDirectory: entity.lastSelectedDirectory,
       chatModel: chatModel,
-      // mcpServer, skill, attachments, sessionQuickCommands 暂不还原
-      // 可在后续需要时补充
+      mcpServer: mcpServer,
     );
   }
 }

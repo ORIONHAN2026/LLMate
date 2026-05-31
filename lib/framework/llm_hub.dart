@@ -77,9 +77,8 @@ class LlmClient {
 
   /// 发送消息并获取流式响应（递归处理 MCP 工具调用，直到无工具调用为止）
   /// chunk: {content,think,tool}  三个字段互斥，每次必有一个有值
-  Stream<Map<String, dynamic>> sendMessageStream(
-    ChatMessage userMessage,
-  ) async* {
+  // ignore: non_constant_identifier_names
+  Stream<Map<String, dynamic>> LLMChat(ChatMessage userMessage) async* {
     _cancelled = false;
 
     // messages 会随每次工具调用追加 assistant + tool 消息，
@@ -131,7 +130,12 @@ class LlmClient {
         nativeToolCallsJson: toolCallsJson,
       );
 
-      if (toolResult == null || _cancelled) return;
+      if (toolResult == null || _cancelled) {
+        if (!_cancelled) {
+          yield {'tool': '⚠️ MCP 服务未连接，跳过工具调用'};
+        }
+        return;
+      }
 
       for (final r in toolResult.executionResults) {
         final name = r['name'] as String;

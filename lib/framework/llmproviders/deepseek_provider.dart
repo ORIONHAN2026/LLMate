@@ -27,8 +27,7 @@ class DeepSeekProvider extends BaseLlmProvider {
   void onConfigure(ChatModel model) {}
 
   @override
-  String buildProviderPrompt() =>
-      '对tools工具的调用，请严格使用<tool_calls>标签返回，禁止使用DMSL';
+  String buildProviderPrompt() => '对tools工具的调用，请严格使用<tool_calls>标签返回，禁止使用DMSL';
 
   @override
   Stream<Map<String, String?>> sendMessageStream({
@@ -72,10 +71,7 @@ class DeepSeekProvider extends BaseLlmProvider {
 
           // 透传 content / think 到 UI
           if (chunk['content'] != null || chunk['think'] != null) {
-            yield {
-              'content': chunk['content'] ?? '',
-              'think': chunk['think'],
-            };
+            yield {'content': chunk['content'] ?? '', 'think': chunk['think']};
           }
 
           // 累积正文
@@ -94,7 +90,9 @@ class DeepSeekProvider extends BaseLlmProvider {
             if (kDebugMode) debugPrint('接收到完整数据 : $accContent');
 
             if (accContent.isNotEmpty) {
-              final textCalls = McpService.parseToolCallsFromResponse(accContent);
+              final textCalls = McpService.parseToolCallsFromResponse(
+                accContent,
+              );
               if (textCalls.isNotEmpty) {
                 if (kDebugMode) {
                   debugPrint(
@@ -102,6 +100,10 @@ class DeepSeekProvider extends BaseLlmProvider {
                   );
                 }
                 yield {'toolcall': jsonEncode(textCalls)};
+              } else {
+                if (kDebugMode) {
+                  debugPrint('🔧 finish_reason=stop 没有检测到工具');
+                }
               }
             }
             return;
@@ -123,7 +125,9 @@ class DeepSeekProvider extends BaseLlmProvider {
       final data = await sendOpenAINonStreamRequest(
         messages: messages,
         session: session,
-        extra: {'response_format': {'type': 'json_object'}},
+        extra: {
+          'response_format': {'type': 'json_object'},
+        },
       );
       if (data != null) {
         final choices = data['choices'] as List?;

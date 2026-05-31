@@ -3513,7 +3513,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // }
 
       // 发送消息并获取流式响应
-      final responseStream = client.sendMessageStream(userMessage);
+      final responseStream = client.LLMChat(userMessage);
 
       // 处理流式响应并更新UI（LlmClient 已在内部处理 MCP 工具调用和 follow-up）
       // chunk 格式: {content,think,tool}  三个字段互斥，每次必有一个有值

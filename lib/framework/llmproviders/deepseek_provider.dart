@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
+import '../stream_tool_call_filter.dart';
 import 'base_provider.dart';
 
 /// DeepSeek API 提供商
@@ -83,6 +84,10 @@ class DeepSeekProvider extends BaseLlmProvider {
   }
 
   /// DeepSeek 特有：累积正文内容，在 finish_reason=stop 时解析 <tool_calls> 文本
+  ///
+  /// 集成 [StreamToolCallFilter] 流式状态机拦截器，实时拦截工具调用标签，
+  /// 避免将 `<tool_calls>`、`<|tool_calls|>`、`<｜｜DSML｜｜tool_calls>` 等标签
+  /// 透传到前端 UI。
   @override
   Stream<Map<String, String?>> transformStreamResponse(
     Stream<List<int>> stream,
@@ -90,6 +95,7 @@ class DeepSeekProvider extends BaseLlmProvider {
     String buffer = '';
     String accContent = '';
     bool isFinished = false;
+    final filter = StreamToolCallFilter();
 
     await for (final chunk in stream) {
       final chunkString = utf8.decode(chunk);
@@ -100,23 +106,45 @@ class DeepSeekProvider extends BaseLlmProvider {
       for (final line in lines) {
         if (!line.trim().startsWith('data: ')) continue;
         final dataStr = line.trim().substring(6);
-        if (dataStr == '[DONE]') continue;
+        if (dataStr == '[DONE]') {
+          // 流结束，刷出状态机缓存
+          final flushResult = filter.flush();
+          if (flushResult.cleanText.isNotEmpty) {
+            accContent += flushResult.cleanText;
+            yield {'content': flushResult.cleanText};
+          }
+          continue;
+        }
 
         try {
           final data = jsonDecode(dataStr) as Map<String, dynamic>;
-          final chunk = extractStreamChunk(data);
+          final extracted = extractStreamChunk(data);
 
-          // 透传 content / think 到 UI
-          if (chunk['content'] != null || chunk['think'] != null) {
-            yield {'content': chunk['content'] ?? '', 'think': chunk['think']};
+          // 透传 think 到 UI（思考内容不需要过滤）
+          if (extracted['think'] != null && extracted['think']!.isNotEmpty) {
+            yield {'content': '', 'think': extracted['think']};
           }
 
-          // 累积正文
-          if (chunk['content'] != null && chunk['content']!.isNotEmpty) {
-            accContent += chunk['content']!;
+          // 对 content 通过状态机过滤
+          final rawContent = extracted['content'] ?? '';
+          if (rawContent.isNotEmpty) {
+            final filterResult = filter.feed(rawContent);
+            final cleanText = filterResult.cleanText;
+
+            // 累积原始内容（用于后续 parseToolCalls 解析）
+            accContent += rawContent;
+
+            // 仅放行过滤后的干净文本
+            if (cleanText.isNotEmpty) {
+              yield {'content': cleanText};
+            }
+
+            if (kDebugMode && filterResult.isInToolCall) {
+              debugPrint('🎯 [DeepSeek] 状态机拦截: 工具调用标签已扣留');
+            }
           }
 
-          final finishReason = chunk['finish_reason'];
+          final finishReason = extracted['finish_reason'];
           if (finishReason != null && kDebugMode) {
             debugPrint('🔧 $providerName finish_reason: $finishReason');
           }
@@ -124,6 +152,14 @@ class DeepSeekProvider extends BaseLlmProvider {
           // finish_reason == 'stop': 从累积文本中解析工具调用
           if (finishReason == 'stop' && !isFinished) {
             isFinished = true;
+
+            // 刷出状态机残留缓存
+            final flushResult = filter.flush();
+            if (flushResult.cleanText.isNotEmpty) {
+              accContent += flushResult.cleanText;
+              yield {'content': flushResult.cleanText};
+            }
+
             if (kDebugMode) debugPrint('接收到完整数据 : $accContent');
 
             if (accContent.isNotEmpty) {
@@ -149,6 +185,13 @@ class DeepSeekProvider extends BaseLlmProvider {
           if (kDebugMode) print('$providerName JSON 解析错误: $e');
         }
       }
+    }
+
+    // 流自然结束，刷出状态机缓存
+    final flushResult = filter.flush();
+    if (flushResult.cleanText.isNotEmpty) {
+      accContent += flushResult.cleanText;
+      yield {'content': flushResult.cleanText};
     }
   }
 

@@ -22,6 +22,9 @@ class ChatSession {
 
   // === 会话级功能配置 ===
 
+  /// 工作目录：会话产生的文件默认保存到此目录
+  final String? workDirectory;
+
   /// 绑定的 MCP 服务（null = 未绑定）
   final McpServerConfig? mcpServer;
 
@@ -53,6 +56,7 @@ class ChatSession {
     this.shouldStopResponse = false,
     this.scrollPosition = 0.0,
     this.lastSelectedDirectory,
+    this.workDirectory,
     this.mcpServer,
     this.skill,
     this.memoryRounds = 20,
@@ -104,6 +108,8 @@ class ChatSession {
     bool? shouldStopResponse,
     double? scrollPosition,
     String? lastSelectedDirectory,
+    String? workDirectory,
+    bool clearWorkDirectory = false,
     McpServerConfig? mcpServer,
     bool clearMcpServer = false,
     Skill? skill,
@@ -127,6 +133,8 @@ class ChatSession {
       scrollPosition: scrollPosition ?? this.scrollPosition,
       lastSelectedDirectory:
           lastSelectedDirectory ?? this.lastSelectedDirectory,
+      workDirectory:
+          clearWorkDirectory ? null : (workDirectory ?? this.workDirectory),
       mcpServer: clearMcpServer ? null : (mcpServer ?? this.mcpServer),
       skill: clearSkill ? null : (skill ?? this.skill),
       chatModel: clearChatModel ? null : (chatModel ?? this.chatModel),
@@ -160,6 +168,7 @@ class ChatSession {
       shouldStopResponse: json['shouldStopResponse'] ?? false,
       scrollPosition: (json['scrollPosition'] as num?)?.toDouble() ?? 0.0,
       lastSelectedDirectory: json['lastSelectedDirectory'],
+      workDirectory: json['workDirectory'],
       mcpServer: json['mcpServer'] is Map<String, dynamic>
           ? McpServerConfig.fromMap(json['mcpServer'])
           : null,
@@ -193,6 +202,7 @@ class ChatSession {
       'shouldStopResponse': shouldStopResponse,
       'scrollPosition': scrollPosition,
       'lastSelectedDirectory': lastSelectedDirectory,
+      if (workDirectory != null) 'workDirectory': workDirectory,
       if (mcpServer != null) 'mcpServer': mcpServer!.toJson(),
       if (skill != null) 'skill': skill!.toJson(),
       'memoryRounds': memoryRounds,

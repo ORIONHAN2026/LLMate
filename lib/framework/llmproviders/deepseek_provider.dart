@@ -124,7 +124,8 @@ class DeepSeekProvider extends BaseLlmProvider {
           // 透传原生 tool_calls 增量（OpenAI 格式，由 extractStreamChunk 提取）
           // DeepSeek 可能在返回 content 的同时返回原生 tool_calls
           final nativeToolCall = extracted['toolcall'];
-          if (nativeToolCall != null && nativeToolCall.isNotEmpty) {
+          final hasNativeToolCall = nativeToolCall != null && nativeToolCall.isNotEmpty;
+          if (hasNativeToolCall) {
             yield {'toolcall': nativeToolCall};
           }
 
@@ -134,7 +135,16 @@ class DeepSeekProvider extends BaseLlmProvider {
           }
 
           // 对 content 通过状态机过滤
-          final rawContent = extracted['content'] ?? '';
+          var rawContent = extracted['content'] ?? '';
+
+          // 当同一 chunk 同时有原生 tool_call 时，content 中的残留标签片段
+          // （如 "s>" 等）是模型已知的问题行为，直接丢弃整个 content
+          if (hasNativeToolCall && rawContent.isNotEmpty) {
+            if (kDebugMode) {
+              debugPrint('🎯 [DeepSeek] 同 chunk 存在原生 tool_call，丢弃 content 残留: "$rawContent"');
+            }
+            rawContent = '';
+          }
           if (rawContent.isNotEmpty) {
             final filterResult = filter.feed(rawContent);
             final cleanText = filterResult.cleanText;

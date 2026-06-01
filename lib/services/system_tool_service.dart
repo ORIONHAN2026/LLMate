@@ -1,9 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 import '../models/chat/chat_session.dart';
+import 'file_tool_service.dart';
 import 'mcp_service.dart';
+import 'skill_tool_service.dart';
 import 'word_tool_service.dart';
 
 class SystemToolDefinition {
@@ -25,6 +28,9 @@ class SystemToolDefinition {
 class SystemToolService {
   static const String createWordDocumentTool = 'word_create_document';
   static const String readWordDocumentTool = 'word_read_document';
+  static const String skillManagerTool = 'skill_manager';
+  static const String fileReadTool = 'file_read';
+  static const String fileWriteTool = 'file_write';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -150,6 +156,69 @@ class SystemToolService {
         'required': ['filePath'],
       },
     ),
+    SystemToolDefinition(
+      name: skillManagerTool,
+      description: '技能管理工具。列出、读取、创建、更新、删除技能（SKILL.md）。涉及技能修改时必须使用此工具，不要通过 bash 或其他方式直接编辑文件。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'action': {
+            'type': 'string',
+            'enum': ['list', 'read', 'create', 'update', 'delete'],
+            'description': '操作类型：list=列出所有技能，read=读取技能内容，create=创建新技能，update=更新已有技能，delete=删除技能。',
+          },
+          'skillId': {
+            'type': 'string',
+            'description': '技能 ID（即 skills/ 下的文件夹名）。read/update/delete 必填。',
+          },
+          'name': {
+            'type': 'string',
+            'description': '技能名称。create 必填，update 可选（不填则保留原值）。',
+          },
+          'description': {
+            'type': 'string',
+            'description': '技能描述。create 可选，update 可选（不填则保留原值）。',
+          },
+          'content': {
+            'type': 'string',
+            'description': '技能正文（SKILL.md YAML 头之后的 Markdown 内容）。create 必填，update 可选（不填则保留原值）。',
+          },
+        },
+        'required': ['action'],
+      },
+    ),
+    SystemToolDefinition(
+      name: fileReadTool,
+      description: '读取文本文件内容。支持代码文件(.dart/.py/.js/.ts/.java/.kt/.swift/.go/.rs/.c/.cpp/.html/.css/.sql等)、Markdown文件(.md)、配置文件(.json/.yaml/.toml/.xml等)、纯文本(.txt/.log/.csv等)。返回文件内容、行数、大小等信息。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要读取的文件完整路径。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
+    SystemToolDefinition(
+      name: fileWriteTool,
+      description: '写入或创建文本文件。支持代码文件、Markdown文件、配置文件、纯文本等。如果文件已存在则覆盖，如果父目录不存在则自动创建。适合生成代码、Markdown文档、配置文件等。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要写入的文件完整路径，包含文件名和扩展名。',
+          },
+          'content': {
+            'type': 'string',
+            'description': '要写入的文件内容。',
+          },
+        },
+        'required': ['filePath', 'content'],
+      },
+    ),
   ];
 
   static List<SystemToolDefinition> get tools => List.unmodifiable(_tools);
@@ -218,26 +287,76 @@ class SystemToolService {
       debugPrint('🧰 SystemToolService 执行: $toolName ${jsonEncode(arguments)}');
     }
 
+    // 注入会话工作目录到工具参数（当工具需要 outputDirectory 但未指定时）
+    final enrichedArgs = _injectWorkDirectory(session, toolName, arguments);
+
     switch (toolName) {
       case createWordDocumentTool:
         return WordToolService.createDocument(
-          arguments: arguments,
+          arguments: enrichedArgs,
           callId: callId,
         );
       case readWordDocumentTool:
         return WordToolService.readDocument(
-          arguments: arguments,
+          arguments: enrichedArgs,
+          callId: callId,
+        );
+      case skillManagerTool:
+        final action = (enrichedArgs['action'] ?? '').toString();
+        return SkillToolService.execute(
+          action: action,
+          arguments: enrichedArgs,
+          callId: callId,
+        );
+      case fileReadTool:
+        return FileToolService.execute(
+          action: 'read',
+          arguments: enrichedArgs,
+          callId: callId,
+        );
+      case fileWriteTool:
+        return FileToolService.execute(
+          action: 'write',
+          arguments: enrichedArgs,
           callId: callId,
         );
       default:
         return {
           'id': callId,
           'name': toolName,
-          'args': arguments,
+          'args': enrichedArgs,
           'result': '系统工具 "$toolName" 不存在。',
           'isError': true,
         };
     }
+  }
+
+  /// 当会话设置了工作目录且工具未指定输出目录时，自动注入
+  static Map<String, dynamic> _injectWorkDirectory(
+    ChatSession session,
+    String toolName,
+    Map<String, dynamic> arguments,
+  ) {
+    final workDir = session.workDirectory;
+    if (workDir == null || workDir.trim().isEmpty) return arguments;
+
+    // word_create_document: 注入 outputDirectory
+    if (toolName == createWordDocumentTool) {
+      final current = (arguments['outputDirectory'] ?? '').toString().trim();
+      if (current.isEmpty) {
+        return {...arguments, 'outputDirectory': workDir};
+      }
+    }
+
+    // file_write: 当 filePath 为相对路径或仅文件名时，拼接工作目录
+    if (toolName == fileWriteTool) {
+      final current = (arguments['filePath'] ?? '').toString().trim();
+      if (current.isNotEmpty && !p.isAbsolute(current)) {
+        return {...arguments, 'filePath': p.join(workDir, current)};
+      }
+    }
+
+    return arguments;
   }
 
   static List<Map<String, dynamic>> buildAllOpenAIToolsFormat(
@@ -290,6 +409,20 @@ class SystemToolService {
       case readWordDocumentTool:
         return const JsonEncoder.withIndent('  ').convert({
           'filePath': '/Users/example/Documents/模板.docx',
+        });
+      case skillManagerTool:
+        return const JsonEncoder.withIndent('  ').convert({
+          'action': 'read',
+          'skillId': '会议通知',
+        });
+      case fileReadTool:
+        return const JsonEncoder.withIndent('  ').convert({
+          'filePath': '/Users/example/project/README.md',
+        });
+      case fileWriteTool:
+        return const JsonEncoder.withIndent('  ').convert({
+          'filePath': '/Users/example/project/notes.md',
+          'content': '# 笔记\n\n这是一段示例内容。',
         });
       default:
         return '{}';

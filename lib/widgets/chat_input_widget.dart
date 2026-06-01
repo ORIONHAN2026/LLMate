@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'package:path/path.dart' as p;
 
 import '../controllers/session_controller.dart';
 import '../models/bigmodel/models.dart';
@@ -863,6 +864,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       const SizedBox(width: 8),
                       _buildMemoryToggle(),
                       const SizedBox(width: 8),
+                      _buildWorkDirectoryToggle(),
+                      const SizedBox(width: 8),
                       _buildCleanHistoryToggle(),
 
                       Container(
@@ -1060,6 +1063,91 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         ),
       ),
     );
+  }
+
+  /// 构建工作目录按钮
+  Widget _buildWorkDirectoryToggle() {
+    final currentSession = sessionController.currentSession.value;
+    final workDir = currentSession?.workDirectory;
+    final hasWorkDir = workDir != null && workDir.isNotEmpty;
+    final displayText = hasWorkDir ? p.basename(workDir) : '工作目录';
+
+    return Tooltip(
+      message: hasWorkDir ? '工作目录: $workDir' : '设置工作目录（文件默认保存位置）',
+      child: GestureDetector(
+        onTap: _isSending ? null : _showWorkDirectoryPicker,
+        onLongPress: hasWorkDir && !_isSending ? _clearWorkDirectory : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          decoration:
+              hasWorkDir
+                  ? BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(4),
+                  )
+                  : null,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                CupertinoIcons.folder,
+                size: 13,
+                color:
+                    !_isSending
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(hasWorkDir ? 0.8 : 0.5)
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+              ),
+              const SizedBox(width: 4),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 80),
+                child: Text(
+                  displayText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color:
+                        !_isSending
+                            ? Theme.of(context).colorScheme.onSurface.withOpacity(hasWorkDir ? 0.8 : 0.5)
+                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 选择工作目录
+  void _showWorkDirectoryPicker() async {
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
+
+    final result = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: '选择工作目录',
+      initialDirectory: currentSession.workDirectory,
+    );
+
+    if (result != null && mounted) {
+      sessionController.updateSession(
+        currentSession.copyWith(workDirectory: result),
+      );
+      SnackBarUtils.showSuccess(context, '工作目录已设置');
+    }
+  }
+
+  /// 清除工作目录
+  void _clearWorkDirectory() {
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
+
+    sessionController.updateSession(
+      currentSession.copyWith(clearWorkDirectory: true),
+    );
+    SnackBarUtils.showSuccess(context, '工作目录已清除');
   }
 
   /// 构建记忆轮数配置按钮

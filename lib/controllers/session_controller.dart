@@ -9,6 +9,7 @@ import '../models/bigmodel/chat_model.dart';
 import '../models/bigmodel/mcp_config.dart';
 import '../storage/isar_models.dart';
 import '../storage/isar_service.dart';
+import '../services/mcp_service.dart';
 
 class SessionController extends GetxController {
   var sessions = <ChatSession>[].obs;
@@ -24,6 +25,10 @@ class SessionController extends GetxController {
 
   Future<void> setCurrentSession(ChatSession? session) async {
     currentSession.value = session;
+    // 会话打开时预初始化 MCP 连接
+    if (session != null) {
+      McpService.initForSession(session);
+    }
     await _persistCurrentSession();
   }
 
@@ -105,9 +110,14 @@ class SessionController extends GetxController {
 
   /// 切换到指定会话并持久化（不阻塞 UI）
   Future<void> switchToSession(String sessionId) async {
+    // 切换会话时关闭所有 MCP 连接
+    await McpService.closeAllClients();
+
     final targetIndex = sessions.indexWhere((s) => s.sessionId == sessionId);
     if (targetIndex >= 0 && targetIndex < sessions.length) {
       currentSession.value = sessions[targetIndex];
+      // 新会话有 MCP 则立即预初始化
+      McpService.initForSession(sessions[targetIndex]);
       // 持久化放到微任务中异步执行，不阻塞 UI 切换
       Future.microtask(() => _persistCurrentSession());
     }

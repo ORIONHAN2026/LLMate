@@ -171,7 +171,7 @@ class McpService {
         debugPrint('      [${i + 1}] ${t.name}: ${t.description}');
       }
 
-      // 转为 McpToolInfo 列表
+      // 转为 McpToolInfo 列表 + 缓存
       final toolInfos =
           tools.map((tool) {
             return McpToolInfo(
@@ -181,9 +181,6 @@ class McpService {
             );
           }).toList();
 
-      // 缓存
-      _clients[config.name] = client;
-      _availableTools[config.name] = tools;
       _cachedConfigs[config.name] = config.copyWith(
         tools: toolInfos,
         lastUpdated: DateTime.now(),
@@ -192,22 +189,28 @@ class McpService {
       debugPrint(
         '✅ ====== 刷新成功: ${config.name}, 工具数: ${toolInfos.length} ======',
       );
+
+      // 断开连接
       return toolInfos;
     } catch (e, stack) {
-      // 清理失败的连接
-      try {
-        _cleanupClient(config.name);
-      } catch (_) {}
       debugPrint('❌ ====== 刷新失败: ${config.name} ======');
       debugPrint('   错误类型: ${e.runtimeType}');
       debugPrint('   错误信息: $e');
       debugPrint('   堆栈: $stack');
       rethrow;
+    } finally {
+      // 无论成功失败，断开连接
+      try {
+        client.disconnect();
+      } catch (_) {}
+      _clients.remove(config.name);
+      _availableTools.remove(config.name);
+      debugPrint('🧹 已断开刷新连接: ${config.name}');
     }
   }
 
-  /// 连接 MCP 服务器并获取服务器名称和工具列表
-  /// 用于首次添加服务时，从远程获取服务器信息
+  /// 连接 MCP 服务器并获取服务器名称和工具列表。
+  /// 用于首次添加服务时，从远程获取服务器信息。**完成后断开连接**。
   static Future<McpConnectionInfo> connectAndGetInfo(
     McpServerConfig config,
   ) async {
@@ -243,7 +246,6 @@ class McpService {
     try {
       await client.connect(transport);
 
-      // 从 initialize 响应中获取服务器名称
       final serverInfo = client.serverInfo;
       final serverName =
           serverInfo != null
@@ -251,7 +253,6 @@ class McpService {
               : config.name;
       debugPrint('📋 服务器名称: $serverName');
 
-      // 获取工具列表
       final tools = await client.listTools();
       debugPrint('📊 获取到 ${tools.length} 个工具');
 
@@ -264,24 +265,29 @@ class McpService {
             );
           }).toList();
 
-      // 缓存
-      _clients[serverName] = client;
-      _availableTools[serverName] = tools;
+      // 缓存工具信息（供 buildMcpToolsInfoForApi 等使用）
       _cachedConfigs[serverName] = config.copyWith(
         tools: toolInfos,
         lastUpdated: DateTime.now(),
       );
 
-      debugPrint('✅ ====== 连接成功: $serverName ======');
+      debugPrint('✅ ====== 获取信息成功: $serverName，断开连接 ======');
+
+      // 立即断开，工具信息已保存到本地缓存
       return McpConnectionInfo(serverName: serverName, tools: toolInfos);
     } catch (e, stack) {
-      try {
-        _cleanupClient(config.name);
-      } catch (_) {}
       debugPrint('❌ ====== 连接失败: ${config.name} ======');
       debugPrint('   错误: $e');
       debugPrint('   堆栈: $stack');
       rethrow;
+    } finally {
+      // 无论成功失败，断开连接
+      try {
+        client.disconnect();
+      } catch (_) {}
+      _clients.remove(config.name);
+      _availableTools.remove(config.name);
+      debugPrint('🧹 已断开探测连接: ${config.name}');
     }
   }
 
@@ -920,25 +926,15 @@ class McpService {
     return tools.isNotEmpty;
   }
 
-  /// 获取或初始化会话的 MCP 客户端（带 session 级缓存 + 存活检测）
+  /// 按需获取 MCP 客户端（懒连接 - 仅作兜底）
+  ///
+  /// 正常流程中，MCP 在会话打开时就已通过 [initForSession] 预连接，
+  /// 此方法仅在未预连接的异常情况下按需初始化。
   static Future<Client?> getOrInitClient(ChatSession session) async {
-    Client? mc = session.mcpClient;
-    if (mc != null) {
-      // 存活检测：缓存的客户端可能已断开（服务端重启、网络中断等）
-      try {
-        await mc.listTools();
-        return mc;
-      } catch (_) {
-        debugPrint('⚠️ 缓存的 MCP 客户端已断开，清理后重新初始化');
-        session.mcpClient = null;
-        mc = null;
-      }
-    }
-
     final svc = session.mcpServer?.name;
     if (svc == null) return null;
 
-    mc = getMCPClient(svc);
+    Client? mc = getMCPClient(svc);
     if (mc == null) {
       await ensureGlobalConfigsLoaded();
       final inited = await initializeSessionMcpServices(session);
@@ -946,9 +942,28 @@ class McpService {
       mc = getMCPClient(svc);
     }
 
-    if (mc != null) {
-      session.mcpClient = mc;
-    }
     return mc;
+  }
+
+  /// 会话打开时预初始化 MCP 连接
+  ///
+  /// 在 [SessionController.switchToSession] 和 [SessionController.setCurrentSession]
+  /// 中调用，确保切换到会话时 MCP 已连接，后续工具调用无需等待。
+  static void initForSession(ChatSession session) {
+    if (session.mcpServer == null) return;
+    final svc = session.mcpServer!.name;
+
+    // 避免重复初始化
+    if (_clients.containsKey(svc)) {
+      debugPrint('📡 MCP 客户端已存在: $svc，跳过重复初始化');
+      return;
+    }
+
+    debugPrint('🚀 会话打开，预初始化 MCP: $svc');
+    // 放到微任务中，不阻塞 UI
+    Future.microtask(() async {
+      await ensureGlobalConfigsLoaded();
+      await initializeSessionMcpServices(session);
+    });
   }
 }

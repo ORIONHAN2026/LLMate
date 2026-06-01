@@ -26,7 +26,45 @@ class DeepSeekProvider extends BaseLlmProvider {
   void onConfigure(ChatModel model) {}
 
   @override
-  String buildProviderPrompt() => '对tools工具的调用，请严格使用<tool_calls>标签返回，禁止使用DMSL';
+  String buildProviderPrompt() => '''
+## 🚨 工具调用规则 — 最高优先级
+
+当你需要使用工具时，必须严格遵守以下格式，**禁止使用 markdown 代码块**（如 ```bash）来执行命令：
+
+<tool_calls>
+<invoke name="工具名称">
+<arguments>
+{"参数名": "参数值"}
+</arguments>
+</invoke>
+</tool_calls>
+
+**关键规则：**
+- ✅ 使用 <tool_calls> XML 格式包裹所有工具调用
+- ✅ 每个 <invoke> 只调用一个工具
+- ✅ 参数必须是标准 JSON 格式，字符串值用双引号
+- ❌ 禁止在 markdown 代码块中写 bash 命令
+- ❌ 禁止用 ```bash ... ``` 代替工具调用
+- ❌ 禁止跳过工具直接输出虚拟结果
+- 💡 工具调用失败或结果为空时，等待真实结果，不要编造
+''';
+
+  /// DeepSeek 使用文本格式工具调用（system prompt 中注入工具信息），
+  /// 不发送 OpenAI 原生 tools/tool_choice 参数，避免与文本格式冲突。
+  @override
+  Map<String, dynamic> buildRequestData({
+    required List<Map<String, dynamic>> messages,
+    required bool stream,
+    ChatSession? session,
+    Map<String, dynamic>? extra,
+  }) {
+    // 调用基类但不传 session，阻止注入 tools/tool_choice
+    return super.buildRequestData(
+      messages: messages,
+      stream: stream,
+      extra: extra,
+    );
+  }
 
   @override
   Stream<Map<String, String?>> sendMessageStream({
@@ -90,7 +128,8 @@ class DeepSeekProvider extends BaseLlmProvider {
 
             if (accContent.isNotEmpty) {
               final parsed = parseToolCalls(accContent);
-              final textCalls = parsed['toolCalls'] as List<Map<String, dynamic>>;
+              final textCalls =
+                  parsed['toolCalls'] as List<Map<String, dynamic>>;
               if (textCalls.isNotEmpty) {
                 if (kDebugMode) {
                   debugPrint(
@@ -177,87 +216,99 @@ class DeepSeekProvider extends BaseLlmProvider {
     final toolCalls = <Map<String, dynamic>>[];
     String? inner;
 
-    // 1) <tool_calls> XML
-    final xmlMatch = RegExp(
-      r'<tool_calls>\s*(.*?)\s*</tool_calls>',
+    // 1) 统一提取 tool_calls 内部的文本
+    // 容错匹配：<tool_calls> 或 <|tool_calls|> 或 <｜｜DSML｜｜tool_calls> 及其任意组合的闭合
+    final toolCallsRegex = RegExp(
+      r'<(?:tool_calls|\||｜|DSML)*>\s*(.*?)\s*</(?:tool_calls|\||｜|DSML)*>',
       dotAll: true,
-    ).firstMatch(response);
-    if (xmlMatch != null) {
-      inner = xmlMatch.group(1);
+    );
+
+    final tcMatch = toolCallsRegex.firstMatch(response);
+    if (tcMatch != null) {
+      inner = tcMatch.group(1);
     }
 
-    // 2) <|tool_calls|> DSML
-    if (inner == null) {
-      final dsmlMatch = RegExp(
-        r'<\|\s*tool_calls\s*\|>\s*(.*?)\s*</\|\s*tool_calls\s*\|>',
-        dotAll: true,
-      ).firstMatch(response);
-      if (dsmlMatch != null) {
-        inner = dsmlMatch
-            .group(1)!
-            .replaceAllMapped(
-              RegExp(r'<\|\s*(invoke|parameter)\b'),
-              (m) => '<${m.group(1)}',
-            )
-            .replaceAllMapped(
-              RegExp(r'</\|\s*(invoke|parameter)\s*\|?\s*>'),
-              (m) => '</${m.group(1)}>',
-            );
-      }
-    }
-
-    // 3) 解析 <invoke> 块
+    // 2) 如果提取到了内部文本，将其中的特殊 invoke 标签统一标准化为标准的 <invoke> 和 <parameter>
     if (inner != null) {
+      // 清理不可见的零宽字符和特殊 Unicode 空格（模型输出有时会混入 U+200B 等）
+      inner = inner.replaceAll(RegExp(r'[\u200B-\u200F\uFEFF\u00A0\u2060]'), '');
+
+      inner = inner
+          // 将 <｜｜DSML｜｜invoke ...> 或 <| invoke ...> 标准化为 <invoke ...>
+          .replaceAllMapped(
+            RegExp(
+              r'<(?:\||｜|DSML\s*)*(invoke|parameter)\b',
+              caseSensitive: false,
+            ),
+            (m) => '<${m.group(1)}',
+          )
+          // 将 </｜｜DSML｜｜invoke> 等标准化为 </invoke>
+          .replaceAllMapped(
+            RegExp(
+              r'</(?:\||｜|DSML\s*)*(invoke|parameter)(?:\||｜|DSML\s*)*>',
+              caseSensitive: false,
+            ),
+            (m) => '</${m.group(1)}>',
+          );
+
+      // 3) 解析标准化后的 <invoke> 块
       final invokeRegex = RegExp(
         r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
         dotAll: true,
       );
+
       for (final im in invokeRegex.allMatches(inner)) {
         try {
           final toolName = im.group(1)?.trim();
-          final invokeBody = im.group(2);
-          if (toolName == null || invokeBody == null) continue;
+          var invokeBody = im.group(2)?.trim() ?? '';
+          if (toolName == null) continue;
 
           final args = <String, dynamic>{};
-          final paramRegex = RegExp(
-            r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>([^<]*)</parameter>',
-          );
-          for (final pm in paramRegex.allMatches(invokeBody)) {
-            final name = pm.group(1)?.trim();
-            final type = pm.group(2)?.trim();
-            final rawValue = pm.group(3)?.trim() ?? '';
-            if (name != null && name.isNotEmpty) {
-              switch (type) {
-                case 'number':
-                  args[name] = num.tryParse(rawValue) ?? rawValue;
-                case 'boolean':
-                  args[name] = rawValue.toLowerCase() == 'true';
-                default:
-                  args[name] = rawValue;
+
+          // 只有当 invokeBody 不为空时才去解析参数
+          if (invokeBody.isNotEmpty) {
+            final paramRegex = RegExp(
+              r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>([^<]*)</parameter>',
+            );
+            for (final pm in paramRegex.allMatches(invokeBody)) {
+              final name = pm.group(1)?.trim();
+              final type = pm.group(2)?.trim();
+              final rawValue = pm.group(3)?.trim() ?? '';
+              if (name != null && name.isNotEmpty) {
+                switch (type) {
+                  case 'number':
+                    args[name] = num.tryParse(rawValue) ?? rawValue;
+                  case 'boolean':
+                    args[name] = rawValue.toLowerCase() == 'true';
+                  default:
+                    args[name] = rawValue;
+                }
               }
             }
           }
 
           toolCalls.add({'name': toolName, 'arguments': args});
-          debugPrint('✅ 解析工具调用: $toolName, 参数: $args');
+          print('✅ 解析工具调用: $toolName, 参数: $args');
         } catch (e) {
-          debugPrint('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
+          print('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
         }
       }
     }
 
-    // 4) 剥离标签
-    final cleanContent = response
-        .replaceAll(RegExp(r'<tool_calls>.*?</tool_calls>', dotAll: true), '')
-        .replaceAll(
-          RegExp(r'<\|\s*tool_calls\s*\|>.*?</\|\s*tool_calls\s*\|>',
-            dotAll: true),
-          '',
-        )
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-        .trim();
+    // 4) 剥离所有形式的工具调用标签，保留纯文本
+    final cleanContent =
+        response
+            .replaceAll(
+              RegExp(
+                r'<(?:tool_calls|\||｜|DSML)*>.*?</(?:tool_calls|\||｜|DSML)*>',
+                dotAll: true,
+              ),
+              '',
+            )
+            .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+            .trim();
 
-    debugPrint('🔍 parseToolCalls: 找到 ${toolCalls.length} 个工具调用');
+    print('🔍 parseToolCalls: 找到 ${toolCalls.length} 个工具调用');
     return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
   }
 }

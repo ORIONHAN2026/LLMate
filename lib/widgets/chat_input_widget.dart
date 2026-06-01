@@ -115,29 +115,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     widget.scrollController.addListener(
       _onScrollChanged,
     ); // 监听当前会话的变化，确保附件状态及时更新
-    // 记录上一次会话的 MCP 服务名，用于生命周期管理
-    String? prevMcpServiceName;
 
     _sessionSubscription = sessionController.currentSession.listen((
       currentSession,
     ) async {
-      // MCP 客户端生命周期管理：切换会话时关闭旧客户端，初始化新客户端
-      final newMcpServiceName = currentSession?.mcpServer?.name;
-      if (prevMcpServiceName != null &&
-          prevMcpServiceName != newMcpServiceName) {
-        debugPrint('🔄 会话切换，关闭旧 MCP 客户端: $prevMcpServiceName');
-        await McpService.closeClient(prevMcpServiceName!);
-      }
-      prevMcpServiceName = newMcpServiceName;
-
-      // 如果新会话已配置 MCP 且客户端未初始化，则初始化
-      if (newMcpServiceName != null && newMcpServiceName.isNotEmpty) {
-        final existingClient = McpService.getMCPClient(newMcpServiceName);
-        if (existingClient == null) {
-          debugPrint('🔄 会话切换，初始化 MCP 客户端: $newMcpServiceName');
-          await McpService.initializeSessionMcpServices(currentSession!);
-        }
-      }
+      // MCP 懒连接：不在会话切换时预初始化，等 LLM 返回工具调用时再按需连接。
+      // 切换时由 SessionController.switchToSession() 统一断开旧连接。
 
       if (mounted && currentSession != null) {
         // 附件状态变化时触发UI更新
@@ -168,14 +151,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   @override
   void dispose() {
-    _textChangeTimer?.cancel(); // 取消定时器
+    _textChangeTimer?.cancel();
     _inputController.removeListener(_onTextChanged);
     widget.scrollController.removeListener(_onScrollChanged);
-    _sessionSubscription.cancel(); // 取消监听器
+    _sessionSubscription.cancel(); // 先取消监听，阻止后续 setState
+    // 关闭所有 MCP 客户端连接（在 dispose controller 之前）
+    McpService.closeAllClients();
     _inputController.dispose();
     _inputFocusNode.dispose();
-    // 关闭所有 MCP 客户端连接
-    McpService.closeAllClients();
     // scrollController 由父组件管理，不需要在这里 dispose
     super.dispose();
   }
@@ -1016,34 +999,41 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return Tooltip(
       message: isDeepThink ? '深度思考: 已开启' : '深度思考: 已关闭',
       child: GestureDetector(
-        onTap: _isSending
-            ? null
-            : () {
-                if (currentSession != null) {
-                  sessionController.updateSession(
-                    currentSession.copyWith(deepThink: !isDeepThink),
-                  );
-                }
-              },
+        onTap:
+            _isSending
+                ? null
+                : () {
+                  if (currentSession != null) {
+                    sessionController.updateSession(
+                      currentSession.copyWith(deepThink: !isDeepThink),
+                    );
+                  }
+                },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          decoration: isDeepThink
-              ? BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(4),
-                )
-              : null,
+          decoration:
+              isDeepThink
+                  ? BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(4),
+                  )
+                  : null,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 isDeepThink ? Icons.psychology : Icons.psychology_outlined,
                 size: 13,
-                color: _isSending
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                    : isDeepThink
+                color:
+                    _isSending
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
+                        : isDeepThink
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 4),
               Text(
@@ -1053,11 +1043,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: isDeepThink ? FontWeight.w700 : FontWeight.w500,
-                  color: _isSending
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                      : isDeepThink
+                  color:
+                      _isSending
+                          ? Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.3)
+                          : isDeepThink
                           ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ],
@@ -1087,8 +1082,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     _isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 4),
               Text(
@@ -1098,7 +1097,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ],
@@ -1133,19 +1134,23 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         return Dialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           elevation: 8,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 120),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 40,
+            vertical: 120,
+          ),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 420, maxHeight: 480),
             child: StatefulBuilder(
               builder: (context, setDialogState) {
                 final query = searchController.text.trim().toLowerCase();
-                final filtered = options.where((o) {
-                  if (query.isEmpty) return true;
-                  return o.label.toLowerCase().contains(query) ||
-                      o.tag.toLowerCase().contains(query) ||
-                      o.rounds.toString().contains(query);
-                }).toList();
+                final filtered =
+                    options.where((o) {
+                      if (query.isEmpty) return true;
+                      return o.label.toLowerCase().contains(query) ||
+                          o.tag.toLowerCase().contains(query) ||
+                          o.rounds.toString().contains(query);
+                    }).toList();
 
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1157,37 +1162,43 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       onChanged: () => setDialogState(() {}),
                     ),
                     Flexible(
-                      child: filtered.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Text(
-                                  '无匹配结果',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      child:
+                          filtered.isEmpty
+                              ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Text(
+                                    '无匹配结果',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.4),
+                                    ),
                                   ),
                                 ),
+                              )
+                              : ListView.builder(
+                                shrinkWrap: true,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                itemCount: filtered.length,
+                                itemBuilder: (context, index) {
+                                  final option = filtered[index];
+                                  final isSelected =
+                                      option.rounds == currentRounds;
+                                  return _buildCommandItem(
+                                    title: option.label,
+                                    tag: isSelected ? null : option.tag,
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      Navigator.of(dialogContext).pop();
+                                      _applyMemoryConfig(option.rounds);
+                                    },
+                                  );
+                                },
                               ),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              itemCount: filtered.length,
-                              itemBuilder: (context, index) {
-                                final option = filtered[index];
-                                final isSelected = option.rounds == currentRounds;
-                                return _buildCommandItem(
-                                  title: option.label,
-                                  tag: isSelected ? null : option.tag,
-                                  isSelected: isSelected,
-                                  onTap: () {
-                                    Navigator.of(dialogContext).pop();
-                                    _applyMemoryConfig(option.rounds);
-                                  },
-                                );
-                              },
-                            ),
                     ),
                   ],
                 );
@@ -1196,7 +1207,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           ),
         );
       },
-    ).then((_) => searchController.dispose());
+    ).then((_) {
+      try { searchController.dispose(); } catch (_) {}
+    });
   }
 
   /// 应用记忆配置
@@ -1306,9 +1319,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：技能名）
     final displayText =
-        activeSkill != null
-            ? activeSkill.name
-            : (hasSkills ? '请选择' : '无可用技能');
+        activeSkill != null ? activeSkill.name : (hasSkills ? '请选择' : '无可用技能');
 
     final iconWidget = Icon(
       CupertinoIcons.wand_stars,
@@ -1320,9 +1331,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     return Tooltip(
-      message: activeSkill != null ? '当前技能: ${activeSkill.name}' : (hasSkills ? '点击选择技能' : '暂无可选技能'),
+      message:
+          activeSkill != null
+              ? '当前技能: ${activeSkill.name}'
+              : (hasSkills ? '点击选择技能' : '暂无可选技能'),
       child: GestureDetector(
-        onTap: hasSkills && !_isSending ? () => _showSkillSelectionList() : null,
+        onTap:
+            hasSkills && !_isSending ? () => _showSkillSelectionList() : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
@@ -1340,7 +1355,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ),
@@ -2829,24 +2846,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       );
     }
 
-    // 如果开启了MCP，初始化选中的服务
-    if (isEnabled) {
-      _initializeMcpServices(updatedSession);
-    } else {
+    // MCP 懒连接：不在 toggle 时预初始化，等 LLM 返回工具调用时再按需连接
+    if (!isEnabled) {
       // 关闭 MCP 时清理客户端
       final serviceName = currentSession.mcpServer?.name;
       if (serviceName != null) {
         McpService.closeClient(serviceName);
       }
-    }
-  }
-
-  /// 初始化会话的MCP服务
-  Future<void> _initializeMcpServices(chatSession) async {
-    try {
-      await McpService.initializeSessionMcpServices(chatSession);
-    } catch (e) {
-      debugPrint('初始化MCP服务失败: $e');
     }
   }
 
@@ -2861,10 +2867,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 0.5,
-          ),
+          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
         ),
       ),
       child: Row(
@@ -2888,7 +2891,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 hintText: '键入命令或搜索...',
                 hintStyle: TextStyle(
                   fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.4),
                 ),
                 border: InputBorder.none,
                 isDense: true,
@@ -2921,13 +2926,19 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: isSelected && !isClearAction
-            ? BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
-              )
-            : null,
+        decoration:
+            isSelected && !isClearAction
+                ? BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withOpacity(0.4),
+                )
+                : null,
         child: Row(
-          crossAxisAlignment: subtitle != null ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          crossAxisAlignment:
+              subtitle != null
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
@@ -2938,10 +2949,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     title,
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
-                      color: isClearAction
-                          ? Theme.of(context).colorScheme.error.withOpacity(0.75)
-                          : Theme.of(context).colorScheme.onSurface,
+                      fontWeight:
+                          isSelected ? FontWeight.w500 : FontWeight.normal,
+                      color:
+                          isClearAction
+                              ? Theme.of(
+                                context,
+                              ).colorScheme.error.withOpacity(0.75)
+                              : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -2950,7 +2965,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       subtitle,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -2971,7 +2988,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 tag,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.35),
                 ),
               ),
           ],
@@ -3002,24 +3021,33 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         return Dialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           elevation: 8,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 120),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 40,
+            vertical: 120,
+          ),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 420, maxHeight: 480),
             child: StatefulBuilder(
               builder: (context, setDialogState) {
                 final query = searchController.text.trim().toLowerCase();
-                final filtered = mcpServices.where((s) {
-                  if (query.isEmpty) return true;
-                  return s.name.toLowerCase().contains(query) ||
-                      (s.url?.toLowerCase().contains(query) ?? false) ||
-                      s.command.toLowerCase().contains(query) ||
-                      s.args.any((a) => a.toLowerCase().contains(query));
-                }).toList();
+                final filtered =
+                    mcpServices.where((s) {
+                      if (query.isEmpty) return true;
+                      return s.name.toLowerCase().contains(query) ||
+                          (s.url?.toLowerCase().contains(query) ?? false) ||
+                          s.command.toLowerCase().contains(query) ||
+                          s.args.any((a) => a.toLowerCase().contains(query));
+                    }).toList();
 
-                final clearCount = selectedName != null &&
-                    (query.isEmpty || '清空'.contains(query) || '取消'.contains(query) || '清空mcp'.contains(query))
-                    ? 1 : 0;
+                final clearCount =
+                    selectedName != null &&
+                            (query.isEmpty ||
+                                '清空'.contains(query) ||
+                                '取消'.contains(query) ||
+                                '清空mcp'.contains(query))
+                        ? 1
+                        : 0;
 
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -3031,53 +3059,62 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       onChanged: () => setDialogState(() {}),
                     ),
                     Flexible(
-                      child: filtered.isEmpty && clearCount == 0
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Text(
-                                  '无匹配结果',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      child:
+                          filtered.isEmpty && clearCount == 0
+                              ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Text(
+                                    '无匹配结果',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.4),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              itemCount: filtered.length + clearCount,
-                              itemBuilder: (context, index) {
-                                if (clearCount > 0 && index == 0) {
+                              )
+                              : ListView.builder(
+                                shrinkWrap: true,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                itemCount: filtered.length + clearCount,
+                                itemBuilder: (context, index) {
+                                  if (clearCount > 0 && index == 0) {
+                                    return _buildCommandItem(
+                                      title: '清空MCP服务',
+                                      tag: '取消绑定',
+                                      isClearAction: true,
+                                      onTap: () {
+                                        Navigator.of(dialogContext).pop();
+                                        _applyMcpSelection(null);
+                                      },
+                                    );
+                                  }
+                                  final serviceIndex = index - clearCount;
+                                  final service = filtered[serviceIndex];
+                                  final isSelected =
+                                      service.name == selectedName;
+                                  final toolCount = service.tools?.length ?? 0;
                                   return _buildCommandItem(
-                                    title: '清空MCP服务',
-                                    tag: '取消绑定',
-                                    isClearAction: true,
+                                    title: service.name,
+                                    subtitle:
+                                        service.url?.isNotEmpty == true
+                                            ? service.url
+                                            : '${service.command} ${service.args.join(' ')}',
+                                    tag: toolCount > 0 ? '$toolCount个工具' : null,
+                                    isSelected: isSelected,
                                     onTap: () {
                                       Navigator.of(dialogContext).pop();
-                                      _applyMcpSelection(null);
+                                      _applyMcpSelection(
+                                        isSelected ? null : service,
+                                      );
                                     },
                                   );
-                                }
-                                final serviceIndex = index - clearCount;
-                                final service = filtered[serviceIndex];
-                                final isSelected = service.name == selectedName;
-                                final toolCount = service.tools?.length ?? 0;
-                                return _buildCommandItem(
-                                  title: service.name,
-                                  subtitle: service.url?.isNotEmpty == true
-                                      ? service.url
-                                      : '${service.command} ${service.args.join(' ')}',
-                                  tag: toolCount > 0 ? '$toolCount个工具' : null,
-                                  isSelected: isSelected,
-                                  onTap: () {
-                                    Navigator.of(dialogContext).pop();
-                                    _applyMcpSelection(isSelected ? null : service);
-                                  },
-                                );
-                              },
-                            ),
+                                },
+                              ),
                     ),
                   ],
                 );
@@ -3086,7 +3123,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           ),
         );
       },
-    ).then((_) => searchController.dispose());
+    ).then((_) {
+      try { searchController.dispose(); } catch (_) {}
+    });
   }
 
   /// 应用MCP服务选择
@@ -3104,11 +3143,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (mounted) {
       if (service != null) {
         SnackBarUtils.showInfo(context, '已选择 MCP 服务: ${service.name}');
-        try {
-          await McpService.initializeSessionMcpServices(updatedSession);
-        } catch (e) {
-          debugPrint('初始化MCP服务失败: $e');
-        }
+        // MCP 懒连接：不在选择时预初始化，等 LLM 返回工具调用时再按需连接
       } else {
         // 关闭 MCP 时清理客户端
         final oldServiceName = currentSession.mcpServer?.name;
@@ -3144,22 +3179,31 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         return Dialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           elevation: 8,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 120),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 40,
+            vertical: 120,
+          ),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 420, maxHeight: 480),
             child: StatefulBuilder(
               builder: (context, setDialogState) {
                 final query = searchController.text.trim().toLowerCase();
-                final filtered = skills.where((s) {
-                  if (query.isEmpty) return true;
-                  return s.name.toLowerCase().contains(query) ||
-                      s.description.toLowerCase().contains(query);
-                }).toList();
+                final filtered =
+                    skills.where((s) {
+                      if (query.isEmpty) return true;
+                      return s.name.toLowerCase().contains(query) ||
+                          s.description.toLowerCase().contains(query);
+                    }).toList();
 
-                final clearCount = currentSkillId != null &&
-                    (query.isEmpty || '清空'.contains(query) || '取消'.contains(query) || '清空技能'.contains(query))
-                    ? 1 : 0;
+                final clearCount =
+                    currentSkillId != null &&
+                            (query.isEmpty ||
+                                '清空'.contains(query) ||
+                                '取消'.contains(query) ||
+                                '清空技能'.contains(query))
+                        ? 1
+                        : 0;
 
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -3171,48 +3215,55 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       onChanged: () => setDialogState(() {}),
                     ),
                     Flexible(
-                      child: filtered.isEmpty && clearCount == 0
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Text(
-                                  '无匹配结果',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      child:
+                          filtered.isEmpty && clearCount == 0
+                              ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Text(
+                                    '无匹配结果',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.4),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              itemCount: filtered.length + clearCount,
-                              itemBuilder: (context, index) {
-                                if (clearCount > 0 && index == 0) {
+                              )
+                              : ListView.builder(
+                                shrinkWrap: true,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                itemCount: filtered.length + clearCount,
+                                itemBuilder: (context, index) {
+                                  if (clearCount > 0 && index == 0) {
+                                    return _buildCommandItem(
+                                      title: '清空技能选择',
+                                      isClearAction: true,
+                                      onTap: () {
+                                        Navigator.of(dialogContext).pop();
+                                        _applySkillSelection(null);
+                                      },
+                                    );
+                                  }
+                                  final skillIndex = index - clearCount;
+                                  final skill = filtered[skillIndex];
+                                  final isSelected = currentSkillId == skill.id;
                                   return _buildCommandItem(
-                                    title: '清空技能选择',
-                                    isClearAction: true,
+                                    title: skill.name,
+                                    subtitle: skill.description,
+                                    isSelected: isSelected,
                                     onTap: () {
                                       Navigator.of(dialogContext).pop();
-                                      _applySkillSelection(null);
+                                      _applySkillSelection(
+                                        isSelected ? null : skill.id,
+                                      );
                                     },
                                   );
-                                }
-                                final skillIndex = index - clearCount;
-                                final skill = filtered[skillIndex];
-                                final isSelected = currentSkillId == skill.id;
-                                return _buildCommandItem(
-                                  title: skill.name,
-                                  subtitle: skill.description,
-                                  isSelected: isSelected,
-                                  onTap: () {
-                                    Navigator.of(dialogContext).pop();
-                                    _applySkillSelection(isSelected ? null : skill.id);
-                                  },
-                                );
-                              },
-                            ),
+                                },
+                              ),
                     ),
                   ],
                 );
@@ -3221,7 +3272,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           ),
         );
       },
-    ).then((_) => searchController.dispose());
+    ).then((_) {
+      try { searchController.dispose(); } catch (_) {}
+    });
   }
 
   /// 应用技能选择
@@ -3232,7 +3285,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 确保技能列表已从文件系统加载
     await SkillService.ensureLoaded();
 
-    final selectedSkill = skillId != null ? SkillService.getSkillById(skillId) : null;
+    final selectedSkill =
+        skillId != null ? SkillService.getSkillById(skillId) : null;
 
     final updatedSession = currentSession.copyWith(
       skill: selectedSkill,

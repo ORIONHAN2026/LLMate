@@ -433,6 +433,19 @@ abstract class BaseLlmProvider {
       systemParts.add(providerPrompt);
     }
 
+    // 全局规则：禁止 Web 搜索，模型不得进行任何形式的联网搜索
+    systemParts.add('''
+## 🚫 联网搜索禁令
+
+你**禁止**进行任何形式的 Web 搜索或联网查询。具体规则：
+
+1. ❌ **禁止调用任何搜索工具**：不得使用 web_search、search、browser、fetch_url 等任何与网络搜索、网页访问相关的工具。
+2. ❌ **禁止声称进行了搜索**：不要在回复中说"让我搜索一下"、"我在网上查了"、"根据搜索结果"等类似表述。
+3. ❌ **禁止主动建议联网**：不要建议用户去搜索、查询外部网站或联网获取信息。
+4. ✅ **仅使用已有知识**：请基于你已有的训练知识直接回答问题。如果不确定或不知道，直接说明即可。
+
+**再次强调：绝对不允许任何形式的联网搜索。**''');
+
     // 技能提示词注入：将当前会话绑定的技能 prompt 注入到系统提示词
     if (session?.skill != null) {
       final skillPrompt = SkillService.buildSkillPrompt(session!.skill);

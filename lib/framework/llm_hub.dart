@@ -153,14 +153,34 @@ class LlmClient {
         return;
       }
 
-      for (final tc in toolResult.toolCallList) {
-        yield {'tool': '执行: ${tc['name']}'};
-      }
+      for (int i = 0; i < toolResult.toolCallList.length; i++) {
+        final tc = toolResult.toolCallList[i];
+        final name = tc['name'] ?? '';
+        final args = tc['arguments'];
+        final er = i < toolResult.executionResults.length
+            ? toolResult.executionResults[i]
+            : null;
+        final ok = !(er?['isError'] == true);
+        final resultText = er?['result'] ?? '';
 
-      for (final r in toolResult.executionResults) {
-        final name = r['name'] as String;
-        final ok = !(r['isError'] == true);
-        yield {'tool': ok ? '已完成: $name' : '失败: $name'};
+        final buf = StringBuffer();
+        buf.writeln('${ok ? '✅' : '❌'} $name');
+        buf.writeln();
+        buf.writeln('📤 参数:');
+        if (args is Map && args.isNotEmpty) {
+          for (final e in args.entries) {
+            buf.writeln('  ${e.key}: ${e.value}');
+          }
+        } else {
+          buf.writeln('  (无)');
+        }
+        buf.writeln();
+        if (resultText.isNotEmpty) {
+          buf.writeln('${ok ? '📥' : '⚠'} 结果:');
+          buf.writeln(resultText);
+        }
+
+        yield {'tool': buf.toString().trim()};
       }
 
       // 追加 assistant(tool_calls) 消息

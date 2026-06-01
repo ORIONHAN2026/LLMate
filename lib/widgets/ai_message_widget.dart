@@ -1201,6 +1201,38 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
   // ========== 内容块渲染 ==========
 
+  /// 清理可能导致 flutter_markdown _inlines.isEmpty 断言的 markdown 内容
+  /// 主要处理空内联元素：****, ** **, __, _ _, `` ` ``, []() 等
+  static String _sanitizeMarkdown(String text) {
+    if (text.isEmpty) return text;
+
+    // 1. 移除零宽字符和不可见 Unicode 字符
+    text = text.replaceAll(RegExp(r'[\u200B-\u200F\uFEFF\u00A0\u2060]'), '');
+
+    // 2. 空加粗: **** 或 **  ** 或 ** **  → 替换为占位内容
+    text = text.replaceAll(RegExp(r'\*\*\s*\*\*'), '');
+
+    // 3. 空斜体: * * → 移除 (仅独立出现时)
+    text = text.replaceAll(RegExp(r'(?<!\*)\*\s\*(?!\*)'), '');
+
+    // 4. 空下划线加粗: __ __ → 移除
+    text = text.replaceAll(RegExp(r'__\s*__'), '');
+
+    // 5. 空删除线: ~~ ~~ → 移除
+    text = text.replaceAll(RegExp(r'~~\s*~~'), '');
+
+    // 6. 空行内代码: ` ` → 移除
+    text = text.replaceAll(RegExp(r'`\s*`'), '');
+
+    // 7. 空链接: []() 或 [ ](url) → 移除
+    text = text.replaceAll(RegExp(r'\[\s*\]\(.*?\)'), '');
+
+    // 8. 连续空行压缩为单个空行
+    text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+
+    return text;
+  }
+
   /// 按 contentBlocks 顺序构建 UI（think / tool / content）
   /// 如果 contentBlocks 为空，回退到旧版渲染方式
   Widget _buildContentBlocks() {
@@ -1214,7 +1246,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           if (widget.message.think.isNotEmpty) _buildThinkBlock(widget.message.think),
           if (widget.message.content.isNotEmpty)
             MarkdownBody(
-              data: widget.message.content,
+              data: _sanitizeMarkdown(widget.message.content),
               styleSheet: _buildMarkdownStyleSheet(),
               selectable: true,
               onTapLink: (text, href, title) {
@@ -1236,7 +1268,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         case ContentBlockType.content:
           children.add(
             MarkdownBody(
-              data: block.text,
+              data: _sanitizeMarkdown(block.text),
               styleSheet: _buildMarkdownStyleSheet(),
               selectable: true,
               onTapLink: (text, href, title) {
@@ -1377,7 +1409,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               ),
             ),
           ),
-          // 展开态：显示工具执行详情
+          // 展开态：显示工具执行详情（文本原文，含参数和结果）
           if (isExpanded)
             Container(
               width: double.infinity,
@@ -1398,7 +1430,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                       .colorScheme
                       .onSurface
                       .withOpacity(0.55),
-                  fontStyle: FontStyle.italic,
+                  fontFamily: 'monospace',
                   height: 1.4,
                 ),
               ),
@@ -1409,16 +1441,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   }
 
   /// 从工具文本中提取一句话描述
-  /// "执行: product_list" → "执行: product_list"
-  /// "已完成: product_list" → "已完成: product_list"
   String _parseToolDescription(String text) {
-    // 取第一行作为摘要描述
     final lines = text.split('\n');
     for (final line in lines) {
       final trimmed = line.trim();
-      if (trimmed.isNotEmpty) {
-        return trimmed;
-      }
+      if (trimmed.isNotEmpty) return trimmed;
     }
     return '工具执行';
   }

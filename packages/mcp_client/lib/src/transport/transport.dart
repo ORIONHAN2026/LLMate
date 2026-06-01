@@ -360,6 +360,26 @@ class SseClientTransport implements ClientTransport {
   @override
   Future<void> get onClose => _closeCompleter.future;
 
+  /// 向 _messageController 推送一个 JSON-RPC 错误响应，
+  /// 让 client 的消息处理管线将错误正确地传递给上层调用者，
+  /// 避免 async void 中 throw 导致的未处理异常。
+  void _emitErrorResponse(dynamic requestMessage, String errorMessage) {
+    try {
+      final reqId =
+          (requestMessage is Map) ? requestMessage['id'] : null;
+      _messageController.add({
+        'jsonrpc': '2.0',
+        if (reqId != null) 'id': reqId,
+        'error': {
+          'code': -32603, // Internal error
+          'message': errorMessage,
+        },
+      });
+    } catch (_) {
+      // 极低概率：_messageController 已关闭
+    }
+  }
+
   @override
   void send(dynamic message) async {
     if (_isClosed) {
@@ -368,9 +388,11 @@ class SseClientTransport implements ClientTransport {
     }
 
     if (_messageEndpoint == null) {
-      throw McpError(
+      _emitErrorResponse(
+        message,
         'Cannot send message: SSE connection not fully established',
       );
+      return;
     }
 
     const maxRetries = 3;
@@ -426,22 +448,25 @@ class SseClientTransport implements ClientTransport {
         } else {
           final responseBody = await response.transform(utf8.decoder).join();
           client.close();
-          print('[MCP-SSE] ❌ POST 错误响应 ${response.statusCode}: $responseBody');
+          final errMsg = '${response.statusCode}: $responseBody';
+          print('[MCP-SSE] ❌ POST 错误响应 $errMsg');
 
           if (retryableStatusCodes.contains(response.statusCode) &&
               attempt < maxRetries) {
             continue; // 可重试的状态码，继续下一次尝试
           }
-          throw McpError('Error sending message: ${response.statusCode}: $responseBody');
+          _emitErrorResponse(message, 'MCP 服务器返回 $errMsg');
+          return;
         }
       } catch (e) {
-        if (e is McpError) rethrow; // 已经是 McpError，直接抛出
-        print('[MCP-SSE] ❌ 发送异常: $e');
+        final errMsg = e is McpError ? e.message : e.toString();
+        print('[MCP-SSE] ❌ 发送异常: $errMsg');
         if (attempt < maxRetries) {
           continue; // 网络异常，重试
         }
         _logger.debug('Error sending message after $maxRetries retries: $e');
-        rethrow;
+        _emitErrorResponse(message, 'MCP 发送失败 (已重试 $maxRetries 次): $errMsg');
+        return;
       }
     }
   }

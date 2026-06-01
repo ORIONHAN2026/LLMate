@@ -61,6 +61,9 @@ class IsarChatSession {
   /// 记忆轮数（0 = 无记忆）
   late int memoryRounds;
 
+  /// 深度思考模式
+  late bool deepThink;
+
   /// 标记是否为当前活动会话
   @Index()
   late bool isCurrent;

@@ -337,6 +337,7 @@ class SessionController extends GetxController {
               )
               : null
       ..memoryRounds = session.memoryRounds
+      ..deepThink = session.deepThink
       ..isCurrent = false; // 由调用方设置
   }
 
@@ -395,6 +396,7 @@ class SessionController extends GetxController {
       mcpServer: mcpServer,
       skill: skill,
       memoryRounds: entity.memoryRounds,
+      deepThink: entity.deepThink,
     );
   }
 }

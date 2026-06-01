@@ -448,6 +448,11 @@ abstract class BaseLlmProvider {
       }
     }
 
+    // 深度思考模式：注入推理增强提示词
+    if (session?.deepThink == true) {
+      systemParts.add(_buildDeepThinkPrompt());
+    }
+
     // MCP 工具信息：将可用工具的描述注入到系统提示词中
     if (session != null && session.mcpServer != null) {
       final mcpToolsInfo = McpService.buildMcpToolsInfoForApi(session);
@@ -462,6 +467,18 @@ abstract class BaseLlmProvider {
   /// Provider 特有的系统提示词片段，子类可重写以注入平台特定指令
   /// 在用户自定义提示词之后、MCP 工具信息之前插入
   String buildProviderPrompt() => '';
+
+  /// 深度思考模式的系统提示词，子类可重写以定制推理风格
+  String _buildDeepThinkPrompt() {
+    return '''【深度思考模式】
+你正在深度思考模式下运行。请遵循以下原则：
+1. 在给出最终答案前，请进行多步骤推理，逐步分析问题的各个方面
+2. 考虑不同角度和可能的解决方案，比较其优劣
+3. 明确指出你的推理过程和中间步骤
+4. 如果涉及计算、逻辑或复杂判断，请展示推导过程
+5. 在得出结论时，说明依据和置信度
+6. 如果问题有歧义，请先澄清再作答''';
+  }
 
   /// 构建消息列表（包含会话历史，实现"记忆"能力）
   List<Map<String, dynamic>> buildMessages({

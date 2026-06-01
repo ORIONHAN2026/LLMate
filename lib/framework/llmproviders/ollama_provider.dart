@@ -13,7 +13,6 @@ class OllamaProvider extends BaseLlmProvider {
   @override
   String get providerName => 'Ollama';
 
-
   @override
   List<String> getSupportedFeatures() {
     return [
@@ -71,7 +70,10 @@ class OllamaProvider extends BaseLlmProvider {
       if (response.statusCode == 200 && response.data != null) {
         yield* _processOllamaStreamResponse(response.data!.stream);
       } else {
-        yield {'content': '错误: API 请求失败，状态码: ${response.statusCode}', 'think': null};
+        yield {
+          'content': '错误: API 请求失败，状态码: ${response.statusCode}',
+          'think': null,
+        };
       }
     } catch (e) {
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
@@ -80,8 +82,9 @@ class OllamaProvider extends BaseLlmProvider {
 
   @override
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
-    List<Map<String, dynamic>> messages,
-  ) async* {
+    List<Map<String, dynamic>> messages, {
+    ChatSession? session,
+  }) async* {
     if (model == null) {
       throw StateError('Ollama 提供商未配置');
     }
@@ -113,7 +116,10 @@ class OllamaProvider extends BaseLlmProvider {
       if (response.statusCode == 200 && response.data != null) {
         yield* _processOllamaStreamResponse(response.data!.stream);
       } else {
-        yield {'content': '错误: API 请求失败，状态码: ${response.statusCode}', 'think': null};
+        yield {
+          'content': '错误: API 请求失败，状态码: ${response.statusCode}',
+          'think': null,
+        };
       }
     } catch (e) {
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
@@ -150,9 +156,7 @@ class OllamaProvider extends BaseLlmProvider {
 
       final response = await dio.post(
         model!.apiUrl!,
-        options: Options(
-          headers: {'Content-Type': 'application/json'},
-        ),
+        options: Options(headers: {'Content-Type': 'application/json'}),
         data: requestData,
       );
 
@@ -163,7 +167,7 @@ class OllamaProvider extends BaseLlmProvider {
           return message['content'] as String?;
         }
       }
-      
+
       return null;
     } catch (e) {
       if (kDebugMode) {
@@ -179,10 +183,7 @@ class OllamaProvider extends BaseLlmProvider {
     ChatSession? session,
   }) {
     // 使用基类的 buildMessages 方法构建消息列表
-    final messages = buildMessages(
-      userMessage: userMessage,
-      session: session,
-    );
+    final messages = buildMessages(userMessage: userMessage, session: session);
 
     return {
       'model': model!.model,
@@ -193,7 +194,9 @@ class OllamaProvider extends BaseLlmProvider {
   }
 
   /// 处理 Ollama 流式响应 (Chat API 格式)
-  Stream<Map<String, String?>> _processOllamaStreamResponse(Stream<List<int>> stream) async* {
+  Stream<Map<String, String?>> _processOllamaStreamResponse(
+    Stream<List<int>> stream,
+  ) async* {
     String buffer = '';
     bool insideThinkTag = false;
 
@@ -225,22 +228,27 @@ class OllamaProvider extends BaseLlmProvider {
                       final content = message['content'].toString();
                       if (content.isNotEmpty) {
                         debugPrint('Ollama原始内容: $content');
-                        
+
                         // 使用基类的统一think处理逻辑
-                        final processed = processContentWithThink(content, insideThinkTag);
+                        final processed = processContentWithThink(
+                          content,
+                          insideThinkTag,
+                        );
                         insideThinkTag = processed['insideThinkTag'] as bool;
-                        
+
                         debugPrint('处理后内容: ${processed['content']}');
                         debugPrint('处理后思考: ${processed['think']}');
-                        
+
                         // 如果有内容或思考内容，就发送
-                        if ((processed['content'] != null && processed['content']!.isNotEmpty) || 
-                            (processed['think'] != null && processed['think']!.isNotEmpty)) {
+                        if ((processed['content'] != null &&
+                                processed['content']!.isNotEmpty) ||
+                            (processed['think'] != null &&
+                                processed['think']!.isNotEmpty)) {
                           debugPrint('发送内容: ${processed['think']}');
 
                           yield {
                             'content': processed['content'] ?? '',
-                            'think': processed['think']
+                            'think': processed['think'],
                           };
                         }
                       }
@@ -410,26 +418,27 @@ class OllamaProvider extends BaseLlmProvider {
     return [];
   }
 
-
-
   /// 处理内容块，分离思考内容和正文内容
-  /// 
+  ///
   /// 支持的think标签格式：
   /// - <think>思考内容</think>
   /// - 跨多个chunk的think标签
-  /// 
+  ///
   /// [content] 原始内容
   /// [insideThinkTag] 当前是否在think标签内
-  /// 
+  ///
   /// 返回：
   /// - content: 处理后的正文内容
   /// - think: 提取的思考内容
   /// - insideThinkTag: 更新后的think标签状态
-  Map<String, dynamic> processContentWithThink(String content, bool insideThinkTag) {
+  Map<String, dynamic> processContentWithThink(
+    String content,
+    bool insideThinkTag,
+  ) {
     String processedContent = content;
     String? thinkContent;
     bool newInsideThinkTag = insideThinkTag;
-    
+
     // 如果当前在思考标签内，所有内容都被视为思考内容
     if (insideThinkTag) {
       // 检查是否包含结束标签
@@ -449,9 +458,13 @@ class OllamaProvider extends BaseLlmProvider {
       if (content.contains('<think>')) {
         if (content.contains('</think>')) {
           // 完整的思考标签在一个块中
-          final thinkRegex = RegExp(r'<think>\s*(.*?)\s*</think>', dotAll: true);
+          final thinkRegex = RegExp(
+            r'<think>\s*(.*?)\s*</think>',
+            dotAll: true,
+          );
           processedContent = content.replaceAllMapped(thinkRegex, (match) {
-            final extractedThink = match.group(1)?.trim() ?? ''; // 移除think内容的换行符
+            final extractedThink =
+                match.group(1)?.trim() ?? ''; // 移除think内容的换行符
             thinkContent = (thinkContent ?? '') + extractedThink;
             return ''; // 从正文中移除思考内容
           });
@@ -460,19 +473,18 @@ class OllamaProvider extends BaseLlmProvider {
           // 只有开始标签
           final parts = content.split('<think>');
           processedContent = parts[0]; // 思考前的内容
-          thinkContent = parts.length > 1 ? parts[1].trim() : ''; // 思考内容开始部分，移除换行符
+          thinkContent =
+              parts.length > 1 ? parts[1].trim() : ''; // 思考内容开始部分，移除换行符
           newInsideThinkTag = true; // 进入think标签
         }
       }
       // 如果没有思考标签，processedContent保持原样，thinkContent保持null
     }
-    
+
     return {
       'content': processedContent.isEmpty ? null : processedContent,
       'think': thinkContent?.isEmpty == true ? null : thinkContent,
       'insideThinkTag': newInsideThinkTag,
     };
   }
-
-
- }
+}

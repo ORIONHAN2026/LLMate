@@ -35,9 +35,10 @@ class ModelScopeProvider extends BaseLlmProvider {
 
   @override
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
-    List<Map<String, dynamic>> messages,
-  ) async* {
-    yield* sendOpenAIStreamRequest(messages: messages);
+    List<Map<String, dynamic>> messages, {
+    ChatSession? session,
+  }) async* {
+    yield* sendOpenAIStreamRequest(messages: messages, session: session);
   }
 
   @override

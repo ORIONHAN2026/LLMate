@@ -87,10 +87,16 @@ class LlmClient {
     // 每个会话的消息历史完全独立，不会与其他会话混合。
     // MCP 工具调用循环中会在此基础上追加 assistant + tool 消息。
     if (kDebugMode) {
-      debugPrint('🧠 [LLMChat] 会话消息数: ${_session.messages.length}, 当前消息ID: ${userMessage.msgId}');
+      debugPrint(
+        '🧠 [LLMChat] 会话消息数: ${_session.messages.length}, 当前消息ID: ${userMessage.msgId}',
+      );
       for (int i = 0; i < _session.messages.length; i++) {
         final m = _session.messages[i];
-        debugPrint('  [$i] ${m.role.name}: ${m.content.length > 50 ? m.content.substring(0, 50) + "..." : m.content} (id: ${m.msgId})');
+        final preview =
+            m.content.length > 50
+                ? '${m.content.substring(0, 50)}...'
+                : m.content;
+        debugPrint('  [$i] ${m.role.name}: $preview (id: ${m.msgId})');
       }
     }
     final messages = _provider.buildMessages(
@@ -102,22 +108,51 @@ class LlmClient {
       for (int i = 0; i < messages.length; i++) {
         final m = messages[i];
         final content = m['content']?.toString() ?? '';
-        debugPrint('  [$i] ${m['role']}: ${content.length > 80 ? content.substring(0, 80) + "..." : content}');
+        final preview =
+            content.length > 80 ? '${content.substring(0, 80)}...' : content;
+        debugPrint('  [$i] ${m['role']}: $preview');
       }
     }
 
-    // 循环：LLM 返回工具调用后追加结果并重发，直到无工具调用
-    while (true) {
-      String? toolCallsJson;
+    // 循环：LLM 返回工具调用后追加结果并重发，直到无工具调用或检测到重复调用
+    int toolIteration = 0;
+    String? lastCallFingerprint;
 
-      final stream = _provider.sendMessageStreamWithMessages(messages);
+    while (true) {
+      // 用于累积本轮 assistant 流中的 content 文本，作为工具调用消息的 content。
+      String loopAccContent = '';
+      final nativeToolCallDeltas = <int, Map<String, dynamic>>{};
+      List<Map<String, dynamic>>? completedTextToolCalls;
+
+      final stream = _provider.sendMessageStreamWithMessages(
+        messages,
+        session: _session,
+      );
       await for (final chunk in stream) {
         if (_cancelled) return;
         final tc = chunk['toolcall'];
-        if (tc != null && tc.isNotEmpty) toolCallsJson = tc;
+        if (tc != null && tc.isNotEmpty) {
+          final parsed = _parseToolCallChunk(tc);
+          if (parsed != null && parsed.isNotEmpty) {
+            final isNativeDelta = parsed.any(
+              (call) =>
+                  call.containsKey('function') ||
+                  call.containsKey('index') ||
+                  call.containsKey('type'),
+            );
+            if (isNativeDelta) {
+              _mergeNativeToolCallDeltas(nativeToolCallDeltas, parsed);
+            } else {
+              completedTextToolCalls = parsed;
+            }
+          }
+        }
 
         final c = chunk['content'] ?? '';
-        if (c.isNotEmpty) yield {'content': c};
+        if (c.isNotEmpty) {
+          loopAccContent += c;
+          yield {'content': c};
+        }
 
         final t = chunk['think'] ?? '';
         if (t.isNotEmpty) yield {'think': t};
@@ -127,29 +162,42 @@ class LlmClient {
       }
 
       // 无工具调用或已取消 → 结束
-      if (_cancelled || toolCallsJson == null) {
+      final parsedCalls =
+          completedTextToolCalls ??
+          _finalizeNativeToolCalls(nativeToolCallDeltas);
+
+      if (_cancelled || parsedCalls.isEmpty) {
         return;
       }
 
-      // 解析工具调用（JSON 格式，由 Provider 在流中已格式化）
-      List<Map<String, dynamic>> parsedCalls;
-      try {
-        final list = jsonDecode(toolCallsJson) as List;
-        parsedCalls = list
-            .map((e) => e as Map<String, dynamic>)
-            .where((tc) => (tc['name'] ?? '') != '')
-            .toList();
-      } catch (_) {
-        return;
+      // 检测重复调用：连续两轮调用相同工具+相同参数则中断，避免无限循环
+      final currentFingerprint = parsedCalls
+          .map((c) => '${c['name']}:${jsonEncode(c['arguments'])}')
+          .join('|');
+      if (currentFingerprint == lastCallFingerprint) {
+        if (kDebugMode) {
+          debugPrint('🔄 [LLMChat] 检测到重复工具调用，自动终止: $currentFingerprint');
+        }
+        // yield {'tool': '⚠ 检测到重复工具调用，已自动终止避免循环。'};
+        // return;
+      }
+      lastCallFingerprint = currentFingerprint;
+      toolIteration++;
+
+      if (kDebugMode) {
+        final names = parsedCalls.map((c) => c['name'] ?? '?').join(', ');
+        debugPrint('🔄 [LLMChat] 工具调用第 $toolIteration 轮: $names');
       }
 
-      if (parsedCalls.isEmpty) return;
+      // 从累积文本中剥离工具调用标签，得到干净的正文内容
+      // 这将作为 assistant 消息的 content 发送给 LLM
+      final cleanContent = _stripToolCallTags(loopAccContent);
 
       // 统一工具执行（MCP 工具 + Skill 内置工具）
       final toolResult = await ToolExecutionService.executeToolCalls(
         session: _session,
         toolCalls: parsedCalls,
-        cleanContent: '', // 文本内容已在流中 yield，此处仅工具调用
+        cleanContent: cleanContent,
       );
 
       if (toolResult == null || _cancelled) {
@@ -160,9 +208,10 @@ class LlmClient {
         final tc = toolResult.toolCallList[i];
         final name = tc['name'] ?? '';
         final args = tc['arguments'];
-        final er = i < toolResult.executionResults.length
-            ? toolResult.executionResults[i]
-            : null;
+        final er =
+            i < toolResult.executionResults.length
+                ? toolResult.executionResults[i]
+                : null;
         final ok = !(er?['isError'] == true);
         final resultText = er?['result'] ?? '';
 
@@ -221,7 +270,145 @@ class LlmClient {
 
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
     List<Map<String, dynamic>> messages,
-  ) => _provider.sendMessageStreamWithMessages(messages);
+  ) => _provider.sendMessageStreamWithMessages(messages, session: _session);
 
   void cancel() => _cancelled = true;
+
+  /// 从累积文本中剥离工具调用标签，返回干净的正文内容
+  /// 支持 XML、管道分隔、DSML 等工具调用标签格式。
+  static String _stripToolCallTags(String text) {
+    if (text.isEmpty) return text;
+    return text
+        // 标准 XML: <tool_calls>...</tool_calls>
+        .replaceAll(RegExp(r'<tool_calls>.*?</tool_calls>', dotAll: true), '')
+        // 管道分隔: <|tool_calls|>...</|tool_calls|>
+        .replaceAll(
+          RegExp(
+            r'<\|\s*tool_calls\s*\|>.*?</\|\s*tool_calls\s*\|>',
+            dotAll: true,
+          ),
+          '',
+        )
+        // DSML 全角: <｜｜DSML｜｜tool_calls>...</｜｜DSML｜｜tool_calls>
+        .replaceAll(
+          RegExp(
+            r'<[｜\|]\s*DSML\s*[｜\|]\s*tool_calls>.*?</[｜\|]\s*DSML\s*[｜\|]\s*tool_calls>',
+            dotAll: true,
+          ),
+          '',
+        )
+        // 通用 DSML 格式容错
+        .replaceAll(
+          RegExp(
+            r'<(?:\||｜|DSML\s*)*tool_calls[^>]*>.*?</(?:\||｜|DSML\s*)*tool_calls[^>]*>',
+            dotAll: true,
+          ),
+          '',
+        )
+        // 清理多余空行
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+  }
+
+  static List<Map<String, dynamic>>? _parseToolCallChunk(String toolCallsJson) {
+    try {
+      final decoded = jsonDecode(toolCallsJson);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+      if (decoded is Map) {
+        return [Map<String, dynamic>.from(decoded)];
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ 工具调用 JSON 解析失败: $e, raw=$toolCallsJson');
+      }
+    }
+    return null;
+  }
+
+  static void _mergeNativeToolCallDeltas(
+    Map<int, Map<String, dynamic>> accumulator,
+    List<Map<String, dynamic>> deltas,
+  ) {
+    for (
+      int fallbackIndex = 0;
+      fallbackIndex < deltas.length;
+      fallbackIndex++
+    ) {
+      final delta = deltas[fallbackIndex];
+      final index = (delta['index'] as int?) ?? fallbackIndex;
+      final current = accumulator.putIfAbsent(index, () {
+        return {
+          'index': index,
+          'id': delta['id'],
+          'type': delta['type'] ?? 'function',
+          'function': {'name': '', 'arguments': ''},
+        };
+      });
+
+      if (delta['id'] != null) current['id'] = delta['id'];
+      if (delta['type'] != null) current['type'] = delta['type'];
+
+      final deltaFunction = delta['function'];
+      if (deltaFunction is Map) {
+        final currentFunction = Map<String, dynamic>.from(
+          current['function'] as Map,
+        );
+        final namePart = deltaFunction['name'];
+        if (namePart is String && namePart.isNotEmpty) {
+          currentFunction['name'] = '${currentFunction['name'] ?? ''}$namePart';
+        }
+        final argumentsPart = deltaFunction['arguments'];
+        if (argumentsPart is String && argumentsPart.isNotEmpty) {
+          currentFunction['arguments'] =
+              '${currentFunction['arguments'] ?? ''}$argumentsPart';
+        }
+        current['function'] = currentFunction;
+      }
+    }
+  }
+
+  static List<Map<String, dynamic>> _finalizeNativeToolCalls(
+    Map<int, Map<String, dynamic>> accumulator,
+  ) {
+    final orderedKeys = accumulator.keys.toList()..sort();
+    final result = <Map<String, dynamic>>[];
+
+    for (final key in orderedKeys) {
+      final call = accumulator[key]!;
+      final function = call['function'];
+      if (function is! Map) continue;
+
+      final name = (function['name'] ?? '').toString();
+      if (name.isEmpty) continue;
+
+      final rawArguments = (function['arguments'] ?? '{}').toString();
+      Map<String, dynamic> arguments;
+      try {
+        final decoded =
+            rawArguments.trim().isEmpty
+                ? <String, dynamic>{}
+                : jsonDecode(rawArguments);
+        arguments =
+            decoded is Map
+                ? Map<String, dynamic>.from(decoded)
+                : <String, dynamic>{'value': decoded};
+      } catch (_) {
+        arguments = {'_raw': rawArguments};
+      }
+
+      result.add({
+        'id': call['id'] ?? 'call_$key',
+        'index': key,
+        'name': name,
+        'arguments': arguments,
+      });
+    }
+
+    return result;
+  }
 }

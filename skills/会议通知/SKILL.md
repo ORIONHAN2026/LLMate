@@ -1,41 +1,12 @@
 ---
 name: 会议通知
-description: 基于会议通知单模板生成标准格式的会议通知Word文档。模板路径：/Users/orion/Documents/WorkBuddy工作空间/会议通知/会议通知单_电商产品讨论会.docx。输出文件保存至同一目录，文件名格式：会议通知单_【主题】.docx。触发词：会议通知、会议通知单、生成会议通知、创建会议通知。
+description: 生成标准格式的会议通知Word文档。收集会议信息后调用系统内置工具 word_create_document 创建文档。输出文件保存至 /Users/orion/Documents/WorkBuddy工作空间/会议通知/，文件名格式：会议通知单_【主题】.docx。触发词：会议通知、会议通知单、生成会议通知、创建会议通知。
 agent_created: true
 ---
 
 # 会议通知单生成技能
 
-根据模板生成标准格式的会议通知Word文档，格式与模板完全一致。
-
-## 模板信息
-
-- 模板路径：`/Users/orion/Documents/WorkBuddy工作空间/会议通知/会议通知单_电商产品讨论会.docx`
-- 输出目录：`/Users/orion/Documents/WorkBuddy工作空间/会议通知/`
-- 文件名格式：`会议通知单_【主题】.docx`
-
-## 模板格式规范
-
-- **纸张**：A4（11906 x 16838 DXA），页边距上下左右各 1440 DXA（1英寸）
-- **标题**：「会议通知单」，居中，加粗，20pt（sz=40），黑色，段前240/段后360
-- **表格**：总宽 9000 DXA，2列（2000 + 7000），黑色单线边框 sz=4，单元格间距 10 DXA
-- **标签列（左列 2000 DXA）**：灰色底色 #E6E6E6，居中，加粗，垂直居中，内边距 100 DXA
-- **内容列（右列 7000 DXA）**：无底色，左对齐，垂直居中，内边距 100 DXA
-
-### 各行高度
-| 行 | 字段 | 行高(DXA) |
-|----|------|-----------|
-| 1 | 时间 | 自动 |
-| 2 | 地点 | 自动 |
-| 3 | 主题 | 322 |
-| 4 | 会议议程 | 3391 |
-| 5 | 参会人员 | 2226 |
-| 6 | 联系人 | 586 |
-
-### 字体
-- 西文：Times New Roman
-- 中文：主题字体（eastAsiaTheme）
-- 正文字号：五号（sz=21, 10.5pt）
+根据用户提供的会议信息，调用系统内置工具 `word_create_document` 生成标准格式的会议通知Word文档。
 
 ## 执行流程
 
@@ -48,60 +19,90 @@ agent_created: true
 | 会议主题 | 会议名称 | 电商产品讨论会 |
 | 时间 | 日期+星期+时间段 | 2026年5月16日（周六）下午 13:00 |
 | 地点 | 会议室或地址 | 1号会议室 |
-| 会议议程 | 多个议题用换行分隔 | 议题1：... 议题2：... 议题3：... |
+| 会议议程 | 多个议题用分号或换行分隔 | 议题1：现状分析；议题2：方案讨论 |
 | 参会人员 | 部门或人员名单 | 产品部门、技术部门 |
 | 联系人 | 姓名+电话 | 娜姐，电话：2222222 |
 
-### Step 2: 基于模板生成文档
+### Step 2: 调用 word_create_document 生成文档
 
-使用模板复制方式生成文档，确保格式与模板完全一致。
+使用系统内置工具 `word_create_document` 创建文档，参数规则如下：
 
-**Python 版本要求**：unpack.py 和 pack.py 必须使用 managed Python 3.13（系统 Python 3.9 不兼容 `str | None` 类型注解语法）。
-
-```bash
-PY3=/Users/orion/.workbuddy/binaries/python/versions/3.13.12/bin/python3
-DOCX_SKILL=~/.workbuddy/plugins/marketplaces/cb_teams_marketplace/plugins/document-skills/skills/docx/scripts/office
-TEMPLATE="/Users/orion/Documents/WorkBuddy工作空间/会议通知/会议通知单_电商产品讨论会.docx"
-OUTPUT_DIR="/Users/orion/Documents/WorkBuddy工作空间/会议通知"
-
-# 复制模板作为基础
-cp "$TEMPLATE" "/tmp/meeting-output.docx"
-
-# 解包
-$PY3 $DOCX_SKILL/unpack.py "/tmp/meeting-output.docx" /tmp/meeting-output/
-
-# 编辑 /tmp/meeting-output/word/document.xml 替换内容
-# 具体替换规则见下方 XML 替换指南
-
-# 打包
-$PY3 $DOCX_SKILL/pack.py /tmp/meeting-output/ "$OUTPUT_DIR/会议通知单_【主题】.docx"
+```
+工具名：word_create_document
+参数：
+  title: "会议通知单"
+  fileName: "会议通知单_【主题】"
+  outputDirectory: "/Users/orion/Documents/WorkBuddy工作空间/会议通知"
+  paragraphs:
+    - {text: "主题：【会议主题】", bold: true}
+  tables:
+    - headers: ["项目", "详情"]
+      rows:
+        - ["时间", "【时间】"]
+        - ["地点", "【地点】"]
+        - ["参会人员", "【参会人员】"]
+        - ["联系人", "【联系人】"]
+  sections:
+    - heading: "会议议程"
+      level: 2
+      paragraphs:
+        - {text: "【议题1】", listType: "number"}
+        - {text: "【议题2】", listType: "number"}
 ```
 
-### Step 3: XML 替换指南
+**参数说明**：
 
-在 `/tmp/meeting-output/word/document.xml` 中替换以下文本：
+- `title`：固定为 `"会议通知单"`
+- `fileName`：格式为 `会议通知单_【主题】`（不需要写 .docx 后缀，系统自动添加）
+- `outputDirectory`：固定为 `/Users/orion/Documents/WorkBuddy工作空间/会议通知`
+- `paragraphs`：用 `{text, bold:true}` 加粗显示会议主题
+- `tables`：用表格呈现时间、地点、参会人员、联系人等字段（key-value 形式）
+- `sections`：单独一个"会议议程"章节，level=2（二级标题），议程项用 `listType: "number"` 有序列表
+- 未提供的字段填 `"（待定）"`
 
-| 原始模板文本 | 替换为 | XML 位置 |
-|-------------|--------|---------|
-| `2026年5月16日（周六）下午 13:00` | 用户提供的【时间】 | 第一个 `<w:tc>` 内容区的 `<w:t>` |
-| `1号会议室` | 用户提供的【地点】 | 第二个 `<w:tc>` 内容区的 `<w:t>` |
-| `电商产品讨论会` (标题下面表格中) | 用户提供的【主题】 | 第三个 `<w:tc>` 内容区的 `<w:t>` |
-| `议题1：电商产品现状分析 议题2：产品优化方案讨论 议题3：技术实现方案评审` | 用户提供的【会议议程】 | 第四个 `<w:tc>` 内容区的 `<w:t>` |
-| `产品部门、技术部门` | 用户提供的【参会人员】 | 第五个 `<w:tc>` 内容区的 `<w:t>` |
-| `娜姐，电话：2222222` | 用户提供的【联系人】 | 第六个 `<w:tc>` 内容区的 `<w:t>` |
+### Step 3: 输出
 
-**重要**：使用 Edit 工具直接替换 `<w:t>` 标签内的文本，不要修改任何格式属性。
+文档创建成功后，告知用户文件保存路径。
 
-### Step 4: 输出
+## 格式建议
 
-文件保存至：`/Users/orion/Documents/WorkBuddy工作空间/会议通知/会议通知单_【主题】.docx`
+1. 时间格式：「YYYY年M月D日（周X）[上午/下午] HH:MM」
+2. 联系人格式：「姓名，电话：XXXXXXX」
+3. 会议议程多个议题用有序列表（listType: number）
+4. 未提供的字段标注为"（待定）"，用户可后续在Word中补充
 
-保存后使用 `open_result_view` 展示结果文件。
+## 调用示例
 
-## 注意事项
+用户输入："给我生成一个6月5号关于大都会项目优化的会议单，地点资产公司5楼，议题项目优化，时间全天"
 
-1. 始终基于模板文件复制生成，不使用 docx-js 从零创建，确保格式完全一致
-2. 会议议程如有多个议题，用空格分隔保留在一行中（与模板格式一致）
-3. 时间格式建议：「YYYY年M月D日（周X）[上午/下午] HH:MM」
-4. 联系人格式建议：「姓名，电话：XXXXXXX」
-5. 如果议程内容较多导致单元格高度不够，适当增加会议议程行的 trHeight 值（在 `<w:trPr>` 中）
+应调用：
+```json
+{
+  "title": "会议通知单",
+  "fileName": "会议通知单_大都会项目优化",
+  "outputDirectory": "/Users/orion/Documents/WorkBuddy工作空间/会议通知",
+  "paragraphs": [
+    {"text": "主题：大都会项目优化", "bold": true}
+  ],
+  "tables": [
+    {
+      "headers": ["项目", "详情"],
+      "rows": [
+        ["时间", "2026年6月5日（周五）全天"],
+        ["地点", "资产公司5楼"],
+        ["参会人员", "（待定）"],
+        ["联系人", "（待定）"]
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "heading": "会议议程",
+      "level": 2,
+      "paragraphs": [
+        {"text": "项目优化", "listType": "number"}
+      ]
+    }
+  ]
+}
+```

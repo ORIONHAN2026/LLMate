@@ -36,9 +36,10 @@ class ZhipuProvider extends BaseLlmProvider {
 
   @override
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
-    List<Map<String, dynamic>> messages,
-  ) async* {
-    yield* sendOpenAIStreamRequest(messages: messages);
+    List<Map<String, dynamic>> messages, {
+    ChatSession? session,
+  }) async* {
+    yield* sendOpenAIStreamRequest(messages: messages, session: session);
   }
 
   @override
@@ -76,7 +77,9 @@ class ZhipuProvider extends BaseLlmProvider {
         options: Options(headers: buildAuthHeaders()),
         data: {
           'model': model!.model,
-          'messages': [{'role': 'user', 'content': '你好'}],
+          'messages': [
+            {'role': 'user', 'content': '你好'},
+          ],
           'max_tokens': 5,
         },
       );

@@ -55,10 +55,6 @@ class StreamToolCallFilter {
   StreamFilterState get state => _state;
 
   /// 向状态机输入一段文本，返回过滤结果
-  ///
-  /// 每次调用 [feed] 时，状态机根据输入内容切换状态并决定哪些文本放行、哪些扣留。
-  /// [StreamFilterResult.transitions] 包含本次 feed 期间发生的所有状态转换事件，
-  /// 调用方可据此向 UI 层发送实时进展通知。
   StreamFilterResult feed(String chunk) {
     if (chunk.isEmpty) {
       return const StreamFilterResult(
@@ -142,16 +138,24 @@ class StreamToolCallFilter {
   }
 
   /// 处理 TOOL 状态下的字符
-  /// 只追踪最近的字符用于匹配闭合标签，避免缓存无限增长
+  ///
+  /// 使用滑动窗口保留最近的字符用于匹配闭合标签。
+  /// 窗口大小为 `_maxCloseTagLength + chunk 最大长度`，确保闭合标签
+  /// 即使跨 chunk 到达也不会被截断。
   void _handleToolChar(String char) {
     _holdBuffer.write(char);
 
-    // 只保留最近 maxCloseTagLength 个字符用于匹配闭合标签
+    // 滑动窗口：保留足够多的尾部字符以匹配闭合标签
+    // 必须保留至少 _maxCloseTagLength + 一个合理余量
+    // （防止闭合标签跨 chunk 到达时前半部分被截断）
     final maxLen = _maxCloseTagLength;
-    if (_holdBuffer.length > maxLen * 2) {
+    if (_holdBuffer.length > maxLen + 256) {
+      // 保留最后 (maxLen + 256) 个字符
+      // 256 的余量确保即使闭合标签前半部分在上一个 chunk 末尾开始，
+      // 也能在当前缓冲区中完整保留
       final current = _holdBuffer.toString();
       _holdBuffer.clear();
-      _holdBuffer.write(current.substring(current.length - maxLen));
+      _holdBuffer.write(current.substring(current.length - maxLen - 256));
     }
 
     final held = _holdBuffer.toString();
@@ -169,21 +173,6 @@ class StreamToolCallFilter {
     }
   }
 
-  /// 执行状态转换，同时记录转换事件
-  void _transition(StreamFilterTransition transition) {
-    switch (transition) {
-      case StreamFilterTransition.enteredBuffer:
-        _state = StreamFilterState.buffer;
-      case StreamFilterTransition.confirmedTool:
-        _state = StreamFilterState.tool;
-      case StreamFilterTransition.bufferCancelled:
-        _state = StreamFilterState.text;
-      case StreamFilterTransition.toolClosed:
-        _state = StreamFilterState.text;
-    }
-    _transitions.add(transition);
-  }
-
   /// 检查 held 字符串是否匹配某个 open pattern
   bool _matchesOpenPattern(String held) {
     for (final pattern in _openPatterns) {
@@ -198,6 +187,21 @@ class StreamToolCallFilter {
       if (pattern.prefix.startsWith(held)) return true;
     }
     return false;
+  }
+
+  /// 执行状态转换，同时记录转换事件
+  void _transition(StreamFilterTransition transition) {
+    switch (transition) {
+      case StreamFilterTransition.enteredBuffer:
+        _state = StreamFilterState.buffer;
+      case StreamFilterTransition.confirmedTool:
+        _state = StreamFilterState.tool;
+      case StreamFilterTransition.bufferCancelled:
+        _state = StreamFilterState.text;
+      case StreamFilterTransition.toolClosed:
+        _state = StreamFilterState.text;
+    }
+    _transitions.add(transition);
   }
 
   /// 流结束时刷出缓存中剩余的内容
@@ -278,9 +282,6 @@ class StreamFilterResult {
   final bool isInToolCall;
 
   /// 本次 feed 期间发生的状态转换事件列表
-  ///
-  /// 可能包含多个事件（例如同一个 chunk 内先进入 BUFFER 再确认 TOOL）。
-  /// 调用方可据此向 UI 层发送实时进展通知。
   final List<StreamFilterTransition> transitions;
 
   const StreamFilterResult({

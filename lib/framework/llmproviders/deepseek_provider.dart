@@ -78,9 +78,10 @@ class DeepSeekProvider extends BaseLlmProvider {
 
   @override
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
-    List<Map<String, dynamic>> messages,
-  ) async* {
-    yield* sendOpenAIStreamRequest(messages: messages);
+    List<Map<String, dynamic>> messages, {
+    ChatSession? session,
+  }) async* {
+    yield* sendOpenAIStreamRequest(messages: messages, session: session);
   }
 
   /// DeepSeek 特有：累积正文内容，在 finish_reason=stop 时解析 <tool_calls> 文本
@@ -119,6 +120,13 @@ class DeepSeekProvider extends BaseLlmProvider {
         try {
           final data = jsonDecode(dataStr) as Map<String, dynamic>;
           final extracted = extractStreamChunk(data);
+
+          // 透传原生 tool_calls 增量（OpenAI 格式，由 extractStreamChunk 提取）
+          // DeepSeek 可能在返回 content 的同时返回原生 tool_calls
+          final nativeToolCall = extracted['toolcall'];
+          if (nativeToolCall != null && nativeToolCall.isNotEmpty) {
+            yield {'toolcall': nativeToolCall};
+          }
 
           // 透传 think 到 UI（思考内容不需要过滤）
           if (extracted['think'] != null && extracted['think']!.isNotEmpty) {
@@ -289,7 +297,10 @@ class DeepSeekProvider extends BaseLlmProvider {
     // 2) 如果提取到了内部文本，将其中的特殊 invoke 标签统一标准化为标准的 <invoke> 和 <parameter>
     if (inner != null) {
       // 清理不可见的零宽字符和特殊 Unicode 空格（模型输出有时会混入 U+200B 等）
-      inner = inner.replaceAll(RegExp(r'[\u200B-\u200F\uFEFF\u00A0\u2060]'), '');
+      inner = inner.replaceAll(
+        RegExp(r'[\u200B-\u200F\uFEFF\u00A0\u2060]'),
+        '',
+      );
 
       inner = inner
           // 将 <｜｜DSML｜｜invoke ...> 或 <| invoke ...> 标准化为 <invoke ...>
@@ -325,8 +336,16 @@ class DeepSeekProvider extends BaseLlmProvider {
 
           // 只有当 invokeBody 不为空时才去解析参数
           if (invokeBody.isNotEmpty) {
+            final jsonArgs = _parseArgumentsJsonBlock(invokeBody);
+            if (jsonArgs != null) {
+              args.addAll(jsonArgs);
+            }
+
+            // 使用 (.*?) 非贪婪匹配而非 ([^<]*)，
+            // 因为参数值可能包含 < 字符（如文档操作中 sed 替换 XML 标签）
             final paramRegex = RegExp(
-              r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>([^<]*)</parameter>',
+              r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>(.*?)</parameter>',
+              dotAll: true,
             );
             for (final pm in paramRegex.allMatches(invokeBody)) {
               final name = pm.group(1)?.trim();
@@ -368,5 +387,25 @@ class DeepSeekProvider extends BaseLlmProvider {
 
     print('🔍 parseToolCalls: 找到 ${toolCalls.length} 个工具调用');
     return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
+  }
+
+  Map<String, dynamic>? _parseArgumentsJsonBlock(String invokeBody) {
+    final match = RegExp(
+      r'<arguments>\s*(.*?)\s*</arguments>',
+      dotAll: true,
+      caseSensitive: false,
+    ).firstMatch(invokeBody);
+    final raw = match?.group(1)?.trim();
+    if (raw == null || raw.isEmpty) return null;
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (e) {
+      debugPrint('⚠️ 解析 <arguments> JSON 失败: $e, raw=$raw');
+    }
+    return null;
   }
 }

@@ -94,7 +94,10 @@ class AnthropicProvider extends BaseLlmProvider {
       if (response.statusCode == 200) {
         final data = response.data;
         if (data['content'] != null && data['content'].isNotEmpty) {
-          yield {'content': data['content'][0]['text'] ?? '抱歉，没有收到回复', 'think': null};
+          yield {
+            'content': data['content'][0]['text'] ?? '抱歉，没有收到回复',
+            'think': null,
+          };
         } else {
           yield {'content': '抱歉，没有收到回复', 'think': null};
         }
@@ -111,8 +114,9 @@ class AnthropicProvider extends BaseLlmProvider {
 
   @override
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
-    List<Map<String, dynamic>> messages,
-  ) async* {
+    List<Map<String, dynamic>> messages, {
+    ChatSession? session,
+  }) async* {
     if (model == null) {
       throw StateError('Anthropic 提供商未配置');
     }
@@ -123,7 +127,8 @@ class AnthropicProvider extends BaseLlmProvider {
         (msg) => msg['role'] == 'system',
         orElse: () => {'content': ''},
       );
-      final userMessages = messages.where((msg) => msg['role'] != 'system').toList();
+      final userMessages =
+          messages.where((msg) => msg['role'] != 'system').toList();
 
       final requestData = {
         'model': model!.model,
@@ -134,6 +139,14 @@ class AnthropicProvider extends BaseLlmProvider {
 
       if (systemMessage['content'].toString().isNotEmpty) {
         requestData['system'] = systemMessage['content'];
+      }
+
+      if (session != null) {
+        final tools = buildTools(session);
+        if (tools.isNotEmpty) {
+          requestData['tools'] = tools;
+          requestData['tool_choice'] = {'type': 'auto'};
+        }
       }
 
       if (kDebugMode) {
@@ -156,7 +169,10 @@ class AnthropicProvider extends BaseLlmProvider {
       if (response.statusCode == 200) {
         final data = response.data;
         if (data['content'] != null && data['content'].isNotEmpty) {
-          yield {'content': data['content'][0]['text'] ?? '抱歉，没有收到回复', 'think': null};
+          yield {
+            'content': data['content'][0]['text'] ?? '抱歉，没有收到回复',
+            'think': null,
+          };
         } else {
           yield {'content': '抱歉，没有收到回复', 'think': null};
         }
@@ -221,7 +237,7 @@ class AnthropicProvider extends BaseLlmProvider {
           return data['content'][0]['text'] as String?;
         }
       }
-      
+
       return null;
     } catch (e) {
       if (kDebugMode) {

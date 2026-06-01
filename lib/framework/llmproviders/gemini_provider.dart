@@ -96,7 +96,10 @@ class GeminiProvider extends BaseLlmProvider {
         if (data['candidates'] != null && data['candidates'].isNotEmpty) {
           final content = data['candidates'][0]['content'];
           if (content['parts'] != null && content['parts'].isNotEmpty) {
-            yield {'content': content['parts'][0]['text'] ?? '抱歉，没有收到回复', 'think': null};
+            yield {
+              'content': content['parts'][0]['text'] ?? '抱歉，没有收到回复',
+              'think': null,
+            };
           } else {
             yield {'content': '抱歉，没有收到回复', 'think': null};
           }
@@ -116,20 +119,24 @@ class GeminiProvider extends BaseLlmProvider {
 
   @override
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
-    List<Map<String, dynamic>> messages,
-  ) async* {
+    List<Map<String, dynamic>> messages, {
+    ChatSession? session,
+  }) async* {
     if (model == null) {
       throw StateError('Gemini 提供商未配置');
     }
 
     try {
       // 转换为 Gemini 的 contents 格式
-      final contents = messages.where((msg) => msg['role'] != 'system').map((msg) {
-        return {
-          'role': msg['role'] == 'user' ? 'user' : 'model',
-          'parts': [{'text': msg['content']}],
-        };
-      }).toList();
+      final contents =
+          messages.where((msg) => msg['role'] != 'system').map((msg) {
+            return {
+              'role': msg['role'] == 'user' ? 'user' : 'model',
+              'parts': [
+                {'text': msg['content']},
+              ],
+            };
+          }).toList();
 
       final requestData = {
         'contents': contents,
@@ -143,8 +150,17 @@ class GeminiProvider extends BaseLlmProvider {
       );
       if (systemMessage['content'].toString().isNotEmpty) {
         requestData['systemInstruction'] = {
-          'parts': [{'text': systemMessage['content']}],
+          'parts': [
+            {'text': systemMessage['content']},
+          ],
         };
+      }
+
+      if (session != null) {
+        final tools = buildTools(session);
+        if (tools.isNotEmpty) {
+          requestData['tools'] = tools;
+        }
       }
 
       if (kDebugMode) {
@@ -162,7 +178,10 @@ class GeminiProvider extends BaseLlmProvider {
         if (data['candidates'] != null && data['candidates'].isNotEmpty) {
           final content = data['candidates'][0]['content'];
           if (content['parts'] != null && content['parts'].isNotEmpty) {
-            yield {'content': content['parts'][0]['text'] ?? '抱歉，没有收到回复', 'think': null};
+            yield {
+              'content': content['parts'][0]['text'] ?? '抱歉，没有收到回复',
+              'think': null,
+            };
           } else {
             yield {'content': '抱歉，没有收到回复', 'think': null};
           }
@@ -198,10 +217,7 @@ class GeminiProvider extends BaseLlmProvider {
             ],
           },
         ],
-        'generationConfig': {
-          'maxOutputTokens': 4000,
-          'temperature': 0.7,
-        },
+        'generationConfig': {'maxOutputTokens': 4000, 'temperature': 0.7},
       };
 
       // 添加工具调用支持
@@ -232,7 +248,7 @@ class GeminiProvider extends BaseLlmProvider {
           }
         }
       }
-      
+
       return null;
     } catch (e) {
       if (kDebugMode) {

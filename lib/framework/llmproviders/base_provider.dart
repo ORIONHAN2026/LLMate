@@ -8,6 +8,7 @@ import '../../models/chat/chat_message.dart';
 import '../../models/chat/chat_attachment.dart';
 import '../../services/mcp_service.dart';
 import '../../services/skill_service.dart';
+import '../../services/system_tool_service.dart';
 
 /// 基础LLM提供商抽象类
 /// 定义了所有LLM提供商必须实现的接口
@@ -129,8 +130,9 @@ abstract class BaseLlmProvider {
 
   /// 发送预构建消息列表 - 流式响应（用于 MCP tool call follow-up 等场景）
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
-    List<Map<String, dynamic>> messages,
-  );
+    List<Map<String, dynamic>> messages, {
+    ChatSession? session,
+  });
 
   /// 发送消息 - 非流式响应（必须实现）
   /// 返回完整的响应内容
@@ -164,8 +166,8 @@ abstract class BaseLlmProvider {
       'temperature': 0.7,
     };
 
-    // MCP 工具调用
-    if (session != null && session.mcpServer != null) {
+    // 系统内置工具 + MCP 工具调用
+    if (session != null) {
       final tools = buildTools(session);
       if (tools.isNotEmpty) {
         data['tools'] = tools;
@@ -468,6 +470,16 @@ abstract class BaseLlmProvider {
       systemParts.add(_buildDeepThinkPrompt());
     }
 
+    // 系统内置工具信息：将客户端自身能力告知模型
+    if (session != null) {
+      final systemToolsInfo = SystemToolService.buildSystemToolsInfoForPrompt(
+        session,
+      );
+      if (systemToolsInfo.isNotEmpty) {
+        systemParts.add(systemToolsInfo);
+      }
+    }
+
     // MCP 工具信息：将可用工具的描述注入到系统提示词中
     if (session != null && session.mcpServer != null) {
       final mcpToolsInfo = McpService.buildMcpToolsInfoForApi(session);
@@ -690,13 +702,13 @@ abstract class BaseLlmProvider {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
   }
 
-  /// 构建工具列表（MCP支持）
+  /// 构建工具列表（系统内置工具 + MCP）
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
-    if (session == null || session.mcpServer == null) {
+    if (session == null) {
       return [];
     }
 
-    return McpService.buildOpenAIToolsFormat(session);
+    return SystemToolService.buildAllOpenAIToolsFormat(session);
   }
 
   /// 处理API错误
@@ -893,8 +905,14 @@ abstract class BaseLlmProvider {
           if (toolName == null || invokeBody == null) continue;
 
           final args = <String, dynamic>{};
+          final jsonArgs = _parseArgumentsJsonBlock(invokeBody);
+          if (jsonArgs != null) {
+            args.addAll(jsonArgs);
+          }
+
           final paramRegex = RegExp(
-            r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>([^<]*)</parameter>',
+            r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>(.*?)</parameter>',
+            dotAll: true,
           );
           for (final pm in paramRegex.allMatches(invokeBody)) {
             final name = pm.group(1)?.trim();
@@ -939,6 +957,26 @@ abstract class BaseLlmProvider {
 
     debugPrint('🔍 parseToolCalls: 找到 ${toolCalls.length} 个工具调用');
     return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
+  }
+
+  Map<String, dynamic>? _parseArgumentsJsonBlock(String invokeBody) {
+    final match = RegExp(
+      r'<arguments>\s*(.*?)\s*</arguments>',
+      dotAll: true,
+      caseSensitive: false,
+    ).firstMatch(invokeBody);
+    final raw = match?.group(1)?.trim();
+    if (raw == null || raw.isEmpty) return null;
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (e) {
+      debugPrint('⚠️ 解析 <arguments> JSON 失败: $e, raw=$raw');
+    }
+    return null;
   }
 }
 

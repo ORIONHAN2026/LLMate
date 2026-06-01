@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mcp_client/mcp_client.dart';
 import '../models/chat/chat_session.dart';
 import 'mcp_service.dart';
+import 'system_tool_service.dart';
 
 /// 工具调用执行结果（统一返回）
 class ToolExecutionResult {
@@ -22,6 +23,7 @@ class ToolExecutionResult {
 ///
 /// 与 MCP 完全解耦，独立调度所有类型工具的执行：
 /// - `exec`/`bash`/`shell` 等：本地 Shell 命令（bash -c）
+/// - 系统内置工具：由客户端本地实现（如 Word 文档创建）
 /// - MCP 工具：通过 MCP 客户端执行
 /// - 其他工具：尝试 MCP，不可用时返回错误
 ///
@@ -31,7 +33,14 @@ class ToolExecutionService {
   static const _execTimeoutSeconds = 30;
 
   /// Shell 工具名称集合
-  static const _shellToolNames = {'exec', 'bash', 'shell', 'sh', 'run', 'command'};
+  static const _shellToolNames = {
+    'exec',
+    'bash',
+    'shell',
+    'sh',
+    'run',
+    'command',
+  };
 
   // ── 执行入口 ──
 
@@ -46,9 +55,7 @@ class ToolExecutionService {
   }) async {
     if (toolCalls.isEmpty) return null;
 
-    debugPrint(
-      '🔧 ToolExecutionService: 准备执行 ${toolCalls.length} 个工具调用',
-    );
+    debugPrint('🔧 ToolExecutionService: 准备执行 ${toolCalls.length} 个工具调用');
 
     // 逐个执行工具
     final executionResults = <Map<String, dynamic>>[];
@@ -101,6 +108,16 @@ class ToolExecutionService {
     required Map<String, dynamic> arguments,
     required String callId,
   }) async {
+    // ── 系统内置工具 ──
+    if (SystemToolService.hasTool(toolName)) {
+      return SystemToolService.execute(
+        session: session,
+        toolName: toolName,
+        arguments: arguments,
+        callId: callId,
+      );
+    }
+
     // ── Shell 命令（exec / bash / shell / sh / run / command）──
     if (_shellToolNames.contains(toolName)) {
       return _executeShellCommand(
@@ -126,7 +143,10 @@ class ToolExecutionService {
         final retryMc = await McpService.getOrInitClient(session);
         if (retryMc != null) {
           final retryResult = await _callMCPTool(
-            retryMc, toolName, arguments, callId,
+            retryMc,
+            toolName,
+            arguments,
+            callId,
           );
           if (retryResult != null) return retryResult;
         }
@@ -208,7 +228,9 @@ class ToolExecutionService {
     required Map<String, dynamic> arguments,
     required String callId,
   }) async {
-    final cmd = (arguments['command'] ?? arguments['cmd'] ?? arguments['script'] ?? '') as String;
+    final cmd =
+        (arguments['command'] ?? arguments['cmd'] ?? arguments['script'] ?? '')
+            as String;
 
     if (cmd.trim().isEmpty) {
       return {
@@ -245,16 +267,18 @@ class ToolExecutionService {
 
       final isError = exitCode != 0;
       final msg = output.toString().trim();
+      final preview = msg.length > 200 ? '${msg.substring(0, 200)}...' : msg;
 
-      debugPrint(
-        '🖥️ [$toolName] exit=$exitCode, output=${msg.length > 200 ? msg.substring(0, 200) + "..." : msg}',
-      );
+      debugPrint('🖥️ [$toolName] exit=$exitCode, output=$preview');
 
       return {
         'id': callId,
         'name': toolName,
         'args': arguments,
-        'result': msg.isNotEmpty ? msg : (isError ? '命令执行失败 (exit $exitCode)' : '命令执行完成'),
+        'result':
+            msg.isNotEmpty
+                ? msg
+                : (isError ? '命令执行失败 (exit $exitCode)' : '命令执行完成'),
         'isError': isError,
       };
     } on TimeoutException catch (e) {
@@ -262,7 +286,7 @@ class ToolExecutionService {
         'id': callId,
         'name': toolName,
         'args': arguments,
-        'result': '${e.message ?? "命令执行超时"}',
+        'result': e.message ?? '命令执行超时',
         'isError': true,
       };
     } catch (e) {

@@ -116,7 +116,6 @@ class LlmClient {
 
     // 循环：LLM 返回工具调用后追加结果并重发，直到无工具调用或检测到重复调用
     int toolIteration = 0;
-    String? lastCallFingerprint;
 
     while (true) {
       // 用于累积本轮 assistant 流中的 content 文本，作为工具调用消息的 content。
@@ -170,18 +169,6 @@ class LlmClient {
         return;
       }
 
-      // 检测重复调用：连续两轮调用相同工具+相同参数则中断，避免无限循环
-      final currentFingerprint = parsedCalls
-          .map((c) => '${c['name']}:${jsonEncode(c['arguments'])}')
-          .join('|');
-      if (currentFingerprint == lastCallFingerprint) {
-        if (kDebugMode) {
-          debugPrint('🔄 [LLMChat] 检测到重复工具调用，自动终止: $currentFingerprint');
-        }
-        // yield {'tool': '⚠ 检测到重复工具调用，已自动终止避免循环。'};
-        // return;
-      }
-      lastCallFingerprint = currentFingerprint;
       toolIteration++;
 
       if (kDebugMode) {

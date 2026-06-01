@@ -29,6 +29,9 @@ class ChatSession {
   /// 绑定的技能（null = 未绑定）
   final Skill? skill;
 
+  /// 记忆轮数（0 = 无记忆，默认 20）
+  final int memoryRounds;
+
   /// 已初始化的 MCP Client（运行时懒加载，不序列化）
   Client? mcpClient;
 
@@ -53,6 +56,7 @@ class ChatSession {
     this.lastSelectedDirectory,
     this.mcpServer,
     this.skill,
+    this.memoryRounds = 20,
     this.sessionQuickCommands = const [],
   });
 
@@ -106,6 +110,7 @@ class ChatSession {
     bool clearSkill = false,
     ChatModel? chatModel,
     bool clearChatModel = false,
+    int? memoryRounds,
     List<ChatCommand>? sessionQuickCommands,
   }) {
     return ChatSession(
@@ -124,6 +129,7 @@ class ChatSession {
       mcpServer: clearMcpServer ? null : (mcpServer ?? this.mcpServer),
       skill: clearSkill ? null : (skill ?? this.skill),
       chatModel: clearChatModel ? null : (chatModel ?? this.chatModel),
+      memoryRounds: memoryRounds ?? this.memoryRounds,
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
     );
   }
@@ -158,6 +164,7 @@ class ChatSession {
       skill: json['skill'] is Map<String, dynamic>
           ? Skill.fromJson(json['skill'])
           : null,
+      memoryRounds: json['memoryRounds'] as int? ?? 20,
       sessionQuickCommands:
           (json['sessionQuickCommands'] as List<dynamic>?)
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
@@ -185,6 +192,7 @@ class ChatSession {
       'lastSelectedDirectory': lastSelectedDirectory,
       if (mcpServer != null) 'mcpServer': mcpServer!.toJson(),
       if (skill != null) 'skill': skill!.toJson(),
+      'memoryRounds': memoryRounds,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
       'chatModel': chatModel?.toMap(),

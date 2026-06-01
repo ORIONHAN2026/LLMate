@@ -58,6 +58,9 @@ class IsarChatSession {
   late String? attachmentsJson;
   late String? sessionQuickCommandsJson;
 
+  /// 记忆轮数（0 = 无记忆）
+  late int memoryRounds;
+
   /// 标记是否为当前活动会话
   @Index()
   late bool isCurrent;

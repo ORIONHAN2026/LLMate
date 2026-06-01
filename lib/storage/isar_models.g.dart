@@ -3438,38 +3438,43 @@ const IsarChatSessionSchema = CollectionSchema(
       name: r'mcpServerJson',
       type: IsarType.string,
     ),
-    r'messagesJson': PropertySchema(
+    r'memoryRounds': PropertySchema(
       id: 9,
+      name: r'memoryRounds',
+      type: IsarType.long,
+    ),
+    r'messagesJson': PropertySchema(
+      id: 10,
       name: r'messagesJson',
       type: IsarType.string,
     ),
     r'name': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'name',
       type: IsarType.string,
     ),
     r'scrollPosition': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'scrollPosition',
       type: IsarType.double,
     ),
     r'sessionId': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'sessionId',
       type: IsarType.string,
     ),
     r'sessionQuickCommandsJson': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'sessionQuickCommandsJson',
       type: IsarType.string,
     ),
     r'shouldStopResponse': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'shouldStopResponse',
       type: IsarType.bool,
     ),
     r'skillJson': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'skillJson',
       type: IsarType.string,
     )
@@ -3584,13 +3589,14 @@ void _isarChatSessionSerialize(
   writer.writeBool(offsets[6], object.isSending);
   writer.writeString(offsets[7], object.lastSelectedDirectory);
   writer.writeString(offsets[8], object.mcpServerJson);
-  writer.writeString(offsets[9], object.messagesJson);
-  writer.writeString(offsets[10], object.name);
-  writer.writeDouble(offsets[11], object.scrollPosition);
-  writer.writeString(offsets[12], object.sessionId);
-  writer.writeString(offsets[13], object.sessionQuickCommandsJson);
-  writer.writeBool(offsets[14], object.shouldStopResponse);
-  writer.writeString(offsets[15], object.skillJson);
+  writer.writeLong(offsets[9], object.memoryRounds);
+  writer.writeString(offsets[10], object.messagesJson);
+  writer.writeString(offsets[11], object.name);
+  writer.writeDouble(offsets[12], object.scrollPosition);
+  writer.writeString(offsets[13], object.sessionId);
+  writer.writeString(offsets[14], object.sessionQuickCommandsJson);
+  writer.writeBool(offsets[15], object.shouldStopResponse);
+  writer.writeString(offsets[16], object.skillJson);
 }
 
 IsarChatSession _isarChatSessionDeserialize(
@@ -3610,13 +3616,14 @@ IsarChatSession _isarChatSessionDeserialize(
   object.isSending = reader.readBool(offsets[6]);
   object.lastSelectedDirectory = reader.readStringOrNull(offsets[7]);
   object.mcpServerJson = reader.readStringOrNull(offsets[8]);
-  object.messagesJson = reader.readStringOrNull(offsets[9]);
-  object.name = reader.readString(offsets[10]);
-  object.scrollPosition = reader.readDouble(offsets[11]);
-  object.sessionId = reader.readString(offsets[12]);
-  object.sessionQuickCommandsJson = reader.readStringOrNull(offsets[13]);
-  object.shouldStopResponse = reader.readBool(offsets[14]);
-  object.skillJson = reader.readStringOrNull(offsets[15]);
+  object.memoryRounds = reader.readLong(offsets[9]);
+  object.messagesJson = reader.readStringOrNull(offsets[10]);
+  object.name = reader.readString(offsets[11]);
+  object.scrollPosition = reader.readDouble(offsets[12]);
+  object.sessionId = reader.readString(offsets[13]);
+  object.sessionQuickCommandsJson = reader.readStringOrNull(offsets[14]);
+  object.shouldStopResponse = reader.readBool(offsets[15]);
+  object.skillJson = reader.readStringOrNull(offsets[16]);
   return object;
 }
 
@@ -3646,18 +3653,20 @@ P _isarChatSessionDeserializeProp<P>(
     case 8:
       return (reader.readStringOrNull(offset)) as P;
     case 9:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 10:
-      return (reader.readString(offset)) as P;
-    case 11:
-      return (reader.readDouble(offset)) as P;
-    case 12:
-      return (reader.readString(offset)) as P;
-    case 13:
       return (reader.readStringOrNull(offset)) as P;
+    case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
+      return (reader.readDouble(offset)) as P;
+    case 13:
+      return (reader.readString(offset)) as P;
     case 14:
-      return (reader.readBool(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 15:
+      return (reader.readBool(offset)) as P;
+    case 16:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -4809,6 +4818,62 @@ extension IsarChatSessionQueryFilter
   }
 
   QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      memoryRoundsEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'memoryRounds',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      memoryRoundsGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'memoryRounds',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      memoryRoundsLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'memoryRounds',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      memoryRoundsBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'memoryRounds',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
       messagesJsonIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -5756,6 +5821,20 @@ extension IsarChatSessionQuerySortBy
   }
 
   QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
+      sortByMemoryRounds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'memoryRounds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
+      sortByMemoryRoundsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'memoryRounds', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
       sortByMessagesJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'messagesJson', Sort.asc);
@@ -5994,6 +6073,20 @@ extension IsarChatSessionQuerySortThenBy
   }
 
   QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
+      thenByMemoryRounds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'memoryRounds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
+      thenByMemoryRoundsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'memoryRounds', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
       thenByMessagesJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'messagesJson', Sort.asc);
@@ -6161,6 +6254,13 @@ extension IsarChatSessionQueryWhereDistinct
   }
 
   QueryBuilder<IsarChatSession, IsarChatSession, QDistinct>
+      distinctByMemoryRounds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'memoryRounds');
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QDistinct>
       distinctByMessagesJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'messagesJson', caseSensitive: caseSensitive);
@@ -6276,6 +6376,12 @@ extension IsarChatSessionQueryProperty
       mcpServerJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'mcpServerJson');
+    });
+  }
+
+  QueryBuilder<IsarChatSession, int, QQueryOperations> memoryRoundsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'memoryRounds');
     });
   }
 

@@ -876,6 +876,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       const SizedBox(width: 8),
                       _buildQuickCommandToggle(),
                       const SizedBox(width: 8),
+                      _buildMemoryToggle(),
+                      const SizedBox(width: 8),
                       _buildCleanHistoryToggle(),
 
                       Container(
@@ -1002,6 +1004,152 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         ),
       ),
     );
+  }
+
+  /// 构建记忆轮数配置按钮
+  Widget _buildMemoryToggle() {
+    final currentSession = sessionController.currentSession.value;
+    final rounds = currentSession?.memoryRounds ?? 20;
+    final label = rounds == 0 ? '无记忆' : '${rounds}轮';
+
+    return Tooltip(
+      message: '记忆配置: 保留最近 $label 对话',
+      child: GestureDetector(
+        onTap: _isSending ? null : _showMemoryConfigDialog,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                CupertinoIcons.clock,
+                size: 13,
+                color:
+                    _isSending
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 显示记忆配置弹窗（仿命令面板风格）
+  void _showMemoryConfigDialog() {
+    final currentSession = sessionController.currentSession.value;
+    final currentRounds = currentSession?.memoryRounds ?? 20;
+
+    final options = <({int rounds, String label, String tag})>[
+      (rounds: 0, label: '关闭记忆', tag: '无上下文'),
+      (rounds: 1, label: '保留 1 轮', tag: '最近1轮'),
+      (rounds: 3, label: '保留 3 轮', tag: '最近3轮'),
+      (rounds: 5, label: '保留 5 轮', tag: '最近5轮'),
+      (rounds: 10, label: '保留 10 轮', tag: '最近10轮'),
+      (rounds: 20, label: '保留 20 轮', tag: '默认'),
+      (rounds: 50, label: '保留 50 轮', tag: '长对话'),
+      (rounds: 100, label: '保留 100 轮', tag: '超长对话'),
+    ];
+
+    final searchController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.15),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 8,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 120),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 480),
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                final query = searchController.text.trim().toLowerCase();
+                final filtered = options.where((o) {
+                  if (query.isEmpty) return true;
+                  return o.label.toLowerCase().contains(query) ||
+                      o.tag.toLowerCase().contains(query) ||
+                      o.rounds.toString().contains(query);
+                }).toList();
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCommandPaletteSearchBar(
+                      controller: searchController,
+                      title: '记忆配置',
+                      onChanged: () => setDialogState(() {}),
+                    ),
+                    Flexible(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  '无匹配结果',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final option = filtered[index];
+                                final isSelected = option.rounds == currentRounds;
+                                return _buildCommandItem(
+                                  title: option.label,
+                                  tag: isSelected ? null : option.tag,
+                                  isSelected: isSelected,
+                                  onTap: () {
+                                    Navigator.of(dialogContext).pop();
+                                    _applyMemoryConfig(option.rounds);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    ).then((_) => searchController.dispose());
+  }
+
+  /// 应用记忆配置
+  void _applyMemoryConfig(int rounds) {
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
+
+    final updated = currentSession.copyWith(memoryRounds: rounds);
+    sessionController.updateSession(updated);
+
+    if (mounted) {
+      final label = rounds == 0 ? '已关闭记忆' : '记忆配置: ${rounds}轮';
+      SnackBarUtils.showInfo(context, label);
+    }
   }
 
   /// 构建输入框功能按钮
@@ -2641,6 +2789,136 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
+  /// 命令面板通用搜索栏
+  Widget _buildCommandPaletteSearchBar({
+    required TextEditingController controller,
+    required String title,
+    required VoidCallback onChanged,
+    bool autofocus = true,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor,
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            CupertinoIcons.search,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              autofocus: autofocus,
+              onChanged: (_) => onChanged(),
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              decoration: InputDecoration(
+                hintText: '键入命令或搜索...',
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 命令面板通用列表项组件
+  Widget _buildCommandItem({
+    required String title,
+    String? subtitle,
+    String? tag,
+    bool isSelected = false,
+    bool isClearAction = false,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: isSelected && !isClearAction
+            ? BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
+              )
+            : null,
+        child: Row(
+          crossAxisAlignment: subtitle != null ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                      color: isClearAction
+                          ? Theme.of(context).colorScheme.error.withOpacity(0.75)
+                          : Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            if (isSelected)
+              Icon(
+                CupertinoIcons.checkmark_alt,
+                size: 14,
+                color: Theme.of(context).colorScheme.primary,
+              )
+            else if (tag != null)
+              Text(
+                tag,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// 显示MCP服务选择弹窗，点击服务直接绑定
   Future<void> _showMcpServiceSelection() async {
     // MCP 服务已全局存储，从 McpStorageService 读取
@@ -2651,292 +2929,103 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       return;
     }
 
-    // 计算弹窗位置 - 在MCP按钮上方
-    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) return;
-
-    final offset = renderBox.localToGlobal(Offset.zero);
     final session = sessionController.currentSession.value;
     final selectedName = session?.mcpServer?.name;
+    final searchController = TextEditingController();
 
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.15),
       barrierDismissible: true,
-      builder: (BuildContext dialogContext) {
-        return Stack(
-          children: [
-            // 透明背景，点击关闭
-            GestureDetector(
-              onTap: () => Navigator.of(dialogContext).pop(),
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                color: Colors.transparent,
-              ),
-            ),
-            // MCP服务选择弹窗
-            Positioned(
-              left: offset.dx + 20,
-              bottom: MediaQuery.of(context).size.height - offset.dy + 10,
-              child: Material(
-                elevation: 8,
-                borderRadius: BorderRadius.circular(12),
-                shadowColor: Theme.of(context).shadowColor.withOpacity(0.2),
-                child: Container(
-                  constraints: const BoxConstraints(
-                    maxWidth: 320,
-                    maxHeight: 400,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Theme.of(context).dividerColor,
-                      width: 1,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 8,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 120),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 480),
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                final query = searchController.text.trim().toLowerCase();
+                final filtered = mcpServices.where((s) {
+                  if (query.isEmpty) return true;
+                  return s.name.toLowerCase().contains(query) ||
+                      (s.url?.toLowerCase().contains(query) ?? false) ||
+                      s.command.toLowerCase().contains(query) ||
+                      s.args.any((a) => a.toLowerCase().contains(query));
+                }).toList();
+
+                final clearCount = selectedName != null &&
+                    (query.isEmpty || '清空'.contains(query) || '取消'.contains(query) || '清空mcp'.contains(query))
+                    ? 1 : 0;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCommandPaletteSearchBar(
+                      controller: searchController,
+                      title: 'MCP服务',
+                      onChanged: () => setDialogState(() {}),
                     ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 标题栏
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color:
-                              Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(12),
-                            topRight: Radius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              CupertinoIcons.gear,
-                              size: 16,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'MCP服务 (${mcpServices.length})',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // 服务选择列表
-                      Flexible(
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          padding: const EdgeInsets.all(8),
-                          itemCount: mcpServices.length + (selectedName != null ? 1 : 0),
-                          separatorBuilder:
-                              (context, index) => Divider(
-                                height: 1,
-                                color: Theme.of(context).dividerColor,
-                              ),
-                          itemBuilder: (context, index) {
-                            // 如果有当前选中，第一项显示"清空"
-                            if (selectedName != null && index == 0) {
-                              return InkWell(
-                                onTap: () {
-                                  Navigator.of(dialogContext).pop();
-                                  _applyMcpSelection(null);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        CupertinoIcons.xmark_circle,
-                                        size: 18,
-                                        color: Theme.of(context).colorScheme.error.withOpacity(0.7),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        '清空MCP服务',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Theme.of(context).colorScheme.error.withOpacity(0.7),
-                                        ),
-                                      ),
-                                    ],
+                    Flexible(
+                      child: filtered.isEmpty && clearCount == 0
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  '无匹配结果',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                   ),
                                 ),
-                              );
-                            }
-
-                            final serviceIndex = selectedName != null ? index - 1 : index;
-                            final service = mcpServices[serviceIndex];
-                            final isSelected = service.name == selectedName;
-                            final toolCount = service.tools?.length ?? 0;
-
-                            return InkWell(
-                              onTap: () {
-                                Navigator.of(dialogContext).pop();
-                                _applyMcpSelection(
-                                  isSelected ? null : service,
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              itemCount: filtered.length + clearCount,
+                              itemBuilder: (context, index) {
+                                if (clearCount > 0 && index == 0) {
+                                  return _buildCommandItem(
+                                    title: '清空MCP服务',
+                                    tag: '取消绑定',
+                                    isClearAction: true,
+                                    onTap: () {
+                                      Navigator.of(dialogContext).pop();
+                                      _applyMcpSelection(null);
+                                    },
+                                  );
+                                }
+                                final serviceIndex = index - clearCount;
+                                final service = filtered[serviceIndex];
+                                final isSelected = service.name == selectedName;
+                                final toolCount = service.tools?.length ?? 0;
+                                return _buildCommandItem(
+                                  title: service.name,
+                                  subtitle: service.url?.isNotEmpty == true
+                                      ? service.url
+                                      : '${service.command} ${service.args.join(' ')}',
+                                  tag: toolCount > 0 ? '$toolCount个工具' : null,
+                                  isSelected: isSelected,
+                                  onTap: () {
+                                    Navigator.of(dialogContext).pop();
+                                    _applyMcpSelection(isSelected ? null : service);
+                                  },
                                 );
                               },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color:
-                                      isSelected
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .primaryContainer
-                                              .withOpacity(0.3)
-                                          : null,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  service.name,
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                                    color: isSelected
-                                                        ? Theme.of(context).colorScheme.primary
-                                                        : Theme.of(context).colorScheme.onSurface,
-                                                  ),
-                                                ),
-                                              ),
-                                              if (isSelected)
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: Theme.of(context).colorScheme.primaryContainer,
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: Text(
-                                                    '当前',
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w500,
-                                                      color: Theme.of(context).colorScheme.primary,
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Row(
-                                            children: [
-                                              if (service.url != null &&
-                                                  service.url!.isNotEmpty)
-                                                Flexible(
-                                                  child: Text(
-                                                    service.url!,
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow
-                                                            .ellipsis,
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: Theme.of(
-                                                            context,
-                                                          )
-                                                          .colorScheme
-                                                          .onSurface
-                                                          .withOpacity(0.5),
-                                                    ),
-                                                  ),
-                                                )
-                                              else
-                                                Flexible(
-                                                  child: Text(
-                                                    '${service.command} ${service.args.join(' ')}',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow
-                                                            .ellipsis,
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: Theme.of(
-                                                            context,
-                                                          )
-                                                          .colorScheme
-                                                          .onSurface
-                                                          .withOpacity(0.5),
-                                                    ),
-                                                  ),
-                                                ),
-                                              if (toolCount > 0) ...[
-                                                const SizedBox(width: 8),
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 4,
-                                                        vertical: 1,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        Theme.of(context)
-                                                            .colorScheme
-                                                            .primaryContainer,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          4,
-                                                        ),
-                                                  ),
-                                                  child: Text(
-                                                    '$toolCount个工具',
-                                                    style: TextStyle(
-                                                      fontSize: 9,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      color:
-                                                          Theme.of(context)
-                                                              .colorScheme
-                                                              .onPrimaryContainer,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ],
+          ),
         );
       },
-    );
+    ).then((_) => searchController.dispose());
   }
 
   /// 应用MCP服务选择
@@ -2979,238 +3068,96 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       return;
     }
 
-    // 计算弹窗位置 - 在技能按钮上方
-    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) return;
-
-    final offset = renderBox.localToGlobal(Offset.zero);
     final session = sessionController.currentSession.value;
     final currentSkillId = session?.skill?.id;
+    final searchController = TextEditingController();
 
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.15),
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
-        return Stack(
-          children: [
-            // 透明背景，点击关闭
-            GestureDetector(
-              onTap: () => Navigator.of(dialogContext).pop(),
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                color: Colors.transparent,
-              ),
-            ),
-            // 技能选择弹窗
-            Positioned(
-              left: offset.dx + 20,
-              bottom: MediaQuery.of(context).size.height - offset.dy + 10,
-              child: Material(
-                elevation: 8,
-                borderRadius: BorderRadius.circular(12),
-                shadowColor: Theme.of(context).shadowColor.withOpacity(0.2),
-                child: Container(
-                  constraints: const BoxConstraints(
-                    maxWidth: 320,
-                    maxHeight: 400,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Theme.of(context).dividerColor,
-                      width: 1,
+        return Dialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 8,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 120),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 480),
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                final query = searchController.text.trim().toLowerCase();
+                final filtered = skills.where((s) {
+                  if (query.isEmpty) return true;
+                  return s.name.toLowerCase().contains(query) ||
+                      s.description.toLowerCase().contains(query);
+                }).toList();
+
+                final clearCount = currentSkillId != null &&
+                    (query.isEmpty || '清空'.contains(query) || '取消'.contains(query) || '清空技能'.contains(query))
+                    ? 1 : 0;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCommandPaletteSearchBar(
+                      controller: searchController,
+                      title: '技能',
+                      onChanged: () => setDialogState(() {}),
                     ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 标题栏
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color:
-                              Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(12),
-                            topRight: Radius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              CupertinoIcons.wand_stars,
-                              size: 16,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '技能列表 (${skills.length})',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // 技能列表
-                      Flexible(
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          padding: const EdgeInsets.all(8),
-                          itemCount: skills.length + (currentSkillId != null ? 1 : 0),
-                          separatorBuilder:
-                              (context, index) => Divider(
-                                height: 1,
-                                color: Theme.of(context).dividerColor,
-                              ),
-                          itemBuilder: (context, index) {
-                            // 如果有当前技能，第一项显示"清空技能"
-                            if (currentSkillId != null && index == 0) {
-                              return InkWell(
-                                onTap: () {
-                                  Navigator.of(dialogContext).pop();
-                                  _applySkillSelection(null);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        CupertinoIcons.xmark_circle,
-                                        size: 18,
-                                        color: Theme.of(context).colorScheme.error.withOpacity(0.7),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        '清空技能选择',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Theme.of(context).colorScheme.error.withOpacity(0.7),
-                                        ),
-                                      ),
-                                    ],
+                    Flexible(
+                      child: filtered.isEmpty && clearCount == 0
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  '无匹配结果',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                   ),
                                 ),
-                              );
-                            }
-
-                            final skillIndex = currentSkillId != null ? index - 1 : index;
-                            final skill = skills[skillIndex];
-                            final isCurrent = currentSkillId == skill.id;
-
-                            return InkWell(
-                              onTap: () {
-                                Navigator.of(dialogContext).pop();
-                                _applySkillSelection(isCurrent ? null : skill.id);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: isCurrent
-                                    ? BoxDecoration(
-                                        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-                                      )
-                                    : null,
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    // 技能图标
-                                    Container(
-                                      width: 32,
-                                      height: 32,
-                                      margin: const EdgeInsets.only(top: 1),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(6),
-                                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        _getSkillIconName(skill.icon),
-                                        style: const TextStyle(fontSize: 16),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    // 技能信息
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  skill.name,
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight:
-                                                        isCurrent ? FontWeight.w700 : FontWeight.w600,
-                                                    color: isCurrent
-                                                        ? Theme.of(context).colorScheme.primary
-                                                        : Theme.of(context).colorScheme.onSurface,
-                                                  ),
-                                                ),
-                                              ),
-                                              if (isCurrent)
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: Theme.of(context).colorScheme.primaryContainer,
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: Text(
-                                                    '当前',
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w500,
-                                                      color: Theme.of(context).colorScheme.primary,
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            skill.description,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withOpacity(0.6),
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              itemCount: filtered.length + clearCount,
+                              itemBuilder: (context, index) {
+                                if (clearCount > 0 && index == 0) {
+                                  return _buildCommandItem(
+                                    title: '清空技能选择',
+                                    isClearAction: true,
+                                    onTap: () {
+                                      Navigator.of(dialogContext).pop();
+                                      _applySkillSelection(null);
+                                    },
+                                  );
+                                }
+                                final skillIndex = index - clearCount;
+                                final skill = filtered[skillIndex];
+                                final isSelected = currentSkillId == skill.id;
+                                return _buildCommandItem(
+                                  title: skill.name,
+                                  subtitle: skill.description,
+                                  isSelected: isSelected,
+                                  onTap: () {
+                                    Navigator.of(dialogContext).pop();
+                                    _applySkillSelection(isSelected ? null : skill.id);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ],
+          ),
         );
       },
-    );
+    ).then((_) => searchController.dispose());
   }
 
   /// 应用技能选择
@@ -3238,33 +3185,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  /// 获取技能图标显示字符
-  String _getSkillIconName(String icon) {
-    switch (icon) {
-      case 'code':
-        return '💻';
-      case 'globe':
-        return '🌐';
-      case 'pencil':
-        return '✏️';
-      case 'chart':
-        return '📊';
-      case 'lightbulb':
-        return '💡';
-      case 'doc':
-        return '📄';
-      case 'star':
-        return '⭐';
-      case 'search':
-        return '🔍';
-      case 'image':
-        return '🖼️';
-      default:
-        return '⭐';
-    }
-  }
-
-  /// ；的主要方法
+  /// 发送消息的主要方法
   Future<void> _sendMessage() async {
     final text = _inputController.text.trim();
     debugPrint('发送消息: $text');

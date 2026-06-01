@@ -336,6 +336,7 @@ class SessionController extends GetxController {
                     .toList(),
               )
               : null
+      ..memoryRounds = session.memoryRounds
       ..isCurrent = false; // 由调用方设置
   }
 
@@ -393,6 +394,7 @@ class SessionController extends GetxController {
       chatModel: chatModel,
       mcpServer: mcpServer,
       skill: skill,
+      memoryRounds: entity.memoryRounds,
     );
   }
 }

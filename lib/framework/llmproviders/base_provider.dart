@@ -518,10 +518,17 @@ abstract class BaseLlmProvider {
 
     final historyMessages = session.messages.sublist(0, userMsgIndex);
 
-    // 保留最近 20 轮对话（以 user 消息为轮次边界）
-    const int maxRounds = 20;
+    // 使用会话级记忆轮数配置（0 = 无记忆，不注入历史）
+    final int maxRounds = session.memoryRounds;
+    if (maxRounds <= 0) {
+      if (kDebugMode) {
+        debugPrint('🧠 [_appendHistoryMessages] 记忆轮数=0，跳过历史注入');
+      }
+      return;
+    }
+
     int roundCount = 0;
-    int historyStart = 0; // 默认包含全部历史，超 20 轮时截断
+    int historyStart = 0; // 默认包含全部历史，超 maxRounds 轮时截断
 
     for (int i = historyMessages.length - 1; i >= 0; i--) {
       if (historyMessages[i].role == MessageRole.user) {
@@ -536,7 +543,7 @@ abstract class BaseLlmProvider {
     final included = historyMessages.sublist(historyStart);
 
     if (kDebugMode) {
-      debugPrint('🧠 [_appendHistoryMessages] 注入 ${included.length} 条历史消息 (总共 ${historyMessages.length} 条, 最近 ${maxRounds} 轮)');
+      debugPrint('🧠 [_appendHistoryMessages] 注入 ${included.length} 条历史消息 (总共 ${historyMessages.length} 条, 最近 $maxRounds 轮)');
     }
 
     // 按时间顺序添加历史消息

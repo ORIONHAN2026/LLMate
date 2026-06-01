@@ -139,6 +139,21 @@ class DeepSeekProvider extends BaseLlmProvider {
               yield {'content': cleanText};
             }
 
+            // 将状态转换事件转为 tool 进展通知，让 UI 实时感知
+            for (final transition in filterResult.transitions) {
+              switch (transition) {
+                case StreamFilterTransition.enteredBuffer:
+                  yield {'tool': '⏳ 检测到工具调用标记...'};
+                case StreamFilterTransition.confirmedTool:
+                  yield {'tool': '🔧 正在接收工具调用参数...'};
+                case StreamFilterTransition.bufferCancelled:
+                  yield {'tool': '✓ 非工具调用，已恢复正文输出'};
+                case StreamFilterTransition.toolClosed:
+                  // 标签闭合后由 LlmHub 执行工具并 yield 结果，此处无需额外提示
+                  break;
+              }
+            }
+
             if (kDebugMode && filterResult.isInToolCall) {
               debugPrint('🎯 [DeepSeek] 状态机拦截: 工具调用标签已扣留');
             }

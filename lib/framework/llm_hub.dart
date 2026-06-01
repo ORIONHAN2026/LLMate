@@ -121,6 +121,9 @@ class LlmClient {
 
         final t = chunk['think'] ?? '';
         if (t.isNotEmpty) yield {'think': t};
+
+        final toolProgress = chunk['tool'] ?? '';
+        if (toolProgress.isNotEmpty) yield {'tool': toolProgress};
       }
 
       // 无工具调用或已取消 → 结束

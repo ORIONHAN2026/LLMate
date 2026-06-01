@@ -10,19 +10,14 @@ import 'package:flutter/foundation.dart';
 /// - [StreamFilterState.buffer]：匹配中状态，可能遇到标签开头，先缓存不发
 /// - [StreamFilterState.tool]：工具调用状态，死死扣住不发
 ///
-/// 使用方式：
-/// ```dart
-/// final filter = StreamToolCallFilter();
-/// for (final chunk in contentChunks) {
-///   final result = filter.feed(chunk);
-///   // result.cleanText → 放行给前端
-///   // result.isInToolCall → 是否正在工具调用中
-/// }
-/// final leftover = filter.flush(); // 流结束时刷出缓存
-/// ```
+/// 状态转换事件通过 [StreamFilterResult.transitions] 传递给调用方，
+/// 调用方可据此向 UI 层发送实时进展信息（通过 tool 字段）。
 class StreamToolCallFilter {
   StreamFilterState _state = StreamFilterState.text;
   final StringBuffer _holdBuffer = StringBuffer();
+
+  /// 当前 feed 调用期间累积的状态转换事件
+  final List<StreamFilterTransition> _transitions = [];
 
   /// 需要拦截的标签开头模式（按长度降序排列，优先匹配更长的模式）
   static const List<_TagPattern> _openPatterns = [
@@ -62,9 +57,18 @@ class StreamToolCallFilter {
   /// 向状态机输入一段文本，返回过滤结果
   ///
   /// 每次调用 [feed] 时，状态机根据输入内容切换状态并决定哪些文本放行、哪些扣留。
+  /// [StreamFilterResult.transitions] 包含本次 feed 期间发生的所有状态转换事件，
+  /// 调用方可据此向 UI 层发送实时进展通知。
   StreamFilterResult feed(String chunk) {
-    if (chunk.isEmpty) return const StreamFilterResult(cleanText: '', isInToolCall: false);
+    if (chunk.isEmpty) {
+      return const StreamFilterResult(
+        cleanText: '',
+        isInToolCall: false,
+        transitions: [],
+      );
+    }
 
+    _transitions.clear();
     final cleanOutput = StringBuffer();
 
     for (int i = 0; i < chunk.length; i++) {
@@ -83,6 +87,7 @@ class StreamToolCallFilter {
     return StreamFilterResult(
       cleanText: cleanOutput.toString(),
       isInToolCall: _state == StreamFilterState.tool,
+      transitions: List.unmodifiable(_transitions),
     );
   }
 
@@ -92,7 +97,7 @@ class StreamToolCallFilter {
       // 可能是工具调用标签的开头，切换到 BUFFER 状态
       _holdBuffer.clear();
       _holdBuffer.write(char);
-      _state = StreamFilterState.buffer;
+      _transition(StreamFilterTransition.enteredBuffer);
     } else {
       cleanOutput.write(char);
     }
@@ -105,8 +110,8 @@ class StreamToolCallFilter {
 
     // 1) 检查是否已经完整匹配到某个 open pattern → 切换到 TOOL 状态
     if (_matchesOpenPattern(held)) {
-      _state = StreamFilterState.tool;
       _holdBuffer.clear();
+      _transition(StreamFilterTransition.confirmedTool);
       if (kDebugMode) {
         debugPrint('🎯 [StreamFilter] 检测到工具调用标签: $held');
       }
@@ -120,8 +125,6 @@ class StreamToolCallFilter {
     }
 
     // 3) 确认不是工具调用标签 → 将缓存内容放行，回到 TEXT 状态
-    //    但需要注意：缓存中可能包含新的 `<`（如 `<a<tool_calls>`），
-    //    需要回溯找到最后一个 `<` 并重新开始匹配
     final lastLtIndex = held.lastIndexOf('<');
     if (lastLtIndex > 0) {
       // 放行最后一个 `<` 之前的内容
@@ -134,7 +137,7 @@ class StreamToolCallFilter {
       // 没有 `<` 或 `<` 就在开头 → 全部放行
       cleanOutput.write(held);
       _holdBuffer.clear();
-      _state = StreamFilterState.text;
+      _transition(StreamFilterTransition.bufferCancelled);
     }
   }
 
@@ -144,10 +147,8 @@ class StreamToolCallFilter {
     _holdBuffer.write(char);
 
     // 只保留最近 maxCloseTagLength 个字符用于匹配闭合标签
-    // 这样避免长工具调用时 _holdBuffer 无限增长
     final maxLen = _maxCloseTagLength;
     if (_holdBuffer.length > maxLen * 2) {
-      // 安全地截断：保留最近 maxLen*2 个字符
       final current = _holdBuffer.toString();
       _holdBuffer.clear();
       _holdBuffer.write(current.substring(current.length - maxLen));
@@ -158,20 +159,32 @@ class StreamToolCallFilter {
     // 检查是否匹配到闭合标签
     for (final pattern in _closePatterns) {
       if (held.endsWith(pattern.prefix)) {
-        // 完全匹配到闭合标签 → 回到 TEXT 状态
-        _state = StreamFilterState.text;
         _holdBuffer.clear();
+        _transition(StreamFilterTransition.toolClosed);
         if (kDebugMode) {
           debugPrint('🎯 [StreamFilter] 工具调用标签闭合，恢复正文状态');
         }
         return;
       }
     }
-    // 还在工具调用中，继续扣留
+  }
+
+  /// 执行状态转换，同时记录转换事件
+  void _transition(StreamFilterTransition transition) {
+    switch (transition) {
+      case StreamFilterTransition.enteredBuffer:
+        _state = StreamFilterState.buffer;
+      case StreamFilterTransition.confirmedTool:
+        _state = StreamFilterState.tool;
+      case StreamFilterTransition.bufferCancelled:
+        _state = StreamFilterState.text;
+      case StreamFilterTransition.toolClosed:
+        _state = StreamFilterState.text;
+    }
+    _transitions.add(transition);
   }
 
   /// 检查 held 字符串是否匹配某个 open pattern
-  /// 即 held 以某个 open pattern 的 prefix 开头（允许标签后有属性等）
   bool _matchesOpenPattern(String held) {
     for (final pattern in _openPatterns) {
       if (held.startsWith(pattern.prefix)) return true;
@@ -188,30 +201,44 @@ class StreamToolCallFilter {
   }
 
   /// 流结束时刷出缓存中剩余的内容
-  ///
-  /// 如果流结束时仍在 BUFFER 状态，说明之前缓存的 `<` 实际上不是标签开头，
-  /// 需要将缓存内容放行。如果在 TOOL 状态，说明标签未闭合，丢弃缓存。
   StreamFilterResult flush() {
     final held = _holdBuffer.toString();
     final previousState = _state;
     _holdBuffer.clear();
     _state = StreamFilterState.text;
 
-    if (held.isEmpty) return const StreamFilterResult(cleanText: '', isInToolCall: false);
-
-    // TOOL 状态结束 → 丢弃（未闭合的工具调用标签，不应泄露到前端）
-    if (previousState == StreamFilterState.tool) {
-      return const StreamFilterResult(cleanText: '', isInToolCall: false);
+    if (held.isEmpty) {
+      return const StreamFilterResult(
+        cleanText: '',
+        isInToolCall: false,
+        transitions: [],
+      );
     }
 
-    // BUFFER 状态结束 → 放行缓存内容（之前的 < 不是标签开头）
-    return StreamFilterResult(cleanText: held, isInToolCall: false);
+    // TOOL 状态结束 → 丢弃
+    if (previousState == StreamFilterState.tool) {
+      return const StreamFilterResult(
+        cleanText: '',
+        isInToolCall: false,
+        transitions: [],
+      );
+    }
+
+    // BUFFER 状态结束 → 放行缓存内容
+    return StreamFilterResult(
+      cleanText: held,
+      isInToolCall: false,
+      transitions: previousState == StreamFilterState.buffer
+          ? [StreamFilterTransition.bufferCancelled]
+          : [],
+    );
   }
 
   /// 重置状态机
   void reset() {
     _state = StreamFilterState.text;
     _holdBuffer.clear();
+    _transitions.clear();
   }
 }
 
@@ -227,6 +254,21 @@ enum StreamFilterState {
   tool,
 }
 
+/// 状态转换事件
+enum StreamFilterTransition {
+  /// TEXT → BUFFER：收到 `<`，可能进入工具调用标签
+  enteredBuffer,
+
+  /// BUFFER → TOOL：确认匹配到工具调用标签开头
+  confirmedTool,
+
+  /// BUFFER → TEXT：匹配失败，之前的 `<` 不是工具调用标签（误报）
+  bufferCancelled,
+
+  /// TOOL → TEXT：工具调用标签闭合，回到正文
+  toolClosed,
+}
+
 /// 过滤结果
 class StreamFilterResult {
   /// 放行给前端的干净文本
@@ -235,7 +277,17 @@ class StreamFilterResult {
   /// 是否正在工具调用中
   final bool isInToolCall;
 
-  const StreamFilterResult({required this.cleanText, required this.isInToolCall});
+  /// 本次 feed 期间发生的状态转换事件列表
+  ///
+  /// 可能包含多个事件（例如同一个 chunk 内先进入 BUFFER 再确认 TOOL）。
+  /// 调用方可据此向 UI 层发送实时进展通知。
+  final List<StreamFilterTransition> transitions;
+
+  const StreamFilterResult({
+    required this.cleanText,
+    required this.isInToolCall,
+    required this.transitions,
+  });
 }
 
 /// 标签模式（用于模式匹配）

@@ -103,12 +103,13 @@ class SessionController extends GetxController {
     });
   }
 
-  /// 切换到指定会话并持久化
+  /// 切换到指定会话并持久化（不阻塞 UI）
   Future<void> switchToSession(String sessionId) async {
     final targetIndex = sessions.indexWhere((s) => s.sessionId == sessionId);
     if (targetIndex >= 0 && targetIndex < sessions.length) {
       currentSession.value = sessions[targetIndex];
-      await _persistCurrentSession();
+      // 持久化放到微任务中异步执行，不阻塞 UI 切换
+      Future.microtask(() => _persistCurrentSession());
     }
   }
 
@@ -269,23 +270,30 @@ class SessionController extends GetxController {
       final currentId = currentSession.value!.sessionId;
 
       await isar.writeTxn(() async {
-        // 清除所有 isCurrent 标记
-        final all = await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
-        for (final s in all) {
-          if (s.isCurrent) {
-            s.isCurrent = false;
-            await isar.isarChatSessions.put(s);
-          }
+        // 只查找旧当前会话（而非加载全部），清除 isCurrent 标记
+        final oldCurrent = await isar.isarChatSessions
+            .buildQuery<IsarChatSession>()
+            .filter()
+            .isCurrentEqualTo(true)
+            .findFirst();
+        if (oldCurrent != null && oldCurrent.sessionId != currentId) {
+          oldCurrent.isCurrent = false;
+          await isar.isarChatSessions.put(oldCurrent);
         }
-        // 设置当前会话
+
+        // 设置新当前会话
         final entity = await isar.isarChatSessions
             .getBySessionId(currentId);
         if (entity != null) {
-          // 同时更新 session 数据
           final updated = _chatSessionToIsar(currentSession.value!);
           updated.id = entity.id;
           updated.isCurrent = true;
           await isar.isarChatSessions.put(updated);
+        } else {
+          // 新会话首次持久化
+          final newEntity = _chatSessionToIsar(currentSession.value!);
+          newEntity.isCurrent = true;
+          await isar.isarChatSessions.put(newEntity);
         }
       });
     } catch (e) {

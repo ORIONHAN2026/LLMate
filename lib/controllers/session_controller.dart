@@ -271,11 +271,16 @@ class SessionController extends GetxController {
 
       await isar.writeTxn(() async {
         // 只查找旧当前会话（而非加载全部），清除 isCurrent 标记
-        final oldCurrent = await isar.isarChatSessions
+        final allSessions = await isar.isarChatSessions
             .buildQuery<IsarChatSession>()
-            .filter()
-            .isCurrentEqualTo(true)
-            .findFirst();
+            .findAll();
+        IsarChatSession? oldCurrent;
+        for (final s in allSessions) {
+          if (s.isCurrent) {
+            oldCurrent = s;
+            break;
+          }
+        }
         if (oldCurrent != null && oldCurrent.sessionId != currentId) {
           oldCurrent.isCurrent = false;
           await isar.isarChatSessions.put(oldCurrent);

@@ -221,7 +221,9 @@ abstract class BaseLlmProvider {
   }
 
   /// 处理 OpenAI 兼容的 SSE 流，逐行解析 data: 块并调用 [extractStreamChunk]
-  Stream<Map<String, String?>> processSSEStream(Stream<List<int>> stream) async* {
+  Stream<Map<String, String?>> processSSEStream(
+    Stream<List<int>> stream,
+  ) async* {
     String buffer = '';
     await for (final chunk in stream) {
       buffer += utf8.decode(chunk);
@@ -245,8 +247,9 @@ abstract class BaseLlmProvider {
 
   /// 处理流式响应（子类重写以实现 provider 特有的流处理，如 DeepSeek 的文本工具调用解析）
   /// 默认实现使用标准 SSE 协议逐行解析
-  Stream<Map<String, String?>> transformStreamResponse(Stream<List<int>> stream) =>
-      processSSEStream(stream);
+  Stream<Map<String, String?>> transformStreamResponse(
+    Stream<List<int>> stream,
+  ) => processSSEStream(stream);
 
   /// 发送 OpenAI 兼容的流式请求（POST → SSE → yield chunks）
   Stream<Map<String, String?>> sendOpenAIStreamRequest({
@@ -266,7 +269,7 @@ abstract class BaseLlmProvider {
 
       if (kDebugMode) {
         print('$providerName 发送请求到: ${model!.apiUrl}');
-        print('请求数据: ${jsonEncode(requestData)}');
+        print('请求数据: ${jsonEncode(requestData)} 请求数据结束');
       }
 
       // 调试：打印 tools
@@ -288,10 +291,7 @@ abstract class BaseLlmProvider {
       if (response.statusCode == 200 && response.data != null) {
         yield* transformStreamResponse(response.data!.stream);
       } else {
-        yield {
-          'content': 'API 请求失败：${response.statusCode}',
-          'think': null,
-        };
+        yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
       }
     } catch (e) {
       if (kDebugMode) print('$providerName 流式响应错误: $e');
@@ -438,7 +438,9 @@ abstract class BaseLlmProvider {
       final skillPrompt = SkillService.buildSkillPrompt(session!.skill);
       if (skillPrompt.isNotEmpty) {
         if (kDebugMode) {
-          debugPrint('🔧 [Skill] 注入技能 "${session.skill!.name}", prompt 长度: ${session.skill!.prompt.length} 字符');
+          debugPrint(
+            '🔧 [Skill] 注入技能 "${session.skill!.name}", prompt 长度: ${session.skill!.prompt.length} 字符',
+          );
         }
         systemParts.add(skillPrompt);
       } else {
@@ -496,7 +498,9 @@ abstract class BaseLlmProvider {
     // 添加会话历史（当前用户消息之前的所有消息）
     if (session != null && session.messages.isNotEmpty) {
       if (kDebugMode) {
-        debugPrint('🧠 [buildMessages] session.messages 共 ${session.messages.length} 条, 当前用户消息: ${userMessage.msgId}');
+        debugPrint(
+          '🧠 [buildMessages] session.messages 共 ${session.messages.length} 条, 当前用户消息: ${userMessage.msgId}',
+        );
       }
       _appendHistoryMessages(messages, session, userMessage);
     } else if (kDebugMode) {
@@ -528,7 +532,9 @@ abstract class BaseLlmProvider {
     // 没有有效历史则跳过
     if (userMsgIndex <= 0) {
       if (kDebugMode) {
-        debugPrint('🧠 [_appendHistoryMessages] 无历史: userMsgIndex=$userMsgIndex, session消息数=${session.messages.length}');
+        debugPrint(
+          '🧠 [_appendHistoryMessages] 无历史: userMsgIndex=$userMsgIndex, session消息数=${session.messages.length}',
+        );
       }
       return;
     }
@@ -560,7 +566,9 @@ abstract class BaseLlmProvider {
     final included = historyMessages.sublist(historyStart);
 
     if (kDebugMode) {
-      debugPrint('🧠 [_appendHistoryMessages] 注入 ${included.length} 条历史消息 (总共 ${historyMessages.length} 条, 最近 $maxRounds 轮)');
+      debugPrint(
+        '🧠 [_appendHistoryMessages] 注入 ${included.length} 条历史消息 (总共 ${historyMessages.length} 条, 最近 $maxRounds 轮)',
+      );
     }
 
     // 按时间顺序添加历史消息
@@ -817,6 +825,107 @@ abstract class BaseLlmProvider {
     }
 
     return '网络错误，请检查网络连接';
+  }
+
+  // ==================== 工具调用解析（默认实现，子类可重写） ====================
+
+  /// 解析 AI 响应中的工具调用，同时剥离标签返回干净文本。
+  ///
+  /// 支持两种格式：`<tool_calls>` XML 和 `<|tool_calls|>` DSML。
+  ///
+  /// 返回 `{ 'toolCalls': [{name, arguments}, ...], 'cleanContent': '...' }`
+  Map<String, dynamic> parseToolCalls(String response) {
+    final toolCalls = <Map<String, dynamic>>[];
+    String? inner;
+
+    // 1) 先试 <tool_calls> XML
+    final xmlMatch = RegExp(
+      r'<tool_calls>\s*(.*?)\s*</tool_calls>',
+      dotAll: true,
+    ).firstMatch(response);
+    if (xmlMatch != null) {
+      inner = xmlMatch.group(1);
+    }
+
+    // 2) 再试 <|tool_calls|> DSML
+    if (inner == null) {
+      final dsmlMatch = RegExp(
+        r'<\|\s*tool_calls\s*\|>\s*(.*?)\s*</\|\s*tool_calls\s*\|>',
+        dotAll: true,
+      ).firstMatch(response);
+      if (dsmlMatch != null) {
+        inner = dsmlMatch
+            .group(1)!
+            .replaceAllMapped(
+              RegExp(r'<\|\s*(invoke|parameter)\b'),
+              (m) => '<${m.group(1)}',
+            )
+            .replaceAllMapped(
+              RegExp(r'</\|\s*(invoke|parameter)\s*\|?\s*>'),
+              (m) => '</${m.group(1)}>',
+            );
+      }
+    }
+
+    // 3) 解析 <invoke> 块
+    if (inner != null) {
+      final invokeRegex = RegExp(
+        r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
+        dotAll: true,
+      );
+      for (final im in invokeRegex.allMatches(inner)) {
+        try {
+          final toolName = im.group(1)?.trim();
+          final invokeBody = im.group(2);
+          if (toolName == null || invokeBody == null) continue;
+
+          final args = <String, dynamic>{};
+          final paramRegex = RegExp(
+            r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>([^<]*)</parameter>',
+          );
+          for (final pm in paramRegex.allMatches(invokeBody)) {
+            final name = pm.group(1)?.trim();
+            final type = pm.group(2)?.trim();
+            final rawValue = pm.group(3)?.trim() ?? '';
+            if (name != null && name.isNotEmpty) {
+              switch (type) {
+                case 'number':
+                  args[name] = num.tryParse(rawValue) ?? rawValue;
+                case 'boolean':
+                  args[name] = rawValue.toLowerCase() == 'true';
+                default:
+                  args[name] = rawValue;
+              }
+            }
+          }
+
+          toolCalls.add({'name': toolName, 'arguments': args});
+          debugPrint('✅ 解析工具调用: $toolName, 参数: $args');
+        } catch (e) {
+          debugPrint('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
+        }
+      }
+    }
+
+    // 4) 剥离标签，返回干净文本
+    final cleanContent =
+        response
+            .replaceAll(
+              RegExp(r'<tool_calls>.*?</tool_calls>', dotAll: true),
+              '',
+            )
+            .replaceAll(
+              RegExp(
+                r'<\|\s*tool_calls\s*\|>.*?</\|\s*tool_calls\s*\|>',
+                dotAll: true,
+              ),
+              '',
+            )
+            .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+            .trim();
+
+    debugPrint('🔍 parseToolCalls: 找到 ${toolCalls.length} 个工具调用');
+    return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
   }
 }
 

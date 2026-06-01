@@ -1,11 +1,11 @@
 {
-    "name": "client",
-    "short_name": "client",
+    "name": "牧狸",
+    "short_name": "牧狸",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#07C160",
-    "theme_color": "#07C160",
-    "description": "A new Flutter project.",
+    "background_color": "#F57C00",
+    "theme_color": "#F57C00",
+    "description": "牧狸 - 智能对话助手",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

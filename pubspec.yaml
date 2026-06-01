@@ -1,5 +1,5 @@
 name: chathub
-description: "ChatHub - 智能对话助手应用"
+description: "牧狸 - 智能对话助手"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -126,8 +126,8 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/icons/app_icon.png"
-    background_color: "#07C160"
-    theme_color: "#07C160"
+    background_color: "#F57C00"
+    theme_color: "#F57C00"
   windows:
     generate: true
     image_path: "assets/icons/app_icon.png"

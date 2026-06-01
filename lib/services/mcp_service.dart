@@ -6,24 +6,6 @@ import '../models/chat/chat_session.dart';
 import '../models/bigmodel/mcp_config.dart';
 import 'mcp_storage_service.dart';
 
-/// MCP 工具执行结果（统一返回）
-class McpExecutionResult {
-  /// 已剥离工具调用 XML 的干净文本
-  final String cleanContent;
-
-  /// 用于 OpenAI 兼容 follow-up 消息构建的工具调用列表
-  final List<Map<String, dynamic>> toolCallList;
-
-  /// 每个工具的调用执行结果
-  final List<Map<String, dynamic>> executionResults;
-
-  const McpExecutionResult({
-    required this.cleanContent,
-    required this.toolCallList,
-    required this.executionResults,
-  });
-}
-
 /// MCP工具调用结果
 class McpToolResult {
   final String toolName;
@@ -670,132 +652,6 @@ class McpService {
     return buffer.toString().trim();
   }
 
-  // ── 解析器注册：按标签类型分发 ──
-
-  /// 解析 AI 响应中的工具调用（组合所有解析器，保持向后兼容）
-  static List<Map<String, dynamic>> parseToolCallsFromResponse(
-    String response,
-  ) {
-    var calls = parseToolCallsXml(response);
-    if (calls.isEmpty) {
-      calls = parseDSMLXml(response);
-    }
-    return calls;
-  }
-
-  /// 解析 `<tool_calls>` 标签格式
-  /// `<tool_calls><invoke name="工具名"><parameter name="x" string="true">value</parameter></invoke></tool_calls>`
-  static List<Map<String, dynamic>> parseToolCallsXml(String response) {
-    final toolCalls = <Map<String, dynamic>>[];
-
-    final blockRegex = RegExp(
-      r'<tool_calls>\s*(.*?)\s*</tool_calls>',
-      dotAll: true,
-    );
-    final blockMatch = blockRegex.firstMatch(response);
-    if (blockMatch == null) {
-      debugPrint('⚠️ parseToolCallsXml: 没有找到 <tool_calls> 标签');
-      return toolCalls;
-    }
-
-    final inner = blockMatch.group(1);
-    if (inner == null) return toolCalls;
-
-    _parseInvokeBlocks(inner, toolCalls);
-    debugPrint('🔍 parseToolCallsXml: 找到 ${toolCalls.length} 个工具调用');
-    return toolCalls;
-  }
-
-  /// 解析 DSML 标签格式
-  /// `<|tool_calls|> <|invoke name="工具名"> [<|parameter ...>值</|parameter|>] </|invoke|> </|tool_calls|>`
-  static List<Map<String, dynamic>> parseDSMLXml(String response) {
-    final toolCalls = <Map<String, dynamic>>[];
-
-    // 匹配 DSML 外层包裹：<|tool_calls|> ... </|tool_calls|>
-    final blockRegex = RegExp(
-      r'<\|\s*tool_calls\s*\|>\s*(.*?)\s*</\|\s*tool_calls\s*\|>',
-      dotAll: true,
-    );
-    final blockMatch = blockRegex.firstMatch(response);
-    if (blockMatch == null) {
-      debugPrint('🔍 parseDSMLXml: 没有找到可用工具');
-
-      return toolCalls;
-    }
-
-    final inner = blockMatch.group(1);
-    if (inner == null) return toolCalls;
-
-    final normalized = inner
-        .replaceAllMapped(
-          RegExp(r'<\|\s*(invoke|parameter)\b'),
-          (m) => '<${m.group(1)}',
-        )
-        .replaceAllMapped(
-          RegExp(r'</\|\s*(invoke|parameter)\s*\|?\s*>'),
-          (m) => '</${m.group(1)}>',
-        );
-
-    _parseInvokeBlocks(normalized, toolCalls);
-    debugPrint('🔍 parseDSMLXml: 找到 ${toolCalls.length} 个工具调用');
-    return toolCalls;
-  }
-
-  // ── 内部：invoke 块解析（<invoke name="x"><parameter .../></invoke>） ──
-
-  static void _parseInvokeBlocks(
-    String inner,
-    List<Map<String, dynamic>> toolCalls,
-  ) {
-    final invokeRegex = RegExp(
-      r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
-      dotAll: true,
-    );
-
-    for (final im in invokeRegex.allMatches(inner)) {
-      try {
-        final toolName = im.group(1)?.trim();
-        final invokeBody = im.group(2);
-        if (toolName == null || invokeBody == null) continue;
-
-        final args = <String, dynamic>{};
-
-        // <parameter name="x" string="true">value</parameter>
-        // <parameter name="y" number="true">42</parameter>
-        // <parameter name="z" boolean="true">true</parameter>
-        final paramRegex = RegExp(
-          r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>([^<]*)</parameter>',
-        );
-        for (final pm in paramRegex.allMatches(invokeBody)) {
-          final name = pm.group(1)?.trim();
-          final type = pm.group(2)?.trim();
-          final rawValue = pm.group(3)?.trim() ?? '';
-          if (name != null && name.isNotEmpty) {
-            args[name] = _parseParamValue(rawValue, type);
-          }
-        }
-
-        toolCalls.add({'name': toolName, 'arguments': args});
-        debugPrint('✅ 解析工具调用: $toolName, 参数: $args');
-      } catch (e) {
-        debugPrint('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
-      }
-    }
-  }
-
-  /// 根据类型属性解析参数值
-  static dynamic _parseParamValue(String rawValue, String? type) {
-    switch (type) {
-      case 'number':
-        final n = num.tryParse(rawValue);
-        return n ?? rawValue;
-      case 'boolean':
-        return rawValue.toLowerCase() == 'true';
-      default: // string or unknown
-        return rawValue;
-    }
-  }
-
   /// 获取会话的真实MCP工具信息用于API调用
   static String buildMcpToolsInfoForApi(ChatSession session) {
     final enabledServices = _getEnabledServices(session);
@@ -1052,21 +908,8 @@ class McpService {
   }
 
   // ──────────────────────────────────────────────
-  // 工具调用 XML 剥离（从模型输出中移除 <tool_calls> 块）
+  // 工具调用解析 / 剥离 已迁移到 BaseLlmProvider.parseToolCalls()
   // ──────────────────────────────────────────────
-
-  static final RegExp _stripToolCallsBlockRegex = RegExp(
-    r'<tool_calls>.*?</tool_calls>',
-    dotAll: true,
-  );
-
-  /// 从文本中移除 `<tool_calls>` 标签块，返回干净的可显示文本
-  static String stripToolCallXml(String text) {
-    return text
-        .replaceAll(_stripToolCallsBlockRegex, '')
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-        .trim();
-  }
 
   /// 检查会话是否有可用的MCP工具
   static bool hasAvailableTools(ChatSession session) {
@@ -1077,118 +920,8 @@ class McpService {
     return tools.isNotEmpty;
   }
 
-  // ──────────────────────────────────────────────
-  // 统一工具调用处理入口
-  // ──────────────────────────────────────────────
-
-  /// 处理模型响应中的工具调用：解析 → 获取 MCP 客户端 → 执行 → 返回
-  ///
-  /// [nativeToolCallsJson] 不为空时走原生 JSON tool_calls 解析；
-  /// 否则从 [accumulatedContent] 中解析文本格式的工具调用。
-  ///
-  /// 返回 null 表示没有工具调用或 MCP 未配置。
-  static Future<McpExecutionResult?> processAndExecuteToolCalls({
-    required ChatSession session,
-    required String accumulatedContent,
-    String? nativeToolCallsJson,
-  }) async {
-    if (session.mcpServer == null) return null;
-
-    // 1. 获取或初始化 MCP 客户端
-    final mc = await _getOrInitClient(session);
-    if (mc == null) return null;
-
-    // 2. 解析工具调用
-    List<Map<String, dynamic>> toolCalls;
-    String cleanContent = accumulatedContent;
-
-    if (nativeToolCallsJson != null && nativeToolCallsJson.isNotEmpty) {
-      // JSON tool_calls（统一使用 name/arguments 格式）
-      try {
-        final List<dynamic> list = jsonDecode(nativeToolCallsJson);
-        toolCalls =
-            list
-                .map((raw) {
-                  final m = raw as Map<String, dynamic>;
-                  return {
-                    'name': (m['name'] ?? '') as String,
-                    'arguments':
-                        (m['arguments'] ?? <String, dynamic>{})
-                            as Map<String, dynamic>,
-                    'id': m['id'],
-                    'index': m['index'],
-                  };
-                })
-                .where((tc) => (tc['name'] as String).isNotEmpty)
-                .toList();
-      } catch (_) {
-        return null;
-      }
-    } else {
-      // 文本格式 tool_calls
-      toolCalls = parseToolCallsFromResponse(accumulatedContent);
-      if (toolCalls.isEmpty) return null;
-      cleanContent = stripToolCallXml(accumulatedContent);
-    }
-
-    if (toolCalls.isEmpty) return null;
-
-    // 3. 逐个执行工具
-    final executionResults = <Map<String, dynamic>>[];
-    final toolCallList = <Map<String, dynamic>>[];
-
-    for (int i = 0; i < toolCalls.length; i++) {
-      final tc = toolCalls[i];
-      final name = tc['name'] as String;
-      final args = tc['arguments'] as Map<String, dynamic>;
-      final callId = (tc['id'] as String?) ?? 'call_$i';
-
-      toolCallList.add({
-        'id': callId,
-        'name': name,
-        'arguments': args,
-        'index': i,
-      });
-
-      try {
-        final r = await mc.callTool(name, args);
-        final ok = r.isError != true;
-        final buf = StringBuffer();
-        for (final c in r.content) {
-          if (c is TextContent) {
-            buf.writeln(c.text);
-          } else if (c is ImageContent) {
-            buf.writeln('[图片: ${c.data ?? c.url}]');
-          }
-        }
-        final text = buf.toString().trim();
-        executionResults.add({
-          'id': callId,
-          'name': name,
-          'args': args,
-          'result': text,
-          'isError': !ok,
-        });
-      } catch (e) {
-        executionResults.add({
-          'id': callId,
-          'name': name,
-          'args': args,
-          'result': '$e',
-          'isError': true,
-        });
-      }
-    }
-
-    return McpExecutionResult(
-      cleanContent: cleanContent,
-      toolCallList: toolCallList,
-      executionResults: executionResults,
-    );
-  }
-
   /// 获取或初始化会话的 MCP 客户端（带 session 级缓存 + 存活检测）
-  static Future<Client?> _getOrInitClient(ChatSession session) async {
+  static Future<Client?> getOrInitClient(ChatSession session) async {
     Client? mc = session.mcpClient;
     if (mc != null) {
       // 存活检测：缓存的客户端可能已断开（服务端重启、网络中断等）

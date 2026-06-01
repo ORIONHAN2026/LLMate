@@ -31,6 +31,8 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
   }
 
   Future<void> _loadSkills() async {
+    // 强制重新扫描文件系统以获取最新技能列表
+    SkillService.reset();
     await SkillService.ensureLoaded();
     if (mounted) {
       setState(() {

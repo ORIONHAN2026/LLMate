@@ -1322,7 +1322,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return Tooltip(
       message: activeSkill != null ? '当前技能: ${activeSkill.name}' : (hasSkills ? '点击选择技能' : '暂无可选技能'),
       child: GestureDetector(
-        onTap: hasSkills && !_isSending ? _showSkillSelectionList : null,
+        onTap: hasSkills && !_isSending ? () => _showSkillSelectionList() : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
@@ -3121,7 +3121,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   /// 显示技能选择列表弹窗，点击技能直接绑定
-  void _showSkillSelectionList() {
+  Future<void> _showSkillSelectionList() async {
+    // 强制重新扫描文件系统以获取最新技能列表
+    SkillService.reset();
+    await SkillService.ensureLoaded();
     final skills = SkillService.skills;
 
     if (skills.isEmpty) {
@@ -4417,8 +4420,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         debugPrint('✅ 已初始化 ${initializedServices.length} 个MCP服务');
       }
 
-      // 解析AI响应中的工具调用请求
-      final toolCalls = McpService.parseToolCallsFromResponse(aiResponse);
+      // 解析AI响应中的工具调用请求（通过当前会话的模型提供者）
+      final provider =
+          session.chatModel != null
+              ? LlmHub.createProvider(session.chatModel!)
+              : null;
+      final parsed = provider?.parseToolCalls(aiResponse) ?? {};
+      final toolCalls =
+          (parsed['toolCalls'] as List<Map<String, dynamic>>?) ?? [];
       if (toolCalls.isEmpty) {
         debugPrint('📝 AI响应中未找到工具调用请求');
         return;

@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/chat_message.dart';
-import '../services/mcp_service.dart';
+import '../services/tool_execution_service.dart';
 import 'llmproviders/base_provider.dart';
 import 'llmproviders/openai_provider.dart';
 import 'llmproviders/deepseek_provider.dart';
@@ -124,35 +124,37 @@ class LlmClient {
       }
 
       // 无工具调用或已取消 → 结束
-      if (_cancelled || toolCallsJson == null || _session.mcpServer == null) {
+      if (_cancelled || toolCallsJson == null) {
         return;
       }
 
-      List<Map<String, dynamic>> parsed;
+      // 解析工具调用（JSON 格式，由 Provider 在流中已格式化）
+      List<Map<String, dynamic>> parsedCalls;
       try {
-        parsed =
-            (jsonDecode(toolCallsJson) as List)
-                .map((e) => e as Map<String, dynamic>)
-                .toList();
+        final list = jsonDecode(toolCallsJson) as List;
+        parsedCalls = list
+            .map((e) => e as Map<String, dynamic>)
+            .where((tc) => (tc['name'] ?? '') != '')
+            .toList();
       } catch (_) {
         return;
       }
 
-      for (final tc in parsed) {
-        yield {'tool': '执行: ${tc['name']}'};
-      }
+      if (parsedCalls.isEmpty) return;
 
-      final toolResult = await McpService.processAndExecuteToolCalls(
+      // 统一工具执行（MCP 工具 + Skill 内置工具）
+      final toolResult = await ToolExecutionService.executeToolCalls(
         session: _session,
-        accumulatedContent: '',
-        nativeToolCallsJson: toolCallsJson,
+        toolCalls: parsedCalls,
+        cleanContent: '', // 文本内容已在流中 yield，此处仅工具调用
       );
 
       if (toolResult == null || _cancelled) {
-        if (!_cancelled) {
-          yield {'tool': '⚠️ MCP 服务未连接，跳过工具调用'};
-        }
         return;
+      }
+
+      for (final tc in toolResult.toolCallList) {
+        yield {'tool': '执行: ${tc['name']}'};
       }
 
       for (final r in toolResult.executionResults) {

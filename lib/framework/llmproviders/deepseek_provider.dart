@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../../services/mcp_service.dart';
 import 'base_provider.dart';
 
 /// DeepSeek API 提供商
@@ -90,9 +89,8 @@ class DeepSeekProvider extends BaseLlmProvider {
             if (kDebugMode) debugPrint('接收到完整数据 : $accContent');
 
             if (accContent.isNotEmpty) {
-              final textCalls = McpService.parseToolCallsFromResponse(
-                accContent,
-              );
+              final parsed = parseToolCalls(accContent);
+              final textCalls = parsed['toolCalls'] as List<Map<String, dynamic>>;
               if (textCalls.isNotEmpty) {
                 if (kDebugMode) {
                   debugPrint(
@@ -170,5 +168,96 @@ class DeepSeekProvider extends BaseLlmProvider {
     // 基类已处理 reasoning_content → 'think'，但这里确保非空的空字符串不被 yield
     // （基类 extractStreamChunk 已过滤空值）
     return chunk;
+  }
+
+  // ==================== 工具调用解析（DeepSeek 实现） ====================
+
+  @override
+  Map<String, dynamic> parseToolCalls(String response) {
+    final toolCalls = <Map<String, dynamic>>[];
+    String? inner;
+
+    // 1) <tool_calls> XML
+    final xmlMatch = RegExp(
+      r'<tool_calls>\s*(.*?)\s*</tool_calls>',
+      dotAll: true,
+    ).firstMatch(response);
+    if (xmlMatch != null) {
+      inner = xmlMatch.group(1);
+    }
+
+    // 2) <|tool_calls|> DSML
+    if (inner == null) {
+      final dsmlMatch = RegExp(
+        r'<\|\s*tool_calls\s*\|>\s*(.*?)\s*</\|\s*tool_calls\s*\|>',
+        dotAll: true,
+      ).firstMatch(response);
+      if (dsmlMatch != null) {
+        inner = dsmlMatch
+            .group(1)!
+            .replaceAllMapped(
+              RegExp(r'<\|\s*(invoke|parameter)\b'),
+              (m) => '<${m.group(1)}',
+            )
+            .replaceAllMapped(
+              RegExp(r'</\|\s*(invoke|parameter)\s*\|?\s*>'),
+              (m) => '</${m.group(1)}>',
+            );
+      }
+    }
+
+    // 3) 解析 <invoke> 块
+    if (inner != null) {
+      final invokeRegex = RegExp(
+        r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
+        dotAll: true,
+      );
+      for (final im in invokeRegex.allMatches(inner)) {
+        try {
+          final toolName = im.group(1)?.trim();
+          final invokeBody = im.group(2);
+          if (toolName == null || invokeBody == null) continue;
+
+          final args = <String, dynamic>{};
+          final paramRegex = RegExp(
+            r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>([^<]*)</parameter>',
+          );
+          for (final pm in paramRegex.allMatches(invokeBody)) {
+            final name = pm.group(1)?.trim();
+            final type = pm.group(2)?.trim();
+            final rawValue = pm.group(3)?.trim() ?? '';
+            if (name != null && name.isNotEmpty) {
+              switch (type) {
+                case 'number':
+                  args[name] = num.tryParse(rawValue) ?? rawValue;
+                case 'boolean':
+                  args[name] = rawValue.toLowerCase() == 'true';
+                default:
+                  args[name] = rawValue;
+              }
+            }
+          }
+
+          toolCalls.add({'name': toolName, 'arguments': args});
+          debugPrint('✅ 解析工具调用: $toolName, 参数: $args');
+        } catch (e) {
+          debugPrint('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
+        }
+      }
+    }
+
+    // 4) 剥离标签
+    final cleanContent = response
+        .replaceAll(RegExp(r'<tool_calls>.*?</tool_calls>', dotAll: true), '')
+        .replaceAll(
+          RegExp(r'<\|\s*tool_calls\s*\|>.*?</\|\s*tool_calls\s*\|>',
+            dotAll: true),
+          '',
+        )
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+
+    debugPrint('🔍 parseToolCalls: 找到 ${toolCalls.length} 个工具调用');
+    return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
   }
 }

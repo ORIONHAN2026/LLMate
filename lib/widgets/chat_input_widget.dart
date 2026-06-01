@@ -3567,14 +3567,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           outputTokens: estimatedOutputTokens,
           totalTokens: estimatedTotalTokens,
         );
-
-        updateSession = updateSession.copyWith(
-          messages: updatedMessages,
-          isSending: false,
-        );
-
-        sessionController.updateSession(updateSession);
+        updateSession = updateSession.copyWith(messages: updatedMessages);
       }
+
+      // 流式响应完成，无论是否找到 bot 消息，都必须重置发送状态
+      final finalSession = sessionController.currentSession.value;
+      if (finalSession?.sessionId == updateSession.sessionId) {
+        sessionController.updateSession(
+          updateSession.copyWith(isSending: false),
+        );
+      }
+
       setState(() {
         _thinkingTimes[botMessageId] = generationDuration;
         _streamingMessageIds.remove(botMessageId);

@@ -478,7 +478,12 @@ abstract class BaseLlmProvider {
 
     // 添加会话历史（当前用户消息之前的所有消息）
     if (session != null && session.messages.isNotEmpty) {
+      if (kDebugMode) {
+        debugPrint('🧠 [buildMessages] session.messages 共 ${session.messages.length} 条, 当前用户消息: ${userMessage.msgId}');
+      }
       _appendHistoryMessages(messages, session, userMessage);
+    } else if (kDebugMode) {
+      debugPrint('🧠 [buildMessages] session 为空或无历史消息');
     }
 
     // 构建包含附件信息的用户消息内容
@@ -504,14 +509,19 @@ abstract class BaseLlmProvider {
     }
 
     // 没有有效历史则跳过
-    if (userMsgIndex <= 0) return;
+    if (userMsgIndex <= 0) {
+      if (kDebugMode) {
+        debugPrint('🧠 [_appendHistoryMessages] 无历史: userMsgIndex=$userMsgIndex, session消息数=${session.messages.length}');
+      }
+      return;
+    }
 
     final historyMessages = session.messages.sublist(0, userMsgIndex);
 
     // 保留最近 20 轮对话（以 user 消息为轮次边界）
     const int maxRounds = 20;
     int roundCount = 0;
-    int historyStart = historyMessages.length;
+    int historyStart = 0; // 默认包含全部历史，超 20 轮时截断
 
     for (int i = historyMessages.length - 1; i >= 0; i--) {
       if (historyMessages[i].role == MessageRole.user) {
@@ -524,6 +534,10 @@ abstract class BaseLlmProvider {
     }
 
     final included = historyMessages.sublist(historyStart);
+
+    if (kDebugMode) {
+      debugPrint('🧠 [_appendHistoryMessages] 注入 ${included.length} 条历史消息 (总共 ${historyMessages.length} 条, 最近 ${maxRounds} 轮)');
+    }
 
     // 按时间顺序添加历史消息
     for (final msg in included) {

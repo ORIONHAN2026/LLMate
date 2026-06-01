@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/chat_message.dart';
@@ -85,10 +86,25 @@ class LlmClient {
     //   [system 提示词] + [当前会话历史] + [当前用户消息]
     // 每个会话的消息历史完全独立，不会与其他会话混合。
     // MCP 工具调用循环中会在此基础上追加 assistant + tool 消息。
+    if (kDebugMode) {
+      debugPrint('🧠 [LLMChat] 会话消息数: ${_session.messages.length}, 当前消息ID: ${userMessage.msgId}');
+      for (int i = 0; i < _session.messages.length; i++) {
+        final m = _session.messages[i];
+        debugPrint('  [$i] ${m.role.name}: ${m.content.length > 50 ? m.content.substring(0, 50) + "..." : m.content} (id: ${m.msgId})');
+      }
+    }
     final messages = _provider.buildMessages(
       userMessage: userMessage,
       session: _session,
     );
+    if (kDebugMode) {
+      debugPrint('🧠 [LLMChat] buildMessages 返回 ${messages.length} 条消息');
+      for (int i = 0; i < messages.length; i++) {
+        final m = messages[i];
+        final content = m['content']?.toString() ?? '';
+        debugPrint('  [$i] ${m['role']}: ${content.length > 80 ? content.substring(0, 80) + "..." : content}');
+      }
+    }
 
     // 循环：LLM 返回工具调用后追加结果并重发，直到无工具调用
     while (true) {

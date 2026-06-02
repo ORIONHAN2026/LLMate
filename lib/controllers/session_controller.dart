@@ -330,6 +330,7 @@ class SessionController extends GetxController {
       ..scrollPosition = session.scrollPosition
       ..inputContent = session.inputContent
       ..lastSelectedDirectory = session.lastSelectedDirectory
+      ..workDirectory = session.workDirectory
       ..messagesJson = jsonEncode(
         session.messages.map((m) => m.toJson()).toList(),
       )
@@ -415,6 +416,7 @@ class SessionController extends GetxController {
       scrollPosition: entity.scrollPosition,
       inputContent: entity.inputContent,
       lastSelectedDirectory: entity.lastSelectedDirectory,
+      workDirectory: entity.workDirectory,
       chatModel: chatModel,
       mcpServer: mcpServer,
       skill: skill,

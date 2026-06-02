@@ -50,6 +50,9 @@ class IsarChatSession {
   late String inputContent;
   late String? lastSelectedDirectory;
 
+  /// 工作目录（会话绑定的文件操作目录）
+  late String? workDirectory;
+
   // JSON blobs for complex nested data
   late String? messagesJson;
   late String? chatModelJson;

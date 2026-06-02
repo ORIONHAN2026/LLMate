@@ -3482,6 +3482,11 @@ const IsarChatSessionSchema = CollectionSchema(
       id: 17,
       name: r'skillJson',
       type: IsarType.string,
+    ),
+    r'workDirectory': PropertySchema(
+      id: 18,
+      name: r'workDirectory',
+      type: IsarType.string,
     )
   },
   estimateSize: _isarChatSessionEstimateSize,
@@ -3576,6 +3581,12 @@ int _isarChatSessionEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  {
+    final value = object.workDirectory;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -3603,6 +3614,7 @@ void _isarChatSessionSerialize(
   writer.writeString(offsets[15], object.sessionQuickCommandsJson);
   writer.writeBool(offsets[16], object.shouldStopResponse);
   writer.writeString(offsets[17], object.skillJson);
+  writer.writeString(offsets[18], object.workDirectory);
 }
 
 IsarChatSession _isarChatSessionDeserialize(
@@ -3631,6 +3643,7 @@ IsarChatSession _isarChatSessionDeserialize(
   object.sessionQuickCommandsJson = reader.readStringOrNull(offsets[15]);
   object.shouldStopResponse = reader.readBool(offsets[16]);
   object.skillJson = reader.readStringOrNull(offsets[17]);
+  object.workDirectory = reader.readStringOrNull(offsets[18]);
   return object;
 }
 
@@ -3676,6 +3689,8 @@ P _isarChatSessionDeserializeProp<P>(
     case 16:
       return (reader.readBool(offset)) as P;
     case 17:
+      return (reader.readStringOrNull(offset)) as P;
+    case 18:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -5703,6 +5718,160 @@ extension IsarChatSessionQueryFilter
       ));
     });
   }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'workDirectory',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'workDirectory',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'workDirectory',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'workDirectory',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'workDirectory',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'workDirectory',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'workDirectory',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'workDirectory',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'workDirectory',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'workDirectory',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'workDirectory',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterFilterCondition>
+      workDirectoryIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'workDirectory',
+        value: '',
+      ));
+    });
+  }
 }
 
 extension IsarChatSessionQueryObject
@@ -5961,6 +6130,20 @@ extension IsarChatSessionQuerySortBy
       sortBySkillJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'skillJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
+      sortByWorkDirectory() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDirectory', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
+      sortByWorkDirectoryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDirectory', Sort.desc);
     });
   }
 }
@@ -6229,6 +6412,20 @@ extension IsarChatSessionQuerySortThenBy
       return query.addSortBy(r'skillJson', Sort.desc);
     });
   }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
+      thenByWorkDirectory() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDirectory', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QAfterSortBy>
+      thenByWorkDirectoryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'workDirectory', Sort.desc);
+    });
+  }
 }
 
 extension IsarChatSessionQueryWhereDistinct
@@ -6363,6 +6560,14 @@ extension IsarChatSessionQueryWhereDistinct
       return query.addDistinctBy(r'skillJson', caseSensitive: caseSensitive);
     });
   }
+
+  QueryBuilder<IsarChatSession, IsarChatSession, QDistinct>
+      distinctByWorkDirectory({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'workDirectory',
+          caseSensitive: caseSensitive);
+    });
+  }
 }
 
 extension IsarChatSessionQueryProperty
@@ -6488,6 +6693,13 @@ extension IsarChatSessionQueryProperty
   QueryBuilder<IsarChatSession, String?, QQueryOperations> skillJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'skillJson');
+    });
+  }
+
+  QueryBuilder<IsarChatSession, String?, QQueryOperations>
+      workDirectoryProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'workDirectory');
     });
   }
 }

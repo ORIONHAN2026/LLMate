@@ -764,7 +764,7 @@ enum ModelProvider {
   openai('openai', 'OpenAI', 'https://api.openai.com/v1'),
   anthropic('anthropic', 'Anthropic', 'https://api.anthropic.com/v1'),
   google('google', 'Google', 'https://generativelanguage.googleapis.com/v1'),
-  qwen('qwen', '通义千问', 'https://dashscope.aliyuncs.com/api/v1'),
+  qwen('qwen', '阿里云百炼', 'https://dashscope.aliyuncs.com/compatible-mode/v1'),
   zhipu('zhipu', '智谱AI', 'https://open.bigmodel.cn/api/paas/v4'),
   ollama('ollama', 'Ollama', 'http://127.0.0.1:11434/api');
 

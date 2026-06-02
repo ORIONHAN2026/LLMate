@@ -710,6 +710,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                 .map((model) {
                                   final isSelected =
                                       _selectedOnlineModel == model['id'];
+                                  final hasCapabilities = model['context'] != null;
                                   return InkWell(
                                     onTap: () {
                                       setState(() {
@@ -804,6 +805,25 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                                                 ),
                                                   ),
                                                 ),
+                                                // 模型能力指标（带勾选标记）
+                                                if (hasCapabilities) ...[
+                                                  const SizedBox(height: 4),
+                                                  _buildCapabilityTags(model, isSelected),
+                                                ] else if (model['specs'] != null) ...[
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    model['specs'],
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurface
+                                                          .withOpacity(0.5),
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ],
 
                                                 // 如果模型有 size 字段且选中了该模型，显示 size 选择标签
                                                 if (isSelected &&
@@ -1561,6 +1581,91 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       };
       Navigator.pop(context, newModel);
     }
+  }
+
+  // 构建模型能力标签（带勾选标记）
+  Widget _buildCapabilityTags(Map<String, dynamic> model, bool isSelected) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final dimColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.35);
+    final tagColor = isSelected ? primaryColor.withOpacity(0.15) : Theme.of(context).colorScheme.surface;
+    final tagBorder = isSelected ? primaryColor.withOpacity(0.3) : Theme.of(context).dividerColor.withOpacity(0.5);
+
+    // 能力列表：[标签名, 字段key, 显示名]
+    final capabilities = [
+      ['context', '上下文'],
+      ['thinking', '思考'],
+      ['fc', 'FC'],
+      ['tools', '内置工具'],
+      ['structuredOutput', '结构化'],
+      ['batchCalling', '批量'],
+    ];
+
+    return Wrap(
+      spacing: 4,
+      runSpacing: 3,
+      children: capabilities.map((cap) {
+        final fieldKey = cap[0];
+        final label = cap[1];
+        final isSupported = model[fieldKey] == true;
+        final isContext = fieldKey == 'context';
+
+        // 上下文用特殊样式显示值
+        if (isContext) {
+          final contextValue = model['context'] ?? '';
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: BoxDecoration(
+              color: isSelected ? primaryColor.withOpacity(0.12) : Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(color: isSelected ? primaryColor.withOpacity(0.4) : Theme.of(context).dividerColor.withOpacity(0.4), width: 0.5),
+            ),
+            child: Text(
+              contextValue,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          decoration: BoxDecoration(
+            color: isSupported ? tagColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(
+              color: isSupported ? tagBorder : dimColor.withOpacity(0.3),
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isSupported ? Icons.check_circle_outline : Icons.cancel_outlined,
+                size: 9,
+                color: isSupported
+                    ? (isSelected ? primaryColor : const Color(0xFF10B981))
+                    : dimColor,
+              ),
+              const SizedBox(width: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: isSupported
+                      ? (isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.7))
+                      : dimColor,
+                  fontWeight: isSupported ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 
   Widget _buildSummaryItem(String label, String value, IconData icon) {

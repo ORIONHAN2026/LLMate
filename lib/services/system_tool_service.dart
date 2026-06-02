@@ -50,7 +50,8 @@ class SystemToolService {
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
       name: createWordDocumentTool,
-      description: '创建一个 Word .docx 文档。支持段落富文本（对齐/加粗/列表）、多级标题(1-3)、表格。适合生成会议通知、纪要、公告、方案、报告等结构化文档，返回保存路径。',
+      description:
+          '创建一个 Word .docx 文档。支持段落富文本（对齐/加粗/列表）、多级标题(1-3)、表格。适合生成会议通知、纪要、公告、方案、报告等结构化文档，返回保存路径。',
       parameters: {
         'type': 'object',
         'properties': {
@@ -74,11 +75,15 @@ class SystemToolService {
                       'enum': ['left', 'center', 'right'],
                       'description': '对齐方式，默认 left。',
                     },
-                    'bold': {'type': 'boolean', 'description': '是否加粗，默认 false。'},
+                    'bold': {
+                      'type': 'boolean',
+                      'description': '是否加粗，默认 false。',
+                    },
                     'listType': {
                       'type': 'string',
                       'enum': ['none', 'bullet', 'number'],
-                      'description': '列表类型：none=普通段落，bullet=无序列表，number=有序列表。默认 none。',
+                      'description':
+                          '列表类型：none=普通段落，bullet=无序列表，number=有序列表。默认 none。',
                     },
                   },
                   'required': ['text'],
@@ -115,10 +120,7 @@ class SystemToolService {
               'type': 'object',
               'properties': {
                 'heading': {'type': 'string', 'description': '章节标题。'},
-                'level': {
-                  'type': 'integer',
-                  'description': '标题级别 1-3，默认 1。',
-                },
+                'level': {'type': 'integer', 'description': '标题级别 1-3，默认 1。'},
                 'paragraphs': {
                   'type': 'array',
                   'description': '章节段落，同顶层 paragraphs 格式。',
@@ -159,28 +161,28 @@ class SystemToolService {
     ),
     SystemToolDefinition(
       name: readWordDocumentTool,
-      description: '读取一个 Word .docx 文档的结构信息，返回标题、段落（含对齐/加粗/列表属性）、表格、章节层级等结构化 JSON。适合分析模板格式后据此生成相同样式的文档。',
+      description:
+          '读取一个 Word .docx 文档的结构信息，返回标题、段落（含对齐/加粗/列表属性）、表格、章节层级等结构化 JSON。适合分析模板格式后据此生成相同样式的文档。',
       parameters: {
         'type': 'object',
         'properties': {
-          'filePath': {
-            'type': 'string',
-            'description': '要读取的 .docx 文件的完整路径。',
-          },
+          'filePath': {'type': 'string', 'description': '要读取的 .docx 文件的完整路径。'},
         },
         'required': ['filePath'],
       },
     ),
     SystemToolDefinition(
       name: skillManagerTool,
-      description: '技能管理工具。列出、读取、创建、更新、删除技能（SKILL.md）。涉及技能修改时必须使用此工具，不要通过 bash 或其他方式直接编辑文件。',
+      description:
+          '技能管理工具。列出、读取、创建、更新、删除技能（SKILL.md）。涉及技能修改时必须使用此工具，不要通过 bash 或其他方式直接编辑文件。',
       parameters: {
         'type': 'object',
         'properties': {
           'action': {
             'type': 'string',
             'enum': ['list', 'read', 'create', 'update', 'delete'],
-            'description': '操作类型：list=列出所有技能，read=读取技能内容，create=创建新技能，update=更新已有技能，delete=删除技能。',
+            'description':
+                '操作类型：list=列出所有技能，read=读取技能内容，create=创建新技能，update=更新已有技能，delete=删除技能。',
           },
           'skillId': {
             'type': 'string',
@@ -196,7 +198,8 @@ class SystemToolService {
           },
           'content': {
             'type': 'string',
-            'description': '技能正文（SKILL.md YAML 头之后的 Markdown 内容）。create 必填，update 可选（不填则保留原值）。',
+            'description':
+                '技能正文（SKILL.md YAML 头之后的 Markdown 内容）。create 必填，update 可选（不填则保留原值）。',
           },
         },
         'required': ['action'],
@@ -204,21 +207,20 @@ class SystemToolService {
     ),
     SystemToolDefinition(
       name: fileReadTool,
-      description: '读取文本文件内容。支持代码文件(.dart/.py/.js/.ts/.java/.kt/.swift/.go/.rs/.c/.cpp/.html/.css/.sql等)、Markdown文件(.md)、配置文件(.json/.yaml/.toml/.xml等)、纯文本(.txt/.log/.csv等)。返回文件内容、行数、大小等信息。',
+      description:
+          '读取文本文件内容。支持代码文件(.dart/.py/.js/.ts/.java/.kt/.swift/.go/.rs/.c/.cpp/.html/.css/.sql等)、Markdown文件(.md)、配置文件(.json/.yaml/.toml/.xml等)、纯文本(.txt/.log/.csv等)。返回文件内容、行数、大小等信息。',
       parameters: {
         'type': 'object',
         'properties': {
-          'filePath': {
-            'type': 'string',
-            'description': '要读取的文件完整路径。',
-          },
+          'filePath': {'type': 'string', 'description': '要读取的文件完整路径。'},
         },
         'required': ['filePath'],
       },
     ),
     SystemToolDefinition(
       name: fileWriteTool,
-      description: '写入或创建文本文件。支持代码文件、Markdown文件、配置文件、纯文本等。如果文件已存在则覆盖，如果父目录不存在则自动创建。适合生成代码、Markdown文档、配置文件等。',
+      description:
+          '写入或创建文本文件。支持代码文件、Markdown文件、配置文件、纯文本等。如果文件已存在则覆盖，如果父目录不存在则自动创建。适合生成代码、Markdown文档、配置文件等。',
       parameters: {
         'type': 'object',
         'properties': {
@@ -226,31 +228,27 @@ class SystemToolService {
             'type': 'string',
             'description': '要写入的文件完整路径，包含文件名和扩展名。',
           },
-          'content': {
-            'type': 'string',
-            'description': '要写入的文件内容。',
-          },
+          'content': {'type': 'string', 'description': '要写入的文件内容。'},
         },
         'required': ['filePath', 'content'],
       },
     ),
     SystemToolDefinition(
       name: excelReadTool,
-      description: '读取 Excel .xlsx 文件内容。返回所有 Sheet 的名称、行数、列数以及每行每列的数据。适合分析表格数据、提取信息。',
+      description:
+          '读取 Excel .xlsx 文件内容。返回所有 Sheet 的名称、行数、列数以及每行每列的数据。适合分析表格数据、提取信息。',
       parameters: {
         'type': 'object',
         'properties': {
-          'filePath': {
-            'type': 'string',
-            'description': '要读取的 .xlsx 文件的完整路径。',
-          },
+          'filePath': {'type': 'string', 'description': '要读取的 .xlsx 文件的完整路径。'},
         },
         'required': ['filePath'],
       },
     ),
     SystemToolDefinition(
       name: excelWriteTool,
-      description: '创建 Excel .xlsx 文件。支持多 Sheet、表头（自动加粗）、数据行。数字类型自动识别为数值单元格。适合生成数据报表、统计表格、清单等。',
+      description:
+          '创建 Excel .xlsx 文件。支持多 Sheet、表头（自动加粗）、数据行。数字类型自动识别为数值单元格。适合生成数据报表、统计表格、清单等。',
       parameters: {
         'type': 'object',
         'properties': {
@@ -276,10 +274,7 @@ class SystemToolService {
                 'rows': {
                   'type': 'array',
                   'description': '数据行，每行是数组（支持字符串和数字）。',
-                  'items': {
-                    'type': 'array',
-                    'items': {},
-                  },
+                  'items': {'type': 'array', 'items': {}},
                 },
               },
             },
@@ -302,7 +297,8 @@ class SystemToolService {
     ),
     SystemToolDefinition(
       name: pdfWriteTool,
-      description: 'PDF 写入工具。支持三种操作：create=创建新PDF（标题+章节+段落+表格），merge=合并多个PDF，watermark=添加文字水印。通过 action 参数选择操作。',
+      description:
+          'PDF 写入工具。支持三种操作：create=创建新PDF（标题+章节+段落+表格），merge=合并多个PDF，watermark=添加文字水印。通过 action 参数选择操作。',
       parameters: {
         'type': 'object',
         'properties': {
@@ -310,26 +306,46 @@ class SystemToolService {
           'action': {
             'type': 'string',
             'enum': ['create', 'merge', 'watermark'],
-            'description': '操作类型：create=创建PDF，merge=合并PDF，watermark=添加水印。默认 create。',
+            'description':
+                '操作类型：create=创建PDF，merge=合并PDF，watermark=添加水印。默认 create。',
           },
           'title': {'type': 'string', 'description': '文档标题（create 时使用）。'},
           'author': {'type': 'string', 'description': '文档作者（create 时使用）。'},
           'sections': {
             'type': 'array',
-            'description': '章节列表（create 时使用），每项含 heading、level、paragraphs、tables。',
+            'description':
+                '章节列表（create 时使用），每项含 heading、level、paragraphs、tables。',
             'items': {
               'type': 'object',
               'properties': {
                 'heading': {'type': 'string', 'description': '章节标题。'},
                 'level': {'type': 'integer', 'description': '标题级别 1-3，默认 1。'},
-                'paragraphs': {'type': 'array', 'description': '段落列表，同 word_create_document。', 'items': {}},
-                'tables': {'type': 'array', 'description': '表格列表。', 'items': {}},
+                'paragraphs': {
+                  'type': 'array',
+                  'description': '段落列表，同 word_create_document。',
+                  'items': {},
+                },
+                'tables': {
+                  'type': 'array',
+                  'description': '表格列表。',
+                  'items': {},
+                },
               },
             },
           },
-          'files': {'type': 'array', 'description': '要合并的 PDF 文件路径列表（merge 时使用）。', 'items': {'type': 'string'}},
-          'sourcePath': {'type': 'string', 'description': '源 PDF 路径（watermark 时使用）。'},
-          'watermarkText': {'type': 'string', 'description': '水印文字（watermark 时使用）。'},
+          'files': {
+            'type': 'array',
+            'description': '要合并的 PDF 文件路径列表（merge 时使用）。',
+            'items': {'type': 'string'},
+          },
+          'sourcePath': {
+            'type': 'string',
+            'description': '源 PDF 路径（watermark 时使用）。',
+          },
+          'watermarkText': {
+            'type': 'string',
+            'description': '水印文字（watermark 时使用）。',
+          },
         },
         'required': ['filePath'],
       },
@@ -341,35 +357,64 @@ class SystemToolService {
       parameters: {
         'type': 'object',
         'properties': {
-          'filePath': {'type': 'string', 'description': '图片文件完整路径。支持 png/jpg/jpeg/gif/webp/bmp/tiff。'},
+          'filePath': {
+            'type': 'string',
+            'description': '图片文件完整路径。支持 png/jpg/jpeg/gif/webp/bmp/tiff。',
+          },
         },
         'required': ['filePath'],
       },
     ),
     SystemToolDefinition(
       name: imageWriteTool,
-      description: '图片处理工具。支持六种操作：resize=缩放，crop=裁剪，rotate=旋转，convert=格式转换，compress=压缩，watermark=添加文字水印。通过 action 参数选择操作。',
+      description:
+          '图片处理工具。支持六种操作：resize=缩放，crop=裁剪，rotate=旋转，convert=格式转换，compress=压缩，watermark=添加文字水印。通过 action 参数选择操作。',
       parameters: {
         'type': 'object',
         'properties': {
           'sourcePath': {'type': 'string', 'description': '源图片路径。'},
-          'filePath': {'type': 'string', 'description': '输出图片路径（含扩展名，扩展名决定输出格式）。'},
+          'filePath': {
+            'type': 'string',
+            'description': '输出图片路径（含扩展名，扩展名决定输出格式）。',
+          },
           'action': {
             'type': 'string',
-            'enum': ['resize', 'crop', 'rotate', 'convert', 'compress', 'watermark'],
+            'enum': [
+              'resize',
+              'crop',
+              'rotate',
+              'convert',
+              'compress',
+              'watermark',
+            ],
             'description': '操作类型，默认 resize。',
           },
           'width': {'type': 'integer', 'description': '目标宽度（resize 时使用）。'},
           'height': {'type': 'integer', 'description': '目标高度（resize 时使用）。'},
-          'maintainAspectRatio': {'type': 'boolean', 'description': '是否保持宽高比（resize 时），默认 true。'},
+          'maintainAspectRatio': {
+            'type': 'boolean',
+            'description': '是否保持宽高比（resize 时），默认 true。',
+          },
           'x': {'type': 'integer', 'description': '裁剪起始 X 坐标（crop 时使用）。'},
           'y': {'type': 'integer', 'description': '裁剪起始 Y 坐标（crop 时使用）。'},
           'cropWidth': {'type': 'integer', 'description': '裁剪宽度（crop 时使用）。'},
           'cropHeight': {'type': 'integer', 'description': '裁剪高度（crop 时使用）。'},
-          'angle': {'type': 'integer', 'description': '旋转角度，90的倍数（rotate 时使用），默认 90。'},
-          'quality': {'type': 'integer', 'description': '压缩质量 0-100（compress/convert 时使用），默认 85。'},
-          'watermarkText': {'type': 'string', 'description': '水印文字（watermark 时使用）。'},
-          'fontSize': {'type': 'integer', 'description': '水印字号（watermark 时使用），默认 24。'},
+          'angle': {
+            'type': 'integer',
+            'description': '旋转角度，90的倍数（rotate 时使用），默认 90。',
+          },
+          'quality': {
+            'type': 'integer',
+            'description': '压缩质量 0-100（compress/convert 时使用），默认 85。',
+          },
+          'watermarkText': {
+            'type': 'string',
+            'description': '水印文字（watermark 时使用）。',
+          },
+          'fontSize': {
+            'type': 'integer',
+            'description': '水印字号（watermark 时使用），默认 24。',
+          },
         },
         'required': ['sourcePath', 'filePath'],
       },
@@ -401,8 +446,15 @@ class SystemToolService {
               'type': 'object',
               'properties': {
                 'title': {'type': 'string', 'description': '幻灯片标题。'},
-                'content': {'type': 'string', 'description': '幻灯片正文内容，支持换行。以 "- " 或 "• " 开头的行自动变为项目列表。'},
-                'items': {'type': 'array', 'description': '项目列表，字符串数组。', 'items': {'type': 'string'}},
+                'content': {
+                  'type': 'string',
+                  'description': '幻灯片正文内容，支持换行。以 "- " 或 "• " 开头的行自动变为项目列表。',
+                },
+                'items': {
+                  'type': 'array',
+                  'description': '项目列表，字符串数组。',
+                  'items': {'type': 'string'},
+                },
               },
             },
           },
@@ -413,11 +465,15 @@ class SystemToolService {
     // ── 邮件工具 ──────────────────────────────────────────────
     SystemToolDefinition(
       name: emailReadTool,
-      description: '读取邮件。通过 IMAP 协议连接邮箱，支持三种操作：list=列出最近邮件，fetch=读取指定邮件完整内容，search=按主题搜索邮件。需要提供邮箱账号和IMAP服务器信息。',
+      description:
+          '读取邮件。通过 IMAP 协议连接邮箱，支持三种操作：list=列出最近邮件，fetch=读取指定邮件完整内容，search=按主题搜索邮件。需要提供邮箱账号和IMAP服务器信息。',
       parameters: {
         'type': 'object',
         'properties': {
-          'host': {'type': 'string', 'description': 'IMAP 服务器地址，如 imap.qq.com。'},
+          'host': {
+            'type': 'string',
+            'description': 'IMAP 服务器地址，如 imap.qq.com。',
+          },
           'port': {'type': 'integer', 'description': 'IMAP 端口，默认 993。'},
           'username': {'type': 'string', 'description': '邮箱账号。'},
           'password': {'type': 'string', 'description': '邮箱密码或授权码。'},
@@ -437,11 +493,15 @@ class SystemToolService {
     ),
     SystemToolDefinition(
       name: emailWriteTool,
-      description: '发送邮件。通过 SMTP 协议发送，支持纯文本/HTML正文、抄送、密送、附件。需要提供邮箱账号和SMTP服务器信息。',
+      description:
+          '发送邮件。通过 SMTP 协议发送，支持纯文本/HTML正文、抄送、密送、附件。需要提供邮箱账号和SMTP服务器信息。',
       parameters: {
         'type': 'object',
         'properties': {
-          'host': {'type': 'string', 'description': 'SMTP 服务器地址，如 smtp.qq.com。'},
+          'host': {
+            'type': 'string',
+            'description': 'SMTP 服务器地址，如 smtp.qq.com。',
+          },
           'port': {'type': 'integer', 'description': 'SMTP 端口，默认 465。'},
           'username': {'type': 'string', 'description': '发件邮箱账号。'},
           'password': {'type': 'string', 'description': '邮箱密码或授权码。'},
@@ -525,10 +585,109 @@ class SystemToolService {
       buffer.writeln();
       buffer.writeln('规则：');
       buffer.writeln('- 生成文件时，如用户未指定保存路径，默认保存到工作目录。');
-      buffer.writeln('- 使用 `word_create_document` 时不需指定 `outputDirectory`，系统会自动使用工作目录。');
-      buffer.writeln('- 使用 `file_write`、`excel_write`、`pdf_write`、`ppt_write`、`image_write` 时若 `filePath` 为相对路径或仅文件名，系统会自动拼接工作目录。');
+      buffer.writeln(
+        '- 使用 `word_create_document` 时不需指定 `outputDirectory`，系统会自动使用工作目录。',
+      );
+      buffer.writeln(
+        '- 使用 `file_write`、`excel_write`、`pdf_write`、`ppt_write`、`image_write` 时若 `filePath` 为相对路径或仅文件名，系统会自动拼接工作目录。',
+      );
       buffer.writeln();
     }
+
+    return buffer.toString().trim();
+  }
+
+  /// 将每个系统内置工具生成独立的 system 消息列表
+  /// 使用自然语言描述，去除冗余的 JSON Schema 和代码块标记
+  static List<Map<String, dynamic>> buildSystemToolsInfoAsMessages(
+    ChatSession? session,
+  ) {
+    if (_tools.isEmpty) return [];
+
+    final messages = <Map<String, dynamic>>[];
+
+    // 工具调用通用说明（单独一条）
+    messages.add({
+      'role': 'system',
+      'content':
+          '你拥有以下客户端内置工具，可以直接调用来完成文件与文档操作。'
+          '调用时必须使用 XML 格式，不要用 Markdown 代码块替代。'
+          '格式如下：\n'
+          '<tool_calls>\n'
+          '<invoke name="工具名">\n'
+          '<arguments>\n'
+          'JSON 参数\n'
+          '</arguments>\n'
+          '</invoke>\n'
+          '</tool_calls>',
+    });
+
+    // 每个工具独立一条 system 消息，使用自然语言描述
+    for (final tool in _tools) {
+      final content = _buildToolNaturalDescription(tool);
+      messages.add({'role': 'system', 'content': content});
+    }
+
+    // 工作目录提示（独立一条）
+    final workDir = session?.workDirectory;
+    if (workDir != null && workDir.trim().isNotEmpty) {
+      messages.add({
+        'role': 'system',
+        'content':
+            '当前会话工作目录：$workDir。'
+            '生成文件时如用户未指定路径，默认保存到该目录。',
+      });
+    }
+
+    return messages;
+  }
+
+  /// 用自然语言构建单个工具的描述
+  static String _buildToolNaturalDescription(SystemToolDefinition tool) {
+    final buffer = StringBuffer();
+
+    buffer.writeln('工具名称：${tool.name}');
+    buffer.writeln();
+    buffer.writeln(tool.description);
+    buffer.writeln();
+
+    // 参数说明
+    final props = tool.parameters['properties'] as Map<String, dynamic>?;
+    final required = tool.parameters['required'] as List<dynamic>? ?? [];
+
+    if (props != null && props.isNotEmpty) {
+      buffer.writeln('参数：');
+      for (final entry in props.entries) {
+        final paramName = entry.key;
+        final paramDef = entry.value as Map<String, dynamic>;
+        final isRequired = required.contains(paramName);
+        final desc = paramDef['description'] as String? ?? '';
+        final type = paramDef['type'] as String? ?? '';
+        final enumValues = paramDef['enum'] as List<dynamic>?;
+
+        buffer.write('- $paramName');
+        if (type.isNotEmpty) buffer.write('（$type');
+        if (enumValues != null) buffer.write('，可选值：${enumValues.join('/')}');
+        if (type.isNotEmpty) buffer.write('）');
+        if (isRequired)
+          buffer.write('，必填');
+        else
+          buffer.write('，可选');
+        if (desc.isNotEmpty) buffer.write('：$desc');
+        buffer.writeln();
+      }
+    }
+
+    // 调用示例
+    buffer.writeln();
+    buffer.writeln('调用示例：');
+    buffer.writeln('<tool_calls>');
+    buffer.writeln('<invoke name="${tool.name}">');
+    buffer.writeln('<arguments>');
+    buffer.writeln(_exampleArguments(tool.name));
+    buffer.writeln('</arguments>');
+    buffer.writeln('</invoke>');
+    buffer.writeln('</tool_calls>');
 
     return buffer.toString().trim();
   }
@@ -734,27 +893,26 @@ class SystemToolService {
           ],
         });
       case readWordDocumentTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'filePath': '/Users/example/Documents/模板.docx',
-        });
+        return const JsonEncoder.withIndent(
+          '  ',
+        ).convert({'filePath': '/Users/example/Documents/模板.docx'});
       case skillManagerTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'action': 'read',
-          'skillId': '会议通知',
-        });
+        return const JsonEncoder.withIndent(
+          '  ',
+        ).convert({'action': 'read', 'skillId': '会议通知'});
       case fileReadTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'filePath': '/Users/example/project/README.md',
-        });
+        return const JsonEncoder.withIndent(
+          '  ',
+        ).convert({'filePath': '/Users/example/project/README.md'});
       case fileWriteTool:
         return const JsonEncoder.withIndent('  ').convert({
           'filePath': '/Users/example/project/notes.md',
           'content': '# 笔记\n\n这是一段示例内容。',
         });
       case excelReadTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'filePath': '/Users/example/Documents/数据报表.xlsx',
-        });
+        return const JsonEncoder.withIndent(
+          '  ',
+        ).convert({'filePath': '/Users/example/Documents/数据报表.xlsx'});
       case excelWriteTool:
         return const JsonEncoder.withIndent('  ').convert({
           'filePath': '/Users/example/Documents/成绩单.xlsx',
@@ -770,9 +928,9 @@ class SystemToolService {
           ],
         });
       case pdfReadTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'filePath': '/Users/example/Documents/报告.pdf',
-        });
+        return const JsonEncoder.withIndent(
+          '  ',
+        ).convert({'filePath': '/Users/example/Documents/报告.pdf'});
       case pdfWriteTool:
         return const JsonEncoder.withIndent('  ').convert({
           'filePath': '/Users/example/Documents/报告.pdf',
@@ -787,9 +945,9 @@ class SystemToolService {
           ],
         });
       case imageReadTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'filePath': '/Users/example/Documents/photo.jpg',
-        });
+        return const JsonEncoder.withIndent(
+          '  ',
+        ).convert({'filePath': '/Users/example/Documents/photo.jpg'});
       case imageWriteTool:
         return const JsonEncoder.withIndent('  ').convert({
           'sourcePath': '/Users/example/Documents/photo.jpg',
@@ -799,14 +957,17 @@ class SystemToolService {
           'height': 600,
         });
       case pptReadTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'filePath': '/Users/example/Documents/演示文稿.pptx',
-        });
+        return const JsonEncoder.withIndent(
+          '  ',
+        ).convert({'filePath': '/Users/example/Documents/演示文稿.pptx'});
       case pptWriteTool:
         return const JsonEncoder.withIndent('  ').convert({
           'filePath': '/Users/example/Documents/演示文稿.pptx',
           'slides': [
-            {'title': '项目概述', 'items': ['背景介绍', '项目目标', '团队构成']},
+            {
+              'title': '项目概述',
+              'items': ['背景介绍', '项目目标', '团队构成'],
+            },
             {'title': '技术方案', 'content': '- 前端架构\n- 后端服务\n- 数据库设计'},
           ],
         });

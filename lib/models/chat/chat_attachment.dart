@@ -8,6 +8,10 @@ class ChatAttachment {
   final String? content;
   final int? size;
   final DateTime createdAt;
+  /// 图片 base64 数据（用于多模态 LLM 发送图片原文）
+  final String? base64Data;
+  /// 图片 MIME 类型（如 image/png），配合 base64Data 使用
+  final String? mimeType;
 
   ChatAttachment({
     required this.id,
@@ -18,6 +22,8 @@ class ChatAttachment {
     this.content,
     this.size,
     required this.createdAt,
+    this.base64Data,
+    this.mimeType,
   });
 
   // 创建副本
@@ -30,6 +36,8 @@ class ChatAttachment {
     String? content,
     int? size,
     DateTime? createdAt,
+    String? base64Data,
+    String? mimeType,
   }) {
     return ChatAttachment(
       id: id ?? this.id,
@@ -40,6 +48,8 @@ class ChatAttachment {
       content: content ?? this.content,
       size: size ?? this.size,
       createdAt: createdAt ?? this.createdAt,
+      base64Data: base64Data ?? this.base64Data,
+      mimeType: mimeType ?? this.mimeType,
     );
   }
 
@@ -57,6 +67,8 @@ class ChatAttachment {
           json['createdAt'] != null
               ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()
               : DateTime.now(),
+      base64Data: json['base64Data'],
+      mimeType: json['mimeType'],
     );
   }
 
@@ -70,6 +82,8 @@ class ChatAttachment {
       'content': content,
       'size': size,
       'createdAt': createdAt.toIso8601String(),
+      'base64Data': base64Data,
+      'mimeType': mimeType,
     };
   }
 }

@@ -6,10 +6,10 @@ import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import 'base_provider.dart';
 
-/// 通义千问 API 提供商
+/// 阿里云百炼 API 提供商
 class QwenProvider extends BaseLlmProvider {
   @override
-  String get providerName => '通义千问';
+  String get providerName => '阿里云百炼';
 
   @override
   List<String> getSupportedFeatures() {

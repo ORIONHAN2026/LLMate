@@ -16,6 +16,13 @@ import 'package:mcp_client/mcp_client.dart' hide MessageRole;
 import '../services/mcp_service.dart';
 import '../services/mcp_storage_service.dart';
 import '../services/skill_service.dart';
+import '../services/skill_storage_service.dart';
+import '../services/word_tool_service.dart';
+import '../services/excel_tool_service.dart';
+import '../services/pdf_tool_service.dart';
+import '../services/ppt_tool_service.dart';
+import '../services/image_tool_service.dart';
+import '../services/file_tool_service.dart';
 import '../utils/snackbar_utils.dart';
 import 'attachment_list_widget.dart';
 
@@ -583,23 +590,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           '${DateTime.now().millisecondsSinceEpoch}_${newAttachments.length}';
       attachmentIds.add(attachmentId);
 
-      // 尝试读取文件内容
-      String? content;
-      try {
-        if (file.extension?.toLowerCase() == '.txt' ||
-            file.extension?.toLowerCase() == '.md' ||
-            file.extension?.toLowerCase() == '.json' ||
-            file.extension?.toLowerCase() == '.go' ||
-            file.extension?.toLowerCase() == '.py' ||
-            file.extension?.toLowerCase() == '.js' ||
-            file.extension?.toLowerCase() == '.html' ||
-            file.extension?.toLowerCase() == '.css') {
-          content = await File(file.path!).readAsString();
-        }
-      } catch (e) {
-        debugPrint('读取文件内容失败: ${e.toString()}');
-      }
-
       // 根据文件扩展名判断类型
       String attachmentType = defaultType;
       if (file.extension != null) {
@@ -629,12 +619,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         filePath: file.path!,
         size: file.size,
         createdAt: DateTime.now(),
-        content: content, // 添加文件内容
       );
 
       newAttachments.add(attachment);
       debugPrint(
-        '创建附件对象: ${attachment.name}, ID: ${attachment.id}, 大小: ${attachment.size}, 内容长度: ${content?.length ?? 0}',
+        '创建附件对象: ${attachment.name}, ID: ${attachment.id}, 大小: ${attachment.size}',
       );
     } // 一次性更新会话，添加所有附件
     final updatedAttachments = List<ChatAttachment>.from(
@@ -663,46 +652,278 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  /// 后台处理附件
+  /// 后台处理附件（使用系统内置工具读取文件内容）
   Future<void> _processAttachmentInBackground(
     String attachmentId,
     ChatAttachment attachment,
-    String targetSessionId, // 添加目标会话ID，确保更新正确的会话
+    String targetSessionId,
   ) async {
     debugPrint('开始后台处理附件: ${attachment.name}，目标会话: $targetSessionId');
 
     try {
-      // 在后台处理文件内容，不阻塞UI
-      final processedAttachment =
-          await FileProcessingService.processAttachmentInBackground(attachment);
+      final processedAttachment = await _readAttachmentWithTool(attachment);
 
       debugPrint(
         '文件处理完成: ${attachment.name}, 内容长度: ${processedAttachment.content?.length ?? 0}',
       );
 
-      // 更新附件状态为已处理，使用指定的会话ID
       await _updateAttachmentInSession(
         attachmentId,
         processedAttachment,
         targetSessionId,
       );
-
-      // 文件处理完成，不显示提示，通过附件状态可见
     } catch (e) {
       debugPrint('处理附件时出错: $e');
 
-      // 处理失败时，更新附件状态为错误
       final errorAttachment = attachment.copyWith(
-        content: 'ERROR_PROCESSING', // 特殊标记表示处理失败
+        content: 'ERROR_PROCESSING',
       );
       await _updateAttachmentInSession(
         attachmentId,
         errorAttachment,
         targetSessionId,
       );
-
-      // 处理文件失败，不显示提示，通过附件状态可见错误状态
     }
+  }
+
+  /// 根据文件格式调用系统内置工具读取附件内容
+  Future<ChatAttachment> _readAttachmentWithTool(
+    ChatAttachment attachment,
+  ) async {
+    if (attachment.filePath == null || attachment.filePath!.isEmpty) {
+      return attachment;
+    }
+
+    final file = File(attachment.filePath!);
+    if (!await file.exists()) {
+      return attachment.copyWith(content: '[文件不存在或已被移动]');
+    }
+
+    final ext = p.extension(attachment.name).toLowerCase();
+    final callId = 'attach_${attachment.id}';
+
+    try {
+      // ── 图片：base64 编码原文 ──
+      if (const ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tiff', '.ico']
+          .contains(ext)) {
+        final bytes = await file.readAsBytes();
+        final base64Str = base64Encode(bytes);
+        final mimeType = _imageMimeType(ext);
+
+        // 同时调用 image_read 获取图片描述信息
+        final readResult = await ImageToolService.execute(
+          action: 'read',
+          arguments: {'filePath': attachment.filePath},
+          callId: callId,
+        );
+        String? description;
+        if (readResult['isError'] != true && readResult['result'] is String) {
+          try {
+            final decoded = jsonDecode(readResult['result'] as String);
+            description = decoded['message'] as String?;
+          } catch (_) {}
+        }
+
+        return attachment.copyWith(
+          type: 'image',
+          content: description ?? '图片文件: ${attachment.name}',
+          base64Data: base64Str,
+          mimeType: mimeType,
+          size: await file.length(),
+        );
+      }
+
+      // ── Word 文档 ──
+      if (ext == '.docx') {
+        final result = await WordToolService.readDocument(
+          arguments: {'filePath': attachment.filePath},
+          callId: callId,
+        );
+        return attachment.copyWith(
+          type: 'document',
+          content: _extractToolResultContent(result),
+          size: await file.length(),
+        );
+      }
+
+      // ── Excel 表格 ──
+      if (ext == '.xlsx') {
+        final result = await ExcelToolService.execute(
+          action: 'read',
+          arguments: {'filePath': attachment.filePath},
+          callId: callId,
+        );
+        return attachment.copyWith(
+          type: 'document',
+          content: _extractToolResultContent(result),
+          size: await file.length(),
+        );
+      }
+
+      // ── PDF ──
+      if (ext == '.pdf') {
+        final result = await PdfToolService.execute(
+          action: 'read',
+          arguments: {'filePath': attachment.filePath},
+          callId: callId,
+        );
+        return attachment.copyWith(
+          type: 'document',
+          content: _extractToolResultContent(result),
+          size: await file.length(),
+        );
+      }
+
+      // ── PPT ──
+      if (ext == '.pptx') {
+        final result = await PptToolService.execute(
+          action: 'read',
+          arguments: {'filePath': attachment.filePath},
+          callId: callId,
+        );
+        return attachment.copyWith(
+          type: 'document',
+          content: _extractToolResultContent(result),
+          size: await file.length(),
+        );
+      }
+
+      // ── 文本/代码文件：使用 file_read ──
+      if (FileToolService.isReadableExtension(ext)) {
+        final result = await FileToolService.execute(
+          action: 'read',
+          arguments: {'filePath': attachment.filePath},
+          callId: callId,
+        );
+        return attachment.copyWith(
+          type: _isCodeExtension(ext) ? 'code' : 'text',
+          content: _extractToolResultContent(result),
+          size: await file.length(),
+        );
+      }
+
+      // ── 其他格式：尝试作为文本读取 ──
+      try {
+        final content = await file.readAsString(encoding: utf8);
+        return attachment.copyWith(
+          type: 'text',
+          content: content.isEmpty ? '[空文件]' : content,
+          size: await file.length(),
+        );
+      } catch (_) {
+        return attachment.copyWith(
+          content: '[不支持的文件格式: $ext]',
+          size: await file.length(),
+        );
+      }
+    } catch (e) {
+      debugPrint('使用系统工具读取附件失败: $e');
+      return attachment.copyWith(content: '[读取文件失败: $e]');
+    }
+  }
+
+  /// 从工具调用结果中提取内容文本
+  String _extractToolResultContent(Map<String, dynamic> toolResult) {
+    if (toolResult['isError'] == true) {
+      return '[读取失败: ${toolResult['result'] ?? '未知错误'}]';
+    }
+    final result = toolResult['result'];
+    if (result is String) {
+      try {
+        final decoded = jsonDecode(result);
+        if (decoded is Map) {
+          // 优先返回结构化内容
+          final parts = <String>[];
+          if (decoded['message'] != null) {
+            parts.add(decoded['message'].toString());
+          }
+          // 文件工具返回 content 字段
+          if (decoded['content'] != null) {
+            parts.add(decoded['content'].toString());
+          }
+          // PDF/Word 返回 pages/sections
+          if (decoded['pages'] is List) {
+            for (final page in decoded['pages'] as List) {
+              if (page is Map && page['text'] != null) {
+                parts.add('=== 第 ${page['pageIndex']} 页 ===\n${page['text']}');
+              }
+            }
+          }
+          if (decoded['sections'] is List) {
+            for (final section in decoded['sections'] as List) {
+              if (section is Map) {
+                final heading = section['heading'] ?? '';
+                final content = section['content'] ?? '';
+                if (heading.isNotEmpty) parts.add('## $heading');
+                if (content.isNotEmpty) parts.add(content.toString());
+              }
+            }
+          }
+          // Excel 返回 sheets
+          if (decoded['sheets'] is List) {
+            for (final sheet in decoded['sheets'] as List) {
+              if (sheet is Map) {
+                parts.add('=== Sheet: ${sheet['name']} ===');
+                if (sheet['rows'] is List) {
+                  for (final row in sheet['rows'] as List) {
+                    if (row is List) {
+                      parts.add(row.map((c) => c?.toString() ?? '').join('\t'));
+                    }
+                  }
+                }
+              }
+            }
+          }
+          // PPT 返回 slides
+          if (decoded['slides'] is List) {
+            for (final slide in decoded['slides'] as List) {
+              if (slide is Map && slide['text'] != null) {
+                parts.add('=== 幻灯片 ${slide['slideIndex']} ===\n${slide['text']}');
+              }
+            }
+          }
+          if (parts.isNotEmpty) return parts.join('\n\n');
+          // 兜底：直接返回原始 JSON
+          return result;
+        }
+        return result;
+      } catch (_) {
+        return result;
+      }
+    }
+    return result?.toString() ?? '[读取结果为空]';
+  }
+
+  /// 获取图片 MIME 类型
+  String _imageMimeType(String ext) {
+    switch (ext) {
+      case '.png':
+        return 'image/png';
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.gif':
+        return 'image/gif';
+      case '.webp':
+        return 'image/webp';
+      case '.bmp':
+        return 'image/bmp';
+      case '.tiff':
+        return 'image/tiff';
+      case '.ico':
+        return 'image/x-icon';
+      default:
+        return 'image/png';
+    }
+  }
+
+  /// 判断是否为代码文件扩展名
+  bool _isCodeExtension(String ext) {
+    return const {
+      '.dart', '.java', '.kt', '.swift', '.py', '.js', '.ts', '.tsx', '.jsx',
+      '.c', '.cpp', '.h', '.hpp', '.cs', '.go', '.rs', '.rb', '.php', '.sh',
+      '.lua', '.r', '.sql', '.vue', '.svelte',
+    }.contains(ext);
   }
 
   /// 更新会话中的附件
@@ -2062,12 +2283,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 强制重新扫描文件系统以获取最新技能列表
     SkillService.reset();
     await SkillService.ensureLoaded();
-    final skills = SkillService.skills;
-
-    if (skills.isEmpty) {
-      SnackBarUtils.showInfo(context, '暂无可选技能');
-      return;
-    }
+    var skills = SkillService.skills;
 
     final session = sessionController.currentSession.value;
     final currentSkillId = session?.skill?.id;
@@ -2111,10 +2327,84 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildCommandPaletteSearchBar(
-                      controller: searchController,
-                      title: '技能',
-                      onChanged: () => setDialogState(() {}),
+                    // 搜索栏 + 创建按钮
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            CupertinoIcons.search,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: searchController,
+                              autofocus: true,
+                              onChanged: (_) => setDialogState(() {}),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: '搜索技能...',
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
+                          // 创建按钮
+                          if (searchController.text.trim().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: CupertinoButton(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                minSize: 0,
+                                borderRadius: BorderRadius.circular(6),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  final skillName = searchController.text.trim();
+                                  if (skillName.isEmpty) return;
+
+                                  try {
+                                    final newSkill = await SkillStorageService.createSkill(
+                                      name: skillName,
+                                      description: '',
+                                      prompt: '# $skillName\n\n请在此编写技能提示词...',
+                                    );
+
+                                    // 刷新技能列表
+                                    SkillService.reset();
+                                    await SkillService.ensureLoaded();
+                                    skills = SkillService.skills;
+
+                                    Navigator.of(dialogContext).pop();
+                                    _applySkillSelection(newSkill.id);
+
+                                    if (mounted) {
+                                      SnackBarUtils.showSuccess(context, '已创建技能「$skillName」并选中');
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      SnackBarUtils.showError(context, '创建技能失败: $e');
+                                    }
+                                  }
+                                },
+                                child: const Text(
+                                  '创建',
+                                  style: TextStyle(fontSize: 13, color: CupertinoColors.white),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                     Flexible(
                       child:
@@ -2242,8 +2532,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         _currentAttachments
             .where(
               (attachment) =>
-                  attachment.content != null &&
-                  attachment.content != 'ERROR_PROCESSING',
+                  (attachment.content != null &&
+                  attachment.content != 'ERROR_PROCESSING') ||
+                  (attachment.base64Data != null &&
+                  attachment.base64Data!.isNotEmpty),
             )
             .toList();
 

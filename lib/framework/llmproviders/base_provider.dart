@@ -418,26 +418,38 @@ abstract class BaseLlmProvider {
     return getSupportedFeatures().contains(feature);
   }
 
-  /// 构建系统提示词
+  /// 构建系统提示词（兼容旧调用，合并所有独立 system 消息为单个字符串）
   String buildSystemPrompt(ChatSession? session) {
-    final List<String> systemParts = [];
+    return buildSystemMessages(session)
+        .map((m) => m['content'] as String)
+        .where((c) => c.isNotEmpty)
+        .join('\n\n');
+  }
+
+  /// 构建多条独立的 system 消息，每个工具/提示词独立一条
+  List<Map<String, dynamic>> buildSystemMessages(ChatSession? session) {
+    final systemMessages = <Map<String, dynamic>>[];
     final chatModel = _model;
 
-    // 用户自定义系统提示词（取自模型配置）
+    // 1. 用户自定义系统提示词（取自模型配置）
     if (chatModel?.chatSettings?.systemPrompt != null &&
         chatModel!.chatSettings!.systemPrompt.isNotEmpty) {
-      systemParts.add(chatModel.chatSettings!.systemPrompt);
+      systemMessages.add({
+        'role': 'system',
+        'content': chatModel.chatSettings!.systemPrompt,
+      });
     }
 
-    // Provider 特有的提示词（子类重写注入）
+    // 2. Provider 特有的提示词（子类重写注入）
     final providerPrompt = buildProviderPrompt();
     if (providerPrompt.isNotEmpty) {
-      systemParts.add(providerPrompt);
+      systemMessages.add({'role': 'system', 'content': providerPrompt});
     }
 
-    // 全局规则：禁止 Web 搜索，模型不得进行任何形式的联网搜索
-    systemParts.add('''
-## 🚫 联网搜索禁令
+    // 3. 全局规则：禁止 Web 搜索
+    systemMessages.add({
+      'role': 'system',
+      'content': '''## 🚫 联网搜索禁令
 
 你**禁止**进行任何形式的 Web 搜索或联网查询。具体规则：
 
@@ -446,9 +458,10 @@ abstract class BaseLlmProvider {
 3. ❌ **禁止主动建议联网**：不要建议用户去搜索、查询外部网站或联网获取信息。
 4. ✅ **仅使用已有知识**：请基于你已有的训练知识直接回答问题。如果不确定或不知道，直接说明即可。
 
-**再次强调：绝对不允许任何形式的联网搜索。**''');
+**再次强调：绝对不允许任何形式的联网搜索。**''',
+    });
 
-    // 技能提示词注入：将当前会话绑定的技能 prompt 注入到系统提示词
+    // 4. 技能提示词注入
     if (session?.skill != null) {
       final skillPrompt = SkillService.buildSkillPrompt(session!.skill);
       if (skillPrompt.isNotEmpty) {
@@ -457,7 +470,7 @@ abstract class BaseLlmProvider {
             '🔧 [Skill] 注入技能 "${session.skill!.name}", prompt 长度: ${session.skill!.prompt.length} 字符',
           );
         }
-        systemParts.add(skillPrompt);
+        systemMessages.add({'role': 'system', 'content': skillPrompt});
       } else {
         if (kDebugMode) {
           debugPrint('⚠️ [Skill] 技能 "${session.skill!.name}" 的 prompt 为空，跳过注入');
@@ -465,30 +478,26 @@ abstract class BaseLlmProvider {
       }
     }
 
-    // 深度思考模式：注入推理增强提示词
+    // 5. 深度思考模式：注入推理增强提示词
     if (session?.deepThink == true) {
-      systemParts.add(_buildDeepThinkPrompt());
+      systemMessages.add({'role': 'system', 'content': _buildDeepThinkPrompt()});
     }
 
-    // 系统内置工具信息：将客户端自身能力告知模型
+    // 6. 系统内置工具信息：每个工具独立一条 system 消息
     if (session != null) {
-      final systemToolsInfo = SystemToolService.buildSystemToolsInfoForPrompt(
-        session,
-      );
-      if (systemToolsInfo.isNotEmpty) {
-        systemParts.add(systemToolsInfo);
-      }
+      final toolMessages = SystemToolService.buildSystemToolsInfoAsMessages(session);
+      systemMessages.addAll(toolMessages);
     }
 
-    // MCP 工具信息：将可用工具的描述注入到系统提示词中
+    // 7. MCP 工具信息：将可用工具的描述注入
     if (session != null && session.mcpServer != null) {
       final mcpToolsInfo = McpService.buildMcpToolsInfoForApi(session);
       if (mcpToolsInfo.isNotEmpty) {
-        systemParts.add(mcpToolsInfo);
+        systemMessages.add({'role': 'system', 'content': mcpToolsInfo});
       }
     }
 
-    return systemParts.join('\n\n');
+    return systemMessages;
   }
 
   /// Provider 特有的系统提示词片段，子类可重写以注入平台特定指令
@@ -514,11 +523,9 @@ abstract class BaseLlmProvider {
   }) {
     final messages = <Map<String, dynamic>>[];
 
-    // 添加系统提示词（传入 session 以支持 MCP 工具信息注入）
-    final systemPrompt = buildSystemPrompt(session);
-    if (systemPrompt.isNotEmpty) {
-      messages.add({'role': 'system', 'content': systemPrompt});
-    }
+    // 添加系统提示词（每个工具/规则独立一条 system 消息）
+    final systemMsgs = buildSystemMessages(session);
+    messages.addAll(systemMsgs);
 
     // 添加会话历史（当前用户消息之前的所有消息）
     if (session != null && session.messages.isNotEmpty) {
@@ -599,21 +606,27 @@ abstract class BaseLlmProvider {
     // 按时间顺序添加历史消息
     for (final msg in included) {
       // 跳过空内容消息（如占位 bot 消息）
-      if (msg.content.isEmpty) continue;
+      if (msg.content.isEmpty && msg.attachments.isEmpty) continue;
       final apiRole = _toOpenAIRole(msg.role);
       if (apiRole == null) continue;
 
-      final msgData = <String, dynamic>{
-        'role': apiRole,
-        'content': msg.content,
-      };
+      // 用户消息：包含附件信息
+      if (msg.role == MessageRole.user && msg.attachments.isNotEmpty) {
+        final msgContent = _buildUserContentWithAttachments(msg);
+        messages.add({'role': apiRole, 'content': msgContent});
+      } else {
+        final msgData = <String, dynamic>{
+          'role': apiRole,
+          'content': msg.content,
+        };
 
-      // tool 角色消息：附加 tool_call_id
-      if (msg.role == MessageRole.tool && msg.toolName != null) {
-        msgData['tool_call_id'] = msg.toolName;
+        // tool 角色消息：附加 tool_call_id
+        if (msg.role == MessageRole.tool && msg.toolName != null) {
+          msgData['tool_call_id'] = msg.toolName;
+        }
+
+        messages.add(msgData);
       }
-
-      messages.add(msgData);
     }
   }
 
@@ -630,11 +643,57 @@ abstract class BaseLlmProvider {
   }
 
   /// 构建包含附件信息的用户消息内容
-  String _buildUserContentWithAttachments(ChatMessage userMessage) {
+  ///
+  /// 文本附件以纯文本拼接；图片附件使用 OpenAI Vision 多模态格式
+  /// （content 为数组，包含 image_url + text 两种类型）。
+  dynamic _buildUserContentWithAttachments(ChatMessage userMessage) {
     if (userMessage.attachments.isEmpty) {
       return userMessage.content;
     }
 
+    // 检查是否有图片附件需要以多模态格式发送
+    final hasImageAttachment = userMessage.attachments.any(
+      (a) => a.type == 'image' && a.base64Data != null && a.base64Data!.isNotEmpty,
+    );
+
+    if (hasImageAttachment) {
+      // ── 多模态格式（OpenAI Vision 兼容） ──
+      final contentParts = <Map<String, dynamic>>[];
+
+      for (final attachment in userMessage.attachments) {
+        if (attachment.type == 'image' &&
+            attachment.base64Data != null &&
+            attachment.base64Data!.isNotEmpty) {
+          // 图片以 data URI 格式发送
+          final dataUri = 'data:${attachment.mimeType ?? "image/png"};base64,${attachment.base64Data}';
+          contentParts.add({
+            'type': 'image_url',
+            'image_url': {'url': dataUri},
+          });
+          // 图片描述信息以文本形式追加
+          if (attachment.content != null && attachment.content!.isNotEmpty) {
+            final imagePath = (attachment.filePath != null && attachment.filePath!.isNotEmpty)
+                ? attachment.filePath!
+                : attachment.name;
+            contentParts.add({
+              'type': 'text',
+              'text': '[图片: $imagePath] ${attachment.content}',
+            });
+          }
+        } else {
+          // 非图片附件，仍以文本格式发送
+          final text = _buildSingleAttachmentInfo(attachment);
+          contentParts.add({'type': 'text', 'text': text});
+        }
+      }
+
+      // 追加用户原始消息
+      contentParts.add({'type': 'text', 'text': userMessage.content});
+
+      return contentParts;
+    }
+
+    // ── 纯文本格式（无图片或图片无 base64 数据） ──
     final attachmentInfos =
         userMessage.attachments.map(_buildSingleAttachmentInfo).toList();
 
@@ -671,7 +730,11 @@ abstract class BaseLlmProvider {
     };
 
     final label = typeLabels[attachment.type] ?? '文件';
-    buffer.write('[$label: ${attachment.name}');
+    // 优先使用完整路径，方便后续操作（如打开文件）
+    final fileIdentity = (attachment.filePath != null && attachment.filePath!.isNotEmpty)
+        ? attachment.filePath!
+        : attachment.name;
+    buffer.write('[$label: $fileIdentity');
   }
 
   /// 添加附件大小信息

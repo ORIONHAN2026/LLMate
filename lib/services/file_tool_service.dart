@@ -152,6 +152,9 @@ class FileToolService {
 
   // ── 辅助方法 ──────────────────────────────────────────────
 
+  /// 判断扩展名是否为可读取的文件类型（公开方法，供附件处理调用）
+  static bool isReadableExtension(String ext) => _isReadableExt(ext);
+
   static bool _isReadableExt(String ext) {
     if (ext.isEmpty) return true; // 无扩展名视为文本文件
     return _readableExtensions.contains(ext.toLowerCase());

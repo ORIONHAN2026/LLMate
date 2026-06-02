@@ -1324,6 +1324,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       child: GestureDetector(
         onTap: _isSending ? null : _showWorkDirectoryPicker,
         onLongPress: hasWorkDir && !_isSending ? _clearWorkDirectory : null,
+        onDoubleTap:
+            hasWorkDir && !_isSending
+                ? () {
+                    try {
+                      Process.run('open', [workDir!]);
+                    } catch (_) {}
+                  }
+                : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/pages/modelssetting.dart';
@@ -18,7 +16,6 @@ import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/utils/responsive_utils.dart';
 import '../widgets/chat_conversation_area.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:path/path.dart' as p;
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});
@@ -336,10 +333,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                   messageKeys: _messageKeys,
                 ),
               ),
-              // 工作目录指示条（已设置时显示，双击打开文件夹）
-              if (currentSession!.workDirectory != null &&
-                  currentSession!.workDirectory!.isNotEmpty)
-                _buildWorkDirectoryBar(currentSession!.workDirectory!),
               // 附件显示区域
               // _buildAttachmentsArea(),
               // 输入区域

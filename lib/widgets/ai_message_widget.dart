@@ -1580,28 +1580,37 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
   /// 构建工具块专用的 Markdown 样式（小字号 monospace）
   MarkdownStyleSheet _buildToolBlockMarkdownStyleSheet() {
+    final base = TextStyle(
+      fontSize: 10,
+      fontFamily: 'monospace',
+      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
+    );
     return MarkdownStyleSheet(
-      p: TextStyle(
-        fontSize: 10,
-        fontFamily: 'monospace',
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
-        height: 1.4,
-      ),
-      a: TextStyle(
-        fontSize: 10,
-        fontFamily: 'monospace',
+      p: base.copyWith(height: 1.4),
+      a: base.copyWith(
         color: Theme.of(context).colorScheme.primary,
         decoration: TextDecoration.underline,
         decorationColor: Theme.of(context).colorScheme.primary,
       ),
-      code: TextStyle(
-        fontSize: 10,
-        fontFamily: 'monospace',
+      code: base.copyWith(
         backgroundColor: Theme.of(
           context,
         ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
         color: Theme.of(context).colorScheme.onSurface,
       ),
+      h1: base,
+      h2: base,
+      h3: base,
+      h4: base,
+      h5: base,
+      h6: base,
+      em: base,
+      strong: base,
+      del: base,
+      blockquote: base,
+      listBullet: base,
+      tableHead: base,
+      tableBody: base,
     );
   }
 

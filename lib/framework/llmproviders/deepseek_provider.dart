@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import '../stream_tool_call_filter.dart';
 import 'base_provider.dart';
+import 'common/message_builder.dart';
 
 /// DeepSeek API 提供商
 class DeepSeekProvider extends BaseLlmProvider {
@@ -26,7 +28,18 @@ class DeepSeekProvider extends BaseLlmProvider {
   @override
   void onConfigure(ChatModel model) {}
 
-  @override
+  // ── HTTP 客户端 ──
+
+  Dio get dio {
+    final client = Dio();
+    client.options.connectTimeout = const Duration(milliseconds: BaseLlmProvider.defaultTimeout);
+    client.options.receiveTimeout = const Duration(minutes: 5);
+    client.options.sendTimeout = const Duration(minutes: 5);
+    return client;
+  }
+
+  // ── DeepSeek 特有提示词 ──
+
   String buildProviderPrompt() => '''
 ## 🚨 工具调用规则 — 最高优先级
 
@@ -50,22 +63,92 @@ class DeepSeekProvider extends BaseLlmProvider {
 - 💡 工具调用失败或结果为空时，等待真实结果，不要编造
 ''';
 
-  /// DeepSeek 使用文本格式工具调用（system prompt 中注入工具信息），
-  /// 不发送 OpenAI 原生 tools/tool_choice 参数，避免与文本格式冲突。
+  // ── 消息构建 ──
+
   @override
+  String buildSystemPrompt(ChatSession? session) {
+    return MessageBuilder.buildSystemPrompt(
+      model: model,
+      session: session,
+      providerPrompt: buildProviderPrompt(),
+    );
+  }
+
+  @override
+  List<Map<String, dynamic>> buildMessages({
+    required ChatMessage userMessage,
+    ChatSession? session,
+  }) {
+    return MessageBuilder.buildMessages(
+      userMessage: userMessage,
+      model: model!,
+      session: session,
+      providerPrompt: buildProviderPrompt(),
+    );
+  }
+
+  // ── 请求体构建（不含 tools/tool_choice） ──
+
   Map<String, dynamic> buildRequestData({
     required List<Map<String, dynamic>> messages,
     required bool stream,
     ChatSession? session,
     Map<String, dynamic>? extra,
   }) {
-    // 调用基类但不传 session，阻止注入 tools/tool_choice
-    return super.buildRequestData(
-      messages: messages,
-      stream: stream,
-      extra: extra,
-    );
+    final data = <String, dynamic>{
+      'model': model!.model,
+      'messages': messages,
+      'stream': stream,
+      'max_tokens': 4000,
+      'temperature': 0.7,
+    };
+    if (extra != null) data.addAll(extra);
+    return data;
   }
+
+  Map<String, String> buildAuthHeaders() {
+    return {
+      'Authorization': 'Bearer ${model!.apiKey}',
+      'Content-Type': 'application/json',
+    };
+  }
+
+  // ── SSE chunk 提取 ──
+
+  Map<String, String?> extractStreamChunk(Map<String, dynamic> data) {
+    String? content;
+    String? reasoningContent;
+    String? toolCall;
+    String? finishReason;
+
+    try {
+      final choices = data['choices'] as List?;
+      if (choices != null && choices.isNotEmpty) {
+        final choice = choices[0] as Map<String, dynamic>;
+        final delta = choice['delta'] as Map<String, dynamic>?;
+        if (delta != null) {
+          content = delta['content'] as String?;
+          reasoningContent = delta['reasoning_content'] as String?;
+          if (delta['tool_calls'] != null) {
+            toolCall = jsonEncode(delta['tool_calls']);
+          }
+        }
+        finishReason = choice['finish_reason'] as String?;
+      }
+    } catch (_) {}
+
+    final result = {
+      if (content != null && content.isNotEmpty) 'content': content,
+      if (reasoningContent != null && reasoningContent.isNotEmpty)
+        'think': reasoningContent,
+      if (toolCall != null && toolCall.isNotEmpty && toolCall != 'null')
+        'toolcall': toolCall,
+      if (finishReason != null) 'finish_reason': finishReason,
+    };
+    return result;
+  }
+
+  // ── 核心抽象方法 ──
 
   @override
   Stream<Map<String, String?>> sendMessageStream({
@@ -73,7 +156,7 @@ class DeepSeekProvider extends BaseLlmProvider {
     ChatSession? session,
   }) async* {
     final messages = buildMessages(userMessage: userMessage, session: session);
-    yield* sendOpenAIStreamRequest(messages: messages, session: session);
+    yield* _sendOpenAIStreamRequest(messages: messages, session: session);
   }
 
   @override
@@ -81,151 +164,7 @@ class DeepSeekProvider extends BaseLlmProvider {
     List<Map<String, dynamic>> messages, {
     ChatSession? session,
   }) async* {
-    yield* sendOpenAIStreamRequest(messages: messages, session: session);
-  }
-
-  /// DeepSeek 特有：累积正文内容，在 finish_reason=stop 时解析 <tool_calls> 文本
-  ///
-  /// 集成 [StreamToolCallFilter] 流式状态机拦截器，实时拦截工具调用标签，
-  /// 避免将 `<tool_calls>`、`<|tool_calls|>`、`<｜｜DSML｜｜tool_calls>` 等标签
-  /// 透传到前端 UI。
-  @override
-  Stream<Map<String, String?>> transformStreamResponse(
-    Stream<List<int>> stream,
-  ) async* {
-    String buffer = '';
-    String accContent = '';
-    bool isFinished = false;
-    final filter = StreamToolCallFilter();
-
-    await for (final chunk in stream) {
-      final chunkString = utf8.decode(chunk);
-      buffer += chunkString;
-      final lines = buffer.split('\n');
-      buffer = lines.removeLast();
-
-      for (final line in lines) {
-        if (!line.trim().startsWith('data: ')) continue;
-        final dataStr = line.trim().substring(6);
-        if (dataStr == '[DONE]') {
-          // 流结束，刷出状态机缓存
-          final flushResult = filter.flush();
-          if (flushResult.cleanText.isNotEmpty) {
-            accContent += flushResult.cleanText;
-            yield {'content': flushResult.cleanText};
-          }
-          continue;
-        }
-
-        try {
-          final data = jsonDecode(dataStr) as Map<String, dynamic>;
-          final extracted = extractStreamChunk(data);
-
-          // 透传原生 tool_calls 增量（OpenAI 格式，由 extractStreamChunk 提取）
-          // DeepSeek 可能在返回 content 的同时返回原生 tool_calls
-          final nativeToolCall = extracted['toolcall'];
-          final hasNativeToolCall = nativeToolCall != null && nativeToolCall.isNotEmpty;
-          if (hasNativeToolCall) {
-            yield {'toolcall': nativeToolCall};
-          }
-
-          // 透传 think 到 UI（思考内容不需要过滤）
-          if (extracted['think'] != null && extracted['think']!.isNotEmpty) {
-            yield {'content': '', 'think': extracted['think']};
-          }
-
-          // 对 content 通过状态机过滤
-          var rawContent = extracted['content'] ?? '';
-
-          // 当同一 chunk 同时有原生 tool_call 时，content 中的残留标签片段
-          // （如 "s>" 等）是模型已知的问题行为，直接丢弃整个 content
-          if (hasNativeToolCall && rawContent.isNotEmpty) {
-            if (kDebugMode) {
-              debugPrint('🎯 [DeepSeek] 同 chunk 存在原生 tool_call，丢弃 content 残留: "$rawContent"');
-            }
-            rawContent = '';
-          }
-          if (rawContent.isNotEmpty) {
-            final filterResult = filter.feed(rawContent);
-            final cleanText = filterResult.cleanText;
-
-            // 累积原始内容（用于后续 parseToolCalls 解析）
-            accContent += rawContent;
-
-            // 仅放行过滤后的干净文本
-            if (cleanText.isNotEmpty) {
-              yield {'content': cleanText};
-            }
-
-            // 将状态转换事件转为 tool 进展通知，让 UI 实时感知
-            for (final transition in filterResult.transitions) {
-              switch (transition) {
-                case StreamFilterTransition.enteredBuffer:
-                  yield {'tool': '⏳ 检测到工具调用标记...'};
-                case StreamFilterTransition.confirmedTool:
-                  yield {'tool': '🔧 正在接收工具调用参数...'};
-                case StreamFilterTransition.bufferCancelled:
-                  yield {'tool': '✓ 非工具调用，已恢复正文输出'};
-                case StreamFilterTransition.toolClosed:
-                  // 标签闭合后由 LlmHub 执行工具并 yield 结果，此处无需额外提示
-                  break;
-              }
-            }
-
-            if (kDebugMode && filterResult.isInToolCall) {
-              debugPrint('🎯 [DeepSeek] 状态机拦截: 工具调用标签已扣留');
-            }
-          }
-
-          final finishReason = extracted['finish_reason'];
-          if (finishReason != null && kDebugMode) {
-            debugPrint('🔧 $providerName finish_reason: $finishReason');
-          }
-
-          // finish_reason == 'stop': 从累积文本中解析工具调用
-          if (finishReason == 'stop' && !isFinished) {
-            isFinished = true;
-
-            // 刷出状态机残留缓存
-            final flushResult = filter.flush();
-            if (flushResult.cleanText.isNotEmpty) {
-              accContent += flushResult.cleanText;
-              yield {'content': flushResult.cleanText};
-            }
-
-            if (kDebugMode) debugPrint('接收到完整数据 : $accContent');
-
-            if (accContent.isNotEmpty) {
-              final parsed = parseToolCalls(accContent);
-              final textCalls =
-                  parsed['toolCalls'] as List<Map<String, dynamic>>;
-              if (textCalls.isNotEmpty) {
-                if (kDebugMode) {
-                  debugPrint(
-                    '🔧 finish_reason=stop 从文本中检测到 tool_calls: ${jsonEncode(textCalls)}',
-                  );
-                }
-                yield {'toolcall': jsonEncode(textCalls)};
-              } else {
-                if (kDebugMode) {
-                  debugPrint('🔧 finish_reason=stop 没有检测到工具');
-                }
-              }
-            }
-            return;
-          }
-        } catch (e) {
-          if (kDebugMode) print('$providerName JSON 解析错误: $e');
-        }
-      }
-    }
-
-    // 流自然结束，刷出状态机缓存
-    final flushResult = filter.flush();
-    if (flushResult.cleanText.isNotEmpty) {
-      accContent += flushResult.cleanText;
-      yield {'content': flushResult.cleanText};
-    }
+    yield* _sendOpenAIStreamRequest(messages: messages, session: session);
   }
 
   @override
@@ -235,12 +174,10 @@ class DeepSeekProvider extends BaseLlmProvider {
   }) async {
     final messages = buildMessages(userMessage: userMessage, session: session);
     try {
-      final data = await sendOpenAINonStreamRequest(
+      final data = await _sendOpenAINonStreamRequest(
         messages: messages,
         session: session,
-        extra: {
-          'response_format': {'type': 'json_object'},
-        },
+        extra: {'response_format': {'type': 'json_object'}},
       );
       if (data != null) {
         final choices = data['choices'] as List?;
@@ -258,101 +195,213 @@ class DeepSeekProvider extends BaseLlmProvider {
     }
   }
 
-  @override
-  Future<Map<String, dynamic>?> getModelInfo() async {
-    if (model == null) return null;
+  // ── OpenAI 兼容流式请求 ──
+
+  Stream<Map<String, String?>> _sendOpenAIStreamRequest({
+    required List<Map<String, dynamic>> messages,
+    ChatSession? session,
+    Map<String, dynamic>? extra,
+  }) async* {
+    if (model == null) throw StateError('$providerName 提供商未配置');
+
     try {
-      return {
-        'provider': 'deepseek',
-        'model': model!.model,
-        'name': model!.name,
-        'features': getSupportedFeatures(),
-        'configured': true,
-        'supports_reasoning': model!.model.contains('r1'),
-      };
+      final requestData = buildRequestData(
+        messages: messages,
+        stream: true,
+        extra: extra,
+      );
+
+      if (kDebugMode) {
+        print('$providerName 发送请求到: ${model!.apiUrl}');
+        print('请求数据: ${jsonEncode(requestData)} 请求数据结束');
+      }
+
+      final response = await dio.post<ResponseBody>(
+        model!.apiUrl!,
+        options: Options(
+          headers: buildAuthHeaders(),
+          responseType: ResponseType.stream,
+        ),
+        data: requestData,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        yield* _transformStreamResponse(response.data!.stream);
+      } else {
+        yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
+      }
     } catch (e) {
-      debugPrint('获取 $providerName 模型信息失败: $e');
-      return null;
+      if (kDebugMode) print('$providerName 流式响应错误: $e');
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
     }
   }
 
-  /// 重写 SSE chunk 提取以支持 reasoning_content
-  @override
-  Map<String, String?> extractStreamChunk(Map<String, dynamic> data) {
-    final chunk = super.extractStreamChunk(data);
-    // 基类已处理 reasoning_content → 'think'，但这里确保非空的空字符串不被 yield
-    // （基类 extractStreamChunk 已过滤空值）
-    return chunk;
+  Future<Map<String, dynamic>?> _sendOpenAINonStreamRequest({
+    required List<Map<String, dynamic>> messages,
+    ChatSession? session,
+    Map<String, dynamic>? extra,
+  }) async {
+    if (model == null) throw StateError('$providerName 提供商未配置');
+    try {
+      final requestData = buildRequestData(
+        messages: messages,
+        stream: false,
+        extra: extra,
+      );
+      final response = await dio.post(
+        model!.apiUrl!,
+        options: Options(headers: buildAuthHeaders()),
+        data: requestData,
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) print('$providerName 非流式响应错误: $e');
+      rethrow;
+    }
   }
 
-  // ==================== 工具调用解析（DeepSeek 实现） ====================
+  // ── DeepSeek 特有的流处理：累积 content + finish_reason=stop 时解析工具调用 ──
+
+  Stream<Map<String, String?>> _transformStreamResponse(
+    Stream<List<int>> stream,
+  ) async* {
+    String buffer = '';
+    String accContent = '';
+    bool isFinished = false;
+    final filter = StreamToolCallFilter();
+
+    await for (final chunk in stream) {
+      final chunkString = utf8.decode(chunk);
+      buffer += chunkString;
+      final lines = buffer.split('\n');
+      buffer = lines.removeLast();
+
+      for (final line in lines) {
+        if (!line.trim().startsWith('data: ')) continue;
+        final dataStr = line.trim().substring(6);
+        if (dataStr == '[DONE]') {
+          final flushResult = filter.flush();
+          if (flushResult.cleanText.isNotEmpty) {
+            accContent += flushResult.cleanText;
+            yield {'content': flushResult.cleanText};
+          }
+          continue;
+        }
+
+        try {
+          final data = jsonDecode(dataStr) as Map<String, dynamic>;
+          final extracted = extractStreamChunk(data);
+
+          final nativeToolCall = extracted['toolcall'];
+          final hasNativeToolCall = nativeToolCall != null && nativeToolCall.isNotEmpty;
+          if (hasNativeToolCall) {
+            yield {'toolcall': nativeToolCall};
+          }
+
+          if (extracted['think'] != null && extracted['think']!.isNotEmpty) {
+            yield {'content': '', 'think': extracted['think']};
+          }
+
+          var rawContent = extracted['content'] ?? '';
+          if (hasNativeToolCall && rawContent.isNotEmpty) {
+            if (kDebugMode) {
+              debugPrint('🎯 [DeepSeek] 同 chunk 存在原生 tool_call，丢弃 content 残留: "$rawContent"');
+            }
+            rawContent = '';
+          }
+          if (rawContent.isNotEmpty) {
+            final filterResult = filter.feed(rawContent);
+            final cleanText = filterResult.cleanText;
+            accContent += rawContent;
+            if (cleanText.isNotEmpty) yield {'content': cleanText};
+            for (final transition in filterResult.transitions) {
+              switch (transition) {
+                case StreamFilterTransition.enteredBuffer:
+                  yield {'tool': '⏳ 检测到工具调用标记...'};
+                case StreamFilterTransition.confirmedTool:
+                  yield {'tool': '🔧 正在接收工具调用参数...'};
+                case StreamFilterTransition.bufferCancelled:
+                  yield {'tool': '✓ 非工具调用，已恢复正文输出'};
+                case StreamFilterTransition.toolClosed:
+                  break;
+              }
+            }
+          }
+
+          final finishReason = extracted['finish_reason'];
+          if (finishReason == 'stop' && !isFinished) {
+            isFinished = true;
+            final flushResult = filter.flush();
+            if (flushResult.cleanText.isNotEmpty) {
+              accContent += flushResult.cleanText;
+              yield {'content': flushResult.cleanText};
+            }
+            if (accContent.isNotEmpty) {
+              final parsed = parseToolCalls(accContent);
+              final textCalls = parsed['toolCalls'] as List<Map<String, dynamic>>;
+              if (textCalls.isNotEmpty) {
+                if (kDebugMode) {
+                  debugPrint('🔧 finish_reason=stop 从文本中检测到 tool_calls: ${jsonEncode(textCalls)}');
+                }
+                yield {'toolcall': jsonEncode(textCalls)};
+              }
+            }
+            return;
+          }
+        } catch (e) {
+          if (kDebugMode) print('$providerName JSON 解析错误: $e');
+        }
+      }
+    }
+
+    final flushResult = filter.flush();
+    if (flushResult.cleanText.isNotEmpty) {
+      yield {'content': flushResult.cleanText};
+    }
+  }
+
+  // ── 工具调用解析（DeepSeek 实现） ──
 
   @override
   Map<String, dynamic> parseToolCalls(String response) {
     final toolCalls = <Map<String, dynamic>>[];
     String? inner;
 
-    // 1) 统一提取 tool_calls 内部的文本
-    // 容错匹配：<tool_calls> 或 <|tool_calls|> 或 <｜｜DSML｜｜tool_calls> 及其任意组合的闭合
     final toolCallsRegex = RegExp(
       r'<(?:tool_calls|\||｜|DSML)*>\s*(.*?)\s*</(?:tool_calls|\||｜|DSML)*>',
       dotAll: true,
     );
-
     final tcMatch = toolCallsRegex.firstMatch(response);
-    if (tcMatch != null) {
-      inner = tcMatch.group(1);
-    }
+    if (tcMatch != null) inner = tcMatch.group(1);
 
-    // 2) 如果提取到了内部文本，将其中的特殊 invoke 标签统一标准化为标准的 <invoke> 和 <parameter>
     if (inner != null) {
-      // 清理不可见的零宽字符和特殊 Unicode 空格（模型输出有时会混入 U+200B 等）
-      inner = inner.replaceAll(
-        RegExp(r'[\u200B-\u200F\uFEFF\u00A0\u2060]'),
-        '',
-      );
-
+      inner = inner.replaceAll(RegExp(r'[\u200B-\u200F\uFEFF\u00A0\u2060]'), '');
       inner = inner
-          // 将 <｜｜DSML｜｜invoke ...> 或 <| invoke ...> 标准化为 <invoke ...>
           .replaceAllMapped(
-            RegExp(
-              r'<(?:\||｜|DSML\s*)*(invoke|parameter)\b',
-              caseSensitive: false,
-            ),
+            RegExp(r'<(?:\||｜|DSML\s*)*(invoke|parameter)\b', caseSensitive: false),
             (m) => '<${m.group(1)}',
           )
-          // 将 </｜｜DSML｜｜invoke> 等标准化为 </invoke>
           .replaceAllMapped(
-            RegExp(
-              r'</(?:\||｜|DSML\s*)*(invoke|parameter)(?:\||｜|DSML\s*)*>',
-              caseSensitive: false,
-            ),
+            RegExp(r'</(?:\||｜|DSML\s*)*(invoke|parameter)(?:\||｜|DSML\s*)*>', caseSensitive: false),
             (m) => '</${m.group(1)}>',
           );
 
-      // 3) 解析标准化后的 <invoke> 块
       final invokeRegex = RegExp(
         r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
         dotAll: true,
       );
-
       for (final im in invokeRegex.allMatches(inner)) {
         try {
           final toolName = im.group(1)?.trim();
           var invokeBody = im.group(2)?.trim() ?? '';
           if (toolName == null) continue;
-
           final args = <String, dynamic>{};
-
-          // 只有当 invokeBody 不为空时才去解析参数
           if (invokeBody.isNotEmpty) {
-            final jsonArgs = _parseArgumentsJsonBlock(invokeBody);
-            if (jsonArgs != null) {
-              args.addAll(jsonArgs);
-            }
-
-            // 使用 (.*?) 非贪婪匹配而非 ([^<]*)，
-            // 因为参数值可能包含 < 字符（如文档操作中 sed 替换 XML 标签）
+            final jsonArgs = MessageBuilder.parseArgumentsJson(invokeBody);
+            if (jsonArgs != null) args.addAll(jsonArgs);
             final paramRegex = RegExp(
               r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>(.*?)</parameter>',
               dotAll: true,
@@ -363,59 +412,68 @@ class DeepSeekProvider extends BaseLlmProvider {
               final rawValue = pm.group(3)?.trim() ?? '';
               if (name != null && name.isNotEmpty) {
                 switch (type) {
-                  case 'number':
-                    args[name] = num.tryParse(rawValue) ?? rawValue;
-                  case 'boolean':
-                    args[name] = rawValue.toLowerCase() == 'true';
-                  default:
-                    args[name] = rawValue;
+                  case 'number': args[name] = num.tryParse(rawValue) ?? rawValue;
+                  case 'boolean': args[name] = rawValue.toLowerCase() == 'true';
+                  default: args[name] = rawValue;
                 }
               }
             }
           }
-
           toolCalls.add({'name': toolName, 'arguments': args});
-          print('✅ 解析工具调用: $toolName, 参数: $args');
-        } catch (e) {
-          print('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
-        }
+        } catch (_) {}
       }
     }
 
-    // 4) 剥离所有形式的工具调用标签，保留纯文本
-    final cleanContent =
-        response
-            .replaceAll(
-              RegExp(
-                r'<(?:tool_calls|\||｜|DSML)*>.*?</(?:tool_calls|\||｜|DSML)*>',
-                dotAll: true,
-              ),
-              '',
-            )
-            .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-            .trim();
+    final cleanContent = response
+        .replaceAll(RegExp(r'<(?:tool_calls|\||｜|DSML)*>.*?</(?:tool_calls|\||｜|DSML)*>', dotAll: true), '')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
 
-    print('🔍 parseToolCalls: 找到 ${toolCalls.length} 个工具调用');
     return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
   }
 
-  Map<String, dynamic>? _parseArgumentsJsonBlock(String invokeBody) {
-    final match = RegExp(
-      r'<arguments>\s*(.*?)\s*</arguments>',
-      dotAll: true,
-      caseSensitive: false,
-    ).firstMatch(invokeBody);
-    final raw = match?.group(1)?.trim();
-    if (raw == null || raw.isEmpty) return null;
+  // ── 验证与错误处理 ──
 
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is Map) {
-        return Map<String, dynamic>.from(decoded);
-      }
-    } catch (e) {
-      debugPrint('⚠️ 解析 <arguments> JSON 失败: $e, raw=$raw');
+  @override
+  Future<bool> validateConfiguration() async {
+    if (model == null) return false;
+    if (model!.apiUrl == null || model!.apiUrl!.isEmpty) return false;
+    if (model!.apiKey == null || model!.apiKey!.isEmpty) return false;
+    if (model!.model.isEmpty) return false;
+    return true;
+  }
+
+  String handleApiError(dynamic error) {
+    final es = error.toString();
+    if (es.contains('Dio can\'t establish a new connection after it was closed')) return '连接错误，请重试发送消息';
+    if (es.contains('DioException') || es.contains('DioError')) {
+      if (es.contains('CONNECT_TIMEOUT')) return '网络连接超时，请检查网络设置';
+      if (es.contains('RECEIVE_TIMEOUT')) return 'API 响应超时，请稍后重试';
+      if (es.contains('RESPONSE')) return 'API 请求失败，请检查配置和网络';
+      if (es.contains('CONNECTION_ERROR') || es.contains('Connection refused')) return '网络连接被拒绝，请检查网络连接和API地址';
+      if (es.contains('Network is unreachable')) return '网络不可达，请检查网络连接';
+      return '网络连接错误：请检查网络设置和API配置';
     }
-    return null;
+    if (es.contains('401') || es.contains('Unauthorized')) return 'API 密钥无效，请检查密钥配置';
+    if (es.contains('403') || es.contains('Forbidden')) return 'API 访问被拒绝，请检查权限设置';
+    if (es.contains('404') || es.contains('Not Found')) return 'API 地址不存在，请检查 URL 配置';
+    if (es.contains('429') || es.contains('Too Many Requests')) return 'API 调用频率过高，请稍后重试';
+    if (es.contains('500') || es.contains('Internal Server Error')) return 'API 服务器内部错误，请稍后重试';
+    if (es.contains('SocketException') || es.contains('HandshakeException')) return '网络连接失败，请检查网络设置和证书配置';
+    if (es.contains('FormatException') || es.contains('Invalid JSON')) return 'API 响应格式错误，请检查API配置';
+    return 'API 错误：$es';
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getModelInfo() async {
+    if (model == null) return null;
+    return {
+      'provider': 'deepseek',
+      'model': model!.model,
+      'name': model!.name,
+      'features': getSupportedFeatures(),
+      'configured': true,
+      'supports_reasoning': model!.model.contains('r1'),
+    };
   }
 }

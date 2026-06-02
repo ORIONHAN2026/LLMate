@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
+import '../../services/system_tool_service.dart';
 import 'base_provider.dart';
+import 'common/message_builder.dart';
 
 /// Google Gemini API 提供商
 class GeminiProvider extends BaseLlmProvider {
@@ -22,63 +24,86 @@ class GeminiProvider extends BaseLlmProvider {
   }
 
   @override
-  void onConfigure(ChatModel model) {
-    // 验证 Google 特定的配置（宽松模式）
-    // 如果配置有问题，会在实际调用时显示错误，而不是在配置时立即抛出异常
-    // 这样可以保持与原有 ApiService 的兼容性
+  void onConfigure(ChatModel model) {}
+
+  Dio get dio {
+    final client = Dio();
+    client.options.connectTimeout = const Duration(milliseconds: BaseLlmProvider.defaultTimeout);
+    client.options.receiveTimeout = const Duration(minutes: 5);
+    client.options.sendTimeout = const Duration(minutes: 5);
+    return client;
   }
+
+  // ── 消息构建 ──
+
+  @override
+  String buildSystemPrompt(ChatSession? session) {
+    return MessageBuilder.buildSystemPrompt(model: model, session: session);
+  }
+
+  @override
+  List<Map<String, dynamic>> buildMessages({
+    required ChatMessage userMessage,
+    ChatSession? session,
+  }) {
+    return MessageBuilder.buildMessages(
+      userMessage: userMessage,
+      model: model!,
+      session: session,
+    );
+  }
+
+  // ── Gemini 请求体构建（contents + systemInstruction） ──
+
+  Map<String, dynamic> _buildGeminiRequestData({
+    required List<Map<String, dynamic>> messages,
+    ChatSession? session,
+  }) {
+    final contents = messages.where((msg) => msg['role'] != 'system').map((msg) {
+      return {
+        'role': msg['role'] == 'user' ? 'user' : 'model',
+        'parts': [{'text': msg['content']}],
+      };
+    }).toList();
+
+    final requestData = <String, dynamic>{
+      'contents': contents,
+      'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 4000},
+    };
+
+    final systemMessage = messages.firstWhere(
+      (msg) => msg['role'] == 'system',
+      orElse: () => {'content': ''},
+    );
+    if (systemMessage['content'].toString().isNotEmpty) {
+      requestData['systemInstruction'] = {
+        'parts': [{'text': systemMessage['content']}],
+      };
+    }
+
+    if (session != null && session.mcpServer != null) {
+      final tools = SystemToolService.buildAllOpenAIToolsFormat(session);
+      if (tools.isNotEmpty) requestData['tools'] = tools;
+    }
+
+    return requestData;
+  }
+
+  Map<String, String> _buildAuthHeaders() {
+    return {'Content-Type': 'application/json'};
+  }
+
+  // ── 核心抽象方法 ──
 
   @override
   Stream<Map<String, String?>> sendMessageStream({
     required ChatMessage userMessage,
     ChatSession? session,
   }) async* {
-    if (model == null) {
-      throw StateError('Gemini 提供商未配置');
-    }
-
+    if (model == null) throw StateError('Gemini 提供商未配置');
     try {
-      final requestMessages = buildMessages(
-        userMessage: userMessage,
-        session: session,
-      );
-
-      // Gemini API 使用 contents 格式
-      final contents =
-          requestMessages.where((msg) => msg['role'] != 'system').map((msg) {
-            return {
-              'role': msg['role'] == 'user' ? 'user' : 'model',
-              'parts': [
-                {'text': msg['content']},
-              ],
-            };
-          }).toList();
-
-      final requestData = {
-        'contents': contents,
-        'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 4000},
-      };
-
-      // 添加系统指令
-      final systemMessage = requestMessages.firstWhere(
-        (msg) => msg['role'] == 'system',
-        orElse: () => {'content': ''},
-      );
-      if (systemMessage['content'].toString().isNotEmpty) {
-        requestData['systemInstruction'] = {
-          'parts': [
-            {'text': systemMessage['content']},
-          ],
-        };
-      }
-
-      // 添加工具调用支持
-      if (session != null && session.mcpServer != null) {
-        final tools = buildTools(session);
-        if (tools.isNotEmpty) {
-          requestData['tools'] = tools;
-        }
-      }
+      final requestMessages = buildMessages(userMessage: userMessage, session: session);
+      final requestData = _buildGeminiRequestData(messages: requestMessages, session: session);
 
       if (kDebugMode) {
         print('Gemini 发送请求到: ${model!.apiUrl}');
@@ -87,7 +112,7 @@ class GeminiProvider extends BaseLlmProvider {
 
       final response = await dio.post(
         model!.apiUrl!,
-        options: Options(headers: {'Content-Type': 'application/json'}),
+        options: Options(headers: _buildAuthHeaders()),
         data: requestData,
       );
 
@@ -96,10 +121,7 @@ class GeminiProvider extends BaseLlmProvider {
         if (data['candidates'] != null && data['candidates'].isNotEmpty) {
           final content = data['candidates'][0]['content'];
           if (content['parts'] != null && content['parts'].isNotEmpty) {
-            yield {
-              'content': content['parts'][0]['text'] ?? '抱歉，没有收到回复',
-              'think': null,
-            };
+            yield {'content': content['parts'][0]['text'] ?? '抱歉，没有收到回复', 'think': null};
           } else {
             yield {'content': '抱歉，没有收到回复', 'think': null};
           }
@@ -110,9 +132,6 @@ class GeminiProvider extends BaseLlmProvider {
         yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Gemini 流式响应错误: $e');
-      }
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
     }
   }
@@ -122,66 +141,20 @@ class GeminiProvider extends BaseLlmProvider {
     List<Map<String, dynamic>> messages, {
     ChatSession? session,
   }) async* {
-    if (model == null) {
-      throw StateError('Gemini 提供商未配置');
-    }
-
+    if (model == null) throw StateError('Gemini 提供商未配置');
     try {
-      // 转换为 Gemini 的 contents 格式
-      final contents =
-          messages.where((msg) => msg['role'] != 'system').map((msg) {
-            return {
-              'role': msg['role'] == 'user' ? 'user' : 'model',
-              'parts': [
-                {'text': msg['content']},
-              ],
-            };
-          }).toList();
-
-      final requestData = {
-        'contents': contents,
-        'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 4000},
-      };
-
-      // 处理系统消息
-      final systemMessage = messages.firstWhere(
-        (msg) => msg['role'] == 'system',
-        orElse: () => {'content': ''},
-      );
-      if (systemMessage['content'].toString().isNotEmpty) {
-        requestData['systemInstruction'] = {
-          'parts': [
-            {'text': systemMessage['content']},
-          ],
-        };
-      }
-
-      if (session != null) {
-        final tools = buildTools(session);
-        if (tools.isNotEmpty) {
-          requestData['tools'] = tools;
-        }
-      }
-
-      if (kDebugMode) {
-        print('Gemini (withMessages) 发送请求到: ${model!.apiUrl}');
-      }
-
+      final requestData = _buildGeminiRequestData(messages: messages, session: session);
       final response = await dio.post(
         model!.apiUrl!,
-        options: Options(headers: {'Content-Type': 'application/json'}),
+        options: Options(headers: _buildAuthHeaders()),
         data: requestData,
       );
-
       if (response.statusCode == 200) {
         final data = response.data;
         if (data['candidates'] != null && data['candidates'].isNotEmpty) {
           final content = data['candidates'][0]['content'];
           if (content['parts'] != null && content['parts'].isNotEmpty) {
-            yield {
-              'content': content['parts'][0]['text'] ?? '抱歉，没有收到回复',
-              'think': null,
-            };
+            yield {'content': content['parts'][0]['text'] ?? '抱歉，没有收到回复', 'think': null};
           } else {
             yield {'content': '抱歉，没有收到回复', 'think': null};
           }
@@ -192,9 +165,6 @@ class GeminiProvider extends BaseLlmProvider {
         yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Gemini 流式响应错误 (withMessages): $e');
-      }
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
     }
   }
@@ -204,41 +174,23 @@ class GeminiProvider extends BaseLlmProvider {
     required ChatMessage userMessage,
     ChatSession? session,
   }) async {
-    if (model == null) {
-      throw StateError('Gemini 提供商未配置');
-    }
-
+    if (model == null) throw StateError('Gemini 提供商未配置');
     try {
-      final requestData = {
+      final requestData = <String, dynamic>{
         'contents': [
-          {
-            'parts': [
-              {'text': userMessage.content},
-            ],
-          },
+          {'parts': [{'text': userMessage.content}]}
         ],
         'generationConfig': {'maxOutputTokens': 4000, 'temperature': 0.7},
       };
-
-      // 添加工具调用支持
       if (session != null && session.mcpServer != null) {
-        final tools = buildTools(session);
-        if (tools.isNotEmpty) {
-          requestData['tools'] = tools;
-        }
+        final tools = SystemToolService.buildAllOpenAIToolsFormat(session);
+        if (tools.isNotEmpty) requestData['tools'] = tools;
       }
-
-      if (kDebugMode) {
-        print('Gemini 发送非流式请求到: ${model!.apiUrl}');
-        print('请求数据: ${jsonEncode(requestData)}');
-      }
-
       final response = await dio.post(
         model!.apiUrl!,
-        options: Options(headers: {'Content-Type': 'application/json'}),
+        options: Options(headers: _buildAuthHeaders()),
         data: requestData,
       );
-
       if (response.statusCode == 200) {
         final data = response.data;
         if (data['candidates'] != null && data['candidates'].isNotEmpty) {
@@ -248,37 +200,27 @@ class GeminiProvider extends BaseLlmProvider {
           }
         }
       }
-
       return null;
     } catch (e) {
-      if (kDebugMode) {
-        print('Gemini 非流式响应错误: $e');
-      }
       throw Exception('Gemini API 错误: ${handleApiError(e)}');
     }
   }
 
+  // ── 验证与错误处理 ──
+
   @override
   Future<bool> validateConfiguration() async {
-    if (model == null) {
-      return false;
-    }
-
+    if (model == null) return false;
     try {
       final response = await dio.post(
         model!.apiUrl!,
-        options: Options(headers: {'Content-Type': 'application/json'}),
+        options: Options(headers: _buildAuthHeaders()),
         data: {
           'contents': [
-            {
-              'parts': [
-                {'text': '你好'},
-              ],
-            },
+            {'parts': [{'text': '你好'}]}
           ],
         },
       );
-
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('Gemini 配置验证失败: $e');
@@ -287,11 +229,21 @@ class GeminiProvider extends BaseLlmProvider {
   }
 
   @override
-  Future<Map<String, dynamic>?> getModelInfo() async {
-    if (model == null) {
-      return null;
-    }
+  Map<String, dynamic> parseToolCalls(String response) {
+    return {'toolCalls': <Map<String, dynamic>>[], 'cleanContent': response};
+  }
 
+  String handleApiError(dynamic error) {
+    final es = error.toString();
+    if (es.contains('401') || es.contains('Unauthorized')) return 'API 密钥无效';
+    if (es.contains('429')) return 'API 调用频率过高';
+    if (es.contains('500')) return 'API 服务器内部错误';
+    return 'API 错误：$es';
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getModelInfo() async {
+    if (model == null) return null;
     return {
       'provider': 'gemini',
       'model': model!.model,

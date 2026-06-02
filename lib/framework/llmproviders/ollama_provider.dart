@@ -7,6 +7,7 @@ import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import 'base_provider.dart';
+import 'common/message_builder.dart';
 
 /// Ollama 本地模型提供商
 class OllamaProvider extends BaseLlmProvider {
@@ -23,11 +24,46 @@ class OllamaProvider extends BaseLlmProvider {
   }
 
   @override
-  void onConfigure(ChatModel model) {
-    // 验证 Ollama 特定的配置（宽松模式）
-    // 如果配置有问题，会在实际调用时显示错误，而不是在配置时立即抛出异常
-    // 这样可以保持与原有 ApiService 的兼容性
+  void onConfigure(ChatModel model) {}
+
+  Dio get dio {
+    final client = Dio();
+    client.options.connectTimeout = const Duration(milliseconds: BaseLlmProvider.defaultTimeout);
+    client.options.receiveTimeout = const Duration(minutes: 5);
+    client.options.sendTimeout = const Duration(minutes: 5);
+    return client;
   }
+
+  // ── 消息构建 ──
+
+  @override
+  String buildSystemPrompt(ChatSession? session) {
+    return MessageBuilder.buildSystemPrompt(model: model, session: session);
+  }
+
+  @override
+  List<Map<String, dynamic>> buildMessages({
+    required ChatMessage userMessage,
+    ChatSession? session,
+  }) {
+    return MessageBuilder.buildMessages(
+      userMessage: userMessage,
+      model: model!,
+      session: session,
+    );
+  }
+
+  // ── Ollama URL 辅助 ──
+
+  String _buildChatApiUrl() {
+    String apiUrl = model!.apiUrl ?? 'http://localhost:11434/api';
+    if (!apiUrl.endsWith('/chat')) {
+      apiUrl = apiUrl.endsWith('/') ? '${apiUrl}chat' : '$apiUrl/chat';
+    }
+    return apiUrl;
+  }
+
+  // ── 核心抽象方法 ──
 
   @override
   Stream<Map<String, String?>> sendMessageStream({
@@ -35,31 +71,21 @@ class OllamaProvider extends BaseLlmProvider {
     ChatSession? session,
   }) async* {
     print("=== OllamaProvider.sendMessageStream 被调用 ===");
-    print("模型配置: ${model?.name} (${model?.model})");
-    print("API URL: ${model?.apiUrl}");
+    if (model == null) throw StateError('模型未配置');
 
-    if (model == null) {
-      print("错误: 模型未配置");
-      throw StateError('模型未配置');
-    }
-    // 构建请求数
-    print("sendMessageStream");
     try {
-      final requestData = _buildRequestData(
-        userMessage: userMessage,
-        session: session,
-      );
+      final messages = buildMessages(userMessage: userMessage, session: session);
+      final requestData = <String, dynamic>{
+        'model': model!.model,
+        'messages': messages,
+        'stream': true,
+        'options': {'temperature': model!.chatSettings?.temperature ?? 0.7},
+      };
 
       debugPrint('Ollama API 请求数据: ${jsonEncode(requestData)}');
 
-      // 构建完整的 API 端点
-      String apiUrl = model!.apiUrl ?? 'http://localhost:11434/api';
-      if (!apiUrl.endsWith('/chat')) {
-        apiUrl = apiUrl.endsWith('/') ? '${apiUrl}chat' : '$apiUrl/chat';
-      }
-
       final response = await dio.post<ResponseBody>(
-        apiUrl,
+        _buildChatApiUrl(),
         options: Options(
           headers: {'Content-Type': 'application/json'},
           responseType: ResponseType.stream,
@@ -70,10 +96,7 @@ class OllamaProvider extends BaseLlmProvider {
       if (response.statusCode == 200 && response.data != null) {
         yield* _processOllamaStreamResponse(response.data!.stream);
       } else {
-        yield {
-          'content': '错误: API 请求失败，状态码: ${response.statusCode}',
-          'think': null,
-        };
+        yield {'content': '错误: API 请求失败，状态码: ${response.statusCode}', 'think': null};
       }
     } catch (e) {
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
@@ -85,27 +108,20 @@ class OllamaProvider extends BaseLlmProvider {
     List<Map<String, dynamic>> messages, {
     ChatSession? session,
   }) async* {
-    if (model == null) {
-      throw StateError('Ollama 提供商未配置');
-    }
+    if (model == null) throw StateError('Ollama 提供商未配置');
 
     try {
-      final requestData = {
+      final requestData = <String, dynamic>{
         'model': model!.model,
         'messages': messages,
         'stream': true,
         'options': {'temperature': model!.chatSettings?.temperature ?? 0.7},
       };
 
-      String apiUrl = model!.apiUrl ?? 'http://localhost:11434/api';
-      if (!apiUrl.endsWith('/chat')) {
-        apiUrl = apiUrl.endsWith('/') ? '${apiUrl}chat' : '$apiUrl/chat';
-      }
-
       debugPrint('Ollama (withMessages) API 请求数据: ${jsonEncode(requestData)}');
 
       final response = await dio.post<ResponseBody>(
-        apiUrl,
+        _buildChatApiUrl(),
         options: Options(
           headers: {'Content-Type': 'application/json'},
           responseType: ResponseType.stream,
@@ -116,10 +132,7 @@ class OllamaProvider extends BaseLlmProvider {
       if (response.statusCode == 200 && response.data != null) {
         yield* _processOllamaStreamResponse(response.data!.stream);
       } else {
-        yield {
-          'content': '错误: API 请求失败，状态码: ${response.statusCode}',
-          'think': null,
-        };
+        yield {'content': '错误: API 请求失败，状态码: ${response.statusCode}', 'think': null};
       }
     } catch (e) {
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
@@ -131,18 +144,11 @@ class OllamaProvider extends BaseLlmProvider {
     required ChatMessage userMessage,
     ChatSession? session,
   }) async {
-    if (model == null) {
-      throw StateError('Ollama 提供商未配置');
-    }
+    if (model == null) throw StateError('Ollama 提供商未配置');
 
     try {
-      // 使用基类的 buildMessages 方法构建消息列表
-      final messages = buildMessages(
-        userMessage: userMessage,
-        session: session,
-      );
-
-      final requestData = {
+      final messages = buildMessages(userMessage: userMessage, session: session);
+      final requestData = <String, dynamic>{
         'model': model!.model,
         'messages': messages,
         'stream': false,
@@ -163,37 +169,16 @@ class OllamaProvider extends BaseLlmProvider {
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data as Map<String, dynamic>;
         final message = data['message'] as Map<String, dynamic>?;
-        if (message != null) {
-          return message['content'] as String?;
-        }
+        if (message != null) return message['content'] as String?;
       }
-
       return null;
     } catch (e) {
-      if (kDebugMode) {
-        print('Ollama 非流式响应错误: $e');
-      }
       throw Exception('Ollama API 错误: ${handleApiError(e)}');
     }
   }
 
-  /// 构建请求数据
-  Map<String, dynamic> _buildRequestData({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) {
-    // 使用基类的 buildMessages 方法构建消息列表
-    final messages = buildMessages(userMessage: userMessage, session: session);
+  // ── Ollama 流式响应处理 ──
 
-    return {
-      'model': model!.model,
-      'messages': messages,
-      'stream': true,
-      'options': {'temperature': model!.chatSettings?.temperature ?? 0.7},
-    };
-  }
-
-  /// 处理 Ollama 流式响应 (Chat API 格式)
   Stream<Map<String, String?>> _processOllamaStreamResponse(
     Stream<List<int>> stream,
   ) async* {
@@ -207,9 +192,8 @@ class OllamaProvider extends BaseLlmProvider {
           buffer += chunkString;
 
           final lines = buffer.split('\n');
-          // 安全地处理最后一行，避免 RangeError
           if (lines.isNotEmpty) {
-            buffer = lines.removeLast(); // 保留可能不完整的最后一行
+            buffer = lines.removeLast();
           } else {
             buffer = '';
           }
@@ -219,33 +203,17 @@ class OllamaProvider extends BaseLlmProvider {
               try {
                 final data = jsonDecode(line);
 
-                // 处理 Ollama Chat API 响应格式
                 if (data is Map<String, dynamic>) {
                   if (data['message'] != null) {
                     final message = data['message'];
-                    if (message is Map<String, dynamic> &&
-                        message['content'] != null) {
+                    if (message is Map<String, dynamic> && message['content'] != null) {
                       final content = message['content'].toString();
                       if (content.isNotEmpty) {
-                        debugPrint('Ollama原始内容: $content');
-
-                        // 使用基类的统一think处理逻辑
-                        final processed = processContentWithThink(
-                          content,
-                          insideThinkTag,
-                        );
+                        final processed = processContentWithThink(content, insideThinkTag);
                         insideThinkTag = processed['insideThinkTag'] as bool;
 
-                        debugPrint('处理后内容: ${processed['content']}');
-                        debugPrint('处理后思考: ${processed['think']}');
-
-                        // 如果有内容或思考内容，就发送
-                        if ((processed['content'] != null &&
-                                processed['content']!.isNotEmpty) ||
-                            (processed['think'] != null &&
-                                processed['think']!.isNotEmpty)) {
-                          debugPrint('发送内容: ${processed['think']}');
-
+                        if ((processed['content'] != null && processed['content']!.isNotEmpty) ||
+                            (processed['think'] != null && processed['think']!.isNotEmpty)) {
                           yield {
                             'content': processed['content'] ?? '',
                             'think': processed['think'],
@@ -255,22 +223,15 @@ class OllamaProvider extends BaseLlmProvider {
                     }
                   }
 
-                  // 检查是否完成
                   if (data['done'] == true) {
                     debugPrint('Ollama流式响应完成');
                     return;
                   }
                 }
-              } catch (e) {
-                // 忽略解析错误，继续处理下一行
-                debugPrint('Ollama JSON解析错误: $e, 行内容: $line');
-              }
+              } catch (_) {}
             }
           }
-        } catch (e) {
-          debugPrint('Ollama 处理数据块错误: $e');
-          // 继续处理下一个数据块
-        }
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint('Ollama 流式响应处理错误: $e');
@@ -278,38 +239,66 @@ class OllamaProvider extends BaseLlmProvider {
     }
   }
 
-  @override
-  Future<bool> validateConfiguration() async {
-    print("=== OllamaProvider.validateConfiguration 被调用 ===");
+  /// 处理内容块，分离思考内容和正文内容
+  Map<String, dynamic> processContentWithThink(String content, bool insideThinkTag) {
+    String processedContent = content;
+    String? thinkContent;
+    bool newInsideThinkTag = insideThinkTag;
 
-    if (model == null) {
-      print("Ollama 验证失败: 模型未配置");
-      return false;
+    if (insideThinkTag) {
+      if (content.contains('</think>')) {
+        final parts = content.split('</think>');
+        thinkContent = parts[0].trim();
+        processedContent = parts.length > 1 ? parts[1] : '';
+        newInsideThinkTag = false;
+      } else {
+        thinkContent = content.trim();
+        processedContent = '';
+        newInsideThinkTag = true;
+      }
+    } else {
+      if (content.contains('<think>')) {
+        if (content.contains('</think>')) {
+          final thinkRegex = RegExp(r'<think>\s*(.*?)\s*</think>', dotAll: true);
+          processedContent = content.replaceAllMapped(thinkRegex, (match) {
+            final extractedThink = match.group(1)?.trim() ?? '';
+            thinkContent = (thinkContent ?? '') + extractedThink;
+            return '';
+          });
+          newInsideThinkTag = false;
+        } else {
+          final parts = content.split('<think>');
+          processedContent = parts[0];
+          thinkContent = parts.length > 1 ? parts[1].trim() : '';
+          newInsideThinkTag = true;
+        }
+      }
     }
 
-    print("Ollama 验证开始...");
-    print("模型: ${model!.model}");
-    print("原始 API URL: ${model!.apiUrl}");
+    return {
+      'content': processedContent.isEmpty ? null : processedContent,
+      'think': thinkContent?.isEmpty == true ? null : thinkContent,
+      'insideThinkTag': newInsideThinkTag,
+    };
+  }
+
+  // ── 验证与错误处理 ──
+
+  @override
+  Future<bool> validateConfiguration() async {
+    if (model == null) return false;
 
     try {
-      // 构建完整的 API 端点
       String apiUrl = model!.apiUrl ?? 'http://localhost:11434/api';
       if (!apiUrl.endsWith('/chat')) {
         apiUrl = apiUrl.endsWith('/') ? '${apiUrl}chat' : '$apiUrl/chat';
       }
 
-      print("最终 API URL: $apiUrl");
-
       final requestBody = {
         'model': model!.model,
-        'messages': [
-          {'role': 'user', 'content': '你好'},
-        ],
+        'messages': [{'role': 'user', 'content': '你好'}],
         'stream': false,
       };
-
-      print("请求体: ${jsonEncode(requestBody)}");
-      print("开始发送 HTTP 请求...");
 
       final response = await http
           .post(
@@ -317,43 +306,39 @@ class OllamaProvider extends BaseLlmProvider {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(requestBody),
           )
-          .timeout(const Duration(seconds: 15)); // 增加超时时间到15秒
+          .timeout(const Duration(seconds: 15));
 
-      print("HTTP 响应状态码: ${response.statusCode}");
-      if (response.statusCode != 200) {
-        print("HTTP 响应体: ${response.body}");
-      }
-
-      final isValid = response.statusCode == 200;
-      print("Ollama 验证结果: ${isValid ? '成功' : '失败'}");
-
-      return isValid;
+      return response.statusCode == 200;
     } catch (e) {
-      print('Ollama 配置验证失败: $e');
-      print('错误类型: ${e.runtimeType}');
+      debugPrint('Ollama 配置验证失败: $e');
       return false;
     }
   }
 
   @override
+  Map<String, dynamic> parseToolCalls(String response) {
+    return {'toolCalls': <Map<String, dynamic>>[], 'cleanContent': response};
+  }
+
+  String handleApiError(dynamic error) {
+    final es = error.toString();
+    if (es.contains('Connection refused')) return '无法连接到 Ollama 服务，请确认服务已启动';
+    if (es.contains('SocketException')) return '网络连接失败，请检查 Ollama 服务';
+    if (es.contains('CONNECT_TIMEOUT')) return '连接 Ollama 超时';
+    return 'Ollama API 错误：$es';
+  }
+
+  @override
   Future<Map<String, dynamic>?> getModelInfo() async {
-    if (model == null) {
-      return null;
-    }
+    if (model == null) return null;
 
     try {
-      // 获取 Ollama 模型信息
       String baseUrl = model!.apiUrl ?? 'http://localhost:11434/api';
-      // 确保基础URL不包含/chat路径，然后添加/tags路径
       baseUrl = baseUrl.replaceAll('/chat', '');
-      final apiTagsUrl =
-          baseUrl.endsWith('/') ? '${baseUrl}tags' : '$baseUrl/tags';
+      final apiTagsUrl = baseUrl.endsWith('/') ? '${baseUrl}tags' : '$baseUrl/tags';
 
       final response = await http
-          .get(
-            Uri.parse(apiTagsUrl),
-            headers: {'Content-Type': 'application/json'},
-          )
+          .get(Uri.parse(apiTagsUrl), headers: {'Content-Type': 'application/json'})
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -374,9 +359,7 @@ class OllamaProvider extends BaseLlmProvider {
           'digest': modelInfo?['digest'],
         };
       }
-    } catch (e) {
-      debugPrint('获取 Ollama 模型信息失败: $e');
-    }
+    } catch (_) {}
 
     return {
       'provider': 'ollama',
@@ -387,104 +370,24 @@ class OllamaProvider extends BaseLlmProvider {
     };
   }
 
-  /// 获取可用的模型列表
   Future<List<Map<String, dynamic>>> getAvailableModels() async {
-    if (model == null) {
-      return [];
-    }
+    if (model == null) return [];
 
     try {
       String baseUrl = model!.apiUrl ?? 'http://localhost:11434/api';
-      // 确保基础URL不包含/chat路径，然后添加/tags路径
       baseUrl = baseUrl.replaceAll('/chat', '');
-      final apiTagsUrl =
-          baseUrl.endsWith('/') ? '${baseUrl}tags' : '$baseUrl/tags';
+      final apiTagsUrl = baseUrl.endsWith('/') ? '${baseUrl}tags' : '$baseUrl/tags';
 
       final response = await http
-          .get(
-            Uri.parse(apiTagsUrl),
-            headers: {'Content-Type': 'application/json'},
-          )
+          .get(Uri.parse(apiTagsUrl), headers: {'Content-Type': 'application/json'})
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return List<Map<String, dynamic>>.from(data['models'] ?? []);
       }
-    } catch (e) {
-      debugPrint('获取 Ollama 可用模型失败: $e');
-    }
+    } catch (_) {}
 
     return [];
-  }
-
-  /// 处理内容块，分离思考内容和正文内容
-  ///
-  /// 支持的think标签格式：
-  /// - <think>思考内容</think>
-  /// - 跨多个chunk的think标签
-  ///
-  /// [content] 原始内容
-  /// [insideThinkTag] 当前是否在think标签内
-  ///
-  /// 返回：
-  /// - content: 处理后的正文内容
-  /// - think: 提取的思考内容
-  /// - insideThinkTag: 更新后的think标签状态
-  Map<String, dynamic> processContentWithThink(
-    String content,
-    bool insideThinkTag,
-  ) {
-    String processedContent = content;
-    String? thinkContent;
-    bool newInsideThinkTag = insideThinkTag;
-
-    // 如果当前在思考标签内，所有内容都被视为思考内容
-    if (insideThinkTag) {
-      // 检查是否包含结束标签
-      if (content.contains('</think>')) {
-        final parts = content.split('</think>');
-        thinkContent = parts[0].trim(); // 移除开头和结尾的换行符
-        processedContent = parts.length > 1 ? parts[1] : ''; // 思考后的内容
-        newInsideThinkTag = false; // 退出think标签
-      } else {
-        // 完全在思考标签内
-        thinkContent = content.trim(); // 移除开头和结尾的换行符
-        processedContent = '';
-        newInsideThinkTag = true; // 保持在think标签内
-      }
-    } else {
-      // 不在思考标签内，检查是否有思考标签
-      if (content.contains('<think>')) {
-        if (content.contains('</think>')) {
-          // 完整的思考标签在一个块中
-          final thinkRegex = RegExp(
-            r'<think>\s*(.*?)\s*</think>',
-            dotAll: true,
-          );
-          processedContent = content.replaceAllMapped(thinkRegex, (match) {
-            final extractedThink =
-                match.group(1)?.trim() ?? ''; // 移除think内容的换行符
-            thinkContent = (thinkContent ?? '') + extractedThink;
-            return ''; // 从正文中移除思考内容
-          });
-          newInsideThinkTag = false;
-        } else {
-          // 只有开始标签
-          final parts = content.split('<think>');
-          processedContent = parts[0]; // 思考前的内容
-          thinkContent =
-              parts.length > 1 ? parts[1].trim() : ''; // 思考内容开始部分，移除换行符
-          newInsideThinkTag = true; // 进入think标签
-        }
-      }
-      // 如果没有思考标签，processedContent保持原样，thinkContent保持null
-    }
-
-    return {
-      'content': processedContent.isEmpty ? null : processedContent,
-      'think': thinkContent?.isEmpty == true ? null : thinkContent,
-      'insideThinkTag': newInsideThinkTag,
-    };
   }
 }

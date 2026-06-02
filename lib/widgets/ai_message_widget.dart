@@ -1582,20 +1582,20 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   MarkdownStyleSheet _buildToolBlockMarkdownStyleSheet() {
     return MarkdownStyleSheet(
       p: TextStyle(
-        fontSize: 5,
+        fontSize: 10,
         fontFamily: 'monospace',
         color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
         height: 1.4,
       ),
       a: TextStyle(
-        fontSize: 5,
+        fontSize: 10,
         fontFamily: 'monospace',
         color: Theme.of(context).colorScheme.primary,
         decoration: TextDecoration.underline,
         decorationColor: Theme.of(context).colorScheme.primary,
       ),
       code: TextStyle(
-        fontSize: 5,
+        fontSize: 10,
         fontFamily: 'monospace',
         backgroundColor: Theme.of(
           context,

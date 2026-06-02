@@ -212,7 +212,7 @@ abstract class BaseLlmProvider {
       }
     } catch (_) {}
 
-    return {
+    final result = {
       if (content != null && content.isNotEmpty) 'content': content,
       if (reasoningContent != null && reasoningContent.isNotEmpty)
         'think': reasoningContent,
@@ -220,6 +220,10 @@ abstract class BaseLlmProvider {
         'toolcall': toolCall,
       if (finishReason != null) 'finish_reason': finishReason,
     };
+    if (kDebugMode && result.isNotEmpty) {
+      debugPrint('📥 [$providerName] chunk: $result');
+    }
+    return result;
   }
 
   /// 处理 OpenAI 兼容的 SSE 流，逐行解析 data: 块并调用 [extractStreamChunk]

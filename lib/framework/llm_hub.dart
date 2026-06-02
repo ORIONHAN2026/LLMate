@@ -131,6 +131,7 @@ class LlmClient {
         if (_cancelled) return;
         final tc = chunk['toolcall'];
         if (tc != null && tc.isNotEmpty) {
+          if (kDebugMode) debugPrint('📤 [LLMChat] toolcall: $tc');
           final parsed = _parseToolCallChunk(tc);
           if (parsed != null && parsed.isNotEmpty) {
             final isNativeDelta = parsed.any(
@@ -150,14 +151,21 @@ class LlmClient {
         final c = chunk['content'] ?? '';
         if (c.isNotEmpty) {
           loopAccContent += c;
+          if (kDebugMode) debugPrint('📤 [LLMChat] content: $c');
           yield {'content': c};
         }
 
         final t = chunk['think'] ?? '';
-        if (t.isNotEmpty) yield {'think': t};
+        if (t.isNotEmpty) {
+          if (kDebugMode) debugPrint('📤 [LLMChat] think: $t');
+          yield {'think': t};
+        }
 
         final toolProgress = chunk['tool'] ?? '';
-        if (toolProgress.isNotEmpty) yield {'tool': toolProgress};
+        if (toolProgress.isNotEmpty) {
+          if (kDebugMode) debugPrint('📤 [LLMChat] tool: $toolProgress');
+          yield {'tool': toolProgress};
+        }
       }
 
       // 无工具调用或已取消 → 结束

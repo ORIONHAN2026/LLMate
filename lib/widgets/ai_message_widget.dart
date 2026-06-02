@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:chathub/controllers/session_controller.dart';
@@ -1379,7 +1378,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   Widget _buildToolBlock(int index, String text) {
     final isExpanded = _expandedToolIndices.contains(index);
     final description = _parseToolDescription(text);
-    final filePaths = _extractFilePaths(text);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1437,25 +1435,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // 折叠态显示可点击的文件名标签
-                  if (filePaths.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    ...filePaths.take(2).map((fp) => _buildFileTag(fp)),
-                    if (filePaths.length > 2)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 2),
-                        child: Text(
-                          '+${filePaths.length - 2}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.7),
-                          ),
-                        ),
-                      ),
-                  ],
                   const SizedBox(width: 4),
                   Icon(
                     isExpanded
@@ -1524,117 +1503,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         color: Theme.of(context).colorScheme.onSurface,
       ),
     );
-  }
-
-  /// 构建可点击的文件标签
-  Widget _buildFileTag(String filePath) {
-    final fileName = filePath.contains('/')
-        ? filePath.substring(filePath.lastIndexOf('/') + 1)
-        : filePath;
-
-    return GestureDetector(
-      onTap: () => _openFile(filePath),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        margin: const EdgeInsets.only(right: 4),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _fileIcon(fileName),
-              size: 10,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 3),
-            Text(
-              fileName,
-              style: TextStyle(
-                fontSize: 10,
-                color: Theme.of(context).colorScheme.primary,
-                decoration: TextDecoration.none,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 根据文件扩展名返回图标
-  IconData _fileIcon(String fileName) {
-    final ext = fileName.contains('.')
-        ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase()
-        : '';
-    switch (ext) {
-      case 'docx':
-      case 'doc':
-        return CupertinoIcons.doc_text;
-      case 'xlsx':
-      case 'xls':
-      case 'csv':
-        return CupertinoIcons.table;
-      case 'pdf':
-        return CupertinoIcons.doc_richtext;
-      case 'pptx':
-      case 'ppt':
-        return CupertinoIcons.tv;
-      case 'png':
-      case 'jpg':
-      case 'jpeg':
-      case 'gif':
-      case 'webp':
-      case 'bmp':
-        return CupertinoIcons.photo;
-      case 'md':
-      case 'txt':
-        return CupertinoIcons.doc_text;
-      default:
-        return CupertinoIcons.doc;
-    }
-  }
-
-  /// 从工具文本中提取所有 file:// 链接和绝对路径
-  List<String> _extractFilePaths(String text) {
-    final paths = <String>[];
-
-    // 1. 提取 Markdown 链接中的 file:// 路径
-    final linkRegex = RegExp(r'\[.*?\]\(file://(/[^)]+)\)');
-    for (final match in linkRegex.allMatches(text)) {
-      paths.add(match.group(1)!);
-    }
-
-    // 2. 提取 JSON 中未链接化的绝对路径
-    if (paths.isEmpty) {
-      try {
-        // 尝试从结果 JSON 行中提取
-        final jsonRegex = RegExp(r'\{[^}]+\}');
-        for (final match in jsonRegex.allMatches(text)) {
-          try {
-            final decoded = jsonDecode(match.group(0)!);
-            if (decoded is Map) {
-              for (final key in ['path', 'filePath', 'outputPath']) {
-                final val = decoded[key];
-                if (val is String && val.startsWith('/') && !val.contains('file://')) {
-                  paths.add(val);
-                }
-              }
-            }
-          } catch (_) {}
-        }
-      } catch (_) {}
-    }
-
-    return paths;
   }
 
   /// 从工具文本中提取一句话描述

@@ -26,6 +26,17 @@ const double kMinWindowHeight = 640; // 依据布局中顶部栏/输入区等高
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 抑制 macOS 上 Caps Lock 等键导致的 Flutter 框架键盘断言错误（已知 bug）
+  FlutterError.onError = (details) {
+    final msg = details.exceptionAsString();
+    if (msg.contains('_pressedKeys.containsKey') ||
+        msg.contains('HardwareKeyboard') ||
+        msg.contains('KeyUpEvent is dispatched')) {
+      return; // 静默忽略
+    }
+    FlutterError.presentError(details);
+  };
+
   // 桌面平台设定最小窗口尺寸，防止布局被压缩溢出
   if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
     await windowManager.ensureInitialized();

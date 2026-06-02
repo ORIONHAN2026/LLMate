@@ -1507,7 +1507,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         );
       },
     ).then((_) {
-      try { searchController.dispose(); } catch (_) {}
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try { searchController.dispose(); } catch (_) {}
+      });
     });
   }
 
@@ -2247,7 +2249,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         );
       },
     ).then((_) {
-      try { searchController.dispose(); } catch (_) {}
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try { searchController.dispose(); } catch (_) {}
+      });
     });
   }
 
@@ -2465,7 +2469,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         );
       },
     ).then((_) {
-      try { searchController.dispose(); } catch (_) {}
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try { searchController.dispose(); } catch (_) {}
+      });
     });
   }
 

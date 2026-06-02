@@ -11,7 +11,7 @@ import 'image_tool_service.dart';
 import 'mcp_service.dart';
 import 'pdf_tool_service.dart';
 import 'ppt_tool_service.dart';
-import 'skill_tool_service.dart';
+import 'skill_storage_service.dart';
 import 'word_tool_service.dart';
 
 class SystemToolDefinition {
@@ -33,7 +33,6 @@ class SystemToolDefinition {
 class SystemToolService {
   static const String createWordDocumentTool = 'word_create_document';
   static const String readWordDocumentTool = 'word_read_document';
-  static const String skillManagerTool = 'skill_manager';
   static const String fileReadTool = 'file_read';
   static const String fileWriteTool = 'file_write';
   static const String excelReadTool = 'excel_read';
@@ -172,43 +171,9 @@ class SystemToolService {
       },
     ),
     SystemToolDefinition(
-      name: skillManagerTool,
-      description:
-          '技能管理工具。列出、读取、创建、更新、删除技能（SKILL.md）。涉及技能修改时必须使用此工具，不要通过 bash 或其他方式直接编辑文件。',
-      parameters: {
-        'type': 'object',
-        'properties': {
-          'action': {
-            'type': 'string',
-            'enum': ['list', 'read', 'create', 'update', 'delete'],
-            'description':
-                '操作类型：list=列出所有技能，read=读取技能内容，create=创建新技能，update=更新已有技能，delete=删除技能。',
-          },
-          'skillId': {
-            'type': 'string',
-            'description': '技能 ID（即 skills/ 下的文件夹名）。read/update/delete 必填。',
-          },
-          'name': {
-            'type': 'string',
-            'description': '技能名称。create 必填，update 可选（不填则保留原值）。',
-          },
-          'description': {
-            'type': 'string',
-            'description': '技能描述。create 可选，update 可选（不填则保留原值）。',
-          },
-          'content': {
-            'type': 'string',
-            'description':
-                '技能正文（SKILL.md YAML 头之后的 Markdown 内容）。create 必填，update 可选（不填则保留原值）。',
-          },
-        },
-        'required': ['action'],
-      },
-    ),
-    SystemToolDefinition(
       name: fileReadTool,
       description:
-          '读取文本文件内容。支持代码文件(.dart/.py/.js/.ts/.java/.kt/.swift/.go/.rs/.c/.cpp/.html/.css/.sql等)、Markdown文件(.md)、配置文件(.json/.yaml/.toml/.xml等)、纯文本(.txt/.log/.csv等)。返回文件内容、行数、大小等信息。',
+          '读取文本文件内容。支持代码文件(.dart/.py/.js/.ts/.java/.kt/.swift/.go/.rs/.c/.cpp/.html/.css/.sql等)、Markdown文件(.md)、配置文件(.json/.yaml/.toml/.xml等)、纯文本(.txt/.log/.csv等)。返回文件内容、行数、大小等信息。也可用于读取技能文件（skills/目录下的SKILL.md）。',
       parameters: {
         'type': 'object',
         'properties': {
@@ -220,7 +185,7 @@ class SystemToolService {
     SystemToolDefinition(
       name: fileWriteTool,
       description:
-          '写入或创建文本文件。支持代码文件、Markdown文件、配置文件、纯文本等。如果文件已存在则覆盖，如果父目录不存在则自动创建。适合生成代码、Markdown文档、配置文件等。',
+          '写入或创建文本文件。支持代码文件、Markdown文件、配置文件、纯文本等。如果文件已存在则覆盖，如果父目录不存在则自动创建。适合生成代码、Markdown文档、配置文件等。也可用于创建或更新技能文件（在skills/目录下创建文件夹并写入SKILL.md）。',
       parameters: {
         'type': 'object',
         'properties': {
@@ -594,6 +559,23 @@ class SystemToolService {
       buffer.writeln();
     }
 
+    // 技能目录提示
+    buffer.writeln('## 技能目录');
+    buffer.writeln();
+    buffer.writeln('技能文件存放在 `${SkillStorageService.skillsRootDir}` 目录下，每个技能是一个文件夹，内含 SKILL.md 文件。');
+    buffer.writeln('你可以使用 `file_read` 和 `file_write` 工具直接读取、创建或修改技能文件。');
+    buffer.writeln('创建技能时，先在技能目录下创建子文件夹，再写入 SKILL.md 文件，文件格式为：');
+    buffer.writeln('```markdown');
+    buffer.writeln('---');
+    buffer.writeln('name: 技能名称');
+    buffer.writeln('description: 技能描述');
+    buffer.writeln('agent_created: true');
+    buffer.writeln('---');
+    buffer.writeln();
+    buffer.writeln('技能正文内容...');
+    buffer.writeln('```');
+    buffer.writeln();
+
     return buffer.toString().trim();
   }
 
@@ -638,6 +620,15 @@ class SystemToolService {
             '生成文件时如用户未指定路径，默认保存到该目录。',
       });
     }
+
+    // 技能目录提示（独立一条）
+    messages.add({
+      'role': 'system',
+      'content':
+          '技能文件存放在 ${SkillStorageService.skillsRootDir} 目录下，每个技能是一个文件夹，内含 SKILL.md 文件。'
+          '你可以使用 file_read 和 file_write 工具直接读取、创建或修改技能文件。'
+          '创建技能时，先在技能目录下创建子文件夹，再写入 SKILL.md 文件，格式为：YAML front matter（name/description/agent_created）+ Markdown 正文。',
+    });
 
     return messages;
   }
@@ -713,13 +704,6 @@ class SystemToolService {
         );
       case readWordDocumentTool:
         return WordToolService.readDocument(
-          arguments: enrichedArgs,
-          callId: callId,
-        );
-      case skillManagerTool:
-        final action = (enrichedArgs['action'] ?? '').toString();
-        return SkillToolService.execute(
-          action: action,
           arguments: enrichedArgs,
           callId: callId,
         );
@@ -896,10 +880,6 @@ class SystemToolService {
         return const JsonEncoder.withIndent(
           '  ',
         ).convert({'filePath': '/Users/example/Documents/模板.docx'});
-      case skillManagerTool:
-        return const JsonEncoder.withIndent(
-          '  ',
-        ).convert({'action': 'read', 'skillId': '会议通知'});
       case fileReadTool:
         return const JsonEncoder.withIndent(
           '  ',

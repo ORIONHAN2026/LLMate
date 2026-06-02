@@ -83,6 +83,9 @@ abstract class BaseLlmProvider {
   /// 是否启用深度思考模式（由会话设置控制）
   bool _thinkEnabled = false;
 
+  /// 会话工作目录（用于文件生成默认路径）
+  String? _workDir;
+
   /// 获取当前配置的模型
   ChatModel? get model => _model;
 
@@ -101,6 +104,10 @@ abstract class BaseLlmProvider {
   /// 根据会话设置更新 provider 状态
   void applySessionSettings(ChatSession session) {
     _thinkEnabled = session.deepThink;
+    _workDir = (session.workDirectory != null &&
+            session.workDirectory!.trim().isNotEmpty)
+        ? session.workDirectory!.trim()
+        : null;
   }
 
   /// 子类可重写此方法处理配置
@@ -190,6 +197,14 @@ abstract class BaseLlmProvider {
       messages.add({
         'role': 'system',
         'content': CommonSystemPrompts.deepThink,
+      });
+    }
+
+    // 1f. 工作目录
+    if (_workDir != null) {
+      messages.add({
+        'role': 'system',
+        'content': CommonSystemPrompts.workDirectory(_workDir!),
       });
     }
 

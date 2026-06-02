@@ -47,6 +47,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   late AnimationController _breathingAnimationController;
   late Animation<double> _breathingAnimation;
 
+  late AnimationController _rotationAnimationController;
+  late Animation<double> _rotationAnimation;
+
   @override
   void initState() {
     super.initState();
@@ -62,12 +65,43 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       ),
     );
     _breathingAnimationController.repeat(reverse: true);
+
+    _rotationAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _rotationAnimation = Tween<double>(
+      begin: -15 / 360,
+      end: 15 / 360,
+    ).animate(
+      CurvedAnimation(
+        parent: _rotationAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    if (widget.message.isToolCalling) {
+      _rotationAnimationController.repeat(reverse: true);
+    }
   }
 
   @override
   void dispose() {
     _breathingAnimationController.dispose();
+    _rotationAnimationController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant AiMessageWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final isToolCalling = widget.message.isToolCalling;
+    final wasToolCalling = oldWidget.message.isToolCalling;
+
+    if (isToolCalling && !wasToolCalling) {
+      _rotationAnimationController.repeat(reverse: true);
+    } else if (!isToolCalling && wasToolCalling) {
+      _rotationAnimationController.stop();
+    }
   }
 
   // 根据消息ID查找包含该消息的会话
@@ -1510,12 +1544,15 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.build_outlined,
-                    size: 14,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.5),
+                  RotationTransition(
+                    turns: _rotationAnimation,
+                    child: Icon(
+                      Icons.build_outlined,
+                      size: 14,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.5),
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Flexible(

@@ -216,7 +216,7 @@ class LlmClient {
         buf.writeln();
         if (resultText.isNotEmpty) {
           buf.writeln('${ok ? '📥' : '⚠'} 结果:');
-          buf.writeln(resultText);
+          buf.writeln(_linkifyFilePaths(resultText));
         }
 
         yield {'tool': buf.toString().trim()};
@@ -260,6 +260,66 @@ class LlmClient {
   ) => _provider.sendMessageStreamWithMessages(messages, session: _session);
 
   void cancel() => _cancelled = true;
+
+  /// 将工具结果 JSON 中的文件路径替换为 Markdown 链接，
+  /// 使其在 UI 中可以被点击打开。
+  ///
+  /// 工具返回的 result 是 JSON 字符串，其中 "path" 或 "filePath" 字段
+  /// 包含本地绝对路径，将它们转为 `[文件名](file:///路径)` 格式。
+  static String _linkifyFilePaths(String resultText) {
+    try {
+      final decoded = jsonDecode(resultText);
+      if (decoded is! Map) return resultText;
+
+      // 查找文件路径字段
+      String? filePath;
+      for (final key in ['path', 'filePath', 'outputPath']) {
+        if (decoded[key] is String && (decoded[key] as String).isNotEmpty) {
+          filePath = decoded[key] as String;
+          break;
+        }
+      }
+      if (filePath == null) return resultText;
+
+      // 提取文件名用于链接显示
+      final fileName = filePath.contains('/')
+          ? filePath.substring(filePath.lastIndexOf('/') + 1)
+          : filePath;
+
+      // 将路径字段替换为 Markdown 链接
+      decoded['path'] = '[$fileName](file://$filePath)';
+      if (decoded.containsKey('filePath')) {
+        decoded['filePath'] = '[$fileName](file://$filePath)';
+      }
+      // 同时更新 message 中的路径引用
+      if (decoded['message'] is String) {
+        decoded['message'] = (decoded['message'] as String).replaceAll(
+          filePath,
+          '[$fileName](file://$filePath)',
+        );
+      }
+
+      return jsonEncode(decoded);
+    } catch (_) {
+      // resultText 不是合法 JSON，尝试直接替换绝对路径
+      return _linkifyRawPaths(resultText);
+    }
+  }
+
+  /// 对非 JSON 文本中的绝对路径进行链接化处理
+  static String _linkifyRawPaths(String text) {
+    // 匹配 macOS/Linux 绝对路径，排除已在 Markdown 链接 [text](url) 中的
+    final pathPattern = RegExp(
+      r'(?<![(\[])(\/(?:Users|home|tmp|var|etc|opt|srv)\/[\w./\-_]+)',
+    );
+    return text.replaceAllMapped(pathPattern, (match) {
+      final path = match.group(0)!;
+      final fileName = path.contains('/')
+          ? path.substring(path.lastIndexOf('/') + 1)
+          : path;
+      return '[$fileName](file://$path)';
+    });
+  }
 
   /// 从累积文本中剥离工具调用标签，返回干净的正文内容
   /// 支持 XML、管道分隔、DSML 等工具调用标签格式。

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/models/bigmodel/models.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
@@ -346,6 +349,13 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     try {
       debugPrint('尝试打开链接: $url');
 
+      // 处理 file:// 协议 - 打开本地文件
+      if (url.startsWith('file://')) {
+        final filePath = url.substring(7); // 去掉 "file://" 前缀
+        await _openFile(filePath);
+        return;
+      }
+
       // 验证URL格式
       Uri? uri;
       try {
@@ -390,6 +400,38 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       debugPrint('打开链接时发生错误: $e');
       if (mounted) {
         SnackBarUtils.showError(context, '打开链接失败: ${e.toString()}');
+      }
+    }
+  }
+
+  // 打开本地文件
+  Future<void> _openFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        if (mounted) {
+          SnackBarUtils.showError(context, '文件不存在: $filePath');
+        }
+        return;
+      }
+
+      // 使用系统默认应用打开文件
+      final result = await Process.run('open', [filePath]);
+      if (result.exitCode == 0) {
+        debugPrint('成功打开文件: $filePath');
+        if (mounted) {
+          SnackBarUtils.showInfo(context, '已打开文件');
+        }
+      } else {
+        debugPrint('打开文件失败: ${result.stderr}');
+        if (mounted) {
+          SnackBarUtils.showError(context, '无法打开文件: ${result.stderr}');
+        }
+      }
+    } catch (e) {
+      debugPrint('打开文件时发生错误: $e');
+      if (mounted) {
+        SnackBarUtils.showError(context, '打开文件失败: $e');
       }
     }
   }
@@ -1246,7 +1288,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           if (widget.message.think.isNotEmpty) _buildThinkBlock(widget.message.think),
           if (widget.message.content.isNotEmpty)
             MarkdownBody(
-              data: _sanitizeMarkdown(widget.message.content),
+              data: _sanitizeMarkdown(_linkifyContentPaths(widget.message.content)),
               styleSheet: _buildMarkdownStyleSheet(),
               selectable: true,
               onTapLink: (text, href, title) {
@@ -1268,7 +1310,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         case ContentBlockType.content:
           children.add(
             MarkdownBody(
-              data: _sanitizeMarkdown(block.text),
+              data: _sanitizeMarkdown(_linkifyContentPaths(block.text)),
               styleSheet: _buildMarkdownStyleSheet(),
               selectable: true,
               onTapLink: (text, href, title) {
@@ -1337,13 +1379,14 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   Widget _buildToolBlock(int index, String text) {
     final isExpanded = _expandedToolIndices.contains(index);
     final description = _parseToolDescription(text);
+    final filePaths = _extractFilePaths(text);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 折叠态：扳手图标 + 一句话描述
+          // 折叠态：扳手图标 + 一句话描述 + 文件名
           GestureDetector(
             onTap: () {
               setState(() {
@@ -1394,6 +1437,25 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  // 折叠态显示可点击的文件名标签
+                  if (filePaths.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    ...filePaths.take(2).map((fp) => _buildFileTag(fp)),
+                    if (filePaths.length > 2)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 2),
+                        child: Text(
+                          '+${filePaths.length - 2}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.7),
+                          ),
+                        ),
+                      ),
+                  ],
                   const SizedBox(width: 4),
                   Icon(
                     isExpanded
@@ -1409,7 +1471,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               ),
             ),
           ),
-          // 展开态：显示工具执行详情（文本原文，含参数和结果）
+          // 展开态：使用 MarkdownBody 渲染，使文件链接可点击
           if (isExpanded)
             Container(
               width: double.infinity,
@@ -1422,22 +1484,157 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     .withOpacity(0.15),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withOpacity(0.55),
-                  fontFamily: 'monospace',
-                  height: 1.4,
-                ),
+              child: MarkdownBody(
+                data: _sanitizeMarkdown(text),
+                styleSheet: _buildToolBlockMarkdownStyleSheet(),
+                selectable: true,
+                onTapLink: (text, href, title) {
+                  if (href != null) _openLink(href);
+                },
               ),
             ),
         ],
       ),
     );
+  }
+
+  /// 构建工具块专用的 Markdown 样式（小字号 monospace）
+  MarkdownStyleSheet _buildToolBlockMarkdownStyleSheet() {
+    return MarkdownStyleSheet(
+      p: TextStyle(
+        fontSize: 11,
+        fontFamily: 'monospace',
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
+        height: 1.4,
+      ),
+      a: TextStyle(
+        fontSize: 11,
+        fontFamily: 'monospace',
+        color: Theme.of(context).colorScheme.primary,
+        decoration: TextDecoration.underline,
+        decorationColor: Theme.of(context).colorScheme.primary,
+      ),
+      code: TextStyle(
+        fontSize: 10,
+        fontFamily: 'monospace',
+        backgroundColor: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withOpacity(0.3),
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+    );
+  }
+
+  /// 构建可点击的文件标签
+  Widget _buildFileTag(String filePath) {
+    final fileName = filePath.contains('/')
+        ? filePath.substring(filePath.lastIndexOf('/') + 1)
+        : filePath;
+
+    return GestureDetector(
+      onTap: () => _openFile(filePath),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        margin: const EdgeInsets.only(right: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _fileIcon(fileName),
+              size: 10,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              fileName,
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).colorScheme.primary,
+                decoration: TextDecoration.none,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 根据文件扩展名返回图标
+  IconData _fileIcon(String fileName) {
+    final ext = fileName.contains('.')
+        ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase()
+        : '';
+    switch (ext) {
+      case 'docx':
+      case 'doc':
+        return CupertinoIcons.doc_text;
+      case 'xlsx':
+      case 'xls':
+      case 'csv':
+        return CupertinoIcons.table;
+      case 'pdf':
+        return CupertinoIcons.doc_richtext;
+      case 'pptx':
+      case 'ppt':
+        return CupertinoIcons.tv;
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+      case 'gif':
+      case 'webp':
+      case 'bmp':
+        return CupertinoIcons.photo;
+      case 'md':
+      case 'txt':
+        return CupertinoIcons.doc_text;
+      default:
+        return CupertinoIcons.doc;
+    }
+  }
+
+  /// 从工具文本中提取所有 file:// 链接和绝对路径
+  List<String> _extractFilePaths(String text) {
+    final paths = <String>[];
+
+    // 1. 提取 Markdown 链接中的 file:// 路径
+    final linkRegex = RegExp(r'\[.*?\]\(file://(/[^)]+)\)');
+    for (final match in linkRegex.allMatches(text)) {
+      paths.add(match.group(1)!);
+    }
+
+    // 2. 提取 JSON 中未链接化的绝对路径
+    if (paths.isEmpty) {
+      try {
+        // 尝试从结果 JSON 行中提取
+        final jsonRegex = RegExp(r'\{[^}]+\}');
+        for (final match in jsonRegex.allMatches(text)) {
+          try {
+            final decoded = jsonDecode(match.group(0)!);
+            if (decoded is Map) {
+              for (final key in ['path', 'filePath', 'outputPath']) {
+                final val = decoded[key];
+                if (val is String && val.startsWith('/') && !val.contains('file://')) {
+                  paths.add(val);
+                }
+              }
+            }
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }
+
+    return paths;
   }
 
   /// 从工具文本中提取一句话描述
@@ -1448,6 +1645,27 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       if (trimmed.isNotEmpty) return trimmed;
     }
     return '工具执行';
+  }
+
+  /// 将 AI 正文中的本地绝对路径转为 Markdown 链接
+  /// 例如 /Users/xxx/file.docx → [file.docx](file:///Users/xxx/file.docx)
+  /// 仅处理文件扩展名结尾的路径，避免误匹配
+  static String _linkifyContentPaths(String text) {
+    if (text.isEmpty) return text;
+
+    // 匹配常见的文件绝对路径（以常见扩展名结尾）
+    // 支持 .docx .xlsx .pdf .pptx .png .jpg .md .txt .csv .json .html .dart 等
+    final pathRegex = RegExp(
+      r'(?<![(\[])(\/(?:Users|home|tmp|var|etc|opt|srv)\/[\w./\-_]+\.(?:docx?|xlsx?|xls|csv|pdf|pptx?|png|jpe?g|gif|webp|bmp|tiff?|md|txt|json|html?|css|dart|py|js|ts|java|xml|yaml|yml|toml|sh|log))',
+      caseSensitive: false,
+    );
+    return text.replaceAllMapped(pathRegex, (match) {
+      final path = match.group(0)!;
+      final fileName = path.contains('/')
+          ? path.substring(path.lastIndexOf('/') + 1)
+          : path;
+      return '[$fileName](file://$path)';
+    });
   }
 
   Widget _buildActionButton({

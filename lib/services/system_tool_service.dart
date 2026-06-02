@@ -562,7 +562,9 @@ class SystemToolService {
     // 技能目录提示
     buffer.writeln('## 技能目录');
     buffer.writeln();
-    buffer.writeln('技能文件存放在 `${SkillStorageService.skillsRootDir}` 目录下，每个技能是一个文件夹，内含 SKILL.md 文件。');
+    buffer.writeln(
+      '技能文件存放在 `${SkillStorageService.skillsRootDir}` 目录下，每个技能是一个文件夹，内含 SKILL.md 文件。',
+    );
     buffer.writeln('你可以使用 `file_read` 和 `file_write` 工具直接读取、创建或修改技能文件。');
     buffer.writeln('创建技能时，先在技能目录下创建子文件夹，再写入 SKILL.md 文件，文件格式为：');
     buffer.writeln('```markdown');

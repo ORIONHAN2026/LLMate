@@ -1336,7 +1336,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         case ContentBlockType.tool:
           children.add(_buildToolBlock(i, block.text));
         case ContentBlockType.toolCalling:
-          children.add(_buildToolCallingBlock(block.text));
         case ContentBlockType.content:
           children.add(
             MarkdownBody(

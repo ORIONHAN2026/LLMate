@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/pages/modelssetting.dart';
@@ -16,6 +18,7 @@ import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/utils/responsive_utils.dart';
 import '../widgets/chat_conversation_area.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:path/path.dart' as p;
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});
@@ -333,6 +336,10 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                   messageKeys: _messageKeys,
                 ),
               ),
+              // 工作目录指示条（已设置时显示，双击打开文件夹）
+              if (currentSession!.workDirectory != null &&
+                  currentSession!.workDirectory!.isNotEmpty)
+                _buildWorkDirectoryBar(currentSession!.workDirectory!),
               // 附件显示区域
               // _buildAttachmentsArea(),
               // 输入区域
@@ -434,6 +441,50 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               },
             ),
         ],
+      ),
+    );
+  }
+
+  /// 工作目录指示条 —— 双击打开文件夹
+  Widget _buildWorkDirectoryBar(String workDir) {
+    return GestureDetector(
+      onDoubleTap: () async {
+        try {
+          await Process.run('open', [workDir]);
+        } catch (_) {}
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        child: Row(
+          children: [
+            Icon(
+              CupertinoIcons.folder_fill,
+              size: 13,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                p.basename(workDir),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            Text(
+              '双击打开',
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2789,28 +2789,27 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
-        final toolChunk = (chunkMap['tool'] ?? '').toString();
+        final tool = (chunkMap['tool'] ?? '').toString();
+        final toolcall = (chunkMap['toolcall'] ?? '').toString();
 
         // 深度思考关闭时，过滤掉 think 数据（即使模型原生产生推理内容也不展示）
         final effectiveThinkChunk = latestSession.deepThink ? thinkChunk : '';
 
-        // 处理工具调用状态标记
-        if (toolChunk == 'true') {
+        // 处理工具调用状态标记（布尔值）
+        if (tool == 'true') {
           botMessage.isToolCalling = true;
-        } else if (toolChunk == 'false') {
+        } else if (tool == 'false') {
           botMessage.isToolCalling = false;
         }
 
         if (contentChunk.isNotEmpty ||
             effectiveThinkChunk.isNotEmpty ||
-            (toolChunk.isNotEmpty &&
-                toolChunk != 'true' &&
-                toolChunk != 'false')) {
+            toolcall.isNotEmpty) {
           accumulatedContent += contentChunk;
           accumulatedThink += effectiveThinkChunk;
-          accumulatedTool += toolChunk;
+          accumulatedTool += toolcall;
 
-          // 按顺序构建内容块（tool 不再混入 think）
+          // 按顺序构建内容块（toolcall 不再混入 think）
           void appendBlock(ContentBlockType type, String text) {
             if (blocks.isNotEmpty && blocks.last.type == type) {
               blocks.last.text += text;
@@ -2821,8 +2820,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
           if (effectiveThinkChunk.isNotEmpty) {
             appendBlock(ContentBlockType.think, effectiveThinkChunk);
-          } else if (toolChunk.isNotEmpty) {
-            appendBlock(ContentBlockType.tool, toolChunk);
+          } else if (toolcall.isNotEmpty) {
+            appendBlock(ContentBlockType.tool, toolcall);
           } else if (contentChunk.isNotEmpty) {
             appendBlock(ContentBlockType.content, contentChunk);
           }

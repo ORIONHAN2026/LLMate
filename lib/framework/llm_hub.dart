@@ -78,7 +78,9 @@ class LlmClient {
       _provider.buildSystemPrompt(session);
 
   /// 发送消息并获取流式响应（递归处理 MCP 工具调用，直到无工具调用为止）
-  /// chunk: {content,think,tool}  三个字段互斥，每次必有一个有值
+  /// chunk: {content,think,tool,toolcall}
+  ///   tool: 'true'/'false' 布尔状态标记，表示是否正在执行工具
+  ///   toolcall: 工具调用的具体内容（函数名、参数、执行结果）
   // ignore: non_constant_identifier_names
   Stream<Map<String, dynamic>> LLMChat(ChatMessage userMessage) async* {
     _cancelled = false;
@@ -123,6 +125,7 @@ class LlmClient {
       String loopAccContent = '';
       final nativeToolCallDeltas = <int, Map<String, dynamic>>{};
       List<Map<String, dynamic>>? completedTextToolCalls;
+      final announcedToolNames = <int, String>{}; // 已公布的函数名，按 index
 
       final stream = _provider.sendMessageStreamWithMessages(
         messages,
@@ -134,7 +137,6 @@ class LlmClient {
         if (tc != null && tc.isNotEmpty) {
           // 收到工具调用，通知 UI 显示"正在执行工具"
           yield {'tool': 'true'};
-          yield {'tool': '🔧 正在接收工具调用参数...\n'};
           final parsed = _parseToolCallChunk(tc);
           if (parsed != null && parsed.isNotEmpty) {
             final isNativeDelta = parsed.any(
@@ -145,9 +147,15 @@ class LlmClient {
             );
             if (isNativeDelta) {
               _mergeNativeToolCallDeltas(nativeToolCallDeltas, parsed);
+              // 实时产出工具调用信息给 UI
+              yield {
+                'toolcall': _buildToolCallProgress(parsed, announcedToolNames),
+              };
             } else {
               completedTextToolCalls = parsed;
             }
+          } else {
+            yield {'toolcall': '🔧 正在接收工具调用参数...\n'};
           }
         }
 
@@ -225,7 +233,7 @@ class LlmClient {
           buf.writeln(_linkifyFilePaths(resultText));
         }
 
-        yield {'tool': buf.toString().trim()};
+        yield {'toolcall': buf.toString().trim()};
       }
 
       // 工具执行完毕，通知 UI 隐藏"正在执行工具"
@@ -364,6 +372,32 @@ class LlmClient {
         // 清理多余空行
         .replaceAll(RegExp(r'\n{3,}'), '\n\n')
         .trim();
+  }
+
+  /// 从工具调用 delta 中提取实时进度文本给 UI 展示
+  /// 只产出当前批次 delta 中的新信息，避免重复
+  static String _buildToolCallProgress(
+    List<Map<String, dynamic>> deltas,
+    Map<int, String> announcedNames,
+  ) {
+    final buf = StringBuffer();
+    for (final delta in deltas) {
+      final index = (delta['index'] as int?) ?? 0;
+      final fn = delta['function'];
+      if (fn is Map) {
+        final name = fn['name'] as String?;
+        final args = fn['arguments'] as String? ?? '';
+        if (name != null && name.isNotEmpty) {
+          announcedNames[index] = name;
+          buf.writeln('🔧 $name');
+          if (args.isNotEmpty) buf.writeln('   参数: $args');
+        } else if (announcedNames.containsKey(index) && args.isNotEmpty) {
+          // 只输出当前批次的参数增量
+          buf.writeln('$args');
+        }
+      }
+    }
+    return buf.toString();
   }
 
   static List<Map<String, dynamic>>? _parseToolCallChunk(String toolCallsJson) {

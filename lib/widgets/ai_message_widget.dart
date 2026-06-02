@@ -838,12 +838,13 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           break;
         }
 
-        // 处理content、think、tool内容
+        // 处理content、think、tool 状态、toolcall 内容
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
         final tool = (chunkMap['tool'] ?? '').toString();
+        final toolcall = (chunkMap['toolcall'] ?? '').toString();
 
-        // 处理工具调用状态标记
+        // 处理工具调用状态标记（布尔值）
         if (tool == 'true') {
           botMessage.isToolCalling = true;
         } else if (tool == 'false') {
@@ -853,9 +854,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
 
-        // 实时累积工具内容（非布尔标记）
-        if (tool.isNotEmpty && tool != 'true' && tool != 'false') {
-          accumulatedTool += tool;
+        // 实时累积工具调用内容
+        if (toolcall.isNotEmpty) {
+          accumulatedTool += toolcall;
         }
 
         // 按顺序构建内容块
@@ -869,9 +870,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
         if (thinkChunk.isNotEmpty) {
           appendBlock(ContentBlockType.think, thinkChunk);
-        } else if (tool.isNotEmpty && tool != 'true' && tool != 'false') {
-          // 工具执行结果
-          appendBlock(ContentBlockType.tool, tool);
+        } else if (toolcall.isNotEmpty) {
+          // 工具调用内容（来自 toolcall key）
+          appendBlock(ContentBlockType.tool, toolcall);
         } else if (contentChunk.isNotEmpty) {
           appendBlock(ContentBlockType.content, contentChunk);
         }
@@ -1518,17 +1519,20 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                   ),
                   const SizedBox(width: 6),
                   Flexible(
-                    child: Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.55),
-                        fontStyle: FontStyle.italic,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 40),
+                      child: Text(
+                        "执行工具",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.55),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -1549,6 +1553,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           if (isExpanded)
             Container(
               width: double.infinity,
+              constraints: const BoxConstraints(maxHeight: 200),
               margin: const EdgeInsets.only(top: 4),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -1557,13 +1562,15 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 ).colorScheme.surfaceContainerHighest.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: MarkdownBody(
-                data: _sanitizeMarkdown(text),
-                styleSheet: _buildToolBlockMarkdownStyleSheet(),
-                selectable: true,
-                onTapLink: (text, href, title) {
-                  if (href != null) _openLink(href);
-                },
+              child: SingleChildScrollView(
+                child: MarkdownBody(
+                  data: _sanitizeMarkdown(text),
+                  styleSheet: _buildToolBlockMarkdownStyleSheet(),
+                  selectable: true,
+                  onTapLink: (text, href, title) {
+                    if (href != null) _openLink(href);
+                  },
+                ),
               ),
             ),
         ],
@@ -1575,20 +1582,20 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   MarkdownStyleSheet _buildToolBlockMarkdownStyleSheet() {
     return MarkdownStyleSheet(
       p: TextStyle(
-        fontSize: 11,
+        fontSize: 5,
         fontFamily: 'monospace',
         color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
         height: 1.4,
       ),
       a: TextStyle(
-        fontSize: 11,
+        fontSize: 5,
         fontFamily: 'monospace',
         color: Theme.of(context).colorScheme.primary,
         decoration: TextDecoration.underline,
         decorationColor: Theme.of(context).colorScheme.primary,
       ),
       code: TextStyle(
-        fontSize: 10,
+        fontSize: 5,
         fontFamily: 'monospace',
         backgroundColor: Theme.of(
           context,

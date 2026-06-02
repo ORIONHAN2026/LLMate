@@ -34,7 +34,7 @@ class AiMessageWidget extends StatefulWidget {
 }
 
 class _AiMessageWidgetState extends State<AiMessageWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _isHovered = false;
   final sessionController = Get.find<SessionController>();
   final GlobalKey _messageKey = GlobalKey();
@@ -240,6 +240,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         else
                           // 显示消息内容（按 contentBlocks 顺序渲染）
                           _buildContentBlocks(),
+
+                        //
+
                         // 底部时间信息和操作按钮 - 悬停时显示，但保持布局高度
                         SizedBox(
                           height: 32, // 固定高度避免飘动
@@ -837,11 +840,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         // 处理content、think、tool内容
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
-        final toolChunk = chunkMap['tool'] ?? '';
+        final tool = (chunkMap['tool'] ?? '').toString();
 
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
-        accumulatedTool += toolChunk;
 
         // 按顺序构建内容块
         void appendBlock(ContentBlockType type, String text) {
@@ -854,8 +856,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
         if (thinkChunk.isNotEmpty) {
           appendBlock(ContentBlockType.think, thinkChunk);
-        } else if (toolChunk.isNotEmpty) {
-          appendBlock(ContentBlockType.tool, toolChunk);
+        } else if (tool.isNotEmpty) {
+          // 工具执行结果
+          blocks.removeWhere((b) => b.type == ContentBlockType.toolCalling);
+          appendBlock(ContentBlockType.tool, tool);
         } else if (contentChunk.isNotEmpty) {
           appendBlock(ContentBlockType.content, contentChunk);
         }
@@ -1292,10 +1296,13 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.message.think.isNotEmpty) _buildThinkBlock(widget.message.think),
+          if (widget.message.think.isNotEmpty)
+            _buildThinkBlock(widget.message.think),
           if (widget.message.content.isNotEmpty)
             MarkdownBody(
-              data: _sanitizeMarkdown(_linkifyContentPaths(widget.message.content)),
+              data: _sanitizeMarkdown(
+                _linkifyContentPaths(widget.message.content),
+              ),
               styleSheet: _buildMarkdownStyleSheet(),
               selectable: true,
               onTapLink: (text, href, title) {
@@ -1314,6 +1321,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           children.add(_buildThinkBlock(block.text));
         case ContentBlockType.tool:
           children.add(_buildToolBlock(i, block.text));
+        case ContentBlockType.toolCalling:
+          children.add(_buildToolCallingBlock(block.text));
         case ContentBlockType.content:
           children.add(
             MarkdownBody(
@@ -1340,10 +1349,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest
-            .withOpacity(0.3),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
@@ -1357,10 +1365,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             '💭 思考中...',
             style: TextStyle(
               fontSize: 10,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withOpacity(0.4),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -1369,12 +1374,43 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             text,
             style: TextStyle(
               fontSize: 11,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               fontStyle: FontStyle.italic,
               height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 工具调用中块（文字提示，工具结果返回后自动替换）
+  Widget _buildToolCallingBlock(String toolNames) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.build_outlined,
+            size: 14,
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '正在调用工具：$toolNames',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
             ),
           ),
         ],
@@ -1406,13 +1442,14 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHighest
-                    .withOpacity(0.25),
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withOpacity(0.25),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.15),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withOpacity(0.15),
                   width: 1,
                 ),
               ),
@@ -1422,10 +1459,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                   Icon(
                     Icons.build_outlined,
                     size: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.5),
                   ),
                   const SizedBox(width: 6),
                   Flexible(
@@ -1433,10 +1469,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                       description,
                       style: TextStyle(
                         fontSize: 11,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.55),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.55),
                         fontStyle: FontStyle.italic,
                       ),
                       maxLines: 1,
@@ -1449,10 +1484,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         ? CupertinoIcons.chevron_up
                         : CupertinoIcons.chevron_down,
                     size: 10,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.35),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.35),
                   ),
                 ],
               ),
@@ -1465,10 +1499,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               margin: const EdgeInsets.only(top: 4),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHighest
-                    .withOpacity(0.15),
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: MarkdownBody(
@@ -1504,10 +1537,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       code: TextStyle(
         fontSize: 10,
         fontFamily: 'monospace',
-        backgroundColor: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest
-            .withOpacity(0.3),
+        backgroundColor: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
         color: Theme.of(context).colorScheme.onSurface,
       ),
     );
@@ -1537,9 +1569,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
     return text.replaceAllMapped(pathRegex, (match) {
       final path = match.group(0)!;
-      final fileName = path.contains('/')
-          ? path.substring(path.lastIndexOf('/') + 1)
-          : path;
+      final fileName =
+          path.contains('/') ? path.substring(path.lastIndexOf('/') + 1) : path;
       return '[$fileName](file://$path)';
     });
   }

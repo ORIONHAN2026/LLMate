@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../models/chat/chat_session.dart';
+import 'file_tool_service.dart';
 import 'mcp_service.dart';
 import 'python_tool_service.dart';
 import 'skill_storage_service.dart';
@@ -21,9 +22,14 @@ class SystemToolDefinition {
 
 /// 内置系统工具注册中心。
 ///
-/// 仅保留 `python_execute`，其他文件/文档/邮件等操作均可通过 Python 脚本完成。
+/// 提供以下内置工具：
+/// - `python_execute`: 执行 Python 脚本
+/// - `file_read`: 读取文本文件
+/// - `file_write`: 写入/创建文本文件
 class SystemToolService {
   static const String pythonExecuteTool = 'python_execute';
+  static const String fileReadTool = 'file_read';
+  static const String fileWriteTool = 'file_write';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -57,6 +63,44 @@ class SystemToolService {
         },
       },
     ),
+    SystemToolDefinition(
+      name: fileReadTool,
+      description:
+          '读取文本文件内容（代码、Markdown、配置、日志等）。'
+          '支持 .dart .py .js .ts .json .yaml .md .txt 等常见文本格式。'
+          '返回文件内容、行数、大小等信息。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要读取的文件完整路径。必须是文本文件。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
+    SystemToolDefinition(
+      name: fileWriteTool,
+      description:
+          '创建或覆盖写入文本文件。自动创建父目录。'
+          '支持 .dart .py .js .ts .json .yaml .md .txt 等常见文本格式。'
+          '返回文件路径、行数、是否覆盖等信息。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要写入的文件完整路径。',
+          },
+          'content': {
+            'type': 'string',
+            'description': '要写入的文件内容。',
+          },
+        },
+        'required': ['filePath', 'content'],
+      },
+    ),
   ];
 
   static List<SystemToolDefinition> get tools => List.unmodifiable(_tools);
@@ -87,31 +131,14 @@ class SystemToolService {
     buffer.writeln('## 系统内置工具');
     buffer.writeln();
     buffer.writeln(
-      '你拥有一个客户端内置工具 `python_execute`，可以执行 Python 脚本完成各种任务：',
+      '你拥有以下客户端内置工具：',
     );
-    buffer.writeln('- 文件读写（文本/图片/音视频）');
-    buffer.writeln('- 数据分析与可视化（pandas/matplotlib）');
-    buffer.writeln('- 生成文档（Word/Excel/PDF/PPT）');
-    buffer.writeln('- 网络请求、API 调用、爬虫');
-    buffer.writeln('- 任何可以通过 Python 完成的操作');
     buffer.writeln();
-    buffer.writeln('参数 Schema:');
-    buffer.writeln('```json');
-    buffer.writeln(
-      const JsonEncoder.withIndent('  ').convert(_tools.first.parameters),
-    );
-    buffer.writeln('```');
+    buffer.writeln('- `$pythonExecuteTool`: 执行 Python 脚本（文件读写/数据分析/文档生成/爬虫等）');
+    buffer.writeln('- `$fileReadTool`: 直接读取文本文件内容');
+    buffer.writeln('- `$fileWriteTool`: 创建或覆盖写入文本文件');
     buffer.writeln();
-    buffer.writeln('调用示例:');
-    buffer.writeln('```xml');
-    buffer.writeln();
-    buffer.writeln('<invoke name="python_execute">');
-    buffer.writeln('<arguments>');
-    buffer.writeln(_exampleArguments(pythonExecuteTool));
-    buffer.writeln('</arguments>');
-    buffer.writeln('</invoke>');
-    buffer.writeln('</tool_calls>');
-    buffer.writeln('```');
+    buffer.writeln('每个工具使用标准 function calling 格式调用（调用示例见下方）。');
     buffer.writeln();
 
     // 工作目录提示
@@ -143,19 +170,12 @@ class SystemToolService {
     final messages = <Map<String, dynamic>>[];
 
     // 工具调用通用说明
+    final toolNames = _tools.map((t) => '`${t.name}`').join('、');
     messages.add({
       'role': 'system',
       'content':
-          '你拥有客户端内置工具 `python_execute`，可以直接调用 Python 脚本完成各种任务。\n'
-          '调用时必须使用 XML 格式，不要用 Markdown 代码块替代。\n'
-          '格式如下：\n'
-          '\n'
-          '<invoke name="python_execute">\n'
-          '<arguments>\n'
-          'JSON 参数\n'
-          '</arguments>\n'
-          '</invoke>\n'
-          '</tool_calls>',
+          '你拥有以下客户端内置工具：$toolNames。\n'
+          '调用时请使用标准的 function calling 机制，不要用 Markdown 代码块或 XML 替代。',
     });
 
     // 每个工具独立一条 system 消息
@@ -261,6 +281,18 @@ class SystemToolService {
           arguments: arguments,
           callId: callId,
         );
+      case fileReadTool:
+        return FileToolService.execute(
+          action: 'read',
+          arguments: arguments,
+          callId: callId,
+        );
+      case fileWriteTool:
+        return await FileToolService.execute(
+          action: 'write',
+          arguments: arguments,
+          callId: callId,
+        );
       default:
         return {
           'id': callId,
@@ -278,6 +310,15 @@ class SystemToolService {
         return const JsonEncoder.withIndent('  ').convert({
           'script': 'import pandas as pd\n\ndf = pd.read_csv("data.csv")\nprint(df.head())',
           'requirements': ['pandas'],
+        });
+      case fileReadTool:
+        return const JsonEncoder.withIndent('  ').convert({
+          'filePath': '/path/to/file.dart',
+        });
+      case fileWriteTool:
+        return const JsonEncoder.withIndent('  ').convert({
+          'filePath': '/path/to/output.md',
+          'content': '# Hello World',
         });
       default:
         return '{}';

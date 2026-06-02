@@ -5,9 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../../services/system_tool_service.dart';
 import 'base_provider.dart';
-import 'common/message_builder.dart';
 
 /// Anthropic (Claude) API 提供商
 class AnthropicProvider extends BaseLlmProvider {
@@ -37,23 +35,6 @@ class AnthropicProvider extends BaseLlmProvider {
 
   // ── 消息构建 ──
 
-  @override
-  String buildSystemPrompt(ChatSession? session) {
-    return MessageBuilder.buildSystemPrompt(model: model, session: session);
-  }
-
-  @override
-  List<Map<String, dynamic>> buildMessages({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) {
-    return MessageBuilder.buildMessages(
-      userMessage: userMessage,
-      model: model!,
-      session: session,
-    );
-  }
-
   // ── Claude 特有的请求体构建（system 独立字段） ──
 
   Map<String, dynamic> _buildClaudeRequestData({
@@ -77,8 +58,8 @@ class AnthropicProvider extends BaseLlmProvider {
       requestData['system'] = systemMessage['content'];
     }
 
-    if (session != null && session.mcpServer != null) {
-      final tools = SystemToolService.buildAllOpenAIToolsFormat(session);
+    if (session != null) {
+      final tools = buildTools(session);
       if (tools.isNotEmpty) {
         requestData['tools'] = tools;
         requestData['tool_choice'] = {'type': 'auto'};
@@ -174,8 +155,8 @@ class AnthropicProvider extends BaseLlmProvider {
         'messages': [{'role': 'user', 'content': userMessage.content}],
         'max_tokens': 4000,
       };
-      if (session != null && session.mcpServer != null) {
-        final tools = SystemToolService.buildAllOpenAIToolsFormat(session);
+      if (session != null) {
+        final tools = buildTools(session);
         if (tools.isNotEmpty) {
           requestData['tools'] = tools;
           requestData['tool_choice'] = {'type': 'auto'};
@@ -209,7 +190,6 @@ class AnthropicProvider extends BaseLlmProvider {
     return true;
   }
 
-  @override
   Map<String, dynamic> parseToolCalls(String response) {
     return {'toolCalls': <Map<String, dynamic>>[], 'cleanContent': response};
   }

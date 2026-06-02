@@ -5,10 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../../services/system_tool_service.dart';
-import '../stream_tool_call_filter.dart';
 import 'base_provider.dart';
-import 'common/message_builder.dart';
 
 /// 阿里云百炼 API 提供商
 class QwenProvider extends BaseLlmProvider {
@@ -39,57 +36,7 @@ class QwenProvider extends BaseLlmProvider {
     return client;
   }
 
-  // ── 消息构建 ──
-
-  @override
-  String buildSystemPrompt(ChatSession? session) {
-    return MessageBuilder.buildSystemPrompt(model: model, session: session);
-  }
-
-  @override
-  List<Map<String, dynamic>> buildMessages({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) {
-    return MessageBuilder.buildMessages(
-      userMessage: userMessage,
-      model: model!,
-      session: session,
-    );
-  }
-
   // ── 请求构建 ──
-
-  Map<String, dynamic> buildRequestData({
-    required List<Map<String, dynamic>> messages,
-    required bool stream,
-    ChatSession? session,
-    Map<String, dynamic>? extra,
-  }) {
-    final data = <String, dynamic>{
-      'model': model!.model,
-      'messages': messages,
-      'stream': stream,
-      'max_tokens': 4000,
-      'temperature': 0.7,
-    };
-    if (session != null) {
-      final tools = SystemToolService.buildAllOpenAIToolsFormat(session);
-      if (tools.isNotEmpty) {
-        data['tools'] = tools;
-        data['tool_choice'] = 'auto';
-      }
-    }
-    if (extra != null) data.addAll(extra);
-    return data;
-  }
-
-  Map<String, String> buildAuthHeaders() {
-    return {
-      'Authorization': 'Bearer ${model!.apiKey}',
-      'Content-Type': 'application/json',
-    };
-  }
 
   Map<String, String?> extractStreamChunk(Map<String, dynamic> data) {
     String? content;
@@ -112,7 +59,7 @@ class QwenProvider extends BaseLlmProvider {
     } catch (_) {}
     return {
       if (content != null && content.isNotEmpty) 'content': content,
-      if (reasoningContent != null && reasoningContent.isNotEmpty)
+      if (thinkEnabled && reasoningContent != null && reasoningContent.isNotEmpty)
         'think': reasoningContent,
       if (toolCall != null && toolCall.isNotEmpty && toolCall != 'null')
         'toolcall': toolCall,
@@ -134,9 +81,8 @@ class QwenProvider extends BaseLlmProvider {
     required ChatMessage userMessage,
     ChatSession? session,
   }) async* {
-    final messages = buildMessages(userMessage: userMessage, session: session);
     yield* _sendOpenAIStreamRequest(
-      messages: messages,
+      userMessage: userMessage,
       session: session,
       extra: _buildThinkingExtra(session),
     );
@@ -159,10 +105,9 @@ class QwenProvider extends BaseLlmProvider {
     required ChatMessage userMessage,
     ChatSession? session,
   }) async {
-    final messages = buildMessages(userMessage: userMessage, session: session);
     try {
       final data = await _sendOpenAINonStreamRequest(
-        messages: messages,
+        userMessage: userMessage,
         session: session,
         extra: _buildThinkingExtra(session),
       );
@@ -183,13 +128,15 @@ class QwenProvider extends BaseLlmProvider {
   // ── OpenAI 兼容请求 ──
 
   Stream<Map<String, String?>> _sendOpenAIStreamRequest({
-    required List<Map<String, dynamic>> messages,
+    ChatMessage? userMessage,
+    List<Map<String, dynamic>>? messages,
     ChatSession? session,
     Map<String, dynamic>? extra,
   }) async* {
     if (model == null) throw StateError('$providerName 提供商未配置');
     try {
       final requestData = buildRequestData(
+        userMessage: userMessage,
         messages: messages,
         stream: true,
         session: session,
@@ -214,12 +161,14 @@ class QwenProvider extends BaseLlmProvider {
   }
 
   Future<Map<String, dynamic>?> _sendOpenAINonStreamRequest({
-    required List<Map<String, dynamic>> messages,
+    ChatMessage? userMessage,
+    List<Map<String, dynamic>>? messages,
     ChatSession? session,
     Map<String, dynamic>? extra,
   }) async {
     if (model == null) throw StateError('$providerName 提供商未配置');
     final requestData = buildRequestData(
+      userMessage: userMessage,
       messages: messages,
       stream: false,
       session: session,
@@ -243,26 +192,37 @@ class QwenProvider extends BaseLlmProvider {
   ) async* {
     String buffer = '';
     final deltaAccumulator = <int, Map<String, dynamic>>{};
-    final filter = StreamToolCallFilter();
-    String accContent = '';
     bool yieldedToolProgress = false;
+    final utf8Decoder = const Utf8Decoder();
+    List<int> pendingBytes = [];
 
     await for (final chunk in stream) {
-      buffer += utf8.decode(chunk);
+      // 拼接上次残留的半截字节，防止 UTF-8 多字节字符被 chunk 切断
+      pendingBytes.addAll(chunk);
+      String? chunkString;
+      try {
+        chunkString = utf8Decoder.convert(pendingBytes);
+        pendingBytes.clear();
+      } on FormatException {
+        for (int i = pendingBytes.length - 1; i > 0; i--) {
+          try {
+            chunkString = utf8Decoder.convert(pendingBytes.sublist(0, i));
+            pendingBytes = pendingBytes.sublist(i);
+            break;
+          } on FormatException {
+            continue;
+          }
+        }
+      }
+      if (chunkString == null) continue;
+      buffer += chunkString;
       final lines = buffer.split('\n');
       buffer = lines.removeLast();
 
       for (final line in lines) {
         if (!line.trim().startsWith('data: ')) continue;
         final dataStr = line.trim().substring(6);
-        if (dataStr == '[DONE]') {
-          final flushResult = filter.flush();
-          if (flushResult.cleanText.isNotEmpty) {
-            accContent += flushResult.cleanText;
-            yield {'content': flushResult.cleanText};
-          }
-          continue;
-        }
+        if (dataStr == '[DONE]') continue;
 
         try {
           final data = jsonDecode(dataStr) as Map<String, dynamic>;
@@ -274,22 +234,7 @@ class QwenProvider extends BaseLlmProvider {
 
           final rawContent = extracted['content'];
           if (rawContent != null && rawContent.isNotEmpty) {
-            accContent += rawContent;
-            final filterResult = filter.feed(rawContent);
-            if (filterResult.cleanText.isNotEmpty)
-              yield {'content': filterResult.cleanText};
-            for (final t in filterResult.transitions) {
-              switch (t) {
-                case StreamFilterTransition.enteredBuffer:
-                  yield {'tool': '⏳ 检测到工具调用标记...'};
-                case StreamFilterTransition.confirmedTool:
-                  yield {'tool': '🔧 正在接收工具调用参数...'};
-                  yieldedToolProgress = true;
-                case StreamFilterTransition.toolClosed:
-                case StreamFilterTransition.bufferCancelled:
-                  break;
-              }
-            }
+            yield {'content': rawContent};
           }
 
           final tc = extracted['toolcall'];
@@ -311,40 +256,10 @@ class QwenProvider extends BaseLlmProvider {
               yield {'toolcall': jsonEncode(merged)};
             }
           }
-
-          if (finishReason == 'stop' && deltaAccumulator.isEmpty) {
-            final flushResult = filter.flush();
-            if (flushResult.cleanText.isNotEmpty) {
-              accContent += flushResult.cleanText;
-              yield {'content': flushResult.cleanText};
-            }
-            if (accContent.contains('<tool_calls') ||
-                accContent.contains('<|tool_calls') ||
-                accContent.contains('<｜｜DSML｜｜tool_calls')) {
-              {
-                final parsed = parseToolCalls(accContent);
-                final textCalls =
-                    parsed['toolCalls'] as List<Map<String, dynamic>>;
-                if (textCalls.isNotEmpty) {
-                  if (kDebugMode)
-                    debugPrint(
-                      '🎯 [Qwen] 从文本中解析到工具调用: ${jsonEncode(textCalls)}',
-                    );
-                  yield {'toolcall': jsonEncode(textCalls)};
-                }
-              }
-            }
-          }
         } catch (e) {
           if (kDebugMode) print('$providerName JSON 解析错误: $e');
         }
       }
-    }
-
-    final flushResult = filter.flush();
-    if (flushResult.cleanText.isNotEmpty) {
-      accContent += flushResult.cleanText;
-      yield {'content': flushResult.cleanText};
     }
   }
 
@@ -459,94 +374,7 @@ class QwenProvider extends BaseLlmProvider {
 
   // ── 工具调用解析 ──
 
-  @override
-  Map<String, dynamic> parseToolCalls(String response) {
-    final toolCalls = <Map<String, dynamic>>[];
-    String? inner;
 
-    final toolCallsRegex = RegExp(
-      r'<(?:tool_calls|\||｜|DSML)*>\s*(.*?)\s*</(?:tool_calls|\||｜|DSML)*>',
-      dotAll: true,
-    );
-    final tcMatch = toolCallsRegex.firstMatch(response);
-    if (tcMatch != null) inner = tcMatch.group(1);
-
-    if (inner == null)
-      return {'toolCalls': <Map<String, dynamic>>[], 'cleanContent': response};
-
-    inner = inner.replaceAll(RegExp(r'[\u200B-\u200F\uFEFF\u00A0\u2060]'), '');
-    inner = inner
-        .replaceAllMapped(
-          RegExp(
-            r'<(?:\||｜|DSML\s*)*(invoke|function)\b',
-            caseSensitive: false,
-          ),
-          (m) => '<invoke',
-        )
-        .replaceAllMapped(
-          RegExp(r'<(?:\||｜|DSML\s*)*parameter\b', caseSensitive: false),
-          (m) => '<parameter',
-        )
-        .replaceAllMapped(
-          RegExp(
-            r'</(?:\||｜|DSML\s*)*(invoke|function)(?:\||｜|DSML\s*)*>',
-            caseSensitive: false,
-          ),
-          (m) => '</invoke>',
-        )
-        .replaceAllMapped(
-          RegExp(
-            r'</(?:\||｜|DSML\s*)*parameter(?:\||｜|DSML\s*)*>',
-            caseSensitive: false,
-          ),
-          (m) => '</parameter>',
-        )
-        .replaceAllMapped(
-          RegExp(r'<parameter=(\S+?)(\s*)>'),
-          (m) => '<parameter name="${m.group(1)}">',
-        );
-
-    final invokeRegex = RegExp(
-      r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
-      dotAll: true,
-    );
-    for (final im in invokeRegex.allMatches(inner)) {
-      try {
-        final toolName = im.group(1)?.trim();
-        final invokeBody = im.group(2)?.trim() ?? '';
-        if (toolName == null) continue;
-        final args = <String, dynamic>{};
-        if (invokeBody.isNotEmpty) {
-          final jsonArgs = MessageBuilder.parseArgumentsJson(invokeBody);
-          if (jsonArgs != null) args.addAll(jsonArgs);
-          final paramRegex = RegExp(
-            r'<parameter\s+name="([^"]+)"[^>]*>(.*?)</parameter>',
-            dotAll: true,
-          );
-          for (final pm in paramRegex.allMatches(invokeBody)) {
-            final name = pm.group(1)?.trim();
-            final rawValue = pm.group(2)?.trim() ?? '';
-            if (name != null && name.isNotEmpty) args[name] = rawValue;
-          }
-        }
-        toolCalls.add({'name': toolName, 'arguments': args});
-      } catch (_) {}
-    }
-
-    final cleanContent =
-        response
-            .replaceAll(
-              RegExp(
-                r'<(?:tool_calls|\||｜|DSML)*>.*?</(?:tool_calls|\||｜|DSML)*>',
-                dotAll: true,
-              ),
-              '',
-            )
-            .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-            .trim();
-
-    return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
-  }
 
   // ── 验证与错误处理 ──
 

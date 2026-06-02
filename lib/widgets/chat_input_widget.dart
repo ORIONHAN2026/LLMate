@@ -675,9 +675,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     } catch (e) {
       debugPrint('处理附件时出错: $e');
 
-      final errorAttachment = attachment.copyWith(
-        content: 'ERROR_PROCESSING',
-      );
+      final errorAttachment = attachment.copyWith(content: 'ERROR_PROCESSING');
       await _updateAttachmentInSession(
         attachmentId,
         errorAttachment,
@@ -704,8 +702,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     try {
       // ── 图片：base64 编码原文 ──
-      if (const ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tiff', '.ico']
-          .contains(ext)) {
+      if (const [
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.gif',
+        '.webp',
+        '.bmp',
+        '.tiff',
+        '.ico',
+      ].contains(ext)) {
         final bytes = await file.readAsBytes();
         final base64Str = base64Encode(bytes);
         final mimeType = _imageMimeType(ext);
@@ -878,7 +884,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           if (decoded['slides'] is List) {
             for (final slide in decoded['slides'] as List) {
               if (slide is Map && slide['text'] != null) {
-                parts.add('=== 幻灯片 ${slide['slideIndex']} ===\n${slide['text']}');
+                parts.add(
+                  '=== 幻灯片 ${slide['slideIndex']} ===\n${slide['text']}',
+                );
               }
             }
           }
@@ -920,9 +928,30 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 判断是否为代码文件扩展名
   bool _isCodeExtension(String ext) {
     return const {
-      '.dart', '.java', '.kt', '.swift', '.py', '.js', '.ts', '.tsx', '.jsx',
-      '.c', '.cpp', '.h', '.hpp', '.cs', '.go', '.rs', '.rb', '.php', '.sh',
-      '.lua', '.r', '.sql', '.vue', '.svelte',
+      '.dart',
+      '.java',
+      '.kt',
+      '.swift',
+      '.py',
+      '.js',
+      '.ts',
+      '.tsx',
+      '.jsx',
+      '.c',
+      '.cpp',
+      '.h',
+      '.hpp',
+      '.cs',
+      '.go',
+      '.rs',
+      '.rb',
+      '.php',
+      '.sh',
+      '.lua',
+      '.r',
+      '.sql',
+      '.vue',
+      '.svelte',
     }.contains(ext);
   }
 
@@ -1305,8 +1334,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     !_isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(hasWorkDir ? 0.8 : 0.5)
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(
+                          hasWorkDir ? 0.8 : 0.5,
+                        )
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -1317,11 +1350,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
-                    fontWeight: hasWorkDir ? FontWeight.w500 : FontWeight.normal,
+                    fontWeight:
+                        hasWorkDir ? FontWeight.w500 : FontWeight.normal,
                     color:
                         !_isSending
-                            ? Theme.of(context).colorScheme.onSurface.withOpacity(hasWorkDir ? 0.8 : 0.5)
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                            ? Theme.of(context).colorScheme.onSurface
+                                .withOpacity(hasWorkDir ? 0.8 : 0.5)
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3),
                   ),
                 ),
               ),
@@ -1508,7 +1545,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       },
     ).then((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        try { searchController.dispose(); } catch (_) {}
+        try {
+          searchController.dispose();
+        } catch (_) {}
       });
     });
   }
@@ -2250,7 +2289,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       },
     ).then((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        try { searchController.dispose(); } catch (_) {}
+        try {
+          searchController.dispose();
+        } catch (_) {}
       });
     });
   }
@@ -2333,10 +2374,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   children: [
                     // 搜索栏 + 创建按钮
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         border: Border(
-                          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
+                          bottom: BorderSide(
+                            color: Theme.of(context).dividerColor,
+                            width: 0.5,
+                          ),
                         ),
                       ),
                       child: Row(
@@ -2344,7 +2391,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           Icon(
                             CupertinoIcons.search,
                             size: 16,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.4),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -2360,7 +2409,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 hintText: '搜索技能...',
                                 border: InputBorder.none,
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
                               ),
                             ),
                           ),
@@ -2369,20 +2420,26 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             Padding(
                               padding: const EdgeInsets.only(left: 8),
                               child: CupertinoButton(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
                                 minSize: 0,
                                 borderRadius: BorderRadius.circular(6),
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
-                                  final skillName = searchController.text.trim();
+                                  final skillName =
+                                      searchController.text.trim();
                                   if (skillName.isEmpty) return;
 
                                   try {
-                                    final newSkill = await SkillStorageService.createSkill(
-                                      name: skillName,
-                                      description: '',
-                                      prompt: '# $skillName\n\n请在此编写技能提示词...',
-                                    );
+                                    final newSkill =
+                                        await SkillStorageService.createSkill(
+                                          name: skillName,
+                                          description: '',
+                                          prompt:
+                                              '# $skillName\n\n请在此编写技能提示词...',
+                                        );
 
                                     // 刷新技能列表
                                     SkillService.reset();
@@ -2393,17 +2450,26 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     _applySkillSelection(newSkill.id);
 
                                     if (mounted) {
-                                      SnackBarUtils.showSuccess(context, '已创建技能「$skillName」并选中');
+                                      SnackBarUtils.showSuccess(
+                                        context,
+                                        '已创建技能「$skillName」并选中',
+                                      );
                                     }
                                   } catch (e) {
                                     if (mounted) {
-                                      SnackBarUtils.showError(context, '创建技能失败: $e');
+                                      SnackBarUtils.showError(
+                                        context,
+                                        '创建技能失败: $e',
+                                      );
                                     }
                                   }
                                 },
                                 child: const Text(
                                   '创建',
-                                  style: TextStyle(fontSize: 13, color: CupertinoColors.white),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: CupertinoColors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -2470,7 +2536,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       },
     ).then((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        try { searchController.dispose(); } catch (_) {}
+        try {
+          searchController.dispose();
+        } catch (_) {}
       });
     });
   }
@@ -2539,9 +2607,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             .where(
               (attachment) =>
                   (attachment.content != null &&
-                  attachment.content != 'ERROR_PROCESSING') ||
+                      attachment.content != 'ERROR_PROCESSING') ||
                   (attachment.base64Data != null &&
-                  attachment.base64Data!.isNotEmpty),
+                      attachment.base64Data!.isNotEmpty),
             )
             .toList();
 
@@ -2721,14 +2789,23 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
-        final toolChunk = chunkMap['tool'] ?? '';
+        final toolChunk = (chunkMap['tool'] ?? '').toString();
 
         // 深度思考关闭时，过滤掉 think 数据（即使模型原生产生推理内容也不展示）
         final effectiveThinkChunk = latestSession.deepThink ? thinkChunk : '';
 
+        // 处理工具调用状态标记
+        if (toolChunk == 'true') {
+          botMessage.isToolCalling = true;
+        } else if (toolChunk == 'false') {
+          botMessage.isToolCalling = false;
+        }
+
         if (contentChunk.isNotEmpty ||
             effectiveThinkChunk.isNotEmpty ||
-            toolChunk.isNotEmpty) {
+            (toolChunk.isNotEmpty &&
+                toolChunk != 'true' &&
+                toolChunk != 'false')) {
           accumulatedContent += contentChunk;
           accumulatedThink += effectiveThinkChunk;
           accumulatedTool += toolChunk;
@@ -3656,81 +3733,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  /// 处理MCP工具调用
+  /// 处理MCP工具调用（已废弃 — 工具调用现在通过流式原生 tool_calls delta 下发）
+  @Deprecated('工具调用现在通过流式原生 tool_calls delta 下发')
   Future<void> _processMcpToolCalls(
     ChatSession session,
     String aiResponse,
     String botMessageId,
   ) async {
-    try {
-      // 检查会话是否启用了MCP工具
-      if (session.mcpServer == null) {
-        debugPrint('📝 会话未启用MCP工具，跳过工具调用');
-        return;
-      }
-
-      // 检查是否配置了全局 MCP 服务
-      if (!McpService.hasGlobalMcpServices) {
-        debugPrint('📝 未配置 MCP 服务，跳过工具调用');
-        return;
-      }
-
-      debugPrint('🔍 开始分析AI响应中的工具调用...');
-
-      // MCP client 应该在会话切换/选择 MCP 时已初始化，这里只做存在性检查
-      final serviceName = session.mcpServer!.name;
-      if (McpService.getMCPClient(serviceName) == null) {
-        debugPrint('⚠️ MCP 客户端未初始化，尝试初始化: $serviceName');
-        final initializedServices =
-            await McpService.initializeSessionMcpServices(session);
-        if (initializedServices.isEmpty) {
-          debugPrint('⚠️ 无法初始化任何MCP服务');
-          return;
-        }
-        debugPrint('✅ 已初始化 ${initializedServices.length} 个MCP服务');
-      }
-
-      // 解析AI响应中的工具调用请求（通过当前会话的模型提供者）
-      final provider =
-          session.chatModel != null
-              ? LlmHub.createProvider(session.chatModel!)
-              : null;
-      final parsed = provider?.parseToolCalls(aiResponse) ?? {};
-      final toolCalls =
-          (parsed['toolCalls'] as List<Map<String, dynamic>>?) ?? [];
-      if (toolCalls.isEmpty) {
-        debugPrint('📝 AI响应中未找到工具调用请求');
-        return;
-      }
-
-      debugPrint('🔧 找到 ${toolCalls.length} 个工具调用请求');
-
-      // 显示工具调用提示
-      if (mounted) {
-        SnackBarUtils.showInfo(context, '正在执行 ${toolCalls.length} 个工具调用...');
-      }
-
-      // 执行工具调用
-      final toolResults = await McpService.executeSessionToolCalls(
-        session: session,
-        toolCalls: toolCalls,
-      );
-
-      if (toolResults.isEmpty) {
-        debugPrint('⚠️ 没有成功执行任何工具调用');
-        return;
-      }
-
-      // 将工具调用结果追加到当前AI消息中
-      await _appendMcpToolResults(session, toolResults, botMessageId);
-
-      debugPrint('✅ MCP工具调用处理完成');
-    } catch (e) {
-      debugPrint('❌ MCP工具调用处理失败: $e');
-      if (mounted) {
-        SnackBarUtils.showError(context, 'MCP工具调用失败: ${e.toString()}');
-      }
-    }
+    // 不再从正文解析工具调用
+    return;
   }
 
   /// 将MCP工具调用结果追加到AI消息中

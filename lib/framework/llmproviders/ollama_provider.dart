@@ -7,7 +7,6 @@ import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import 'base_provider.dart';
-import 'common/message_builder.dart';
 
 /// Ollama 本地模型提供商
 class OllamaProvider extends BaseLlmProvider {
@@ -35,23 +34,6 @@ class OllamaProvider extends BaseLlmProvider {
   }
 
   // ── 消息构建 ──
-
-  @override
-  String buildSystemPrompt(ChatSession? session) {
-    return MessageBuilder.buildSystemPrompt(model: model, session: session);
-  }
-
-  @override
-  List<Map<String, dynamic>> buildMessages({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) {
-    return MessageBuilder.buildMessages(
-      userMessage: userMessage,
-      model: model!,
-      session: session,
-    );
-  }
 
   // ── Ollama URL 辅助 ──
 
@@ -186,9 +168,27 @@ class OllamaProvider extends BaseLlmProvider {
     bool insideThinkTag = false;
 
     try {
+      final utf8Decoder = const Utf8Decoder();
+      List<int> pendingBytes = [];
       await for (final chunk in stream) {
         try {
-          final chunkString = utf8.decode(chunk);
+          pendingBytes.addAll(chunk);
+          String? chunkString;
+          try {
+            chunkString = utf8Decoder.convert(pendingBytes);
+            pendingBytes.clear();
+          } on FormatException {
+            for (int i = pendingBytes.length - 1; i > 0; i--) {
+              try {
+                chunkString = utf8Decoder.convert(pendingBytes.sublist(0, i));
+                pendingBytes = pendingBytes.sublist(i);
+                break;
+              } on FormatException {
+                continue;
+              }
+            }
+          }
+          if (chunkString == null) continue;
           buffer += chunkString;
 
           final lines = buffer.split('\n');
@@ -315,7 +315,6 @@ class OllamaProvider extends BaseLlmProvider {
     }
   }
 
-  @override
   Map<String, dynamic> parseToolCalls(String response) {
     return {'toolCalls': <Map<String, dynamic>>[], 'cleanContent': response};
   }

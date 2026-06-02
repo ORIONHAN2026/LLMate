@@ -169,10 +169,10 @@ final List<Map<String, dynamic>> onlineProviders = [
     'icon': CupertinoIcons.cube_box,
     'description': '高性能AI助手，支持多种任务',
     'color': const Color(0xFF3B82F6),
-    'defaultUrl': 'https://api.deepseek.com/v1',
+    'defaultUrl': 'https://api.deepseek.com',
     'models': [
-      {'id': 'deepseek-chat', 'name': 'DeepSeek-V4-Flash', 'specs': '快速响应 • 高性价比 • 通用对话', },
-      {'id': 'deepseek-reasoner', 'name': 'DeepSeek-V4-Pro', 'specs': '深度推理 • 复杂问题 • 思维链',},
+      {'id': 'deepseek-v4-flash', 'name': 'DeepSeek-V4-Flash', 'specs': '快速响应 • 高性价比 • 通用对话', },
+      {'id': 'deepseek-v4-pro', 'name': 'DeepSeek-V4-Pro', 'specs': '深度推理 • 复杂问题 • 思维链',},
     ],
   },
   {

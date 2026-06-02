@@ -5,9 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../../services/system_tool_service.dart';
 import 'base_provider.dart';
-import 'common/message_builder.dart';
 
 /// Google Gemini API 提供商
 class GeminiProvider extends BaseLlmProvider {
@@ -35,23 +33,6 @@ class GeminiProvider extends BaseLlmProvider {
   }
 
   // ── 消息构建 ──
-
-  @override
-  String buildSystemPrompt(ChatSession? session) {
-    return MessageBuilder.buildSystemPrompt(model: model, session: session);
-  }
-
-  @override
-  List<Map<String, dynamic>> buildMessages({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) {
-    return MessageBuilder.buildMessages(
-      userMessage: userMessage,
-      model: model!,
-      session: session,
-    );
-  }
 
   // ── Gemini 请求体构建（contents + systemInstruction） ──
 
@@ -81,8 +62,8 @@ class GeminiProvider extends BaseLlmProvider {
       };
     }
 
-    if (session != null && session.mcpServer != null) {
-      final tools = SystemToolService.buildAllOpenAIToolsFormat(session);
+    if (session != null) {
+      final tools = buildTools(session);
       if (tools.isNotEmpty) requestData['tools'] = tools;
     }
 
@@ -182,8 +163,8 @@ class GeminiProvider extends BaseLlmProvider {
         ],
         'generationConfig': {'maxOutputTokens': 4000, 'temperature': 0.7},
       };
-      if (session != null && session.mcpServer != null) {
-        final tools = SystemToolService.buildAllOpenAIToolsFormat(session);
+      if (session != null) {
+        final tools = buildTools(session);
         if (tools.isNotEmpty) requestData['tools'] = tools;
       }
       final response = await dio.post(
@@ -228,7 +209,6 @@ class GeminiProvider extends BaseLlmProvider {
     }
   }
 
-  @override
   Map<String, dynamic> parseToolCalls(String response) {
     return {'toolCalls': <Map<String, dynamic>>[], 'cleanContent': response};
   }

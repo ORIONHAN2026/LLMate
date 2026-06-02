@@ -5,9 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../../services/system_tool_service.dart';
 import 'base_provider.dart';
-import 'common/message_builder.dart';
 
 /// OpenAI API 提供商
 class OpenAiProvider extends BaseLlmProvider {
@@ -39,72 +37,10 @@ class OpenAiProvider extends BaseLlmProvider {
     return client;
   }
 
-  // ── 消息构建（委托给 MessageBuilder） ──
-
-  @override
-  String buildSystemPrompt(ChatSession? session) {
-    return MessageBuilder.buildSystemPrompt(
-      model: model,
-      session: session,
-    );
-  }
-
-  @override
-  List<Map<String, dynamic>> buildMessages({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) {
-    return MessageBuilder.buildMessages(
-      userMessage: userMessage,
-      model: model!,
-      session: session,
-    );
-  }
-
-  // ── 系统提示词（OpenAI 无特有提示词） ──
-
   /// OpenAI 无特有系统提示词
   String buildProviderPrompt() => '';
 
-  // ── 请求体构建 ──
-
-  Map<String, dynamic> buildRequestData({
-    required List<Map<String, dynamic>> messages,
-    required bool stream,
-    ChatSession? session,
-    Map<String, dynamic>? extra,
-  }) {
-    final data = <String, dynamic>{
-      'model': model!.model,
-      'messages': messages,
-      'stream': stream,
-      'max_tokens': 4000,
-      'temperature': 0.7,
-    };
-
-    if (session != null) {
-      final tools = buildTools(session);
-      if (tools.isNotEmpty) {
-        data['tools'] = tools;
-        data['tool_choice'] = 'auto';
-      }
-    }
-
-    if (extra != null) data.addAll(extra);
-    return data;
-  }
-
-  Map<String, String> buildAuthHeaders() {
-    return {
-      'Authorization': 'Bearer ${model!.apiKey}',
-      'Content-Type': 'application/json',
-    };
-  }
-
-  List<Map<String, dynamic>> buildTools(ChatSession? session) {
-    if (session == null) return [];
-    return SystemToolService.buildAllOpenAIToolsFormat(session);
-  }
+  // ── SSE ──
 
   // ── SSE 流处理 ──
 
@@ -132,7 +68,7 @@ class OpenAiProvider extends BaseLlmProvider {
 
     final result = {
       if (content != null && content.isNotEmpty) 'content': content,
-      if (reasoningContent != null && reasoningContent.isNotEmpty)
+      if (thinkEnabled && reasoningContent != null && reasoningContent.isNotEmpty)
         'think': reasoningContent,
       if (toolCall != null && toolCall.isNotEmpty && toolCall != 'null')
         'toolcall': toolCall,
@@ -146,8 +82,27 @@ class OpenAiProvider extends BaseLlmProvider {
 
   Stream<Map<String, String?>> processSSEStream(Stream<List<int>> stream) async* {
     String buffer = '';
+    final utf8Decoder = const Utf8Decoder();
+    List<int> pendingBytes = [];
     await for (final chunk in stream) {
-      buffer += utf8.decode(chunk);
+      pendingBytes.addAll(chunk);
+      String? chunkString;
+      try {
+        chunkString = utf8Decoder.convert(pendingBytes);
+        pendingBytes.clear();
+      } on FormatException {
+        for (int i = pendingBytes.length - 1; i > 0; i--) {
+          try {
+            chunkString = utf8Decoder.convert(pendingBytes.sublist(0, i));
+            pendingBytes = pendingBytes.sublist(i);
+            break;
+          } on FormatException {
+            continue;
+          }
+        }
+      }
+      if (chunkString == null) continue;
+      buffer += chunkString;
       final lines = buffer.split('\n');
       buffer = lines.removeLast();
       for (final line in lines) {
@@ -171,7 +126,8 @@ class OpenAiProvider extends BaseLlmProvider {
   // ── 发送请求 ──
 
   Stream<Map<String, String?>> sendOpenAIStreamRequest({
-    required List<Map<String, dynamic>> messages,
+    ChatMessage? userMessage,
+    List<Map<String, dynamic>>? messages,
     ChatSession? session,
     Map<String, dynamic>? extra,
   }) async* {
@@ -179,6 +135,7 @@ class OpenAiProvider extends BaseLlmProvider {
 
     try {
       final requestData = buildRequestData(
+        userMessage: userMessage,
         messages: messages,
         stream: true,
         session: session,
@@ -211,7 +168,8 @@ class OpenAiProvider extends BaseLlmProvider {
   }
 
   Future<Map<String, dynamic>?> sendOpenAINonStreamRequest({
-    required List<Map<String, dynamic>> messages,
+    ChatMessage? userMessage,
+    List<Map<String, dynamic>>? messages,
     ChatSession? session,
     Map<String, dynamic>? extra,
   }) async {
@@ -219,6 +177,7 @@ class OpenAiProvider extends BaseLlmProvider {
 
     try {
       final requestData = buildRequestData(
+        userMessage: userMessage,
         messages: messages,
         stream: false,
         session: session,
@@ -246,8 +205,7 @@ class OpenAiProvider extends BaseLlmProvider {
     required ChatMessage userMessage,
     ChatSession? session,
   }) async* {
-    final messages = buildMessages(userMessage: userMessage, session: session);
-    yield* sendOpenAIStreamRequest(messages: messages, session: session);
+    yield* sendOpenAIStreamRequest(userMessage: userMessage, session: session);
   }
 
   @override
@@ -263,10 +221,9 @@ class OpenAiProvider extends BaseLlmProvider {
     required ChatMessage userMessage,
     ChatSession? session,
   }) async {
-    final messages = buildMessages(userMessage: userMessage, session: session);
     try {
       final data = await sendOpenAINonStreamRequest(
-        messages: messages,
+        userMessage: userMessage,
         session: session,
       );
       if (data != null) {
@@ -294,83 +251,7 @@ class OpenAiProvider extends BaseLlmProvider {
     return true;
   }
 
-  @override
-  Map<String, dynamic> parseToolCalls(String response) {
-    final toolCalls = <Map<String, dynamic>>[];
-    String? inner;
 
-    final xmlMatch = RegExp(
-      r'<tool_calls>\s*(.*?)\s*</tool_calls>',
-      dotAll: true,
-    ).firstMatch(response);
-    if (xmlMatch != null) inner = xmlMatch.group(1);
-
-    if (inner == null) {
-      final dsmlMatch = RegExp(
-        r'<\|\s*tool_calls\s*\|>\s*(.*?)\s*</\|\s*tool_calls\s*\|>',
-        dotAll: true,
-      ).firstMatch(response);
-      if (dsmlMatch != null) {
-        inner = dsmlMatch
-            .group(1)!
-            .replaceAllMapped(
-              RegExp(r'<\|\s*(invoke|parameter)\b'),
-              (m) => '<${m.group(1)}',
-            )
-            .replaceAllMapped(
-              RegExp(r'</\|\s*(invoke|parameter)\s*\|?\s*>'),
-              (m) => '</${m.group(1)}>',
-            );
-      }
-    }
-
-    final invokeSource = inner ?? response;
-    final invokeRegex = RegExp(
-      r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
-      dotAll: true,
-    );
-    for (final im in invokeRegex.allMatches(invokeSource)) {
-      try {
-        final toolName = im.group(1)?.trim();
-        final invokeBody = im.group(2);
-        if (toolName == null || invokeBody == null) continue;
-        final args = <String, dynamic>{};
-        final jsonArgs = MessageBuilder.parseArgumentsJson(invokeBody);
-        if (jsonArgs != null) args.addAll(jsonArgs);
-        final paramRegex = RegExp(
-          r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>(.*?)</parameter>',
-          dotAll: true,
-        );
-        for (final pm in paramRegex.allMatches(invokeBody)) {
-          final name = pm.group(1)?.trim();
-          final type = pm.group(2)?.trim();
-          final rawValue = pm.group(3)?.trim() ?? '';
-          if (name != null && name.isNotEmpty) {
-            switch (type) {
-              case 'number':
-                args[name] = num.tryParse(rawValue) ?? rawValue;
-              case 'boolean':
-                args[name] = rawValue.toLowerCase() == 'true';
-              default:
-                args[name] = rawValue;
-            }
-          }
-        }
-        toolCalls.add({'name': toolName, 'arguments': args});
-      } catch (_) {}
-    }
-
-    final cleanContent = response
-        .replaceAll(RegExp(r'<tool_calls>.*?</tool_calls>', dotAll: true), '')
-        .replaceAll(
-          RegExp(r'<\|\s*tool_calls\s*\|>.*?</\|\s*tool_calls\s*\|>', dotAll: true),
-          '',
-        )
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-        .trim();
-
-    return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
-  }
 
   // ── 错误处理 ──
 

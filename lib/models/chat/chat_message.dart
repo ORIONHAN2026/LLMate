@@ -33,6 +33,7 @@ class ChatMessage {
   // 工具调用相关字段
   final String? toolName; // 工具名称（用于tool类型消息）
   final Map<String, dynamic>? toolArguments; // 工具参数（用于tool类型消息）
+  bool isToolCalling; // 是否正在调用工具，默认为 false
 
   // 性能统计字段
   final DateTime? generationStartTime; // 生成开始时间
@@ -59,6 +60,7 @@ class ChatMessage {
     this.aiStatus, // AI消息状态（可选）
     this.toolName, // 工具名称（可选）
     this.toolArguments, // 工具参数（可选）
+    this.isToolCalling = false, // 是否正在调用工具，默认为 false
     this.generationStartTime,
     this.generationEndTime,
     this.totalTokens,
@@ -117,6 +119,7 @@ class ChatMessage {
           json['toolArguments'] != null
               ? Map<String, dynamic>.from(json['toolArguments'])
               : null,
+      isToolCalling: json['isToolCalling'] ?? false,
       generationStartTime:
           json['generationStartTime'] != null
               ? DateTime.tryParse(json['generationStartTime'])
@@ -183,6 +186,7 @@ class ChatMessage {
       'aiStatus': _aiStatusToString(aiStatus),
       'toolName': toolName,
       'toolArguments': toolArguments,
+      'isToolCalling': isToolCalling,
       'generationStartTime': generationStartTime?.toIso8601String(),
       'generationEndTime': generationEndTime?.toIso8601String(),
       'totalTokens': totalTokens,
@@ -234,6 +238,7 @@ class ChatMessage {
     AiMessageStatus? aiStatus, // AI消息状态
     String? toolName,
     Map<String, dynamic>? toolArguments,
+    bool? isToolCalling,
     DateTime? generationStartTime,
     DateTime? generationEndTime,
     int? totalTokens,
@@ -258,6 +263,7 @@ class ChatMessage {
       aiStatus: aiStatus ?? this.aiStatus, // AI消息状态
       toolName: toolName ?? this.toolName,
       toolArguments: toolArguments ?? this.toolArguments,
+      isToolCalling: isToolCalling ?? this.isToolCalling,
       generationStartTime: generationStartTime ?? this.generationStartTime,
       generationEndTime: generationEndTime ?? this.generationEndTime,
       totalTokens: totalTokens ?? this.totalTokens,

@@ -63,6 +63,7 @@ class LlmClient {
     : _session = session,
       _provider = LlmHub._resolve(session.chatModel!) {
     _provider.configure(session.chatModel!);
+    _provider.applySessionSettings(session);
   }
 
   ChatModel? get model => _session.chatModel;
@@ -131,7 +132,8 @@ class LlmClient {
         if (_cancelled) return;
         final tc = chunk['toolcall'];
         if (tc != null && tc.isNotEmpty) {
-          if (kDebugMode) debugPrint('📤 [LLMChat] toolcall: $tc');
+          // 收到工具调用，通知 UI 显示"正在执行工具"
+          yield {'tool': 'true'};
           final parsed = _parseToolCallChunk(tc);
           if (parsed != null && parsed.isNotEmpty) {
             final isNativeDelta = parsed.any(
@@ -160,12 +162,6 @@ class LlmClient {
           if (kDebugMode) debugPrint('📤 [LLMChat] think: $t');
           yield {'think': t};
         }
-
-        final toolProgress = chunk['tool'] ?? '';
-        if (toolProgress.isNotEmpty) {
-          if (kDebugMode) debugPrint('📤 [LLMChat] tool: $toolProgress');
-          yield {'tool': toolProgress};
-        }
       }
 
       // 无工具调用或已取消 → 结束
@@ -179,9 +175,10 @@ class LlmClient {
 
       toolIteration++;
 
+      final toolNames = parsedCalls.map((c) => c['name'] ?? '?').join(', ');
+
       if (kDebugMode) {
-        final names = parsedCalls.map((c) => c['name'] ?? '?').join(', ');
-        debugPrint('🔄 [LLMChat] 工具调用第 $toolIteration 轮: $names');
+        debugPrint('🔄 [LLMChat] 工具调用第 $toolIteration 轮: $toolNames');
       }
 
       // 从累积文本中剥离工具调用标签，得到干净的正文内容
@@ -229,6 +226,9 @@ class LlmClient {
 
         yield {'tool': buf.toString().trim()};
       }
+
+      // 工具执行完毕，通知 UI 隐藏"正在执行工具"
+      yield {'tool': 'false'};
 
       // 追加 assistant(tool_calls) 消息
       messages.add({
@@ -290,9 +290,10 @@ class LlmClient {
       if (filePath == null) return resultText;
 
       // 提取文件名用于链接显示
-      final fileName = filePath.contains('/')
-          ? filePath.substring(filePath.lastIndexOf('/') + 1)
-          : filePath;
+      final fileName =
+          filePath.contains('/')
+              ? filePath.substring(filePath.lastIndexOf('/') + 1)
+              : filePath;
 
       // 将路径字段替换为 Markdown 链接
       decoded['path'] = '[$fileName](file://$filePath)';
@@ -322,9 +323,8 @@ class LlmClient {
     );
     return text.replaceAllMapped(pathPattern, (match) {
       final path = match.group(0)!;
-      final fileName = path.contains('/')
-          ? path.substring(path.lastIndexOf('/') + 1)
-          : path;
+      final fileName =
+          path.contains('/') ? path.substring(path.lastIndexOf('/') + 1) : path;
       return '[$fileName](file://$path)';
     });
   }

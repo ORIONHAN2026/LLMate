@@ -5,9 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../../services/system_tool_service.dart';
 import 'base_provider.dart';
-import 'common/message_builder.dart';
 
 /// 智谱AI API 提供商
 class ZhipuProvider extends BaseLlmProvider {
@@ -36,54 +34,6 @@ class ZhipuProvider extends BaseLlmProvider {
     return client;
   }
 
-  @override
-  String buildSystemPrompt(ChatSession? session) {
-    return MessageBuilder.buildSystemPrompt(model: model, session: session);
-  }
-
-  @override
-  List<Map<String, dynamic>> buildMessages({
-    required ChatMessage userMessage,
-    ChatSession? session,
-  }) {
-    return MessageBuilder.buildMessages(
-      userMessage: userMessage,
-      model: model!,
-      session: session,
-    );
-  }
-
-  Map<String, dynamic> buildRequestData({
-    required List<Map<String, dynamic>> messages,
-    required bool stream,
-    ChatSession? session,
-    Map<String, dynamic>? extra,
-  }) {
-    final data = <String, dynamic>{
-      'model': model!.model,
-      'messages': messages,
-      'stream': stream,
-      'max_tokens': 4000,
-      'temperature': 0.7,
-    };
-    if (session != null) {
-      final tools = SystemToolService.buildAllOpenAIToolsFormat(session);
-      if (tools.isNotEmpty) {
-        data['tools'] = tools;
-        data['tool_choice'] = 'auto';
-      }
-    }
-    if (extra != null) data.addAll(extra);
-    return data;
-  }
-
-  Map<String, String> buildAuthHeaders() {
-    return {
-      'Authorization': 'Bearer ${model!.apiKey}',
-      'Content-Type': 'application/json',
-    };
-  }
-
   Map<String, String?> extractStreamChunk(Map<String, dynamic> data) {
     String? content;
     String? toolCall;
@@ -109,8 +59,27 @@ class ZhipuProvider extends BaseLlmProvider {
 
   Stream<Map<String, String?>> _processSSEStream(Stream<List<int>> stream) async* {
     String buffer = '';
+    final utf8Decoder = const Utf8Decoder();
+    List<int> pendingBytes = [];
     await for (final chunk in stream) {
-      buffer += utf8.decode(chunk);
+      pendingBytes.addAll(chunk);
+      String? chunkString;
+      try {
+        chunkString = utf8Decoder.convert(pendingBytes);
+        pendingBytes.clear();
+      } on FormatException {
+        for (int i = pendingBytes.length - 1; i > 0; i--) {
+          try {
+            chunkString = utf8Decoder.convert(pendingBytes.sublist(0, i));
+            pendingBytes = pendingBytes.sublist(i);
+            break;
+          } on FormatException {
+            continue;
+          }
+        }
+      }
+      if (chunkString == null) continue;
+      buffer += chunkString;
       final lines = buffer.split('\n');
       buffer = lines.removeLast();
       for (final line in lines) {
@@ -130,9 +99,8 @@ class ZhipuProvider extends BaseLlmProvider {
     ChatSession? session,
   }) async* {
     if (model == null) throw StateError('$providerName 提供商未配置');
-    final messages = buildMessages(userMessage: userMessage, session: session);
     try {
-      final requestData = buildRequestData(messages: messages, stream: true, session: session);
+      final requestData = buildRequestData(userMessage: userMessage, stream: true, session: session);
       final response = await dio.post<ResponseBody>(
         model!.apiUrl!,
         options: Options(headers: buildAuthHeaders(), responseType: ResponseType.stream),
@@ -177,9 +145,8 @@ class ZhipuProvider extends BaseLlmProvider {
     ChatSession? session,
   }) async {
     if (model == null) throw StateError('$providerName 提供商未配置');
-    final messages = buildMessages(userMessage: userMessage, session: session);
     try {
-      final requestData = buildRequestData(messages: messages, stream: false, session: session);
+      final requestData = buildRequestData(userMessage: userMessage, stream: false, session: session);
       final response = await dio.post(
         model!.apiUrl!,
         options: Options(headers: buildAuthHeaders()),
@@ -219,28 +186,7 @@ class ZhipuProvider extends BaseLlmProvider {
     }
   }
 
-  @override
-  Map<String, dynamic> parseToolCalls(String response) {
-    final toolCalls = <Map<String, dynamic>>[];
-    final xmlMatch = RegExp(r'<tool_calls>\s*(.*?)\s*</tool_calls>', dotAll: true).firstMatch(response);
-    final inner = xmlMatch?.group(1) ?? response;
-    final invokeRegex = RegExp(r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>', dotAll: true);
-    for (final im in invokeRegex.allMatches(inner)) {
-      try {
-        final toolName = im.group(1)?.trim();
-        final invokeBody = im.group(2);
-        if (toolName == null || invokeBody == null) continue;
-        final args = <String, dynamic>{};
-        final jsonArgs = MessageBuilder.parseArgumentsJson(invokeBody);
-        if (jsonArgs != null) args.addAll(jsonArgs);
-        toolCalls.add({'name': toolName, 'arguments': args});
-      } catch (_) {}
-    }
-    final cleanContent = response
-        .replaceAll(RegExp(r'<tool_calls>.*?</tool_calls>', dotAll: true), '')
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
-    return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
-  }
+
 
   String handleApiError(dynamic error) {
     final es = error.toString();

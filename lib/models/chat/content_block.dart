@@ -1,5 +1,5 @@
 /// 消息内容块的类型
-enum ContentBlockType { think, tool, content }
+enum ContentBlockType { think, tool, toolCalling, content }
 
 /// 按时间顺序记录的消息内容块
 /// 用于在 UI 中按实际生成的顺序展示 思考/工具执行/正文

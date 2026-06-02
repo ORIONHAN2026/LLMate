@@ -288,6 +288,18 @@ class DeepSeekProvider extends BaseLlmProvider {
             accContent += flushResult.cleanText;
             yield {'content': flushResult.cleanText};
           }
+          // 兼容某些 API 先发 [DONE] 后发 finish_reason 的情况
+          if (!isFinished && accContent.isNotEmpty) {
+            isFinished = true;
+            final parsed = parseToolCalls(accContent);
+            final textCalls = parsed['toolCalls'] as List<Map<String, dynamic>>;
+            if (textCalls.isNotEmpty) {
+              if (kDebugMode) {
+                debugPrint('🔧 [DONE] 从文本中检测到 tool_calls: ${jsonEncode(textCalls)}');
+              }
+              yield {'toolcall': jsonEncode(textCalls)};
+            }
+          }
           continue;
         }
 
@@ -326,6 +338,7 @@ class DeepSeekProvider extends BaseLlmProvider {
                 case StreamFilterTransition.bufferCancelled:
                   yield {'tool': '✓ 非工具调用，已恢复正文输出'};
                 case StreamFilterTransition.toolClosed:
+                  yield {'tool': '✅ 工具调用完成，正在解析...'};
                   break;
               }
             }
@@ -370,22 +383,39 @@ class DeepSeekProvider extends BaseLlmProvider {
     final toolCalls = <Map<String, dynamic>>[];
     String? inner;
 
+    // 1) 尝试匹配外层 <tool_calls> 包装器
     final toolCallsRegex = RegExp(
-      r'<(?:tool_calls|\||｜|DSML)*>\s*(.*?)\s*</(?:tool_calls|\||｜|DSML)*>',
+      r'<(?:tool_calls|\||\uff5c|DSML)*>\s*(.*?)\s*</(?:tool_calls|\||\uff5c|DSML)*>',
       dotAll: true,
     );
     final tcMatch = toolCallsRegex.firstMatch(response);
-    if (tcMatch != null) inner = tcMatch.group(1);
+    if (tcMatch != null) {
+      inner = tcMatch.group(1);
+      if (kDebugMode) {
+        debugPrint('\u{1F4E6} [DeepSeek] 匹配到外层 <tool_calls> 包装器');
+      }
+    }
+
+    // 2) 如果没有外层包装器，直接在整个 response 中查找 <invoke> 标签
+    if (inner == null) {
+      // 检查是否有 <invoke 标签（不带外层包装）
+      if (RegExp(r'<\s*invoke\b', caseSensitive: false).hasMatch(response)) {
+        inner = response;
+        if (kDebugMode) {
+          debugPrint('\u26A0\uFE0F [DeepSeek] 无外层 <tool_calls> 包装，在整个响应中查找 <invoke>');
+        }
+      }
+    }
 
     if (inner != null) {
       inner = inner.replaceAll(RegExp(r'[\u200B-\u200F\uFEFF\u00A0\u2060]'), '');
       inner = inner
           .replaceAllMapped(
-            RegExp(r'<(?:\||｜|DSML\s*)*(invoke|parameter)\b', caseSensitive: false),
+            RegExp(r'<(?:\||\uff5c|DSML\s*)*(invoke|parameter)\b', caseSensitive: false),
             (m) => '<${m.group(1)}',
           )
           .replaceAllMapped(
-            RegExp(r'</(?:\||｜|DSML\s*)*(invoke|parameter)(?:\||｜|DSML\s*)*>', caseSensitive: false),
+            RegExp(r'</(?:\||\uff5c|DSML\s*)*(invoke|parameter)(?:\||\uff5c|DSML\s*)*>', caseSensitive: false),
             (m) => '</${m.group(1)}>',
           );
 
@@ -420,12 +450,19 @@ class DeepSeekProvider extends BaseLlmProvider {
             }
           }
           toolCalls.add({'name': toolName, 'arguments': args});
+          if (kDebugMode) {
+            debugPrint('\u2705 [DeepSeek] 解析到工具调用: $toolName($args)');
+          }
         } catch (_) {}
       }
     }
 
+    if (toolCalls.isEmpty && kDebugMode) {
+      debugPrint('\u274C [DeepSeek] parseToolCalls 未找到工具调用, response 长度: ${response.length}');
+    }
+
     final cleanContent = response
-        .replaceAll(RegExp(r'<(?:tool_calls|\||｜|DSML)*>.*?</(?:tool_calls|\||｜|DSML)*>', dotAll: true), '')
+        .replaceAll(RegExp(r'<(?:tool_calls|\||\uff5c|DSML)*>.*?</(?:tool_calls|\||\uff5c|DSML)*>', dotAll: true), '')
         .replaceAll(RegExp(r'\n{3,}'), '\n\n')
         .trim();
 

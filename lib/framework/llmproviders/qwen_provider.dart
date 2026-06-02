@@ -31,7 +31,9 @@ class QwenProvider extends BaseLlmProvider {
 
   Dio get dio {
     final client = Dio();
-    client.options.connectTimeout = const Duration(milliseconds: BaseLlmProvider.defaultTimeout);
+    client.options.connectTimeout = const Duration(
+      milliseconds: BaseLlmProvider.defaultTimeout,
+    );
     client.options.receiveTimeout = const Duration(minutes: 5);
     client.options.sendTimeout = const Duration(minutes: 5);
     return client;
@@ -102,15 +104,18 @@ class QwenProvider extends BaseLlmProvider {
         if (delta != null) {
           content = delta['content'] as String?;
           reasoningContent = delta['reasoning_content'] as String?;
-          if (delta['tool_calls'] != null) toolCall = jsonEncode(delta['tool_calls']);
+          if (delta['tool_calls'] != null)
+            toolCall = jsonEncode(delta['tool_calls']);
         }
         finishReason = choice['finish_reason'] as String?;
       }
     } catch (_) {}
     return {
       if (content != null && content.isNotEmpty) 'content': content,
-      if (reasoningContent != null && reasoningContent.isNotEmpty) 'think': reasoningContent,
-      if (toolCall != null && toolCall.isNotEmpty && toolCall != 'null') 'toolcall': toolCall,
+      if (reasoningContent != null && reasoningContent.isNotEmpty)
+        'think': reasoningContent,
+      if (toolCall != null && toolCall.isNotEmpty && toolCall != 'null')
+        'toolcall': toolCall,
       if (finishReason != null) 'finish_reason': finishReason,
     };
   }
@@ -192,7 +197,10 @@ class QwenProvider extends BaseLlmProvider {
       );
       final response = await dio.post<ResponseBody>(
         model!.apiUrl!,
-        options: Options(headers: buildAuthHeaders(), responseType: ResponseType.stream),
+        options: Options(
+          headers: buildAuthHeaders(),
+          responseType: ResponseType.stream,
+        ),
         data: requestData,
       );
       if (response.statusCode == 200 && response.data != null) {
@@ -268,7 +276,8 @@ class QwenProvider extends BaseLlmProvider {
           if (rawContent != null && rawContent.isNotEmpty) {
             accContent += rawContent;
             final filterResult = filter.feed(rawContent);
-            if (filterResult.cleanText.isNotEmpty) yield {'content': filterResult.cleanText};
+            if (filterResult.cleanText.isNotEmpty)
+              yield {'content': filterResult.cleanText};
             for (final t in filterResult.transitions) {
               switch (t) {
                 case StreamFilterTransition.enteredBuffer:
@@ -297,7 +306,8 @@ class QwenProvider extends BaseLlmProvider {
           if (finishReason == 'tool_calls') {
             final merged = _finalizeMergedCalls(deltaAccumulator);
             if (merged.isNotEmpty) {
-              if (kDebugMode) debugPrint('🎯 [Qwen] 产出原生工具调用: ${jsonEncode(merged)}');
+              if (kDebugMode)
+                debugPrint('🎯 [Qwen] 产出原生工具调用: ${jsonEncode(merged)}');
               yield {'toolcall': jsonEncode(merged)};
             }
           }
@@ -311,11 +321,17 @@ class QwenProvider extends BaseLlmProvider {
             if (accContent.contains('<tool_calls') ||
                 accContent.contains('<|tool_calls') ||
                 accContent.contains('<｜｜DSML｜｜tool_calls')) {
-              final parsed = parseToolCalls(accContent);
-              final textCalls = parsed['toolCalls'] as List<Map<String, dynamic>>;
-              if (textCalls.isNotEmpty) {
-                if (kDebugMode) debugPrint('🎯 [Qwen] 从文本中解析到工具调用: ${jsonEncode(textCalls)}');
-                yield {'toolcall': jsonEncode(textCalls)};
+              {
+                final parsed = parseToolCalls(accContent);
+                final textCalls =
+                    parsed['toolCalls'] as List<Map<String, dynamic>>;
+                if (textCalls.isNotEmpty) {
+                  if (kDebugMode)
+                    debugPrint(
+                      '🎯 [Qwen] 从文本中解析到工具调用: ${jsonEncode(textCalls)}',
+                    );
+                  yield {'toolcall': jsonEncode(textCalls)};
+                }
               }
             }
           }
@@ -332,12 +348,19 @@ class QwenProvider extends BaseLlmProvider {
     }
   }
 
-  void _accumulateDelta(Map<int, Map<String, dynamic>> accumulator, String toolCallsJson) {
+  void _accumulateDelta(
+    Map<int, Map<String, dynamic>> accumulator,
+    String toolCallsJson,
+  ) {
     List<Map<String, dynamic>>? parsed;
     try {
       final decoded = jsonDecode(toolCallsJson);
       if (decoded is List) {
-        parsed = decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+        parsed =
+            decoded
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
       } else if (decoded is Map) {
         parsed = [Map<String, dynamic>.from(decoded)];
       }
@@ -349,12 +372,15 @@ class QwenProvider extends BaseLlmProvider {
     for (int i = 0; i < parsed.length; i++) {
       final delta = parsed[i];
       final index = (delta['index'] as int?) ?? i;
-      final current = accumulator.putIfAbsent(index, () => {
-        'index': index,
-        'id': delta['id'],
-        'type': delta['type'] ?? 'function',
-        'function': {'name': '', 'arguments': ''},
-      });
+      final current = accumulator.putIfAbsent(
+        index,
+        () => {
+          'index': index,
+          'id': delta['id'],
+          'type': delta['type'] ?? 'function',
+          'function': {'name': '', 'arguments': ''},
+        },
+      );
       final deltaId = delta['id'];
       if (deltaId is String && deltaId.isNotEmpty) current['id'] = deltaId;
       if (delta['type'] != null) current['type'] = delta['type'];
@@ -362,17 +388,23 @@ class QwenProvider extends BaseLlmProvider {
       if (deltaFunction is Map) {
         final curFn = Map<String, dynamic>.from(current['function'] as Map);
         final n = deltaFunction['name'];
-        if (n is String && n.isNotEmpty) curFn['name'] = '${curFn['name'] ?? ''}$n';
+        if (n is String && n.isNotEmpty)
+          curFn['name'] = '${curFn['name'] ?? ''}$n';
         final a = deltaFunction['arguments'];
         if (a is String && a.isNotEmpty) {
-          curFn['arguments'] = _concatJsonFragments(curFn['arguments'] as String? ?? '', a);
+          curFn['arguments'] = _concatJsonFragments(
+            curFn['arguments'] as String? ?? '',
+            a,
+          );
         }
         current['function'] = curFn;
       }
     }
   }
 
-  List<Map<String, dynamic>> _finalizeMergedCalls(Map<int, Map<String, dynamic>> accumulator) {
+  List<Map<String, dynamic>> _finalizeMergedCalls(
+    Map<int, Map<String, dynamic>> accumulator,
+  ) {
     final keys = accumulator.keys.toList()..sort();
     final result = <Map<String, dynamic>>[];
     for (final k in keys) {
@@ -384,17 +416,19 @@ class QwenProvider extends BaseLlmProvider {
       final raw = (fn['arguments'] ?? '{}').toString();
       Map<String, dynamic> args;
       try {
-        args = raw.trim().isEmpty
-            ? <String, dynamic>{}
-            : (jsonDecode(raw) is Map
-                ? Map<String, dynamic>.from(jsonDecode(raw))
-                : <String, dynamic>{'value': jsonDecode(raw)});
+        args =
+            raw.trim().isEmpty
+                ? <String, dynamic>{}
+                : (jsonDecode(raw) is Map
+                    ? Map<String, dynamic>.from(jsonDecode(raw))
+                    : <String, dynamic>{'value': jsonDecode(raw)});
       } catch (_) {
         args = _repairAndParseJson(raw);
       }
-      final cid = (call['id'] is String && (call['id'] as String).isNotEmpty)
-          ? call['id'] as String
-          : 'call_$k';
+      final cid =
+          (call['id'] is String && (call['id'] as String).isNotEmpty)
+              ? call['id'] as String
+              : 'call_$k';
       result.add({'id': cid, 'name': name, 'arguments': args});
     }
     return result;
@@ -403,7 +437,8 @@ class QwenProvider extends BaseLlmProvider {
   static String _concatJsonFragments(String prev, String next) {
     if (prev.isEmpty) return next;
     if (next.isEmpty) return prev;
-    if (prev.endsWith('"') && next.startsWith('"') &&
+    if (prev.endsWith('"') &&
+        next.startsWith('"') &&
         (prev.length < 2 || prev[prev.length - 2] != '\\')) {
       return '$prev${next.substring(1)}';
     }
@@ -436,12 +471,16 @@ class QwenProvider extends BaseLlmProvider {
     final tcMatch = toolCallsRegex.firstMatch(response);
     if (tcMatch != null) inner = tcMatch.group(1);
 
-    if (inner == null) return {'toolCalls': <Map<String, dynamic>>[], 'cleanContent': response};
+    if (inner == null)
+      return {'toolCalls': <Map<String, dynamic>>[], 'cleanContent': response};
 
     inner = inner.replaceAll(RegExp(r'[\u200B-\u200F\uFEFF\u00A0\u2060]'), '');
     inner = inner
         .replaceAllMapped(
-          RegExp(r'<(?:\||｜|DSML\s*)*(invoke|function)\b', caseSensitive: false),
+          RegExp(
+            r'<(?:\||｜|DSML\s*)*(invoke|function)\b',
+            caseSensitive: false,
+          ),
           (m) => '<invoke',
         )
         .replaceAllMapped(
@@ -449,11 +488,17 @@ class QwenProvider extends BaseLlmProvider {
           (m) => '<parameter',
         )
         .replaceAllMapped(
-          RegExp(r'</(?:\||｜|DSML\s*)*(invoke|function)(?:\||｜|DSML\s*)*>', caseSensitive: false),
+          RegExp(
+            r'</(?:\||｜|DSML\s*)*(invoke|function)(?:\||｜|DSML\s*)*>',
+            caseSensitive: false,
+          ),
           (m) => '</invoke>',
         )
         .replaceAllMapped(
-          RegExp(r'</(?:\||｜|DSML\s*)*parameter(?:\||｜|DSML\s*)*>', caseSensitive: false),
+          RegExp(
+            r'</(?:\||｜|DSML\s*)*parameter(?:\||｜|DSML\s*)*>',
+            caseSensitive: false,
+          ),
           (m) => '</parameter>',
         )
         .replaceAllMapped(
@@ -461,7 +506,10 @@ class QwenProvider extends BaseLlmProvider {
           (m) => '<parameter name="${m.group(1)}">',
         );
 
-    final invokeRegex = RegExp(r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>', dotAll: true);
+    final invokeRegex = RegExp(
+      r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
+      dotAll: true,
+    );
     for (final im in invokeRegex.allMatches(inner)) {
       try {
         final toolName = im.group(1)?.trim();
@@ -485,10 +533,17 @@ class QwenProvider extends BaseLlmProvider {
       } catch (_) {}
     }
 
-    final cleanContent = response
-        .replaceAll(RegExp(r'<(?:tool_calls|\||｜|DSML)*>.*?</(?:tool_calls|\||｜|DSML)*>', dotAll: true), '')
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-        .trim();
+    final cleanContent =
+        response
+            .replaceAll(
+              RegExp(
+                r'<(?:tool_calls|\||｜|DSML)*>.*?</(?:tool_calls|\||｜|DSML)*>',
+                dotAll: true,
+              ),
+              '',
+            )
+            .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+            .trim();
 
     return {'toolCalls': toolCalls, 'cleanContent': cleanContent};
   }
@@ -504,7 +559,9 @@ class QwenProvider extends BaseLlmProvider {
         options: Options(headers: buildAuthHeaders()),
         data: {
           'model': model!.model,
-          'messages': [{'role': 'user', 'content': '你好'}],
+          'messages': [
+            {'role': 'user', 'content': '你好'},
+          ],
           'max_tokens': 5,
         },
       );

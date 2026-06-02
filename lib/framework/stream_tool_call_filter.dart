@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 /// 流式工具调用拦截状态机
 ///
 /// 在 LLM 流式输出过程中实时拦截工具调用标签（如 `<tool_calls>`、`<|tool_calls|>`、
-/// `<｜｜DSML｜｜tool_calls>` 等），防止这些标签内容泄露到前端 UI。
+/// `<\uff5ctool_calls>` 等），防止这些标签内容泄露到前端 UI。
 ///
 /// 三种核心状态：
 /// - [StreamFilterState.text]：正文状态，正常放行
@@ -21,25 +21,47 @@ class StreamToolCallFilter {
 
   /// 需要拦截的标签开头模式（按长度降序排列，优先匹配更长的模式）
   static const List<_TagPattern> _openPatterns = [
-    // <｜｜DSML｜｜tool_calls> 系列（全角竖线 + DSML）
-    _TagPattern('<｜｜DSML｜｜tool_calls>'),
-    // <|tool_calls|> 系列
+    // <\uff5ctool_calls> 系列（全角竖线 + DSML，含内层标签）
+    _TagPattern('<\uff5ctool_calls>'),
+    _TagPattern('<\uff5cinvoke'),
+    _TagPattern('<\uff5cparameter'),
+    _TagPattern('<\uff5carguments'),
+    // <|tool_calls|> 系列（含内层标签）
     _TagPattern('<|tool_calls|>'),
+    _TagPattern('<|invoke'),
+    _TagPattern('<|parameter'),
+    _TagPattern('<|arguments'),
     // <tool_calls> 标准 XML
     _TagPattern('<tool_calls'),
     // <|tool_call|> 变体
     _TagPattern('<|tool_call|>'),
     // <tool_call 变体
     _TagPattern('<tool_call'),
+    // 内层标签（模型可能不包外层 tool_calls，直接输出）
+    _TagPattern('<invoke'),
+    _TagPattern('<parameter'),
+    _TagPattern('<arguments'),
   ];
 
   /// 闭合标签模式
   static const List<_TagPattern> _closePatterns = [
-    _TagPattern('</｜｜DSML｜｜tool_calls>'),
+    // 全角竖线 / DSML
+    _TagPattern('</\uff5ctool_calls>'),
+    _TagPattern('</\uff5cinvoke>'),
+    _TagPattern('</\uff5cparameter>'),
+    _TagPattern('</\uff5carguments>'),
+    // 管道符分隔
     _TagPattern('</|tool_calls|>'),
-    _TagPattern('</tool_calls>'),
     _TagPattern('</|tool_call|>'),
+    _TagPattern('</|invoke|>'),
+    _TagPattern('</|parameter|>'),
+    _TagPattern('</|arguments|>'),
+    // 标准 XML
+    _TagPattern('</tool_calls>'),
     _TagPattern('</tool_call'),
+    _TagPattern('</invoke>'),
+    _TagPattern('</parameter>'),
+    _TagPattern('</arguments>'),
   ];
 
   /// 闭合标签的最大长度（用于 TOOL 状态下的滑动窗口）
@@ -109,7 +131,7 @@ class StreamToolCallFilter {
       _holdBuffer.clear();
       _transition(StreamFilterTransition.confirmedTool);
       if (kDebugMode) {
-        debugPrint('🎯 [StreamFilter] 检测到工具调用标签: $held');
+        debugPrint('\u{1F3AF} [StreamFilter] 检测到工具调用标签: $held');
       }
       return;
     }
@@ -166,7 +188,7 @@ class StreamToolCallFilter {
         _holdBuffer.clear();
         _transition(StreamFilterTransition.toolClosed);
         if (kDebugMode) {
-          debugPrint('🎯 [StreamFilter] 工具调用标签闭合，恢复正文状态');
+          debugPrint('\u{1F3AF} [StreamFilter] 工具调用标签闭合，恢复正文状态');
         }
         return;
       }

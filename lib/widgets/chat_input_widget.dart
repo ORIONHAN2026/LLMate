@@ -2828,6 +2828,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     } catch (e) {
       rethrow;
     } finally {
+      // 一律重置发送状态，避免 stop 按钮残留
+      try {
+        final finalSession = sessionController.currentSession.value;
+        if (finalSession?.isSending == true) {
+          sessionController.updateSession(
+            finalSession!.copyWith(isSending: false),
+          );
+        }
+        if (_streamingMessageIds.isNotEmpty) {
+          setState(() {
+            _streamingMessageIds.clear();
+          });
+          widget.onStreamingChanged?.call(_streamingMessageIds);
+        }
+      } catch (_) {}
+
       // 释放客户端资源
       try {
         client?.dispose();

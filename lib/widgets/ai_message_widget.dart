@@ -953,6 +953,14 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         await sessionController.updateSession(finalSession);
       }
 
+      // 无论是否找到 bot 消息，都必须重置发送状态
+      final finalCheckSession = sessionController.currentSession.value;
+      if (finalCheckSession?.isSending == true) {
+        await sessionController.updateSession(
+          finalCheckSession!.copyWith(isSending: false),
+        );
+      }
+
       // 强制触发UI更新 - 关键修复
       if (mounted) {
         widget.onUpdate?.call();

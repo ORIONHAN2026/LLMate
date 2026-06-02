@@ -960,48 +960,48 @@ abstract class BaseLlmProvider {
     }
 
     // 3) 解析 <invoke> 块
-    if (inner != null) {
-      final invokeRegex = RegExp(
-        r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
-        dotAll: true,
-      );
-      for (final im in invokeRegex.allMatches(inner)) {
-        try {
-          final toolName = im.group(1)?.trim();
-          final invokeBody = im.group(2);
-          if (toolName == null || invokeBody == null) continue;
+    // 无论是否有 /DSML 包裹，都尝试直接从响应中解析 <invoke>
+    final invokeSource = inner ?? response;
+    final invokeRegex = RegExp(
+      r'<invoke\s+name="([^"]+)"[^>]*>(.*?)</invoke>',
+      dotAll: true,
+    );
+    for (final im in invokeRegex.allMatches(invokeSource)) {
+      try {
+        final toolName = im.group(1)?.trim();
+        final invokeBody = im.group(2);
+        if (toolName == null || invokeBody == null) continue;
 
-          final args = <String, dynamic>{};
-          final jsonArgs = _parseArgumentsJsonBlock(invokeBody);
-          if (jsonArgs != null) {
-            args.addAll(jsonArgs);
-          }
+        final args = <String, dynamic>{};
+        final jsonArgs = _parseArgumentsJsonBlock(invokeBody);
+        if (jsonArgs != null) {
+          args.addAll(jsonArgs);
+        }
 
-          final paramRegex = RegExp(
-            r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>(.*?)</parameter>',
-            dotAll: true,
-          );
-          for (final pm in paramRegex.allMatches(invokeBody)) {
-            final name = pm.group(1)?.trim();
-            final type = pm.group(2)?.trim();
-            final rawValue = pm.group(3)?.trim() ?? '';
-            if (name != null && name.isNotEmpty) {
-              switch (type) {
-                case 'number':
-                  args[name] = num.tryParse(rawValue) ?? rawValue;
-                case 'boolean':
-                  args[name] = rawValue.toLowerCase() == 'true';
-                default:
-                  args[name] = rawValue;
-              }
+        final paramRegex = RegExp(
+          r'<parameter\s+name="([^"]+)"\s+(\w+)="[^"]*"[^>]*>(.*?)</parameter>',
+          dotAll: true,
+        );
+        for (final pm in paramRegex.allMatches(invokeBody)) {
+          final name = pm.group(1)?.trim();
+          final type = pm.group(2)?.trim();
+          final rawValue = pm.group(3)?.trim() ?? '';
+          if (name != null && name.isNotEmpty) {
+            switch (type) {
+              case 'number':
+                args[name] = num.tryParse(rawValue) ?? rawValue;
+              case 'boolean':
+                args[name] = rawValue.toLowerCase() == 'true';
+              default:
+                args[name] = rawValue;
             }
           }
-
-          toolCalls.add({'name': toolName, 'arguments': args});
-          debugPrint('✅ 解析工具调用: $toolName, 参数: $args');
-        } catch (e) {
-          debugPrint('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
         }
+
+        toolCalls.add({'name': toolName, 'arguments': args});
+        debugPrint('✅ 解析工具调用: $toolName, 参数: $args');
+      } catch (e) {
+        debugPrint('❌ 解析工具调用失败: ${im.group(0)}, 错误: $e');
       }
     }
 

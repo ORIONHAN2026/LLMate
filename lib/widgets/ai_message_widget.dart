@@ -36,6 +36,7 @@ class AiMessageWidget extends StatefulWidget {
 class _AiMessageWidgetState extends State<AiMessageWidget>
     with TickerProviderStateMixin {
   bool _isHovered = false;
+  bool _toolCallingExpanded = false;
   final sessionController = Get.find<SessionController>();
   final GlobalKey _messageKey = GlobalKey();
 
@@ -852,6 +853,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
 
+        // 实时累积工具内容（非布尔标记）
+        if (tool.isNotEmpty && tool != 'true' && tool != 'false') {
+          accumulatedTool += tool;
+        }
+
         // 按顺序构建内容块
         void appendBlock(ContentBlockType type, String text) {
           if (blocks.isNotEmpty && blocks.last.type == type) {
@@ -1305,8 +1311,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         children: [
           if (widget.message.think.isNotEmpty)
             _buildThinkBlock(widget.message.think),
-          if (widget.message.isToolCalling)
-            _buildToolCallingBlock('正在执行工具...'),
+
           if (widget.message.content.isNotEmpty)
             MarkdownBody(
               data: _sanitizeMarkdown(
@@ -1344,10 +1349,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             ),
           );
       }
-    }
-
-    if (widget.message.isToolCalling) {
-      children.add(_buildToolCallingBlock('正在执行工具...'));
     }
 
     return Column(
@@ -1397,11 +1398,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
   }
 
-  /// 工具调用中块（文字提示，工具结果返回后自动替换）
+  /// 工具调用中块（可折叠，展开时显示实时工具内容）
   Widget _buildToolCallingBlock(String toolNames) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),
         borderRadius: BorderRadius.circular(6),
@@ -1410,22 +1410,63 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           width: 1,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.build_outlined,
-            size: 14,
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '正在调用工具：$toolNames',
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+          GestureDetector(
+            onTap:
+                () => setState(
+                  () => _toolCallingExpanded = !_toolCallingExpanded,
+                ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.build_outlined,
+                    size: 14,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.7),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '正在调用工具',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.7),
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _toolCallingExpanded
+                        ? Icons.expand_less
+                        : Icons.expand_more,
+                    size: 16,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.5),
+                  ),
+                ],
+              ),
             ),
           ),
+          if (_toolCallingExpanded && widget.message.toolContent.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+              child: Text(
+                widget.message.toolContent,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                  height: 1.4,
+                ),
+              ),
+            ),
         ],
       ),
     );

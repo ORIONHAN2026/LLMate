@@ -134,6 +134,7 @@ class LlmClient {
         if (tc != null && tc.isNotEmpty) {
           // 收到工具调用，通知 UI 显示"正在执行工具"
           yield {'tool': 'true'};
+          yield {'tool': '🔧 正在接收工具调用参数...\n'};
           final parsed = _parseToolCallChunk(tc);
           if (parsed != null && parsed.isNotEmpty) {
             final isNativeDelta = parsed.any(

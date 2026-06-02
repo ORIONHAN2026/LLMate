@@ -438,50 +438,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     );
   }
 
-  /// 工作目录指示条 —— 双击打开文件夹
-  Widget _buildWorkDirectoryBar(String workDir) {
-    return GestureDetector(
-      onDoubleTap: () async {
-        try {
-          await Process.run('open', [workDir]);
-        } catch (_) {}
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        child: Row(
-          children: [
-            Icon(
-              CupertinoIcons.folder_fill,
-              size: 13,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                p.basename(workDir),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            ),
-            Text(
-              '双击打开',
-              style: TextStyle(
-                fontSize: 10,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // 显示设置菜单
   void _showSettingsMenu() {
     // 获取设置按钮的渲染位置

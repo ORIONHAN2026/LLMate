@@ -274,6 +274,20 @@ class SystemToolService {
       buffer.writeln();
     }
 
+    // 工作目录提示
+    final workDir = session?.workDirectory;
+    if (workDir != null && workDir.trim().isNotEmpty) {
+      buffer.writeln('## 工作目录');
+      buffer.writeln();
+      buffer.writeln('当前会话已设置工作目录：`$workDir`');
+      buffer.writeln();
+      buffer.writeln('规则：');
+      buffer.writeln('- 生成文件时，如用户未指定保存路径，默认保存到工作目录。');
+      buffer.writeln('- 使用 `word_create_document` 时不需指定 `outputDirectory`，系统会自动使用工作目录。');
+      buffer.writeln('- 使用 `file_write` 时若 `filePath` 为相对路径或仅文件名，系统会自动拼接工作目录。');
+      buffer.writeln();
+    }
+
     return buffer.toString().trim();
   }
 

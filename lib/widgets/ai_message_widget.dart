@@ -842,6 +842,13 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         final thinkChunk = chunkMap['think'] ?? '';
         final tool = (chunkMap['tool'] ?? '').toString();
 
+        // 处理工具调用状态标记
+        if (tool == 'true') {
+          botMessage.isToolCalling = true;
+        } else if (tool == 'false') {
+          botMessage.isToolCalling = false;
+        }
+
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
 
@@ -856,9 +863,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
         if (thinkChunk.isNotEmpty) {
           appendBlock(ContentBlockType.think, thinkChunk);
-        } else if (tool.isNotEmpty) {
+        } else if (tool.isNotEmpty && tool != 'true' && tool != 'false') {
           // 工具执行结果
-          blocks.removeWhere((b) => b.type == ContentBlockType.toolCalling);
           appendBlock(ContentBlockType.tool, tool);
         } else if (contentChunk.isNotEmpty) {
           appendBlock(ContentBlockType.content, contentChunk);
@@ -888,6 +894,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
             toolContent: accumulatedTool,
             contentBlocks: List<ContentBlock>.from(blocks),
+            isToolCalling: botMessage.isToolCalling,
             timestamp: botMessage.timestamp,
             repoId: null,
             sessionId: session.sessionId,
@@ -1298,6 +1305,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         children: [
           if (widget.message.think.isNotEmpty)
             _buildThinkBlock(widget.message.think),
+          if (widget.message.isToolCalling)
+            _buildToolCallingBlock('正在执行工具...'),
           if (widget.message.content.isNotEmpty)
             MarkdownBody(
               data: _sanitizeMarkdown(
@@ -1335,6 +1344,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             ),
           );
       }
+    }
+
+    if (widget.message.isToolCalling) {
+      children.add(_buildToolCallingBlock('正在执行工具...'));
     }
 
     return Column(

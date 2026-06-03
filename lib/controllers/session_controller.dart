@@ -298,7 +298,13 @@ class SessionController extends GetxController {
       // 按创建时间排序
       loaded.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       sessions.value = loaded;
-      currentSession.value = current;
+
+      // 通过 setCurrentSession 解析 mcp/skill/model，而不是直接赋值
+      if (current != null) {
+        await setCurrentSession(current);
+      } else {
+        currentSession.value = null;
+      }
     } catch (e) {
       debugPrint('加载会话失败: $e');
     }

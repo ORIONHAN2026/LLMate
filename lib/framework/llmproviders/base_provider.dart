@@ -281,7 +281,13 @@ abstract class BaseLlmProvider {
   /// 构建可用工具列表（OpenAI function-calling 格式）
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
     final allTools = <Map<String, dynamic>>[];
-    allTools.addAll(_buildSystemTools());
+    // 当选择了 MCP 但没有选择技能时，不传递系统内置工具
+    // 避免系统工具与 MCP 工具产生冲突或干扰
+    final hasMcp = session?.mcp != null;
+    final hasSkill = session?.skill != null;
+    if (!hasMcp || hasSkill) {
+      allTools.addAll(_buildSystemTools());
+    }
     allTools.addAll(_buildMcpTools(session));
     allTools.addAll(_buildSkillTools(session));
     return allTools;

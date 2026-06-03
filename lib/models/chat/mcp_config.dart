@@ -20,8 +20,9 @@ extension McpTransportTypeExt on McpTransportType {
       case 'sse':
         return McpTransportType.sse;
       case 'http':
-      case 'streamableHttp':
         return McpTransportType.http;
+      case 'streamableHttp':
+        return McpTransportType.streamableHttp;
       default:
         return null;
     }

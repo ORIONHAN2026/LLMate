@@ -114,25 +114,48 @@ class McpService {
   }
 
   /// 根据配置创建对应的 Transport（支持 stdio / SSE / StreamableHTTP）
+  /// 当 type 未指定时，先尝试 SSE，若 SSE 返回 405 则自动回退到 Streamable HTTP。
   static Future<ClientTransport> _createTransport(
     Mcp config, {
     Duration? timeout,
   }) async {
     if (config.url != null && config.url!.isNotEmpty) {
-      final t = config.type ?? 'sse';
-      if (t == 'streamableHttp' || t == 'http') {
+      final transportType = config.type;
+      if (transportType == McpTransportType.streamableHttp ||
+          transportType == McpTransportType.http) {
         debugPrint('🔗 使用 Streamable HTTP 传输: ${config.url}');
         return StreamableHttpClientTransport.create(
           baseUrl: config.url!,
           headers: config.headers,
           timeout: timeout,
         );
-      } else {
+      } else if (transportType == McpTransportType.sse) {
         debugPrint('🔗 使用 SSE 传输: ${config.url}');
         return SseClientTransport.create(
           serverUrl: config.url!,
           headers: config.headers,
         );
+      } else {
+        // type 未指定，先尝试 SSE，405 时自动回退 Streamable HTTP
+        debugPrint('🔗 传输类型未指定，先尝试 SSE: ${config.url}');
+        try {
+          return SseClientTransport.create(
+            serverUrl: config.url!,
+            headers: config.headers,
+          );
+        } catch (e) {
+          final es = e.toString();
+          // SSE 端点不支持（405 Method Not Allowed），回退到 Streamable HTTP
+          if (es.contains('405') || es.contains('Method not allowed')) {
+            debugPrint('🔗 SSE 不支持 (405)，自动回退到 Streamable HTTP: ${config.url}');
+            return StreamableHttpClientTransport.create(
+              baseUrl: config.url!,
+              headers: config.headers,
+              timeout: timeout,
+            );
+          }
+          rethrow;
+        }
       }
     } else {
       final cmd = config.command;

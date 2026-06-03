@@ -409,32 +409,7 @@ class _TrainingTabState extends State<McpTab> {
                     maxLines: null,
                     expands: true,
                     decoration: InputDecoration(
-                      hintText: '''支持以下格式:
-
-标准MCP配置格式:
-{
-  "mcpServers": {
-    "service-name": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/files"]
-    }
-  }
-}
-
-平面格式:
-{
-  "service-name": {
-    "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/files"]
-  }
-}
-
-简化格式:
-{
-  "name": "service-name",
-  "command": "npx",
-  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/files"]
-}''',
+                      hintText: '配置',
                       hintStyle: const TextStyle(fontSize: 11),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),

@@ -112,33 +112,17 @@ class ImageToolService {
         return _error(callId, args, '无法解析源图片: $sourcePath');
       }
 
-      Image? result;
-
-      switch (action) {
-        case 'resize':
-          result = _resize(image, args);
-
-        case 'crop':
-          result = _crop(image, args);
-
-        case 'rotate':
-          result = _rotate(image, args);
-
-        case 'convert':
-          result = image;
-
-        case 'compress':
-          result = image;
-
-        case 'watermark':
-          result = _watermark(image, args);
-
-        default:
-          return _error(callId, args, '不支持的 image_write action: $action，可用: resize/crop/rotate/convert/compress/watermark');
-      }
-
+      final result = switch (action) {
+        'resize' => _resize(image, args),
+        'crop' => _crop(image, args),
+        'rotate' => _rotate(image, args),
+        'convert' => image,
+        'compress' => image,
+        'watermark' => _watermark(image, args),
+        _ => null,
+      };
       if (result == null) {
-        return _error(callId, args, '图片处理失败');
+        return _error(callId, args, '不支持的 image_write action: $action，可用: resize/crop/rotate/convert/compress/watermark');
       }
 
       // 编码输出

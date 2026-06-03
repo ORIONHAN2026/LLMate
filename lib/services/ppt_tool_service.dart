@@ -370,8 +370,6 @@ class PptToolService {
         .replaceAll("'", '&apos;');
   }
 
-  static List<int> _utf8Bytes(String xml) => utf8.encode(xml);
-
   static ArchiveFile _af(String name, String content) {
     final bytes = utf8.encode(content);
     return ArchiveFile(name, bytes.length, bytes);

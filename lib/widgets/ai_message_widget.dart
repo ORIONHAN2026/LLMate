@@ -36,7 +36,6 @@ class AiMessageWidget extends StatefulWidget {
 class _AiMessageWidgetState extends State<AiMessageWidget>
     with TickerProviderStateMixin {
   bool _isHovered = false;
-  bool _toolCallingExpanded = false;
   final sessionController = Get.find<SessionController>();
   final GlobalKey _messageKey = GlobalKey();
 
@@ -1449,84 +1448,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
   }
 
-  /// 工具调用中块（可折叠，展开时显示实时工具内容）
-  Widget _buildToolCallingBlock(String toolNames) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap:
-                () => setState(
-                  () => _toolCallingExpanded = !_toolCallingExpanded,
-                ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.build_outlined,
-                    size: 14,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.7),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '正在调用工具',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.7),
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    _toolCallingExpanded
-                        ? Icons.expand_less
-                        : Icons.expand_more,
-                    size: 16,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.5),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_toolCallingExpanded && widget.message.toolContent.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-              child: Text(
-                widget.message.toolContent,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
-                  height: 1.4,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   /// 工具执行块（折叠/展开，默认折叠显示扳手图标+描述）
   Widget _buildToolBlock(int index, String text) {
     final isExpanded = _expandedToolIndices.contains(index);
-    final description = _parseToolDescription(text);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1666,16 +1590,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       tableHead: base,
       tableBody: base,
     );
-  }
-
-  /// 从工具文本中提取一句话描述
-  String _parseToolDescription(String text) {
-    final lines = text.split('\n');
-    for (final line in lines) {
-      final trimmed = line.trim();
-      if (trimmed.isNotEmpty) return trimmed;
-    }
-    return '工具执行';
   }
 
   /// 将 AI 正文中的本地绝对路径转为 Markdown 链接

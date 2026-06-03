@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import '../models/chat/chat_session.dart';
 import 'excel_tool_service.dart';
 import 'file_tool_service.dart';
-import 'mcp_service.dart';
 import 'pdf_tool_service.dart';
 import 'ppt_tool_service.dart';
 import 'python_tool_service.dart';
@@ -298,9 +297,7 @@ class SystemToolService {
   static bool hasTool(String name) => _tools.any((tool) => tool.name == name);
 
   /// 构建 OpenAI tools 格式，用于向 LLM 声明可用工具
-  static List<Map<String, dynamic>> buildOpenAIToolsFormat(
-    ChatSession? session,
-  ) {
+  static List<Map<String, dynamic>> buildOpenAIToolsFormat() {
     return _tools.map((tool) {
       return {
         'type': 'function',
@@ -311,16 +308,6 @@ class SystemToolService {
         },
       };
     }).toList();
-  }
-
-  /// 构建所有工具（系统 + MCP）的 OpenAI tools 格式
-  static List<Map<String, dynamic>> buildAllOpenAIToolsFormat(
-    ChatSession? session,
-  ) {
-    return [
-      ...buildOpenAIToolsFormat(session),
-      if (session != null) ...McpService.buildOpenAIToolsFormat(session),
-    ];
   }
 
   /// 执行系统工具

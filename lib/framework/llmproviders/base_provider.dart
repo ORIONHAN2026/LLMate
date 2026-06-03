@@ -3,6 +3,7 @@ import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import '../../models/chat/chat_attachment.dart';
+import '../../services/mcp_service.dart';
 import '../../services/system_tool_service.dart';
 import '../../services/skill_service.dart';
 import 'common/message_builder.dart';
@@ -278,11 +279,28 @@ abstract class BaseLlmProvider {
   String get providerPrompt => '';
 
   /// 构建可用工具列表（OpenAI function-calling 格式）
-  ///
-  /// 默认合并系统内置工具（如 file_read/file_write/python_execute）和 MCP 工具。
-  /// 子类可覆写以自定义工具选择策略。
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
-    return SystemToolService.buildAllOpenAIToolsFormat(session);
+    final allTools = <Map<String, dynamic>>[];
+    allTools.addAll(_buildSystemTools());
+    allTools.addAll(_buildMcpTools(session));
+    allTools.addAll(_buildSkillTools(session));
+    return allTools;
+  }
+
+  /// 1. 系统内置工具（file_read/write, word/pdf/excel/ppt 读写等）
+  List<Map<String, dynamic>> _buildSystemTools() {
+    return SystemToolService.buildOpenAIToolsFormat();
+  }
+
+  /// 2. MCP 服务工具（按会话绑定的 mcpServer 过滤）
+  List<Map<String, dynamic>> _buildMcpTools(ChatSession? session) {
+    if (session == null) return [];
+    return McpService.buildOpenAIToolsFormat(session);
+  }
+
+  /// 3. 技能工具（会话 + 模型绑定的 Skill 作为可调用工具）
+  List<Map<String, dynamic>> _buildSkillTools(ChatSession? session) {
+    return SkillService.buildSkillTools(session);
   }
 
   /// 模型设置覆盖消息列表（最后一步，子类可覆写）

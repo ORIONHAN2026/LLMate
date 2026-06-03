@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/chat/chat_session.dart';
 import '../models/chat/skill.dart';
 import 'skill_storage_service.dart';
 
@@ -129,6 +130,70 @@ class SkillService {
   }
 
   // ======== 工具方法 ========
+
+  /// 将会话绑定的技能转为 OpenAI function-calling 工具列表
+  ///
+  /// 目前为占位实现：技能尚未内建工具定义，仅以技能名称/描述作为无参工具暴露。
+  /// 后续需解析 SKILL.md 中的工具声明块来填充真实的 parameters schema。
+  static List<Map<String, dynamic>> buildSkillTools(ChatSession? session) {
+    if (session == null) return [];
+    final tools = <Map<String, dynamic>>[];
+
+    // 会话绑定的技能
+    if (session.skill != null) {
+      final t = _skillToTool(session.skill!);
+      if (t != null) tools.add(t);
+    }
+    // 模型绑定的技能
+    final modelSkills = session.chatModel?.skills;
+    if (modelSkills != null) {
+      for (final skill in modelSkills) {
+        final t = _skillToTool(skill);
+        if (t != null) tools.add(t);
+      }
+    }
+    return tools;
+  }
+
+  /// 将单个 Skill 转为 OpenAI function-calling 工具定义（占位）
+  static Map<String, dynamic>? _skillToTool(Skill skill) {
+    // OpenAI function name 仅允许 [a-zA-Z0-9_-]
+    final raw = skill.id.isNotEmpty ? skill.id : skill.name;
+    if (raw.isEmpty) return null;
+    final safeName = _sanitizeToolName(raw);
+    if (safeName.isEmpty) return null;
+
+    final desc = skill.description.isNotEmpty
+        ? '${skill.name}: ${skill.description}'
+        : skill.name;
+
+    return {
+      'type': 'function',
+      'function': {
+        'name': safeName,
+        'description': desc,
+        'parameters': {
+          'type': 'object',
+          'properties': <String, dynamic>{},
+          'required': <String>[],
+        },
+      },
+    };
+  }
+
+  /// 将任意字符串转为合法的 OpenAI function name（仅保留 [a-zA-Z0-9_-]）
+  static String _sanitizeToolName(String raw) {
+    final cleaned = raw
+        .replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    if (cleaned.isEmpty) return '';
+    // 确保不以数字开头
+    if (RegExp(r'^\d').hasMatch(cleaned)) {
+      return 'skill_$cleaned';
+    }
+    return cleaned;
+  }
 
   /// 重置缓存（强制重新扫描文件系统）
   static void reset() {

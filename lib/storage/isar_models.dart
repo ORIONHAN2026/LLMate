@@ -55,8 +55,7 @@ class IsarChatSession {
 
   // JSON blobs for complex nested data
   late String? messagesJson;
-  @Deprecated('使用 modelId 替代，chatModelJson 仅用于旧数据迁移')
-  late String? chatModelJson;
+  @ignore late String? chatModelJson;
   late String? mcpServerJson;
   late String? skillJson;
   late String? attachmentsJson;

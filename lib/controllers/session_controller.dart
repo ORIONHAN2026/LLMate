@@ -354,7 +354,6 @@ class SessionController extends GetxController {
         session.messages.map((m) => m.toJson()).toList(),
       )
       ..modelId = session.modelId
-      ..chatModelJson = null // 已废弃，仅占位
       ..mcpServerJson =
           session.mcpServer != null
               ? jsonEncode(session.mcpServer!.toJson())

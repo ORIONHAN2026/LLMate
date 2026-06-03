@@ -39,7 +39,8 @@ class LlmHub {
 
   /// 解析 provider
   static BaseLlmProvider _resolve(ChatModel model) {
-    final p = instance._providers[model.provider];
+    final key = model.provider?.toLowerCase();
+    final p = instance._providers[key];
     if (p == null) throw UnsupportedError('不支持的提供商: ${model.provider}');
     return p;
   }

@@ -542,32 +542,6 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
   ) async {
     LlmClient? client;
     try {
-      // 检查模型状态
-      if (session.chatModel?.status != 'active') {
-        // 创建错误消息
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final errorMessage = ChatMessage(
-          msgId: '${timestamp}_bot',
-          role: MessageRole.bot,
-          content: '当前模型 "${session.chatModel?.name}" 已停用，请先启用模型后再重新生成。',
-          timestamp: DateTime.now(),
-          repoId: null,
-          sessionId: session.sessionId,
-          isError: true,
-        );
-
-        final updatedMessages = List<ChatMessage>.from(session.messages)
-          ..add(errorMessage);
-        final updatedSession = session.copyWith(
-          messages: updatedMessages,
-          isSending: false,
-        );
-
-        await sessionController.updateSession(updatedSession);
-        widget.onUpdate?.call();
-        return;
-      }
-
       // 创建AI消息用于流式更新
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final botMessageId = '${timestamp}_bot';

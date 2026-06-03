@@ -778,32 +778,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     try {
       final startTime = DateTime.now(); // 记录开始时间
 
-      // 检查模型状态
-      if (session.chatModel?.status != 'active') {
-        // 创建错误消息
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final errorMessage = ChatMessage(
-          msgId: '${timestamp}_bot',
-          role: MessageRole.bot,
-          content: '当前模型 "${session.chatModel?.name}" 已停用，请先启用模型后再重新生成。',
-          timestamp: DateTime.now(),
-          repoId: null,
-          sessionId: session.sessionId,
-          isError: true,
-        );
-
-        final updatedMessages = List<ChatMessage>.from(session.messages)
-          ..add(errorMessage);
-        final updatedSession = session.copyWith(
-          messages: updatedMessages,
-          isSending: false,
-        );
-
-        await sessionController.updateSession(updatedSession);
-        widget.onUpdate?.call();
-        return;
-      }
-
       String botMessageId;
       ChatMessage botMessage;
 

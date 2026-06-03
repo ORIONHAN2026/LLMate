@@ -233,24 +233,25 @@ class OpenAiProvider extends BaseLlmProvider {
     ))
       return '连接错误，请重试发送消息';
     if (es.contains('DioException') || es.contains('DioError')) {
+      // HTTP 状态码优先判断
+      if (es.contains('401') || es.contains('Unauthorized'))
+        return 'API 密钥无效，请检查密钥配置';
+      if (es.contains('403') || es.contains('Forbidden'))
+        return 'API 访问被拒绝，请检查权限设置';
+      if (es.contains('404') || es.contains('Not Found'))
+        return 'API 地址不存在，请检查 URL 配置';
+      if (es.contains('429') || es.contains('Too Many Requests'))
+        return 'API 调用频率过高，请稍后重试';
+      if (es.contains('500') || es.contains('Internal Server Error'))
+        return 'API 服务器内部错误，请稍后重试';
+      // 网络错误
       if (es.contains('CONNECT_TIMEOUT')) return '网络连接超时，请检查网络设置';
       if (es.contains('RECEIVE_TIMEOUT')) return 'API 响应超时，请稍后重试';
-      if (es.contains('RESPONSE')) return 'API 请求失败，请检查配置和网络';
       if (es.contains('CONNECTION_ERROR') || es.contains('Connection refused'))
         return '网络连接被拒绝，请检查网络连接和API地址';
       if (es.contains('Network is unreachable')) return '网络不可达，请检查网络连接';
       return '网络连接错误：请检查网络设置和API配置';
     }
-    if (es.contains('401') || es.contains('Unauthorized'))
-      return 'API 密钥无效，请检查密钥配置';
-    if (es.contains('403') || es.contains('Forbidden'))
-      return 'API 访问被拒绝，请检查权限设置';
-    if (es.contains('404') || es.contains('Not Found'))
-      return 'API 地址不存在，请检查 URL 配置';
-    if (es.contains('429') || es.contains('Too Many Requests'))
-      return 'API 调用频率过高，请稍后重试';
-    if (es.contains('500') || es.contains('Internal Server Error'))
-      return 'API 服务器内部错误，请稍后重试';
     if (es.contains('SocketException') || es.contains('HandshakeException'))
       return '网络连接失败，请检查网络设置和证书配置';
     if (es.contains('FormatException') || es.contains('Invalid JSON'))

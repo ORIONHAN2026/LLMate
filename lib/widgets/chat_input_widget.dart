@@ -2990,14 +2990,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         throw ('还未绑定模型');
       }
 
-      if (updatedSession.chatModel?.status != 'active') {
-        _handleModelInactiveForSession(
-          updatedSession,
-          updatedSession.chatModel?.name,
-        );
-        return;
-      }
-
       await _generateAIResponse(updatedSession, userMessage);
     } catch (e) {
       _handleSendError(e);
@@ -3276,38 +3268,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return chineseTokens + englishTokens + punctuationTokens;
   }
 
-  /// 处理模型未激活状态
-  void _handleModelInactiveForSession(ChatSession session, String? modelName) {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final botMessageId = '${timestamp}_bot';
 
-    final systemMessage = ChatMessage(
-      msgId: botMessageId,
-      role: MessageRole.bot,
-      content: '当前模型 "$modelName" 已停用，请先启用模型后再发送消息。',
-      timestamp: DateTime.now(),
-      repoId: null,
-      sessionId: session.sessionId,
-      isError: true,
-    );
-
-    widget.messageKeys[systemMessage.msgId] = GlobalKey();
-
-    final updatedMessages = List<ChatMessage>.from(session.messages)
-      ..add(systemMessage);
-    final updatedSession = session.copyWith(
-      messages: updatedMessages,
-      isSending: false,
-    );
-
-    sessionController.updateSession(updatedSession);
-    setState(() {});
-
-    // 滚动到底部显示提示消息
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom(force: true);
-    });
-  }
 
   /// 处理发送错误
   void _handleSendError(dynamic error) {

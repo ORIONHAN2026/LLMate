@@ -28,14 +28,14 @@ class McpMarketService {
     this.downloads = 0,
   });
 
-  /// 转换为McpServerConfig
-  McpServerConfig toMcpServerConfig() {
-    return McpServerConfig(name: name, command: command, args: args);
+  /// 转换为Mcp
+  Mcp toMcp() {
+    return Mcp(name: name, command: command, args: args);
   }
 }
 
 class McpMarketPage extends StatefulWidget {
-  final Function(McpServerConfig) onServiceSelected;
+  final Function(Mcp) onServiceSelected;
 
   const McpMarketPage({super.key, required this.onServiceSelected});
 
@@ -750,7 +750,7 @@ class _McpMarketPageState extends State<McpMarketPage> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop(); // 关闭详情对话框
-                widget.onServiceSelected(service.toMcpServerConfig());
+                widget.onServiceSelected(service.toMcp());
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,

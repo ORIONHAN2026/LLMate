@@ -137,7 +137,7 @@ class ToolExecutionService {
       // 连接失败（SSE 长连接可能因空闲超时被断开），
       // 清理旧客户端并重连重试一次
       debugPrint('🔄 MCP 工具 "$toolName" 连接失败，尝试重连重试...');
-      final svc = session.mcpServer?.name;
+      final svc = session.mcp?.mcpId;
       if (svc != null) {
         await McpService.closeClient(svc);
         final retryMc = await McpService.getOrInitClient(session);

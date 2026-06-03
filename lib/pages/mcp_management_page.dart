@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
@@ -23,7 +24,7 @@ class McpManagementPage extends StatefulWidget {
 }
 
 class _McpManagementPageState extends State<McpManagementPage> {
-  List<McpServerConfig> _services = [];
+  List<Mcp> _services = [];
   bool _isLoading = true;
 
   @override
@@ -51,14 +52,15 @@ class _McpManagementPageState extends State<McpManagementPage> {
   }
 
   void _showAddMcpDialog() {
-
-    // 默认提供两个示例模板
     final jsonCtrl = TextEditingController(text: const JsonEncoder.withIndent('  ').convert({
       'command': 'npx',
       'args': ['-y', 'package-name'],
-      'timeout': 60,
+      'timeout': 30,
     }));
     bool isConnecting = false;
+    String? errorMessage;
+    // 默认超时 30 秒
+    int timeoutSec = 30;
 
     showDialog(
       context: context,
@@ -81,6 +83,39 @@ class _McpManagementPageState extends State<McpManagementPage> {
                   Text(
                     '如果 JSON 中包含 "mcpServers" 字段，会自动从中提取服务配置',
                     style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 10),
+                  // 超时设置
+                  Row(
+                    children: [
+                      Text('连接超时', style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      )),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 60,
+                        height: 28,
+                        child: TextField(
+                          enabled: !isConnecting,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 12),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                            isDense: true,
+                          ),
+                          controller: TextEditingController(text: '$timeoutSec'),
+                          onChanged: (v) {
+                            final parsed = int.tryParse(v);
+                            if (parsed != null && parsed > 0) timeoutSec = parsed;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text('秒', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                    ],
                   ),
                   const SizedBox(height: 10),
                   Text('JSON 配置', style: TextStyle(
@@ -127,6 +162,42 @@ class _McpManagementPageState extends State<McpManagementPage> {
                       ),
                     ),
                   ],
+                  // 错误提示（内联展示，不关闭弹窗）
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.error.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            CupertinoIcons.exclamationmark_circle,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorMessage!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.error,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -152,11 +223,13 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
                         // 先生成一个临时名称
                         final tempName = 'mcp_${DateTime.now().millisecondsSinceEpoch}';
-                        final config = McpServerConfig(
+                        // 优先使用 JSON 中的 timeout，否则用 UI 设置的
+                        final effectiveTimeout = serviceJson['timeout'] as int? ?? timeoutSec;
+                        final config = Mcp(
                           name: tempName,
                           command: serviceJson['command'] as String? ?? '',
                           args: (serviceJson['args'] as List<dynamic>?)?.cast<String>() ?? [],
-                          timeout: serviceJson['timeout'] as int?,
+                          timeout: effectiveTimeout,
                           url: serviceJson['url'] as String?,
                           headers: serviceJson['headers'] != null
                               ? Map<String, String>.from(serviceJson['headers'])
@@ -167,8 +240,11 @@ class _McpManagementPageState extends State<McpManagementPage> {
                           workingDirectory: serviceJson['workingDirectory'] as String?,
                         );
 
-                        // 显示加载状态
-                        setDialogState(() => isConnecting = true);
+                        // 清除旧错误，显示加载状态
+                        setDialogState(() {
+                          errorMessage = null;
+                          isConnecting = true;
+                        });
 
                         // 连接远程获取真实名称和工具
                         final info = await McpService.connectAndGetInfo(config);
@@ -182,14 +258,20 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
                         Navigator.pop(ctx);
                         _addServiceWithInfo(realConfig, toolCount: info.tools.length);
+                      } on TimeoutException catch (e) {
+                        setDialogState(() {
+                          isConnecting = false;
+                          errorMessage = '⏱ 连接超时\n\n${e.message}\n\n请检查服务器地址是否正确，或尝试增大超时时间后重试。';
+                        });
                       } catch (e) {
-                        if (ctx.mounted) {
-                          setDialogState(() => isConnecting = false);
-                          SnackBarUtils.showError(context, '连接失败: ${e.toString().length > 80 ? '${e.toString().substring(0, 80)}...' : e}');
-                        }
+                        setDialogState(() {
+                          isConnecting = false;
+                          final msg = e.toString();
+                          errorMessage = '❌ 连接失败\n\n${msg.length > 200 ? '${msg.substring(0, 200)}...' : msg}\n\n请检查配置是否正确，修改后重试。';
+                        });
                       }
                     },
-              child: const Text('连接并添加'),
+              child: Text(isConnecting ? '连接中...' : '连接并添加'),
             ),
           ],
         ),
@@ -197,7 +279,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
     );
   }
 
-  Future<void> _addServiceWithInfo(McpServerConfig config, {required int toolCount}) async {
+  Future<void> _addServiceWithInfo(Mcp config, {required int toolCount}) async {
     if (_services.any((s) => s.name == config.name)) {
       SnackBarUtils.showInfo(context, '服务 "${config.name}" 已存在');
       return;
@@ -335,7 +417,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
     );
   }
 
-  Widget _buildAddedServiceCard(McpServerConfig service) {
+  Widget _buildAddedServiceCard(Mcp service) {
     final hasTools = service.tools != null && service.tools!.isNotEmpty;
     final toolCount = service.tools?.length ?? 0;
 
@@ -476,7 +558,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
   final Set<String> _refreshingServices = {};
 
-  Widget _buildRefreshButton(McpServerConfig service) {
+  Widget _buildRefreshButton(Mcp service) {
     final isRefreshing = _refreshingServices.contains(service.name);
     return GestureDetector(
       onTap: isRefreshing ? null : () => _refreshService(service),
@@ -501,7 +583,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
     );
   }
 
-  Future<void> _refreshService(McpServerConfig service) async {
+  Future<void> _refreshService(Mcp service) async {
     if (_refreshingServices.contains(service.name)) return;
 
     setState(() => _refreshingServices.add(service.name));
@@ -559,7 +641,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
     }
   }
 
-  void _showAddedServiceDetail(McpServerConfig service) {
+  void _showAddedServiceDetail(Mcp service) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -794,14 +876,14 @@ class _McpManagementPageState extends State<McpManagementPage> {
     );
   }
 
-  String _buildSubtitle(McpServerConfig service) {
+  String _buildSubtitle(Mcp service) {
     if (service.url != null && service.url!.isNotEmpty) {
       return service.url!;
     }
     return '${service.command} ${service.args.join(' ')}';
   }
 
-  String _buildConfigJson(McpServerConfig service) {
+  String _buildConfigJson(Mcp service) {
     final map = <String, dynamic>{
       'name': service.name,
     };

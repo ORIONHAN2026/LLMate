@@ -9,12 +9,12 @@ import 'dart:convert';
 import 'package:path/path.dart' as p;
 
 import '../controllers/session_controller.dart';
+import '../controllers/mcp_controller.dart';
 import '../models/bigmodel/models.dart';
 import '../framework/llm_framework.dart';
 import '../services/model_storage_service.dart';
 import 'package:mcp_client/mcp_client.dart' hide MessageRole;
 import '../services/mcp_service.dart';
-import '../services/mcp_storage_service.dart';
 import '../services/skill_service.dart';
 import '../services/skill_storage_service.dart';
 import '../services/word_tool_service.dart';
@@ -1602,13 +1602,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // MCP 服务已全局存储，不依赖 ChatModel
     final hasMcpServices = McpService.hasGlobalMcpServices;
-    final mcpServer = currentSession?.mcpServer;
-    final hasSelectedService = mcpServer != null;
+    final mcp = currentSession?.mcp;
+    final hasSelectedService = mcp != null;
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
     final displayText =
         hasSelectedService
-            ? mcpServer.name
+            ? mcp.name
             : (hasMcpServices ? '请选择' : '无MCP服务');
 
     return Tooltip(
@@ -1721,8 +1721,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Future<void> _showMcpServicesList() async {
     final currentSession = sessionController.currentSession.value;
 
-    // MCP 服务已全局存储，从 McpStorageService 读取
-    final mcpServices = await McpStorageService.loadMcpServices();
+    // MCP 服务从 McpController 读取
+    final mcpc = Get.find<McpController>();
+    await mcpc.ensureLoaded();
+    final mcpServices = mcpc.configs.toList();
 
     if (mcpServices.isEmpty) {
       SnackBarUtils.showInfo(context, '当前未配置MCP服务');
@@ -1809,11 +1811,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             ),
                             const Spacer(),
                             Text(
-                              currentSession?.mcpServer != null ? '已启用' : '已禁用',
+                              currentSession?.mcp != null ? '已启用' : '已禁用',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
-                                    currentSession?.mcpServer != null
+                                    currentSession?.mcp != null
                                         ? Theme.of(context).colorScheme.primary
                                         : Theme.of(
                                           context,
@@ -1973,11 +1975,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(
-                                currentSession?.mcpServer != null ? '禁用' : '启用',
+                                currentSession?.mcp != null ? '禁用' : '启用',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color:
-                                      currentSession?.mcpServer != null
+                                      currentSession?.mcp != null
                                           ? Theme.of(context).colorScheme.error
                                           : Theme.of(
                                             context,
@@ -2006,11 +2008,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // toggle: 如果已有 MCP 服务则清空，否则保持当前状态（需先选择服务）
     final updatedSession = currentSession.copyWith(
-      clearMcpServer: currentSession.mcpServer != null,
+      clearMcp: currentSession.mcp != null,
     );
     sessionController.updateSession(updatedSession);
 
-    final isEnabled = updatedSession.mcpServer != null;
+    final isEnabled = updatedSession.mcp != null;
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
@@ -2021,7 +2023,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // MCP 懒连接：不在 toggle 时预初始化，等 LLM 返回工具调用时再按需连接
     if (!isEnabled) {
       // 关闭 MCP 时清理客户端
-      final serviceName = currentSession.mcpServer?.name;
+      final serviceName = currentSession.mcp?.mcpId;
       if (serviceName != null) {
         McpService.closeClient(serviceName);
       }
@@ -2173,8 +2175,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   /// 显示MCP服务选择弹窗，点击服务直接绑定
   Future<void> _showMcpServiceSelection() async {
-    // MCP 服务已全局存储，从 McpStorageService 读取
-    final mcpServices = await McpStorageService.loadMcpServices();
+    // MCP 服务从 McpController 读取
+    final mcpc = Get.find<McpController>();
+    await mcpc.ensureLoaded();
+    final mcpServices = mcpc.configs.toList();
 
     if (mcpServices.isEmpty) {
       SnackBarUtils.showInfo(context, '当前未配置MCP服务');
@@ -2182,7 +2186,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
 
     final session = sessionController.currentSession.value;
-    final selectedName = session?.mcpServer?.name;
+    final selectedName = session?.mcp?.mcpId;
     final searchController = TextEditingController();
 
     showDialog(
@@ -2268,7 +2272,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   final serviceIndex = index - clearCount;
                                   final service = filtered[serviceIndex];
                                   final isSelected =
-                                      service.name == selectedName;
+                                      service.mcpId == selectedName;
                                   final toolCount = service.tools?.length ?? 0;
                                   return _buildCommandItem(
                                     title: service.name,
@@ -2305,13 +2309,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   /// 应用MCP服务选择
-  void _applyMcpSelection(McpServerConfig? service) async {
+  void _applyMcpSelection(Mcp? service) async {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
 
     final updatedSession = currentSession.copyWith(
-      mcpServer: service,
-      clearMcpServer: service == null,
+      mcp: service,
+      clearMcp: service == null,
     );
 
     await sessionController.updateSession(updatedSession);
@@ -2322,7 +2326,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         // MCP 懒连接：不在选择时预初始化，等 LLM 返回工具调用时再按需连接
       } else {
         // 关闭 MCP 时清理客户端
-        final oldServiceName = currentSession.mcpServer?.name;
+        final oldServiceName = currentSession.mcp?.mcpId;
         if (oldServiceName != null) {
           McpService.closeClient(oldServiceName);
         }
@@ -3438,7 +3442,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       debugPrint('🔧 解析到 ${toolCallsList.length} 个 tool_calls');
 
       // MCP client 应该在会话切换/选择 MCP 时已初始化，这里只做存在性检查
-      final serviceName = session.mcpServer?.name;
+      final serviceName = session.mcp?.mcpId;
       if (serviceName == null || McpService.getMCPClient(serviceName) == null) {
         debugPrint('⚠️ MCP 客户端未初始化，尝试初始化: $serviceName');
         final initializedServices =

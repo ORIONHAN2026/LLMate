@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
@@ -209,9 +210,10 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
     final initialJson = const JsonEncoder.withIndent('  ').convert({
       'command': item.command,
       'args': item.args,
-      'timeout': 60,
+      'timeout': 30,
     });
     final jsonCtrl = TextEditingController(text: initialJson);
+    int timeoutSec = 30;
 
     showModalBottomSheet(
       context: context,
@@ -222,11 +224,12 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) {
           bool isSheetConnecting = false;
+          String? sheetError;
 
           return DraggableScrollableSheet(
-            initialChildSize: 0.5,
+            initialChildSize: 0.55,
             minChildSize: 0.3,
-            maxChildSize: 0.8,
+            maxChildSize: 0.85,
             expand: false,
             builder: (ctx, sc) => SingleChildScrollView(
               controller: sc,
@@ -246,6 +249,38 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                   const SizedBox(height: 8),
                   Text(item.description, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                   const SizedBox(height: 16),
+                  // 超时设置
+                  Row(
+                    children: [
+                      Text('连接超时', style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      )),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 60, height: 28,
+                        child: TextField(
+                          enabled: !isSheetConnecting,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 12),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                            isDense: true,
+                          ),
+                          controller: TextEditingController(text: '$timeoutSec'),
+                          onChanged: (v) {
+                            final parsed = int.tryParse(v);
+                            if (parsed != null && parsed > 0) timeoutSec = parsed;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text('秒', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
                   Text('JSON 配置', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                   const SizedBox(height: 8),
                   Container(
@@ -279,6 +314,42 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                       ),
                     ),
                   ],
+                  // 错误提示
+                  if (sheetError != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.error.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            CupertinoIcons.exclamationmark_circle,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              sheetError!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.error,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -300,14 +371,18 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                             onPressed: isSheetConnecting ? null : () async {
                               try {
                                 final json = jsonDecode(jsonCtrl.text) as Map<String, dynamic>;
-                                final config = McpServerConfig(
+                                final effectiveTimeout = json['timeout'] as int? ?? timeoutSec;
+                                final config = Mcp(
                                   name: item.name,
                                   command: json['command'] as String? ?? '',
                                   args: (json['args'] as List<dynamic>?)?.cast<String>() ?? [],
-                                  timeout: json['timeout'] as int?,
+                                  timeout: effectiveTimeout,
                                 );
 
-                                setSheetState(() => isSheetConnecting = true);
+                                setSheetState(() {
+                                  sheetError = null;
+                                  isSheetConnecting = true;
+                                });
 
                                 // 连接远程获取工具
                                 try {
@@ -324,6 +399,11 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                                     Navigator.pop(ctx);
                                     SnackBarUtils.showSuccess(context, '已添加: ${info.serverName} (${info.tools.length} 个工具)');
                                   }
+                                } on TimeoutException catch (e) {
+                                  setSheetState(() {
+                                    isSheetConnecting = false;
+                                    sheetError = '⏱ 连接超时\n\n${e.message}\n\n请增大超时时间后重试。';
+                                  });
                                 } catch (_) {
                                   // 连接失败，用预定义名称直接添加
                                   final model = _currentModel;
@@ -331,14 +411,14 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                                     await _saveModel(model.addMcpService(config));
                                     if (mounted) setState(() {});
                                     Navigator.pop(ctx);
-                                    SnackBarUtils.showInfo(context, '已添加: ${config.name}');
+                                    SnackBarUtils.showInfo(context, '已添加: ${config.name}（工具信息获取失败，可稍后手动刷新）');
                                   }
                                 }
                               } catch (e) {
-                                if (ctx.mounted) {
-                                  setSheetState(() => isSheetConnecting = false);
-                                  SnackBarUtils.showError(context, 'JSON 格式错误: $e');
-                                }
+                                setSheetState(() {
+                                  isSheetConnecting = false;
+                                  sheetError = '❌ JSON 格式错误: $e';
+                                });
                               }
                             },
                             icon: const Icon(CupertinoIcons.plus, size: 16),
@@ -356,7 +436,7 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
     );
   }
 
-  Future<void> _addService(McpServerConfig config) async {
+  Future<void> _addService(Mcp config) async {
     final model = _currentModel;
     if (model == null) {
       SnackBarUtils.showInfo(context, '请先选择一个会话并绑定模型');
@@ -558,7 +638,7 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                   if (isAdded) {
                     _removeService(item.name);
                   } else {
-                    _addService(McpServerConfig(name: item.name, command: item.command, args: item.args));
+                    _addService(Mcp(name: item.name, command: item.command, args: item.args));
                   }
                 },
                 child: Container(

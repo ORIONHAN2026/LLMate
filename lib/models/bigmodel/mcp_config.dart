@@ -35,7 +35,9 @@ class McpToolInfo {
 }
 
 /// MCP服务器配置模型
-class McpServerConfig {
+class Mcp {
+  /// 唯一标识（默认等于 name）
+  final String mcpId;
   final String name;
   final String command;
   final List<String> args;
@@ -47,7 +49,8 @@ class McpServerConfig {
   final List<McpToolInfo>? tools; // 新增：工具信息列表
   final DateTime? lastUpdated; // 新增：最后更新时间
 
-  const McpServerConfig({
+  const Mcp({
+    String? mcpId,
     required this.name,
     required this.command,
     required this.args,
@@ -58,9 +61,9 @@ class McpServerConfig {
     this.headers,
     this.tools,
     this.lastUpdated,
-  });
+  }) : mcpId = mcpId ?? name;
 
-  factory McpServerConfig.fromJson(String name, Map<String, dynamic> json) {
+  factory Mcp.fromJson(String name, Map<String, dynamic> json) {
     final toolsList = json['tools'] as List<dynamic>?;
     final tools =
         toolsList
@@ -71,7 +74,8 @@ class McpServerConfig {
     final lastUpdated =
         lastUpdatedStr != null ? DateTime.tryParse(lastUpdatedStr) : null;
 
-    return McpServerConfig(
+    return Mcp(
+      mcpId: json['mcpId'] as String?,
       name: name,
       command: json['command'] as String? ?? '',
       args: List<String>.from(json['args'] ?? []),
@@ -86,15 +90,20 @@ class McpServerConfig {
   }
 
   /// 从包含 name 字段的 Map 反序列化（用于独立存储）
-  factory McpServerConfig.fromMap(Map<String, dynamic> json) {
-    return McpServerConfig.fromJson(
+  factory Mcp.fromMap(Map<String, dynamic> json) {
+    return Mcp.fromJson(
       json['name'] as String? ?? '',
       json,
     );
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {'name': name, 'command': command, 'args': args};
+    final Map<String, dynamic> data = {
+      'mcpId': mcpId,
+      'name': name,
+      'command': command,
+      'args': args,
+    };
 
     if (env != null) data['env'] = env;
     if (workingDirectory != null) data['workingDirectory'] = workingDirectory;
@@ -112,7 +121,8 @@ class McpServerConfig {
   }
 
   /// 创建带有工具信息的副本
-  McpServerConfig copyWith({
+  Mcp copyWith({
+    String? mcpId,
     String? name,
     String? command,
     List<String>? args,
@@ -124,7 +134,8 @@ class McpServerConfig {
     List<McpToolInfo>? tools,
     DateTime? lastUpdated,
   }) {
-    return McpServerConfig(
+    return Mcp(
+      mcpId: mcpId ?? this.mcpId,
       name: name ?? this.name,
       command: command ?? this.command,
       args: args ?? this.args,
@@ -140,23 +151,23 @@ class McpServerConfig {
 
   @override
   String toString() {
-    return 'McpServerConfig(name: $name, command: $command, args: $args, tools: ${tools?.length ?? 0})';
+    return 'Mcp(mcpId: $mcpId, name: $name, command: $command, tools: ${tools?.length ?? 0})';
   }
 }
 
 /// MCP配置文件模型
 class McpConfig {
-  final Map<String, McpServerConfig> mcpServers;
+  final Map<String, Mcp> mcpServers;
   final String? version;
 
   const McpConfig({required this.mcpServers, this.version});
 
   factory McpConfig.fromJson(Map<String, dynamic> json) {
-    final servers = <String, McpServerConfig>{};
+    final servers = <String, Mcp>{};
     final mcpServersJson = json['mcpServers'] as Map<String, dynamic>? ?? {};
 
     for (final entry in mcpServersJson.entries) {
-      servers[entry.key] = McpServerConfig.fromJson(
+      servers[entry.key] = Mcp.fromJson(
         entry.key,
         entry.value as Map<String, dynamic>,
       );
@@ -191,12 +202,12 @@ class McpConfig {
   factory McpConfig.defaultConfig() {
     return McpConfig(
       mcpServers: {
-        '12306-mcp': McpServerConfig(
+        '12306-mcp': Mcp(
           name: '12306-mcp',
           command: 'npx',
           args: ['-y', '12306-mcp'],
         ),
-        'filesystem': McpServerConfig(
+        'filesystem': Mcp(
           name: 'filesystem',
           command: 'npx',
           args: [
@@ -205,7 +216,7 @@ class McpConfig {
             '/path/to/allowed/files',
           ],
         ),
-        'sqlite': McpServerConfig(
+        'sqlite': Mcp(
           name: 'sqlite',
           command: 'npx',
           args: [

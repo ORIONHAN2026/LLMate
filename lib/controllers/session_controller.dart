@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../models/chat/chat_session.dart';
-import '../models/chat/skill.dart';
 import '../models/bigmodel/chat_model.dart';
-import '../models/bigmodel/mcp_config.dart';
 import '../storage/isar_models.dart';
 import '../storage/isar_service.dart';
 import '../services/mcp_service.dart';
+import '../services/skill_service.dart';
 import 'model_controller.dart';
+import 'mcp_controller.dart';
 
 class SessionController extends GetxController {
   var sessions = <ChatSession>[].obs;
@@ -25,29 +25,63 @@ class SessionController extends GetxController {
   }
 
   Future<void> setCurrentSession(ChatSession? session) async {
+    if (session == null) {
+      currentSession.value = null;
+      await _persistCurrentSession();
+      return;
+    }
+
+    // 使用非空局部变量，允许后续 copyWith 重新赋值
+    ChatSession s = session;
+    bool updated = false;
+
     // 每次进入会话时，根据 modelId 动态重新加载 chatModel
-    if (session != null && session.modelId != null && session.modelId!.isNotEmpty) {
-      final sid = session.modelId!;
+    if (s.modelId != null && s.modelId!.isNotEmpty) {
       try {
         final modelController = Get.find<ModelController>();
-        final updatedChatModel = modelController.models.firstWhere(
-          (m) => m.modelId == sid,
+        final m = modelController.models.firstWhere(
+          (m) => m.modelId == s.modelId,
         );
-        session = session.copyWith(chatModel: updatedChatModel);
+        s = s.copyWith(chatModel: m);
+        updated = true;
       } catch (_) {
         // 模型已被删除，chatModel 保持为 null
       }
-      // 同步更新 sessions 列表中的对应项
-      final idx = sessions.indexWhere((s) => s.sessionId == session!.sessionId);
-      if (idx != -1) {
-        sessions[idx] = session!;
+    }
+
+    // 根据 mcpId 动态解析 mcp
+    if (s.mcpId != null && s.mcpId!.isNotEmpty) {
+      final mcpController = Get.find<McpController>();
+      await mcpController.ensureLoaded();
+      final mcp = mcpController.getMcpByName(s.mcpId!);
+      if (mcp != null) {
+        s = s.copyWith(mcp: mcp);
+        updated = true;
       }
     }
-    currentSession.value = session;
-    // 会话打开时预初始化 MCP 连接
-    if (session != null) {
-      McpService.initForSession(session);
+
+    // 根据 skillId 动态解析 skill
+    if (s.skillId != null && s.skillId!.isNotEmpty) {
+      await SkillService.ensureLoaded();
+      final skillObj = SkillService.getSkillById(s.skillId!);
+      if (skillObj != null) {
+        s = s.copyWith(skill: skillObj);
+        updated = true;
+      }
     }
+
+    // 同步更新 sessions 列表中的对应项
+    if (updated) {
+      final idx = sessions.indexWhere((ss) => ss.sessionId == s.sessionId);
+      if (idx != -1) {
+        sessions[idx] = s;
+      }
+    }
+
+    // 会话打开时预初始化 MCP 连接
+    McpService.initForSession(s);
+
+    currentSession.value = s;
     await _persistCurrentSession();
   }
 
@@ -354,14 +388,8 @@ class SessionController extends GetxController {
         session.messages.map((m) => m.toJson()).toList(),
       )
       ..modelId = session.modelId
-      ..mcpServerJson =
-          session.mcpServer != null
-              ? jsonEncode(session.mcpServer!.toJson())
-              : null
-      ..skillJson =
-          session.skill != null
-              ? jsonEncode(session.skill!.toJson())
-              : null
+      ..mcpId = session.mcpId
+      ..skillId = session.skillId
       ..attachmentsJson =
           session.attachments.isNotEmpty
               ? jsonEncode(
@@ -408,23 +436,7 @@ class SessionController extends GetxController {
       }
     }
 
-    // 解析 McpServerConfig
-    McpServerConfig? mcpServer;
-    if (entity.mcpServerJson != null && entity.mcpServerJson!.isNotEmpty) {
-      try {
-        final map = jsonDecode(entity.mcpServerJson!) as Map<String, dynamic>;
-        mcpServer = McpServerConfig.fromMap(map);
-      } catch (_) {}
-    }
-
-    // 解析 Skill
-    Skill? skill;
-    if (entity.skillJson != null && entity.skillJson!.isNotEmpty) {
-      try {
-        final map = jsonDecode(entity.skillJson!) as Map<String, dynamic>;
-        skill = Skill.fromJson(map);
-      } catch (_) {}
-    }
+    // mcp / skill 在 setCurrentSession 中动态解析（此时 MCP/Skill 可能尚未加载）
 
     return ChatSession(
       sessionId: entity.sessionId,
@@ -439,9 +451,9 @@ class SessionController extends GetxController {
       lastSelectedDirectory: entity.lastSelectedDirectory,
       workDirectory: entity.workDirectory,
       modelId: modelId,
+      mcpId: entity.mcpId,
+      skillId: entity.skillId,
       chatModel: chatModel,
-      mcpServer: mcpServer,
-      skill: skill,
       memoryRounds: entity.memoryRounds,
       deepThink: entity.deepThink,
     );

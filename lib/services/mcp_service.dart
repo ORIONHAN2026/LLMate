@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:mcp_client/mcp_client.dart';
 import '../models/chat/chat_session.dart';
 import '../models/bigmodel/mcp_config.dart';
-import 'mcp_storage_service.dart';
+import '../controllers/mcp_controller.dart';
 
 /// MCP工具调用结果
 class McpToolResult {
@@ -49,7 +50,7 @@ class McpService {
 
   /// 更新配置中的工具信息
   static Future<void> _updateConfigWithToolInfo(
-    McpServerConfig config,
+    Mcp config,
     List<Tool> tools,
   ) async {
     try {
@@ -70,7 +71,7 @@ class McpService {
       );
 
       // 保存到缓存
-      _cachedConfigs[config.name] = updatedConfig;
+      _cachedConfigs[config.mcpId] = updatedConfig;
 
       debugPrint('✅ 已更新 ${config.name} 的工具信息: ${toolInfos.length} 个工具');
     } catch (e) {
@@ -78,44 +79,55 @@ class McpService {
     }
   }
 
-  /// 缓存的配置信息
-  static final Map<String, McpServerConfig> _cachedConfigs = {};
+  /// 缓存的配置信息（运行时工具信息，不持久化）
+  static final Map<String, Mcp> _cachedConfigs = {};
 
-  /// 全局 MCP 配置列表（从 McpStorageService 加载）
-  static List<McpServerConfig> _globalMcpConfigs = [];
-  static bool _globalConfigsLoaded = false;
+  /// 获取 McpController 实例
+  static McpController get _mcpController => Get.find<McpController>();
 
   /// 确保全局 MCP 配置已加载到内存
   static Future<void> ensureGlobalConfigsLoaded() async {
-    if (_globalConfigsLoaded) return;
-    _globalMcpConfigs = await McpStorageService.loadMcpServices();
-    _globalConfigsLoaded = true;
-    debugPrint('📦 从存储加载了 ${_globalMcpConfigs.length} 个全局 MCP 服务配置');
+    await _mcpController.ensureLoaded();
   }
 
   /// 是否有全局 MCP 服务（同步，用于快速判断）
   static bool get hasGlobalMcpServices {
-    // 如果已加载，用内存中的结果
-    if (_globalConfigsLoaded) return _globalMcpConfigs.isNotEmpty;
-    // 否则也检查缓存中是否有数据（通过 refresh/connect 等填入的）
-    return _cachedConfigs.isNotEmpty;
+    try {
+      return _mcpController.hasServices;
+    } catch (_) {
+      return _cachedConfigs.isNotEmpty;
+    }
+  }
+
+  /// 按名称查找 MCP 服务配置
+  static Mcp? getMcpServerByName(String name) {
+    // 优先从缓存中查找（含运行时工具信息）
+    if (_cachedConfigs.containsKey(name)) {
+      return _cachedConfigs[name];
+    }
+    return _mcpController.getMcpByName(name);
   }
 
   /// 刷新单个 MCP 服务的工具列表（支持 stdio 和 SSE 两种传输方式）
-  /// 返回获取到的工具信息列表，失败时抛出异常
+  /// 刷新单个 MCP 服务的工具列表（支持 stdio 和 SSE 两种传输方式）
+  /// 返回获取到的工具信息列表，失败时抛出异常。
+  ///
+  /// 使用 [config.timeout] 作为超时时间，未设置则默认 30 秒。
+  /// 超时时抛出 [TimeoutException]。
   static Future<List<McpToolInfo>> refreshServiceTools(
-    McpServerConfig config,
+    Mcp config,
   ) async {
+    final timeoutSec = config.timeout ?? _defaultConnectionTimeoutSeconds;
     debugPrint('🔄 ====== 开始刷新 MCP 服务工具: ${config.name} ======');
     debugPrint(
       '   配置详情: name=${config.name}, url=${config.url}, command=${config.command}',
     );
     debugPrint('   args=${config.args}, headers=${config.headers}');
-    debugPrint('   timeout=${config.timeout}');
+    debugPrint('   ⏱ 超时: ${timeoutSec}s');
 
     // 清理旧连接
     debugPrint('   🧹 清理旧连接...');
-    await _cleanupClient(config.name);
+    await _cleanupClient(config.mcpId);
 
     // 创建客户端
     final client = Client(
@@ -124,35 +136,50 @@ class McpService {
     );
     debugPrint('   📦 创建 Client: aidock-client-${config.name} v1.0.0');
 
-    // 根据配置类型选择传输方式
-    ClientTransport transport;
-    if (config.url != null && config.url!.isNotEmpty) {
-      // SSE (URL-based) 传输
-      debugPrint('🔗 使用 SSE 传输: ${config.url}');
-      final startTime = DateTime.now();
-      transport = await SseClientTransport.create(
-        serverUrl: config.url!,
-        headers: config.headers,
-      );
-      debugPrint(
-        '   ⏱ SSE Transport 创建耗时: ${DateTime.now().difference(startTime).inMilliseconds}ms',
-      );
-    } else {
-      // stdio 传输
-      debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
-      transport = await StdioClientTransport.create(
-        command: config.command,
-        arguments: config.args,
-        environment: config.env,
-        workingDirectory: config.workingDirectory,
-      );
-    }
-
     try {
+      // 根据配置类型选择传输方式
+      ClientTransport transport;
+      if (config.url != null && config.url!.isNotEmpty) {
+        // SSE (URL-based) 传输
+        debugPrint('🔗 使用 SSE 传输: ${config.url}');
+        final startTime = DateTime.now();
+        transport = await SseClientTransport.create(
+          serverUrl: config.url!,
+          headers: config.headers,
+        ).timeout(
+          Duration(seconds: timeoutSec),
+          onTimeout: () => throw TimeoutException(
+            '连接 SSE 端点超时 (${timeoutSec}s): ${config.url}',
+          ),
+        );
+        debugPrint(
+          '   ⏱ SSE Transport 创建耗时: ${DateTime.now().difference(startTime).inMilliseconds}ms',
+        );
+      } else {
+        // stdio 传输
+        debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
+        transport = await StdioClientTransport.create(
+          command: config.command,
+          arguments: config.args,
+          environment: config.env,
+          workingDirectory: config.workingDirectory,
+        ).timeout(
+          Duration(seconds: timeoutSec),
+          onTimeout: () => throw TimeoutException(
+            '启动 stdio 进程超时 (${timeoutSec}s): ${config.command}',
+          ),
+        );
+      }
+
       // 连接（connect 内部会自动调用 initialize）
       debugPrint('🔌 调用 client.connect(transport)...');
       final connectStart = DateTime.now();
-      await client.connect(transport);
+      await client.connect(transport).timeout(
+        Duration(seconds: timeoutSec),
+        onTimeout: () => throw TimeoutException(
+          '连接 MCP 服务器超时 (${timeoutSec}s): ${config.name}',
+        ),
+      );
       debugPrint(
         '   ⏱ connect 耗时: ${DateTime.now().difference(connectStart).inMilliseconds}ms',
       );
@@ -160,7 +187,12 @@ class McpService {
       // 获取工具列表
       debugPrint('📋 调用 client.listTools()...');
       final listStart = DateTime.now();
-      final tools = await client.listTools();
+      final tools = await client.listTools().timeout(
+        Duration(seconds: timeoutSec),
+        onTimeout: () => throw TimeoutException(
+          '获取工具列表超时 (${timeoutSec}s): ${config.name}',
+        ),
+      );
       debugPrint(
         '   ⏱ listTools 耗时: ${DateTime.now().difference(listStart).inMilliseconds}ms',
       );
@@ -181,7 +213,7 @@ class McpService {
             );
           }).toList();
 
-      _cachedConfigs[config.name] = config.copyWith(
+      _cachedConfigs[config.mcpId] = config.copyWith(
         tools: toolInfos,
         lastUpdated: DateTime.now(),
       );
@@ -193,7 +225,10 @@ class McpService {
       // 断开连接
       return toolInfos;
     } catch (e, stack) {
-      debugPrint('❌ ====== 刷新失败: ${config.name} ======');
+      final isTimeout = e is TimeoutException;
+      debugPrint(
+        '${isTimeout ? '⏱' : '❌'} ====== 刷新失败: ${config.name} ======',
+      );
       debugPrint('   错误类型: ${e.runtimeType}');
       debugPrint('   错误信息: $e');
       debugPrint('   堆栈: $stack');
@@ -203,48 +238,71 @@ class McpService {
       try {
         client.disconnect();
       } catch (_) {}
-      _clients.remove(config.name);
-      _availableTools.remove(config.name);
+      _clients.remove(config.mcpId);
+      _availableTools.remove(config.mcpId);
       debugPrint('🧹 已断开刷新连接: ${config.name}');
     }
   }
 
+  /// 默认连接超时（秒）
+  static const int _defaultConnectionTimeoutSeconds = 30;
+
   /// 连接 MCP 服务器并获取服务器名称和工具列表。
   /// 用于首次添加服务时，从远程获取服务器信息。**完成后断开连接**。
+  ///
+  /// 使用 [config.timeout] 作为超时时间，未设置则默认 30 秒。
+  /// 超时时抛出 [TimeoutException]。
   static Future<McpConnectionInfo> connectAndGetInfo(
-    McpServerConfig config,
+    Mcp config,
   ) async {
+    final timeoutSec = config.timeout ?? _defaultConnectionTimeoutSeconds;
     debugPrint('🔗 ====== 连接 MCP 服务器并获取信息 ======');
     debugPrint('   配置: url=${config.url}, command=${config.command}');
     debugPrint('   args=${config.args}, headers=${config.headers}');
+    debugPrint('   ⏱ 超时: ${timeoutSec}s');
 
     // 清理旧连接
-    await _cleanupClient(config.name);
+    await _cleanupClient(config.mcpId);
 
     final client = Client(
       name: 'aidock-client-${config.name}',
       version: '1.0.0',
     );
 
-    ClientTransport transport;
-    if (config.url != null && config.url!.isNotEmpty) {
-      debugPrint('🔗 使用 SSE 传输: ${config.url}');
-      transport = await SseClientTransport.create(
-        serverUrl: config.url!,
-        headers: config.headers,
-      );
-    } else {
-      debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
-      transport = await StdioClientTransport.create(
-        command: config.command,
-        arguments: config.args,
-        environment: config.env,
-        workingDirectory: config.workingDirectory,
-      );
-    }
-
     try {
-      await client.connect(transport);
+      ClientTransport transport;
+      if (config.url != null && config.url!.isNotEmpty) {
+        debugPrint('🔗 使用 SSE 传输: ${config.url}');
+        transport = await SseClientTransport.create(
+          serverUrl: config.url!,
+          headers: config.headers,
+        ).timeout(
+          Duration(seconds: timeoutSec),
+          onTimeout: () => throw TimeoutException(
+            '连接 SSE 端点超时 (${timeoutSec}s): ${config.url}',
+          ),
+        );
+      } else {
+        debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
+        transport = await StdioClientTransport.create(
+          command: config.command,
+          arguments: config.args,
+          environment: config.env,
+          workingDirectory: config.workingDirectory,
+        ).timeout(
+          Duration(seconds: timeoutSec),
+          onTimeout: () => throw TimeoutException(
+            '启动 stdio 进程超时 (${timeoutSec}s): ${config.command}',
+          ),
+        );
+      }
+
+      await client.connect(transport).timeout(
+        Duration(seconds: timeoutSec),
+        onTimeout: () => throw TimeoutException(
+          '连接 MCP 服务器超时 (${timeoutSec}s): ${config.name}',
+        ),
+      );
 
       final serverInfo = client.serverInfo;
       final serverName =
@@ -253,7 +311,12 @@ class McpService {
               : config.name;
       debugPrint('📋 服务器名称: $serverName');
 
-      final tools = await client.listTools();
+      final tools = await client.listTools().timeout(
+        Duration(seconds: timeoutSec),
+        onTimeout: () => throw TimeoutException(
+          '获取工具列表超时 (${timeoutSec}s): $serverName',
+        ),
+      );
       debugPrint('📊 获取到 ${tools.length} 个工具');
 
       final toolInfos =
@@ -276,8 +339,10 @@ class McpService {
       // 立即断开，工具信息已保存到本地缓存
       return McpConnectionInfo(serverName: serverName, tools: toolInfos);
     } catch (e, stack) {
-      debugPrint('❌ ====== 连接失败: ${config.name} ======');
-      debugPrint('   错误: $e');
+      final isTimeout = e is TimeoutException;
+      debugPrint('${isTimeout ? '⏱' : '❌'} ====== 连接失败: ${config.name} ======');
+      debugPrint('   错误类型: ${e.runtimeType}');
+      debugPrint('   错误信息: $e');
       debugPrint('   堆栈: $stack');
       rethrow;
     } finally {
@@ -285,31 +350,31 @@ class McpService {
       try {
         client.disconnect();
       } catch (_) {}
-      _clients.remove(config.name);
-      _availableTools.remove(config.name);
+      _clients.remove(config.mcpId);
+      _availableTools.remove(config.mcpId);
       debugPrint('🧹 已断开探测连接: ${config.name}');
     }
   }
 
   /// 初始化MCP客户端
-  static Future<bool> initializeClient(McpServerConfig config) async {
+  static Future<bool> initializeClient(Mcp config) async {
     try {
       debugPrint('🔧 初始化MCP客户端: ${config.name}');
 
       // 检查是否已经初始化
-      if (_clients.containsKey(config.name)) {
-        final client = _clients[config.name]!;
+      if (_clients.containsKey(config.mcpId)) {
+        final client = _clients[config.mcpId]!;
         // 检查客户端是否仍然连接
         try {
           // 尝试获取工具列表来验证连接状态
           final tools = await client.listTools();
-          _availableTools[config.name] = tools;
+          _availableTools[config.mcpId] = tools;
           debugPrint('✓ MCP客户端已存在且连接正常: ${config.name}, 工具数量: ${tools.length}');
           return true;
         } catch (e) {
           debugPrint('⚠️ 现有客户端连接异常，重新初始化: ${config.name}, 错误: $e');
           // 清理旧客户端
-          await _cleanupClient(config.name);
+          await _cleanupClient(config.mcpId);
         }
       }
 
@@ -361,8 +426,8 @@ class McpService {
       final tools = await client.listTools();
 
       // 存储客户端和工具列表
-      _clients[config.name] = client;
-      _availableTools[config.name] = tools;
+      _clients[config.mcpId] = client;
+      _availableTools[config.mcpId] = tools;
 
       debugPrint('✅ MCP客户端初始化成功: ${config.name}, 工具数量: ${tools.length}');
 
@@ -412,8 +477,8 @@ class McpService {
   }
 
   /// 获取会话中实际启用的MCP服务列表（直接从 session 获取）
-  static List<McpServerConfig> _getEnabledServices(ChatSession session) {
-    return session.mcpServer != null ? [session.mcpServer!] : [];
+  static List<Mcp> _getEnabledServices(ChatSession session) {
+    return session.mcp != null ? [session.mcp!] : [];
   }
 
   /// 初始化会话的MCP服务
@@ -434,7 +499,7 @@ class McpService {
     for (final config in enabledServices) {
       final success = await initializeClient(config);
       if (success) {
-        initializedServices.add(config.name);
+        initializedServices.add(config.mcpId);
       }
     }
 
@@ -453,7 +518,7 @@ class McpService {
 
     final allTools = <Tool>[];
     for (final config in enabledServices) {
-      final tools = _availableTools[config.name];
+      final tools = _availableTools[config.mcpId];
       if (tools != null) {
         allTools.addAll(tools);
       }
@@ -572,7 +637,7 @@ class McpService {
           final serviceName = toolParts[0];
           final serviceConfig =
               enabledServices
-                  .where((config) => config.name == serviceName)
+                  .where((config) => config.mcpId == serviceName)
                   .firstOrNull;
 
           if (serviceConfig != null) {
@@ -586,9 +651,9 @@ class McpService {
         // 如果通过服务名称没有找到，在所有服务中搜索工具
         if (targetService == null) {
           for (final config in enabledServices) {
-            final tools = _availableTools[config.name];
+            final tools = _availableTools[config.mcpId];
             if (tools != null && tools.any((tool) => tool.name == toolName)) {
-              targetService = config.name;
+              targetService = config.mcpId;
               break;
             }
           }
@@ -703,7 +768,7 @@ class McpService {
 
     for (final config in enabledServices) {
       // 首先尝试从缓存中获取最新的配置信息
-      final cachedConfig = _cachedConfigs[config.name];
+      final cachedConfig = _cachedConfigs[config.mcpId];
       final toolInfos = cachedConfig?.tools ?? config.tools;
 
       if (toolInfos != null && toolInfos.isNotEmpty) {
@@ -919,7 +984,7 @@ class McpService {
 
   /// 检查会话是否有可用的MCP工具
   static bool hasAvailableTools(ChatSession session) {
-    if (session.mcpServer == null) return false;
+    if (session.mcp == null) return false;
     if (!hasGlobalMcpServices) return false;
 
     final tools = getSessionAvailableTools(session);
@@ -931,7 +996,7 @@ class McpService {
   /// 正常流程中，MCP 在会话打开时就已通过 [initForSession] 预连接，
   /// 此方法仅在未预连接的异常情况下按需初始化。
   static Future<Client?> getOrInitClient(ChatSession session) async {
-    final svc = session.mcpServer?.name;
+    final svc = session.mcp?.mcpId;
     if (svc == null) return null;
 
     Client? mc = getMCPClient(svc);
@@ -950,8 +1015,8 @@ class McpService {
   /// 在 [SessionController.switchToSession] 和 [SessionController.setCurrentSession]
   /// 中调用，确保切换到会话时 MCP 已连接，后续工具调用无需等待。
   static void initForSession(ChatSession session) {
-    if (session.mcpServer == null) return;
-    final svc = session.mcpServer!.name;
+    if (session.mcp == null) return;
+    final svc = session.mcp!.name;
 
     // 避免重复初始化
     if (_clients.containsKey(svc)) {

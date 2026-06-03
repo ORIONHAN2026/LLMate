@@ -25,10 +25,10 @@ class ChatSession {
   /// 工作目录：会话产生的文件默认保存到此目录
   final String? workDirectory;
 
-  /// 绑定的 MCP 服务（null = 未绑定）
-  final McpServerConfig? mcpServer;
+  /// 绑定的 MCP 服务（null = 未绑定，运行时由 mcpId 动态解析）
+  final Mcp? mcp;
 
-  /// 绑定的技能（null = 未绑定）
+  /// 绑定的技能（null = 未绑定，运行时由 skillId 动态解析）
   final Skill? skill;
 
   /// 记忆轮数（0 = 无记忆，默认 20）
@@ -42,6 +42,12 @@ class ChatSession {
   /// 绑定的模型ID，用于动态加载 chatModel
   final String? modelId;
 
+  /// 绑定的 MCP 服务名称（ID）
+  final String? mcpId;
+
+  /// 绑定的技能ID
+  final String? skillId;
+
   /// 运行时动态解析的模型对象（不持久化，由 modelId 解析而来）
   final ChatModel? chatModel;
   final List<ChatMessage> messages;
@@ -53,7 +59,11 @@ class ChatSession {
     required this.createdAt,
     required this.messages,
     String? modelId,
+    String? mcpId,
+    String? skillId,
     this.chatModel,
+    this.mcp,
+    this.skill,
     this.isFavorite = false,
     this.inputContent = '',
     this.attachments = const [],
@@ -62,12 +72,12 @@ class ChatSession {
     this.scrollPosition = 0.0,
     this.lastSelectedDirectory,
     this.workDirectory,
-    this.mcpServer,
-    this.skill,
     this.memoryRounds = 20,
     this.deepThink = false,
     this.sessionQuickCommands = const [],
-  }) : modelId = modelId ?? chatModel?.modelId;
+  })  : modelId = modelId ?? chatModel?.modelId,
+        mcpId = mcpId ?? mcp?.mcpId,
+        skillId = skillId ?? skill?.id;
 
   // 获取会话的预览文本
   String get previewText {
@@ -115,8 +125,8 @@ class ChatSession {
     String? lastSelectedDirectory,
     String? workDirectory,
     bool clearWorkDirectory = false,
-    McpServerConfig? mcpServer,
-    bool clearMcpServer = false,
+    Mcp? mcp,
+    bool clearMcp = false,
     Skill? skill,
     bool clearSkill = false,
     ChatModel? chatModel,
@@ -139,6 +149,33 @@ class ChatSession {
       resolvedChatModel = this.chatModel;
     }
 
+    // 自动同步 mcpId / skillId
+    final String? resolvedMcpId;
+    final Mcp? resolvedMcp;
+    if (clearMcp) {
+      resolvedMcpId = null;
+      resolvedMcp = null;
+    } else if (mcp != null) {
+      resolvedMcpId = mcp.mcpId;
+      resolvedMcp = mcp;
+    } else {
+      resolvedMcpId = mcpId;
+      resolvedMcp = this.mcp;
+    }
+
+    final String? resolvedSkillId;
+    final Skill? resolvedSkill;
+    if (clearSkill) {
+      resolvedSkillId = null;
+      resolvedSkill = null;
+    } else if (skill != null) {
+      resolvedSkillId = skill.id;
+      resolvedSkill = skill;
+    } else {
+      resolvedSkillId = skillId;
+      resolvedSkill = this.skill;
+    }
+
     return ChatSession(
       sessionId: sessionId ?? this.sessionId,
       name: title ?? name,
@@ -154,9 +191,11 @@ class ChatSession {
           lastSelectedDirectory ?? this.lastSelectedDirectory,
       workDirectory:
           clearWorkDirectory ? null : (workDirectory ?? this.workDirectory),
-      mcpServer: clearMcpServer ? null : (mcpServer ?? this.mcpServer),
-      skill: clearSkill ? null : (skill ?? this.skill),
+      mcp: resolvedMcp,
+      skill: resolvedSkill,
       modelId: resolvedModelId,
+      mcpId: resolvedMcpId,
+      skillId: resolvedSkillId,
       chatModel: resolvedChatModel,
       memoryRounds: memoryRounds ?? this.memoryRounds,
       deepThink: deepThink ?? this.deepThink,
@@ -165,11 +204,20 @@ class ChatSession {
   }
 
   factory ChatSession.fromJson(Map<String, dynamic> json) {
-    // 优先从 modelId 字段读取，兼容旧数据的 chatModel 字段提取 modelId
-    final String? modelId = json['modelId'] as String? ??
-        (json['chatModel'] is Map<String, dynamic>
-            ? (json['chatModel'] as Map<String, dynamic>)['modelId'] as String?
-            : null);
+    final String? modelId = json['modelId'] as String?;
+    final String? mcpId = json['mcpId'] as String?;
+    final String? skillId = json['skillId'] as String?;
+
+    // 兼容旧数据
+    final ChatModel? chatModel = json['chatModel'] != null
+        ? ChatModel.fromMap(json['chatModel'])
+        : null;
+    final Mcp? parsedMcp = json['mcp'] is Map<String, dynamic>
+        ? Mcp.fromMap(json['mcp'])
+        : null;
+    final Skill? skill = json['skill'] is Map<String, dynamic>
+        ? Skill.fromJson(json['skill'])
+        : null;
 
     return ChatSession(
       sessionId: json['id'] ?? '',
@@ -195,12 +243,6 @@ class ChatSession {
       scrollPosition: (json['scrollPosition'] as num?)?.toDouble() ?? 0.0,
       lastSelectedDirectory: json['lastSelectedDirectory'],
       workDirectory: json['workDirectory'],
-      mcpServer: json['mcpServer'] is Map<String, dynamic>
-          ? McpServerConfig.fromMap(json['mcpServer'])
-          : null,
-      skill: json['skill'] is Map<String, dynamic>
-          ? Skill.fromJson(json['skill'])
-          : null,
       memoryRounds: json['memoryRounds'] as int? ?? 20,
       deepThink: json['deepThink'] as bool? ?? false,
       sessionQuickCommands:
@@ -209,10 +251,11 @@ class ChatSession {
               .toList() ??
           [],
       modelId: modelId,
-      chatModel:
-          json['chatModel'] != null
-              ? ChatModel.fromMap(json['chatModel'])
-              : null,
+      mcpId: mcpId,
+      skillId: skillId,
+      chatModel: chatModel,
+      mcp: parsedMcp,
+      skill: skill,
     );
   }
 
@@ -230,14 +273,16 @@ class ChatSession {
       'scrollPosition': scrollPosition,
       'lastSelectedDirectory': lastSelectedDirectory,
       if (workDirectory != null) 'workDirectory': workDirectory,
-      if (mcpServer != null) 'mcpServer': mcpServer!.toJson(),
-      if (skill != null) 'skill': skill!.toJson(),
       'memoryRounds': memoryRounds,
       'deepThink': deepThink,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
       if (modelId != null) 'modelId': modelId,
+      if (mcpId != null) 'mcpId': mcpId,
+      if (skillId != null) 'skillId': skillId,
       'chatModel': chatModel?.toMap(),
+      if (mcp != null) 'mcp': mcp!.toJson(),
+      if (skill != null) 'skill': skill!.toJson(),
     };
   }
 

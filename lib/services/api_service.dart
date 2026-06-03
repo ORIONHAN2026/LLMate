@@ -330,9 +330,9 @@ class ApiService {
 
       // 如果启用了MCP工具，添加tools字段（魔塔兼容OpenAI格式）
       debugPrint(
-        'ModelScope MCP检查: isMcpToolsEnabled=${chatSession.mcpServer != null}, hasGlobalServices=${McpService.hasGlobalMcpServices}',
+        'ModelScope MCP检查: isMcpToolsEnabled=${chatSession.mcp != null}, hasGlobalServices=${McpService.hasGlobalMcpServices}',
       );
-      if (chatSession.mcpServer != null &&
+      if (chatSession.mcp != null &&
           McpService.hasGlobalMcpServices) {
         final tools = McpService.buildOpenAIToolsFormat(chatSession);
         debugPrint('ModelScope 构建的tools数量: ${tools.length}');
@@ -420,7 +420,7 @@ class ApiService {
       };
 
       // 如果启用了MCP工具，添加tools字段
-      if (chatSession.mcpServer != null &&
+      if (chatSession.mcp != null &&
           McpService.hasGlobalMcpServices) {
         final tools = McpService.buildOpenAIToolsFormat(chatSession);
         if (tools.isNotEmpty) {
@@ -514,7 +514,7 @@ class ApiService {
       };
 
       // 如果启用了MCP工具，添加tools字段
-      if (chatSession.mcpServer != null &&
+      if (chatSession.mcp != null &&
           McpService.hasGlobalMcpServices) {
         final tools = McpService.buildOpenAIToolsFormat(chatSession);
         if (tools.isNotEmpty) {
@@ -751,7 +751,7 @@ class ApiService {
       };
 
       // 如果启用了MCP工具，添加tools字段（魔塔兼容OpenAI格式）
-      if (chatSession.mcpServer != null &&
+      if (chatSession.mcp != null &&
           McpService.hasGlobalMcpServices) {
         final tools = McpService.buildOpenAIToolsFormat(chatSession);
         if (tools.isNotEmpty) {

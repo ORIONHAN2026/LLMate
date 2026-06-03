@@ -56,8 +56,8 @@ class IsarChatSession {
   // JSON blobs for complex nested data
   late String? messagesJson;
   @ignore late String? chatModelJson;
-  late String? mcpServerJson;
-  late String? skillJson;
+  @ignore late String? mcpServerJson;
+  @ignore late String? skillJson;
   late String? attachmentsJson;
   late String? sessionQuickCommandsJson;
 
@@ -73,18 +73,32 @@ class IsarChatSession {
 
   /// 绑定的模型ID（用于动态解析 ChatModel，放在末尾避免破坏旧数据字段索引）
   late String? modelId;
+
+  /// 绑定的 MCP 服务名称
+  late String? mcpId;
+
+  /// 绑定的技能ID
+  late String? skillId;
 }
 
-/// Isar 集合：MCP 服务配置
+/// Isar 集合：MCP 服务配置（独立字段存储，不再使用 JSON 大对象）
 @collection
 class IsarMcpService {
   Id id = Isar.autoIncrement;
 
   @Index(unique: true)
-  late String name;
+  late String mcpId;
 
-  /// 完整的 McpServerConfig JSON
-  late String configJson;
+  late String name;
+  late String command;
+  late String argsJson;       // JSON for List<String>
+  late String? envJson;       // JSON for Map<String,String>
+  late String? workingDirectory;
+  late int? timeout;
+  late String? url;
+  late String? headersJson;   // JSON for Map<String,String>
+  late String? toolsJson;     // JSON for List<McpToolInfo>
+  late DateTime? lastUpdated;
 }
 
 /// Isar 集合：通用键值设置（如主题偏好）

@@ -96,7 +96,7 @@ class _TrainingTabState extends State<McpTab> {
     );
   }
 
-  Widget _buildMcpServiceCard(McpServerConfig service) {
+  Widget _buildMcpServiceCard(Mcp service) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -245,7 +245,7 @@ class _TrainingTabState extends State<McpTab> {
     );
   }
 
-  void _testMcpService(McpServerConfig service) {
+  void _testMcpService(Mcp service) {
     // 显示简单的测试提示
     showDialog(
       context: context,
@@ -299,7 +299,7 @@ class _TrainingTabState extends State<McpTab> {
     SnackBarUtils.showSuccess(context, 'MCP服务测试功能开发中');
   }
 
-  void _fullMcpTest(McpServerConfig service) {
+  void _fullMcpTest(Mcp service) {
     // 显示完整测试提示
     showDialog(
       context: context,
@@ -514,7 +514,7 @@ class _TrainingTabState extends State<McpTab> {
     );
   }
 
-  void _showDeleteMcpServiceDialog(McpServerConfig service) {
+  void _showDeleteMcpServiceDialog(Mcp service) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -630,7 +630,7 @@ class _TrainingTabState extends State<McpTab> {
                 Navigator.pop(context);
 
                 // 删除服务
-                final currentServices = List<McpServerConfig>.from(
+                final currentServices = List<Mcp>.from(
                   _currentModel.mcpServices ?? [],
                 );
                 currentServices.removeWhere((s) => s.name == service.name);
@@ -676,7 +676,7 @@ class _TrainingTabState extends State<McpTab> {
   void _parseAndAddMcpConfig(String configText) {
     try {
       final Map<String, dynamic> json = jsonDecode(configText);
-      final currentServices = List<McpServerConfig>.from(
+      final currentServices = List<Mcp>.from(
         _currentModel.mcpServices ?? [],
       );
 
@@ -690,7 +690,7 @@ class _TrainingTabState extends State<McpTab> {
           throw Exception('服务名称 "$serviceName" 已存在');
         }
 
-        final service = McpServerConfig(
+        final service = Mcp(
           name: serviceName,
           command: json['command'] as String,
           args: List<String>.from(json['args'] ?? []),
@@ -712,7 +712,7 @@ class _TrainingTabState extends State<McpTab> {
             throw Exception('服务名称 "$serviceName" 已存在');
           }
 
-          final service = McpServerConfig(
+          final service = Mcp(
             name: serviceName,
             command: serviceConfig['command'] as String,
             args: List<String>.from(serviceConfig['args'] ?? []),
@@ -737,7 +737,7 @@ class _TrainingTabState extends State<McpTab> {
             throw Exception('服务名称 "$serviceName" 已存在');
           }
 
-          final service = McpServerConfig(
+          final service = Mcp(
             name: serviceName,
             command: serviceConfig['command'] as String,
             args: List<String>.from(serviceConfig['args'] ?? []),

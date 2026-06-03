@@ -25,7 +25,7 @@ class ChatModel {
   final ChatSettings? chatSettings;
 
   // MCP服务列表 - 模型绑定的MCP服务配置
-  final List<McpServerConfig>? mcpServices;
+  final List<Mcp>? mcpServices;
 
   // 快捷指令列表 - 模型绑定的快捷指令配置
   final List<ChatCommand>? chatCommands;
@@ -100,7 +100,7 @@ class ChatModel {
                   .where((item) => item != null) // 过滤掉空项
                   .map((item) {
                     try {
-                      return McpServerConfig.fromJson(
+                      return Mcp.fromJson(
                         item['name'] ?? '',
                         item is Map<String, dynamic>
                             ? item
@@ -110,7 +110,7 @@ class ChatModel {
                       print('Error parsing MCP service config: $e');
                       print('Item data: $item');
                       // 返回一个默认配置而不是抛出异常
-                      return McpServerConfig(
+                      return Mcp(
                         name: item['name'] ?? 'unknown',
                         command: '',
                         args: [],
@@ -285,7 +285,7 @@ class ChatModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     ChatSettings? chatSettings,
-    List<McpServerConfig>? mcpServices,
+    List<Mcp>? mcpServices,
     List<ChatCommand>? chatCommands,
     List<Skill>? skills,
   }) {
@@ -502,8 +502,8 @@ class ChatModel {
   // ========== MCP 服务管理方法 ==========
 
   /// 添加 MCP 服务配置
-  ChatModel addMcpService(McpServerConfig service) {
-    final currentServices = mcpServices?.toList() ?? <McpServerConfig>[];
+  ChatModel addMcpService(Mcp service) {
+    final currentServices = mcpServices?.toList() ?? <Mcp>[];
     // 检查是否已存在同名服务
     if (!currentServices.any((s) => s.name == service.name)) {
       currentServices.add(service);
@@ -513,14 +513,14 @@ class ChatModel {
 
   /// 移除 MCP 服务配置
   ChatModel removeMcpService(String serviceName) {
-    final currentServices = mcpServices?.toList() ?? <McpServerConfig>[];
+    final currentServices = mcpServices?.toList() ?? <Mcp>[];
     currentServices.removeWhere((s) => s.name == serviceName);
     return copyWith(mcpServices: currentServices);
   }
 
   /// 更新 MCP 服务配置
-  ChatModel updateMcpService(String serviceName, McpServerConfig newService) {
-    final currentServices = mcpServices?.toList() ?? <McpServerConfig>[];
+  ChatModel updateMcpService(String serviceName, Mcp newService) {
+    final currentServices = mcpServices?.toList() ?? <Mcp>[];
     final index = currentServices.indexWhere((s) => s.name == serviceName);
     if (index != -1) {
       currentServices[index] = newService;
@@ -529,7 +529,7 @@ class ChatModel {
   }
 
   /// 获取指定名称的 MCP 服务配置
-  McpServerConfig? getMcpService(String serviceName) {
+  Mcp? getMcpService(String serviceName) {
     return mcpServices?.firstWhere(
       (s) => s.name == serviceName,
       orElse: () => throw StateError('Service not found'),
@@ -548,18 +548,18 @@ class ChatModel {
 
   /// 清空所有 MCP 服务配置
   ChatModel clearMcpServices() {
-    return copyWith(mcpServices: <McpServerConfig>[]);
+    return copyWith(mcpServices: <Mcp>[]);
   }
 
   /// 从 JSON 配置批量添加 MCP 服务
   ChatModel addMcpServicesFromJson(List<Map<String, dynamic>> servicesJson) {
-    final currentServices = mcpServices?.toList() ?? <McpServerConfig>[];
+    final currentServices = mcpServices?.toList() ?? <Mcp>[];
 
     for (final serviceJson in servicesJson) {
       try {
         final serviceName = serviceJson['name'] as String? ?? '';
         if (serviceName.isNotEmpty) {
-          final service = McpServerConfig.fromJson(serviceName, serviceJson);
+          final service = Mcp.fromJson(serviceName, serviceJson);
           // 检查是否已存在同名服务
           if (!currentServices.any((s) => s.name == service.name)) {
             currentServices.add(service);

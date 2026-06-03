@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'controllers/model_controller.dart';
 import 'controllers/session_controller.dart';
 import 'controllers/theme_controller.dart';
+import 'controllers/mcp_controller.dart';
 import 'pages/home.dart';
 import 'pages/loading_page.dart';
 import 'services/model_storage_service.dart';
@@ -229,11 +230,15 @@ class _AppInitializerState extends State<AppInitializer> {
       // 初始化全局GetX控制器
       final modelController = Get.put(ModelController());
       final sessionController = Get.put(SessionController());
+      final mcpController = Get.put(McpController());
 
       // 加载模型数据
       final modelMaps = await ModelStorageService.loadModels();
       final models = modelMaps.map((m) => ChatModel.fromMap(m)).toList();
       modelController.setModels(models);
+
+      // 加载 MCP 配置数据
+      await mcpController.loadAll();
 
       // 加载会话数据
       await sessionController.loadAll();

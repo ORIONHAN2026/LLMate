@@ -941,7 +941,10 @@ class McpService {
         // 构建OpenAI function格式
         final functionDef = <String, dynamic>{
           'type': 'function',
-          'function': {'name': tool.name, 'description': tool.description},
+          'function': <String, dynamic>{
+            'name': tool.name,
+            'description': tool.description,
+          },
         };
 
         // 处理参数schema

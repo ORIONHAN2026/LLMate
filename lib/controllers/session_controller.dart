@@ -53,7 +53,7 @@ class SessionController extends GetxController {
     if (s.mcpId != null && s.mcpId!.isNotEmpty) {
       final mcpController = Get.find<McpController>();
       await mcpController.ensureLoaded();
-      final mcp = mcpController.getMcpByName(s.mcpId!);
+      final mcp = mcpController.getMcpById(s.mcpId!);
       if (mcp != null) {
         s = s.copyWith(mcp: mcp);
         updated = true;

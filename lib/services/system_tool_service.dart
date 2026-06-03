@@ -8,6 +8,7 @@ import 'file_tool_service.dart';
 import 'pdf_tool_service.dart';
 import 'ppt_tool_service.dart';
 import 'python_tool_service.dart';
+import 'url_fetch_tool_service.dart';
 import 'word_tool_service.dart';
 
 class SystemToolDefinition {
@@ -43,6 +44,9 @@ class SystemToolService {
   static const String pdfReadTool = 'pdf_read';
   static const String pptWriteTool = 'ppt_write';
   static const String pptReadTool = 'ppt_read';
+
+  // ── 网络工具 ──
+  static const String urlFetchTool = 'url_fetch';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -290,6 +294,25 @@ class SystemToolService {
         'required': ['filePath'],
       },
     ),
+
+    // ── 网络工具 ──
+    SystemToolDefinition(
+      name: urlFetchTool,
+      description:
+          '抓取指定 URL 的网页内容并提取纯文本。支持 HTTP/HTTPS。'
+          '自动识别 HTML 页面（提取文本）、JSON 接口（格式化输出）、纯文本等。'
+          '最大内容 5MB，文本截断至 20000 字符。适用于阅读文档、获取 API 数据等场景。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'url': {
+            'type': 'string',
+            'description': '要抓取的完整 URL（必须包含 http:// 或 https://）。',
+          },
+        },
+        'required': ['url'],
+      },
+    ),
   ];
 
   static List<SystemToolDefinition> get tools => List.unmodifiable(_tools);
@@ -382,6 +405,11 @@ class SystemToolService {
       case pptReadTool:
         return PptToolService.execute(
           action: 'read',
+          arguments: arguments,
+          callId: callId,
+        );
+      case urlFetchTool:
+        return UrlFetchToolService.execute(
           arguments: arguments,
           callId: callId,
         );

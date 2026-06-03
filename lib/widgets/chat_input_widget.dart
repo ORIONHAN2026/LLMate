@@ -1100,22 +1100,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _buildInputAttachToggle(),
-
-                      const SizedBox(width: 8),
-
-                      _buildMcpToolsToggle(),
-                      const SizedBox(width: 8),
-
-                      _buildSkillToggle(),
                       const SizedBox(width: 8),
                       _buildDeepThinkToggle(),
+                      const SizedBox(width: 8),
+                      _buildMcpToolsToggle(),
+                      const SizedBox(width: 8),
+                      _buildSkillToggle(),
                       const SizedBox(width: 8),
                       _buildMemoryToggle(),
                       const SizedBox(width: 8),
                       _buildWorkDirectoryToggle(),
                       const SizedBox(width: 8),
                       _buildCleanHistoryToggle(),
-
                       // Container(
                       //   height: 16,
                       //   width: 1,
@@ -1600,10 +1596,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
     final displayText =
-        hasSelectedService ? mcp.name : (hasMcpServices ? '请选择' : '无MCP服务');
+        hasSelectedService ? mcp.name : (hasMcpServices ? '选连接器' : '无连接器');
 
     return Tooltip(
-      message: hasMcpServices ? '点击选择MCP服务' : '当前模型未配置MCP服务',
+      message: hasMcpServices ? '点击选择连接器(MCP)' : '当前模型未配置连接器(MCP)',
       child: GestureDetector(
         onTap: hasMcpServices && !_isSending ? _showMcpServiceSelection : null,
         onDoubleTap:
@@ -1658,7 +1654,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：技能名）
     final displayText =
-        activeSkill != null ? activeSkill.name : (hasSkills ? '请选择' : '无可用技能');
+        activeSkill != null ? activeSkill.name : (hasSkills ? '选技能' : '无可用技能');
 
     final iconWidget = Icon(
       CupertinoIcons.wand_stars,

@@ -2810,6 +2810,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           botMessage.isToolCalling = false;
         }
 
+        // 处理流结束信号
+        if ((chunkMap['done'] ?? '') == 'true') {
+          botMessage.isToolCalling = false;
+          updateSession = updateSession.copyWith(isSending: false);
+          sessionController.updateSession(updateSession);
+          setState(() {});
+        }
+
         if (contentChunk.isNotEmpty ||
             effectiveThinkChunk.isNotEmpty ||
             toolcall.isNotEmpty) {

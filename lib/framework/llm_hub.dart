@@ -171,6 +171,11 @@ class LlmClient {
           if (kDebugMode) debugPrint('📤 [LLMChat] think: $t');
           yield {'think': t};
         }
+
+        final done = chunk['done'] ?? '';
+        if (done == 'true') {
+          yield {'done': 'true'};
+        }
       }
 
       // 无工具调用或已取消 → 结束

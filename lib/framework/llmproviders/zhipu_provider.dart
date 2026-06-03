@@ -1,5 +1,6 @@
-import 'dart:async';
 import 'dart:convert';
+import 'dart:async';
+import 'package:chathub/models/bigmodel/zhipu_response.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
@@ -26,94 +27,26 @@ class ZhipuProvider extends BaseLlmProvider {
   @override
   void onConfigure(ChatModel model) {}
 
+  // ── HTTP 客户端 ──
+
   Dio get dio {
     final client = Dio();
-    client.options.connectTimeout = const Duration(milliseconds: BaseLlmProvider.defaultTimeout);
+    client.options.connectTimeout = const Duration(
+      milliseconds: BaseLlmProvider.defaultTimeout,
+    );
     client.options.receiveTimeout = const Duration(minutes: 5);
     client.options.sendTimeout = const Duration(minutes: 5);
     return client;
   }
 
-  Map<String, String?> extractStreamChunk(Map<String, dynamic> data) {
-    String? content;
-    String? toolCall;
-    String? finishReason;
-    try {
-      final choices = data['choices'] as List?;
-      if (choices != null && choices.isNotEmpty) {
-        final choice = choices[0] as Map<String, dynamic>;
-        final delta = choice['delta'] as Map<String, dynamic>?;
-        if (delta != null) {
-          content = delta['content'] as String?;
-          if (delta['tool_calls'] != null) toolCall = jsonEncode(delta['tool_calls']);
-        }
-        finishReason = choice['finish_reason'] as String?;
-      }
-    } catch (_) {}
-    return {
-      if (content != null && content.isNotEmpty) 'content': content,
-      if (toolCall != null && toolCall.isNotEmpty && toolCall != 'null') 'toolcall': toolCall,
-      if (finishReason != null) 'finish_reason': finishReason,
-    };
-  }
-
-  Stream<Map<String, String?>> _processSSEStream(Stream<List<int>> stream) async* {
-    String buffer = '';
-    final utf8Decoder = const Utf8Decoder();
-    List<int> pendingBytes = [];
-    await for (final chunk in stream) {
-      pendingBytes.addAll(chunk);
-      String? chunkString;
-      try {
-        chunkString = utf8Decoder.convert(pendingBytes);
-        pendingBytes.clear();
-      } on FormatException {
-        for (int i = pendingBytes.length - 1; i > 0; i--) {
-          try {
-            chunkString = utf8Decoder.convert(pendingBytes.sublist(0, i));
-            pendingBytes = pendingBytes.sublist(i);
-            break;
-          } on FormatException {
-            continue;
-          }
-        }
-      }
-      if (chunkString == null) continue;
-      buffer += chunkString;
-      final lines = buffer.split('\n');
-      buffer = lines.removeLast();
-      for (final line in lines) {
-        if (!line.trim().startsWith('data: ')) continue;
-        final dataStr = line.trim().substring(6);
-        if (dataStr == '[DONE]') return;
-        try {
-          yield extractStreamChunk(jsonDecode(dataStr) as Map<String, dynamic>);
-        } catch (_) {}
-      }
-    }
-  }
+  // ── 核心抽象方法 ──
 
   @override
   Stream<Map<String, String?>> sendMessageStream({
     required ChatMessage userMessage,
     ChatSession? session,
   }) async* {
-    if (model == null) throw StateError('$providerName 提供商未配置');
-    try {
-      final requestData = buildRequestData(userMessage: userMessage, stream: true, session: session);
-      final response = await dio.post<ResponseBody>(
-        model!.apiUrl!,
-        options: Options(headers: buildAuthHeaders(), responseType: ResponseType.stream),
-        data: requestData,
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        yield* _processSSEStream(response.data!.stream);
-      } else {
-        yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
-      }
-    } catch (e) {
-      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
-    }
+    yield* _sendOpenAIStreamRequest(userMessage: userMessage, session: session);
   }
 
   @override
@@ -121,22 +54,7 @@ class ZhipuProvider extends BaseLlmProvider {
     List<Map<String, dynamic>> messages, {
     ChatSession? session,
   }) async* {
-    if (model == null) throw StateError('$providerName 提供商未配置');
-    try {
-      final requestData = buildRequestData(messages: messages, stream: true, session: session);
-      final response = await dio.post<ResponseBody>(
-        model!.apiUrl!,
-        options: Options(headers: buildAuthHeaders(), responseType: ResponseType.stream),
-        data: requestData,
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        yield* _processSSEStream(response.data!.stream);
-      } else {
-        yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
-      }
-    } catch (e) {
-      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
-    }
+    yield* _sendOpenAIStreamRequest(messages: messages, session: session);
   }
 
   @override
@@ -144,57 +62,198 @@ class ZhipuProvider extends BaseLlmProvider {
     required ChatMessage userMessage,
     ChatSession? session,
   }) async {
+    try {
+      final data = await _sendOpenAINonStreamRequest(
+        userMessage: userMessage,
+        session: session,
+        extra: {
+          'response_format': {'type': 'json_object'},
+        },
+      );
+      if (data != null) {
+        final choices = data['choices'] as List?;
+        if (choices != null && choices.isNotEmpty) {
+          final message = choices[0]['message'];
+          if (message != null && message['content'] != null) {
+            return message['content'] as String;
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) print('$providerName 非流式响应错误: $e');
+      throw Exception('错误: ${handleApiError(e)}');
+    }
+  }
+
+  // ── OpenAI 兼容流式请求 ──
+
+  Stream<Map<String, String?>> _sendOpenAIStreamRequest({
+    ChatMessage? userMessage,
+    List<Map<String, dynamic>>? messages,
+    ChatSession? session,
+    Map<String, dynamic>? extra,
+  }) async* {
+    if (model == null) throw StateError('$providerName 提供商未配置');
+
+    try {
+      final requestData = buildRequestData(
+        userMessage: userMessage,
+        messages: messages,
+        stream: true,
+        session: session,
+        extra: extra,
+      );
+
+      if (kDebugMode) {
+        print('$providerName 发送请求到: ${model!.apiUrl}');
+        print('请求数据: ${jsonEncode(requestData)} 请求数据结束');
+      }
+
+      final response = await dio.post<ResponseBody>(
+        model!.apiUrl!,
+        options: Options(
+          headers: buildAuthHeaders(),
+          responseType: ResponseType.stream,
+        ),
+        data: requestData,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        yield* _transformStreamResponse(response.data!.stream);
+      } else {
+        yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
+      }
+    } catch (e) {
+      if (kDebugMode) print('$providerName 流式响应错误: $e');
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
+    }
+  }
+
+  Future<Map<String, dynamic>?> _sendOpenAINonStreamRequest({
+    ChatMessage? userMessage,
+    List<Map<String, dynamic>>? messages,
+    ChatSession? session,
+    Map<String, dynamic>? extra,
+  }) async {
     if (model == null) throw StateError('$providerName 提供商未配置');
     try {
-      final requestData = buildRequestData(userMessage: userMessage, stream: false, session: session);
+      final requestData = buildRequestData(
+        userMessage: userMessage,
+        messages: messages,
+        stream: false,
+        session: session,
+        extra: extra,
+      );
       final response = await dio.post(
         model!.apiUrl!,
         options: Options(headers: buildAuthHeaders()),
         data: requestData,
       );
       if (response.statusCode == 200 && response.data != null) {
-        final data = response.data as Map<String, dynamic>;
-        final choices = data['choices'] as List?;
-        if (choices != null && choices.isNotEmpty) {
-          final message = (choices[0] as Map)['message'] as Map<String, dynamic>?;
-          if (message != null) return message['content'] as String?;
-        }
+        return response.data as Map<String, dynamic>;
       }
       return null;
     } catch (e) {
-      throw Exception('$providerName API 错误: ${handleApiError(e)}');
+      if (kDebugMode) print('$providerName 非流式响应错误: $e');
+      rethrow;
     }
   }
+
+  // ── 智谱流处理 ──
+
+  Stream<Map<String, String?>> _transformStreamResponse(
+    Stream<List<int>> stream,
+  ) async* {
+    String buffer = '';
+
+    await for (final chunk in stream) {
+      buffer += utf8.decode(chunk);
+      final lines = buffer.split('\n');
+      buffer = lines.removeLast();
+
+      for (final line in lines) {
+        if (!line.trim().startsWith('data: ')) continue;
+        final dataStr = line.trim().substring(6);
+        print(dataStr);
+        if (dataStr == '[DONE]') {
+          yield {'done': 'true'};
+          return;
+        }
+        try {
+          final response = ZhipuResponse.fromJson(
+            jsonDecode(dataStr) as Map<String, dynamic>,
+          );
+
+          // 普通文本内容
+          final content = response.choices.firstOrNull?.delta?.content;
+          if (content != null && content.isNotEmpty) {
+            yield {'content': content};
+          }
+
+          // 提取 think（推理过程），仅在深度思考模式下 yield
+          if (thinkEnabled) {
+            final reasoning =
+                response.choices.firstOrNull?.delta?.reasoningContent;
+            if (reasoning != null && reasoning.isNotEmpty) {
+              yield {'think': reasoning};
+            }
+          }
+
+          // 原生 tool_calls delta
+          final toolCalls = response.choices.firstOrNull?.delta?.toolCalls;
+          if (toolCalls != null && toolCalls.isNotEmpty) {
+            yield {
+              'toolcall': jsonEncode(toolCalls.map((t) => t.toJson()).toList()),
+            };
+          }
+        } catch (e) {
+          if (kDebugMode) print('$providerName JSON 解析错误: $e');
+        }
+      }
+    }
+  }
+
+  // ── 验证与错误处理 ──
 
   @override
   Future<bool> validateConfiguration() async {
     if (model == null) return false;
-    try {
-      final response = await dio.post(
-        model!.apiUrl!,
-        options: Options(headers: buildAuthHeaders()),
-        data: {
-          'model': model!.model,
-          'messages': [{'role': 'user', 'content': '你好'}],
-          'max_tokens': 5,
-        },
-      );
-      return response.statusCode == 200;
-    } catch (e) {
-      debugPrint('$providerName 配置验证失败: $e');
-      return false;
-    }
+    if (model!.apiUrl == null || model!.apiUrl!.isEmpty) return false;
+    if (model!.apiKey == null || model!.apiKey!.isEmpty) return false;
+    if (model!.model.isEmpty) return false;
+    return true;
   }
-
-
 
   String handleApiError(dynamic error) {
     final es = error.toString();
-    if (es.contains('CONNECT_TIMEOUT')) return '网络连接超时';
-    if (es.contains('RECEIVE_TIMEOUT')) return 'API 响应超时';
-    if (es.contains('401') || es.contains('Unauthorized')) return 'API 密钥无效';
-    if (es.contains('429')) return 'API 调用频率过高';
-    if (es.contains('500')) return 'API 服务器内部错误';
+    if (es.contains(
+      'Dio can\'t establish a new connection after it was closed',
+    ))
+      return '连接错误，请重试发送消息';
+    if (es.contains('DioException') || es.contains('DioError')) {
+      if (es.contains('CONNECT_TIMEOUT')) return '网络连接超时，请检查网络设置';
+      if (es.contains('RECEIVE_TIMEOUT')) return 'API 响应超时，请稍后重试';
+      if (es.contains('RESPONSE')) return 'API 请求失败，请检查配置和网络';
+      if (es.contains('CONNECTION_ERROR') || es.contains('Connection refused'))
+        return '网络连接被拒绝，请检查网络连接和API地址';
+      if (es.contains('Network is unreachable')) return '网络不可达，请检查网络连接';
+      return '网络连接错误：请检查网络设置和API配置';
+    }
+    if (es.contains('401') || es.contains('Unauthorized'))
+      return 'API 密钥无效，请检查密钥配置';
+    if (es.contains('403') || es.contains('Forbidden'))
+      return 'API 访问被拒绝，请检查权限设置';
+    if (es.contains('404') || es.contains('Not Found'))
+      return 'API 地址不存在，请检查 URL 配置';
+    if (es.contains('429') || es.contains('Too Many Requests'))
+      return 'API 调用频率过高，请稍后重试';
+    if (es.contains('500') || es.contains('Internal Server Error'))
+      return 'API 服务器内部错误，请稍后重试';
+    if (es.contains('SocketException') || es.contains('HandshakeException'))
+      return '网络连接失败，请检查网络设置和证书配置';
+    if (es.contains('FormatException') || es.contains('Invalid JSON'))
+      return 'API 响应格式错误，请检查API配置';
     return 'API 错误：$es';
   }
 
@@ -207,6 +266,7 @@ class ZhipuProvider extends BaseLlmProvider {
       'name': model!.name,
       'features': getSupportedFeatures(),
       'configured': true,
+      'supports_reasoning': model!.model.contains('glm'),
     };
   }
 }

@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../models/chat/chat_session.dart';
+import 'excel_tool_service.dart';
 import 'file_tool_service.dart';
 import 'mcp_service.dart';
+import 'pdf_tool_service.dart';
+import 'ppt_tool_service.dart';
 import 'python_tool_service.dart';
-import 'skill_storage_service.dart';
+import 'word_tool_service.dart';
 
 class SystemToolDefinition {
   final String name;
@@ -27,9 +30,20 @@ class SystemToolDefinition {
 /// - `file_read`: 读取文本文件
 /// - `file_write`: 写入/创建文本文件
 class SystemToolService {
+  // ── 基础工具 ──
   static const String pythonExecuteTool = 'python_execute';
   static const String fileReadTool = 'file_read';
   static const String fileWriteTool = 'file_write';
+
+  // ── 文档工具 ──
+  static const String wordCreateTool = 'word_create';
+  static const String wordReadTool = 'word_read';
+  static const String excelWriteTool = 'excel_write';
+  static const String excelReadTool = 'excel_read';
+  static const String pdfWriteTool = 'pdf_write';
+  static const String pdfReadTool = 'pdf_read';
+  static const String pptWriteTool = 'ppt_write';
+  static const String pptReadTool = 'ppt_read';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -101,6 +115,182 @@ class SystemToolService {
         'required': ['filePath', 'content'],
       },
     ),
+
+    // ── Word 文档 ──
+    SystemToolDefinition(
+      name: wordCreateTool,
+      description:
+          '创建 .docx Word 文档。支持标题、章节（heading + paragraphs）、'
+          '表格（headers + rows）、项目符号/编号列表、文字对齐与加粗。'
+          '如果不指定 fileName，自动根据 title 生成。返回生成文件路径。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'title': {'type': 'string', 'description': '文档标题（可选，自动回退）。'},
+          'fileName': {
+            'type': 'string',
+            'description': '文件名（如 report.docx），可选。',
+          },
+          'outputDirectory': {
+            'type': 'string',
+            'description': '输出目录完整路径，默认 GeneratedDocuments。',
+          },
+          'paragraphs': {
+            'type': 'array',
+            'description': '顶层段落列表。每个元素可以是纯字符串或 {text, align, bold, listType} 对象。',
+          },
+          'sections': {
+            'type': 'array',
+            'description': '章节列表。每个元素为 {heading, level(1-3), paragraphs} 对象。',
+          },
+          'tables': {
+            'type': 'array',
+            'description': '表格列表。每个元素为 {headers:[], rows:[[]]} 对象。',
+          },
+        },
+      },
+    ),
+    SystemToolDefinition(
+      name: wordReadTool,
+      description:
+          '读取 .docx Word 文档内容，返回结构化 JSON（段落、表格、章节、元数据）。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要读取的 .docx 文件完整路径。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
+
+    // ── Excel 表格 ──
+    SystemToolDefinition(
+      name: excelWriteTool,
+      description:
+          '创建 .xlsx Excel 文件。支持多 Sheet、表头、数据行、'
+          '自动识别数字/文本/布尔值类型。返回文件路径。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': 'Excel 文件完整路径（如 /path/to/data.xlsx）。',
+          },
+          'sheets': {
+            'type': 'array',
+            'description': 'Sheet 列表，每个元素为 {name, headers:[], rows:[[]]}。',
+          },
+        },
+        'required': ['filePath', 'sheets'],
+      },
+    ),
+    SystemToolDefinition(
+      name: excelReadTool,
+      description:
+          '读取 .xlsx Excel 文件，返回所有 Sheet 的名称、行数据、行列数。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要读取的 .xlsx 文件完整路径。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
+
+    // ── PDF 文档 ──
+    SystemToolDefinition(
+      name: pdfWriteTool,
+      description:
+          '创建或处理 PDF 文件。'
+          '支持两种模式：create（新建带标题、章节、段落的 PDF）'
+          '和 watermark（给已有 PDF 添加文字水印）。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '输出 PDF 完整路径。',
+          },
+          'action': {
+            'type': 'string',
+            'description': '操作类型：create 或 watermark，默认 create。',
+          },
+          'title': {'type': 'string', 'description': 'PDF 标题（create 模式）。'},
+          'author': {'type': 'string', 'description': '作者（create 模式）。'},
+          'sections': {
+            'type': 'array',
+            'description': '章节列表 [{heading, level, paragraphs:[{text, bold, align}]}]。',
+          },
+          'sourcePath': {
+            'type': 'string',
+            'description': '源 PDF 文件路径（watermark 模式必填）。',
+          },
+          'watermarkText': {
+            'type': 'string',
+            'description': '水印文字（watermark 模式必填）。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
+    SystemToolDefinition(
+      name: pdfReadTool,
+      description:
+          '读取 PDF 文件，提取每页文本内容、页数、元数据（标题/作者/主题）。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要读取的 PDF 文件完整路径。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
+
+    // ── PPT 演示文稿 ──
+    SystemToolDefinition(
+      name: pptWriteTool,
+      description:
+          '创建 .pptx 演示文稿。支持多页幻灯片，每页含标题、正文内容、项目列表（items）。'
+          '自动应用 Office 主题样式。返回文件路径。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': 'PPT 文件完整路径（如 /path/to/presentation.pptx）。',
+          },
+          'slides': {
+            'type': 'array',
+            'description': '幻灯片列表。每页为 {title, content, items:[]}。items 为项目符号列表。',
+          },
+        },
+        'required': ['filePath', 'slides'],
+      },
+    ),
+    SystemToolDefinition(
+      name: pptReadTool,
+      description:
+          '读取 .pptx 演示文稿，提取每页幻灯片的文本元素和内容。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要读取的 .pptx 文件完整路径。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
   ];
 
   static List<SystemToolDefinition> get tools => List.unmodifiable(_tools);
@@ -121,137 +311,6 @@ class SystemToolService {
         },
       };
     }).toList();
-  }
-
-  /// 构建系统工具说明文本，注入到 system prompt
-  static String buildSystemToolsInfoForPrompt(ChatSession? session) {
-    if (_tools.isEmpty) return '';
-
-    final buffer = StringBuffer();
-    buffer.writeln('## 系统内置工具');
-    buffer.writeln();
-    buffer.writeln(
-      '你拥有以下客户端内置工具：',
-    );
-    buffer.writeln();
-    buffer.writeln('- `$pythonExecuteTool`: 执行 Python 脚本（文件读写/数据分析/文档生成/爬虫等）');
-    buffer.writeln('- `$fileReadTool`: 直接读取文本文件内容');
-    buffer.writeln('- `$fileWriteTool`: 创建或覆盖写入文本文件');
-    buffer.writeln();
-    buffer.writeln('每个工具使用标准 function calling 格式调用（调用示例见下方）。');
-    buffer.writeln();
-
-    // 工作目录提示
-    final workDir = session?.workDirectory;
-    if (workDir != null && workDir.trim().isNotEmpty) {
-      buffer.writeln('## 工作目录');
-      buffer.writeln();
-      buffer.writeln('当前会话已设置工作目录：`$workDir`');
-      buffer.writeln();
-      buffer.writeln('规则：');
-      buffer.writeln(
-        '- 生成文件时，如用户未指定保存路径，默认保存到工作目录。',
-      );
-      buffer.writeln(
-        '- 脚本中涉及文件路径时，相对路径相对于工作目录解析。',
-      );
-      buffer.writeln();
-    }
-
-    return buffer.toString().trim();
-  }
-
-  /// 将每个系统内置工具生成独立的 system 消息列表（自然语言描述）
-  static List<Map<String, dynamic>> buildSystemToolsInfoAsMessages(
-    ChatSession? session,
-  ) {
-    if (_tools.isEmpty) return [];
-
-    final messages = <Map<String, dynamic>>[];
-
-    // 工具调用通用说明
-    final toolNames = _tools.map((t) => '`${t.name}`').join('、');
-    messages.add({
-      'role': 'system',
-      'content':
-          '你拥有以下客户端内置工具：$toolNames。\n'
-          '调用时请使用标准的 function calling 机制，不要用 Markdown 代码块或 XML 替代。',
-    });
-
-    // 每个工具独立一条 system 消息
-    for (final tool in _tools) {
-      final content = _buildToolNaturalDescription(tool);
-      messages.add({'role': 'system', 'content': content});
-    }
-
-    // 工作目录提示
-    final workDir = session?.workDirectory;
-    if (workDir != null && workDir.trim().isNotEmpty) {
-      messages.add({
-        'role': 'system',
-        'content':
-            '当前会话工作目录：$workDir。'
-            '脚本中涉及文件路径时，相对路径相对于工作目录解析。',
-      });
-    }
-
-    // 技能目录提示
-    messages.add({
-      'role': 'system',
-      'content':
-          '技能文件存放在 ${SkillStorageService.skillsRootDir} 目录下，每个技能是一个文件夹，内含 SKILL.md 文件。\n'
-          '你可以使用 python_execute 工具（调用 file_read / file_write 的 Python 脚本）直接读取、创建或修改技能文件。\n'
-          '【重要约束】如果你正在调整某个技能（修改 SKILL.md 或为其添加配套脚本），'
-          '所有与该技能相关的脚本文件（.py / .sh 等）必须放在该技能的文件夹内，不要放到其他位置。',
-    });
-
-    return messages;
-  }
-
-  /// 用自然语言构建单个工具的描述
-  static String _buildToolNaturalDescription(SystemToolDefinition tool) {
-    final buffer = StringBuffer();
-
-    buffer.writeln('工具名称：${tool.name}');
-    buffer.writeln();
-    buffer.writeln(tool.description);
-    buffer.writeln();
-
-    final props = tool.parameters['properties'] as Map<String, dynamic>?;
-    final required = tool.parameters['required'] as List<dynamic>? ?? [];
-
-    if (props != null && props.isNotEmpty) {
-      buffer.writeln('参数：');
-      for (final entry in props.entries) {
-        final paramName = entry.key;
-        final paramDef = entry.value as Map<String, dynamic>;
-        final isRequired = required.contains(paramName);
-        final desc = paramDef['description'] as String? ?? '';
-        final type = paramDef['type'] as String? ?? '';
-
-        buffer.write('- $paramName');
-        if (type.isNotEmpty) buffer.write('（$type）');
-        if (isRequired) {
-          buffer.write('，必填');
-        } else {
-          buffer.write('，可选');
-        }
-        if (desc.isNotEmpty) buffer.write('：$desc');
-        buffer.writeln();
-      }
-    }
-
-    buffer.writeln();
-    buffer.writeln('调用示例：');
-    buffer.writeln('');
-    buffer.writeln('<invoke name="${tool.name}">');
-    buffer.writeln('<arguments>');
-    buffer.writeln(_exampleArguments(tool.name));
-    buffer.writeln('</arguments>');
-    buffer.writeln('</invoke>');
-    buffer.writeln('</tool_calls>');
-
-    return buffer.toString().trim();
   }
 
   /// 构建所有工具（系统 + MCP）的 OpenAI tools 格式
@@ -293,6 +352,52 @@ class SystemToolService {
           arguments: arguments,
           callId: callId,
         );
+      case wordCreateTool:
+        return await WordToolService.createDocument(
+          arguments: arguments,
+          callId: callId,
+        );
+      case wordReadTool:
+        return await WordToolService.readDocument(
+          arguments: arguments,
+          callId: callId,
+        );
+      case excelWriteTool:
+        return await ExcelToolService.execute(
+          action: 'write',
+          arguments: arguments,
+          callId: callId,
+        );
+      case excelReadTool:
+        return ExcelToolService.execute(
+          action: 'read',
+          arguments: arguments,
+          callId: callId,
+        );
+      case pdfWriteTool:
+        return await PdfToolService.execute(
+          action: 'write',
+          arguments: arguments,
+          callId: callId,
+        );
+      case pdfReadTool:
+        return PdfToolService.execute(
+          action: 'read',
+          arguments: arguments,
+          callId: callId,
+        );
+      case pptWriteTool:
+        return await PptToolService.execute(
+          action: 'write',
+          arguments: arguments,
+          callId: callId,
+        );
+      case pptReadTool:
+        return PptToolService.execute(
+          action: 'read',
+          arguments: arguments,
+          callId: callId,
+        );
       default:
         return {
           'id': callId,
@@ -301,27 +406,6 @@ class SystemToolService {
           'result': '系统工具 "$toolName" 不存在。',
           'isError': true,
         };
-    }
-  }
-
-  static String _exampleArguments(String toolName) {
-    switch (toolName) {
-      case pythonExecuteTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'script': 'import pandas as pd\n\ndf = pd.read_csv("data.csv")\nprint(df.head())',
-          'requirements': ['pandas'],
-        });
-      case fileReadTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'filePath': '/path/to/file.dart',
-        });
-      case fileWriteTool:
-        return const JsonEncoder.withIndent('  ').convert({
-          'filePath': '/path/to/output.md',
-          'content': '# Hello World',
-        });
-      default:
-        return '{}';
     }
   }
 }

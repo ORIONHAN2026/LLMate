@@ -176,7 +176,10 @@ class DeepSeekProvider extends BaseLlmProvider {
         if (!line.trim().startsWith('data: ')) continue;
         final dataStr = line.trim().substring(6);
         print(dataStr);
-        if (dataStr == '[DONE]') return;
+        if (dataStr == '[DONE]') {
+          yield {'done': 'true'};
+          return;
+        }
         try {
           final response = DeepSeekResponse.fromJson(
             jsonDecode(dataStr) as Map<String, dynamic>,

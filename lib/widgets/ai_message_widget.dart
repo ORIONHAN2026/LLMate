@@ -885,6 +885,12 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           botMessage.isToolCalling = false;
         }
 
+        // 处理流结束信号
+        final done = chunkMap['done'] ?? '';
+        if (done == 'true') {
+          botMessage.isToolCalling = false;
+        }
+
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
 

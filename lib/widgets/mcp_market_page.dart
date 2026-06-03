@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:chathub/models/bigmodel/mcp_config.dart';
+import 'package:chathub/models/chat/mcp_config.dart';
 
 /// MCP服务市场数据模型
 class McpMarketService {
@@ -30,7 +30,12 @@ class McpMarketService {
 
   /// 转换为Mcp
   Mcp toMcp() {
-    return Mcp(name: name, command: command, args: args);
+    return Mcp(
+      mcpId: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      command: command,
+      args: args,
+    );
   }
 }
 

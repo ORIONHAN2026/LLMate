@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:chathub/models/bigmodel/chat_model.dart';
-import 'package:chathub/models/bigmodel/mcp_config.dart';
+import 'package:chathub/models/chat/mcp_config.dart';
 import 'package:chathub/models/chat/skill.dart';
 
 import 'chat_message.dart';
@@ -36,6 +36,9 @@ class ChatSession {
 
   /// 深度思考模式（默认关闭）
   final bool deepThink;
+
+  /// 连接器和技能的关联关系描述提示词
+  final String? connectPrompt;
 
   // ============================
 
@@ -74,10 +77,11 @@ class ChatSession {
     this.workDirectory,
     this.memoryRounds = 20,
     this.deepThink = false,
+    this.connectPrompt,
     this.sessionQuickCommands = const [],
-  })  : modelId = modelId ?? chatModel?.modelId,
-        mcpId = mcpId ?? mcp?.mcpId,
-        skillId = skillId ?? skill?.id;
+  }) : modelId = modelId ?? chatModel?.modelId,
+       mcpId = mcpId ?? mcp?.mcpId,
+       skillId = skillId ?? skill?.skillId;
 
   // 获取会话的预览文本
   String get previewText {
@@ -133,6 +137,8 @@ class ChatSession {
     bool clearChatModel = false,
     int? memoryRounds,
     bool? deepThink,
+    String? connectPrompt,
+    bool clearConnectPrompt = false,
     List<ChatCommand>? sessionQuickCommands,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
@@ -169,7 +175,7 @@ class ChatSession {
       resolvedSkillId = null;
       resolvedSkill = null;
     } else if (skill != null) {
-      resolvedSkillId = skill.id;
+      resolvedSkillId = skill.skillId;
       resolvedSkill = skill;
     } else {
       resolvedSkillId = skillId;
@@ -199,6 +205,8 @@ class ChatSession {
       chatModel: resolvedChatModel,
       memoryRounds: memoryRounds ?? this.memoryRounds,
       deepThink: deepThink ?? this.deepThink,
+      connectPrompt:
+          clearConnectPrompt ? null : (connectPrompt ?? this.connectPrompt),
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
     );
   }
@@ -209,15 +217,14 @@ class ChatSession {
     final String? skillId = json['skillId'] as String?;
 
     // 兼容旧数据
-    final ChatModel? chatModel = json['chatModel'] != null
-        ? ChatModel.fromMap(json['chatModel'])
-        : null;
-    final Mcp? parsedMcp = json['mcp'] is Map<String, dynamic>
-        ? Mcp.fromMap(json['mcp'])
-        : null;
-    final Skill? skill = json['skill'] is Map<String, dynamic>
-        ? Skill.fromJson(json['skill'])
-        : null;
+    final ChatModel? chatModel =
+        json['chatModel'] != null ? ChatModel.fromMap(json['chatModel']) : null;
+    final Mcp? parsedMcp =
+        json['mcp'] is Map<String, dynamic> ? Mcp.fromMap(json['mcp']) : null;
+    final Skill? skill =
+        json['skill'] is Map<String, dynamic>
+            ? Skill.fromJson(json['skill'])
+            : null;
 
     return ChatSession(
       sessionId: json['id'] ?? '',
@@ -245,6 +252,7 @@ class ChatSession {
       workDirectory: json['workDirectory'],
       memoryRounds: json['memoryRounds'] as int? ?? 20,
       deepThink: json['deepThink'] as bool? ?? false,
+      connectPrompt: json['connectPrompt'] as String?,
       sessionQuickCommands:
           (json['sessionQuickCommands'] as List<dynamic>?)
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
@@ -267,7 +275,8 @@ class ChatSession {
       'messages': messages.map((message) => message.toJson()).toList(),
       'isFavorite': isFavorite,
       'inputContent': inputContent,
-      'attachments': attachments.map((attachment) => attachment.toJson()).toList(),
+      'attachments':
+          attachments.map((attachment) => attachment.toJson()).toList(),
       'isSending': isSending,
       'shouldStopResponse': shouldStopResponse,
       'scrollPosition': scrollPosition,
@@ -275,6 +284,7 @@ class ChatSession {
       if (workDirectory != null) 'workDirectory': workDirectory,
       'memoryRounds': memoryRounds,
       'deepThink': deepThink,
+      if (connectPrompt != null) 'connectPrompt': connectPrompt,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
       if (modelId != null) 'modelId': modelId,

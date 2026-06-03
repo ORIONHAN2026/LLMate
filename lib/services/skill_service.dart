@@ -48,10 +48,10 @@ class SkillService {
 
   // ======== 查询 ========
 
-  /// 按 ID（文件夹名）查找技能
+  /// 按 skillId（文件夹名）查找技能
   static Skill? getSkillById(String skillId) {
     return skills.cast<Skill?>().firstWhere(
-      (s) => s!.id == skillId,
+      (s) => s!.skillId == skillId,
       orElse: () => null,
     );
   }
@@ -88,7 +88,7 @@ class SkillService {
   /// 更新技能（修改 SKILL.md）
   static Future<void> updateSkill(Skill skill) async {
     await SkillStorageService.updateSkill(skill);
-    final index = _skills.indexWhere((s) => s.id == skill.id);
+    final index = _skills.indexWhere((s) => s.skillId == skill.skillId);
     if (index != -1) {
       _skills[index] = skill;
     }
@@ -100,8 +100,8 @@ class SkillService {
     final skill = getSkillById(skillId);
     if (skill == null) return;
 
-    await SkillStorageService.deleteSkill(skill.folderPath);
-    _skills.removeWhere((s) => s.id == skillId);
+    await SkillStorageService.deleteSkill(skill.path);
+    _skills.removeWhere((s) => s.skillId == skillId);
     debugPrint('✅ SkillService: 删除技能 "${skill.name}"');
   }
 
@@ -158,7 +158,7 @@ class SkillService {
   /// 将单个 Skill 转为 OpenAI function-calling 工具定义（占位）
   static Map<String, dynamic>? _skillToTool(Skill skill) {
     // OpenAI function name 仅允许 [a-zA-Z0-9_-]
-    final raw = skill.id.isNotEmpty ? skill.id : skill.name;
+    final raw = skill.skillId.isNotEmpty ? skill.skillId : skill.name;
     if (raw.isEmpty) return null;
     final safeName = _sanitizeToolName(raw);
     if (safeName.isEmpty) return null;

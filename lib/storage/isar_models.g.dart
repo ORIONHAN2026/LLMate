@@ -6705,59 +6705,14 @@ const IsarMcpServiceSchema = CollectionSchema(
   name: r'IsarMcpService',
   id: 5628804302628824559,
   properties: {
-    r'argsJson': PropertySchema(
+    r'content': PropertySchema(
       id: 0,
-      name: r'argsJson',
+      name: r'content',
       type: IsarType.string,
-    ),
-    r'command': PropertySchema(
-      id: 1,
-      name: r'command',
-      type: IsarType.string,
-    ),
-    r'envJson': PropertySchema(
-      id: 2,
-      name: r'envJson',
-      type: IsarType.string,
-    ),
-    r'headersJson': PropertySchema(
-      id: 3,
-      name: r'headersJson',
-      type: IsarType.string,
-    ),
-    r'lastUpdated': PropertySchema(
-      id: 4,
-      name: r'lastUpdated',
-      type: IsarType.dateTime,
     ),
     r'mcpId': PropertySchema(
-      id: 5,
+      id: 1,
       name: r'mcpId',
-      type: IsarType.string,
-    ),
-    r'name': PropertySchema(
-      id: 6,
-      name: r'name',
-      type: IsarType.string,
-    ),
-    r'timeout': PropertySchema(
-      id: 7,
-      name: r'timeout',
-      type: IsarType.long,
-    ),
-    r'toolsJson': PropertySchema(
-      id: 8,
-      name: r'toolsJson',
-      type: IsarType.string,
-    ),
-    r'url': PropertySchema(
-      id: 9,
-      name: r'url',
-      type: IsarType.string,
-    ),
-    r'workingDirectory': PropertySchema(
-      id: 10,
-      name: r'workingDirectory',
       type: IsarType.string,
     )
   },
@@ -6795,40 +6750,8 @@ int _isarMcpServiceEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  bytesCount += 3 + object.argsJson.length * 3;
-  bytesCount += 3 + object.command.length * 3;
-  {
-    final value = object.envJson;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
-  {
-    final value = object.headersJson;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
+  bytesCount += 3 + object.content.length * 3;
   bytesCount += 3 + object.mcpId.length * 3;
-  bytesCount += 3 + object.name.length * 3;
-  {
-    final value = object.toolsJson;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
-  {
-    final value = object.url;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
-  {
-    final value = object.workingDirectory;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
   return bytesCount;
 }
 
@@ -6838,17 +6761,8 @@ void _isarMcpServiceSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.argsJson);
-  writer.writeString(offsets[1], object.command);
-  writer.writeString(offsets[2], object.envJson);
-  writer.writeString(offsets[3], object.headersJson);
-  writer.writeDateTime(offsets[4], object.lastUpdated);
-  writer.writeString(offsets[5], object.mcpId);
-  writer.writeString(offsets[6], object.name);
-  writer.writeLong(offsets[7], object.timeout);
-  writer.writeString(offsets[8], object.toolsJson);
-  writer.writeString(offsets[9], object.url);
-  writer.writeString(offsets[10], object.workingDirectory);
+  writer.writeString(offsets[0], object.content);
+  writer.writeString(offsets[1], object.mcpId);
 }
 
 IsarMcpService _isarMcpServiceDeserialize(
@@ -6858,18 +6772,9 @@ IsarMcpService _isarMcpServiceDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = IsarMcpService();
-  object.argsJson = reader.readString(offsets[0]);
-  object.command = reader.readString(offsets[1]);
-  object.envJson = reader.readStringOrNull(offsets[2]);
-  object.headersJson = reader.readStringOrNull(offsets[3]);
+  object.content = reader.readString(offsets[0]);
   object.id = id;
-  object.lastUpdated = reader.readDateTimeOrNull(offsets[4]);
-  object.mcpId = reader.readString(offsets[5]);
-  object.name = reader.readString(offsets[6]);
-  object.timeout = reader.readLongOrNull(offsets[7]);
-  object.toolsJson = reader.readStringOrNull(offsets[8]);
-  object.url = reader.readStringOrNull(offsets[9]);
-  object.workingDirectory = reader.readStringOrNull(offsets[10]);
+  object.mcpId = reader.readString(offsets[1]);
   return object;
 }
 
@@ -6884,24 +6789,6 @@ P _isarMcpServiceDeserializeProp<P>(
       return (reader.readString(offset)) as P;
     case 1:
       return (reader.readString(offset)) as P;
-    case 2:
-      return (reader.readStringOrNull(offset)) as P;
-    case 3:
-      return (reader.readStringOrNull(offset)) as P;
-    case 4:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 5:
-      return (reader.readString(offset)) as P;
-    case 6:
-      return (reader.readString(offset)) as P;
-    case 7:
-      return (reader.readLongOrNull(offset)) as P;
-    case 8:
-      return (reader.readStringOrNull(offset)) as P;
-    case 9:
-      return (reader.readStringOrNull(offset)) as P;
-    case 10:
-      return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -7104,13 +6991,13 @@ extension IsarMcpServiceQueryWhere
 extension IsarMcpServiceQueryFilter
     on QueryBuilder<IsarMcpService, IsarMcpService, QFilterCondition> {
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonEqualTo(
+      contentEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'argsJson',
+        property: r'content',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -7118,7 +7005,7 @@ extension IsarMcpServiceQueryFilter
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonGreaterThan(
+      contentGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -7126,7 +7013,7 @@ extension IsarMcpServiceQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'argsJson',
+        property: r'content',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -7134,7 +7021,7 @@ extension IsarMcpServiceQueryFilter
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonLessThan(
+      contentLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -7142,7 +7029,7 @@ extension IsarMcpServiceQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'argsJson',
+        property: r'content',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -7150,7 +7037,7 @@ extension IsarMcpServiceQueryFilter
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonBetween(
+      contentBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -7159,7 +7046,7 @@ extension IsarMcpServiceQueryFilter
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'argsJson',
+        property: r'content',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -7170,13 +7057,13 @@ extension IsarMcpServiceQueryFilter
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonStartsWith(
+      contentStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'argsJson',
+        property: r'content',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -7184,13 +7071,13 @@ extension IsarMcpServiceQueryFilter
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonEndsWith(
+      contentEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'argsJson',
+        property: r'content',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -7198,10 +7085,10 @@ extension IsarMcpServiceQueryFilter
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonContains(String value, {bool caseSensitive = true}) {
+      contentContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
-        property: r'argsJson',
+        property: r'content',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -7209,10 +7096,10 @@ extension IsarMcpServiceQueryFilter
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonMatches(String pattern, {bool caseSensitive = true}) {
+      contentMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
-        property: r'argsJson',
+        property: r'content',
         wildcard: pattern,
         caseSensitive: caseSensitive,
       ));
@@ -7220,464 +7107,20 @@ extension IsarMcpServiceQueryFilter
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonIsEmpty() {
+      contentIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'argsJson',
+        property: r'content',
         value: '',
       ));
     });
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      argsJsonIsNotEmpty() {
+      contentIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'argsJson',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'command',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'command',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandLessThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'command',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandBetween(
-    String lower,
-    String upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'command',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'command',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'command',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'command',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'command',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'command',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      commandIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'command',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'envJson',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'envJson',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'envJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'envJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'envJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'envJson',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'envJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'envJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'envJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'envJson',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'envJson',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      envJsonIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'envJson',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'headersJson',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'headersJson',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'headersJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'headersJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'headersJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'headersJson',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'headersJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'headersJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'headersJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'headersJson',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'headersJson',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      headersJsonIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'headersJson',
+        property: r'content',
         value: '',
       ));
     });
@@ -7730,80 +7173,6 @@ extension IsarMcpServiceQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
         property: r'id',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      lastUpdatedIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'lastUpdated',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      lastUpdatedIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'lastUpdated',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      lastUpdatedEqualTo(DateTime? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'lastUpdated',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      lastUpdatedGreaterThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'lastUpdated',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      lastUpdatedLessThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'lastUpdated',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      lastUpdatedBetween(
-    DateTime? lower,
-    DateTime? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'lastUpdated',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -7947,678 +7316,6 @@ extension IsarMcpServiceQueryFilter
       ));
     });
   }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameLessThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameBetween(
-    String lower,
-    String upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'name',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'name',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'name',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      nameIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'name',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      timeoutIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'timeout',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      timeoutIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'timeout',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      timeoutEqualTo(int? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'timeout',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      timeoutGreaterThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'timeout',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      timeoutLessThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'timeout',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      timeoutBetween(
-    int? lower,
-    int? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'timeout',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'toolsJson',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'toolsJson',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'toolsJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'toolsJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'toolsJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'toolsJson',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'toolsJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'toolsJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'toolsJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'toolsJson',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'toolsJson',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      toolsJsonIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'toolsJson',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'url',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'url',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'url',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'url',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'url',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'url',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'url',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'url',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'url',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'url',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'url',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      urlIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'url',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'workingDirectory',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'workingDirectory',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'workingDirectory',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'workingDirectory',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'workingDirectory',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'workingDirectory',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'workingDirectory',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'workingDirectory',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'workingDirectory',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'workingDirectory',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'workingDirectory',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterFilterCondition>
-      workingDirectoryIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'workingDirectory',
-        value: '',
-      ));
-    });
-  }
 }
 
 extension IsarMcpServiceQueryObject
@@ -8629,70 +7326,16 @@ extension IsarMcpServiceQueryLinks
 
 extension IsarMcpServiceQuerySortBy
     on QueryBuilder<IsarMcpService, IsarMcpService, QSortBy> {
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByArgsJson() {
+  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByContent() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'argsJson', Sort.asc);
+      return query.addSortBy(r'content', Sort.asc);
     });
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByArgsJsonDesc() {
+      sortByContentDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'argsJson', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByCommand() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'command', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByCommandDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'command', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByEnvJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'envJson', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByEnvJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'envJson', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByHeadersJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'headersJson', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByHeadersJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'headersJson', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByLastUpdated() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'lastUpdated', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByLastUpdatedDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'lastUpdated', Sort.desc);
+      return query.addSortBy(r'content', Sort.desc);
     });
   }
 
@@ -8707,124 +7350,20 @@ extension IsarMcpServiceQuerySortBy
       return query.addSortBy(r'mcpId', Sort.desc);
     });
   }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByName() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'name', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByNameDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'name', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByTimeout() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timeout', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByTimeoutDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timeout', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByToolsJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'toolsJson', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByToolsJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'toolsJson', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByUrl() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'url', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> sortByUrlDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'url', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByWorkingDirectory() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'workingDirectory', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      sortByWorkingDirectoryDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'workingDirectory', Sort.desc);
-    });
-  }
 }
 
 extension IsarMcpServiceQuerySortThenBy
     on QueryBuilder<IsarMcpService, IsarMcpService, QSortThenBy> {
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByArgsJson() {
+  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByContent() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'argsJson', Sort.asc);
+      return query.addSortBy(r'content', Sort.asc);
     });
   }
 
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByArgsJsonDesc() {
+      thenByContentDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'argsJson', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByCommand() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'command', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByCommandDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'command', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByEnvJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'envJson', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByEnvJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'envJson', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByHeadersJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'headersJson', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByHeadersJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'headersJson', Sort.desc);
+      return query.addSortBy(r'content', Sort.desc);
     });
   }
 
@@ -8840,20 +7379,6 @@ extension IsarMcpServiceQuerySortThenBy
     });
   }
 
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByLastUpdated() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'lastUpdated', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByLastUpdatedDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'lastUpdated', Sort.desc);
-    });
-  }
-
   QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByMcpId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'mcpId', Sort.asc);
@@ -8865,106 +7390,14 @@ extension IsarMcpServiceQuerySortThenBy
       return query.addSortBy(r'mcpId', Sort.desc);
     });
   }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByName() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'name', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByNameDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'name', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByTimeout() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timeout', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByTimeoutDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timeout', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByToolsJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'toolsJson', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByToolsJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'toolsJson', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByUrl() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'url', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy> thenByUrlDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'url', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByWorkingDirectory() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'workingDirectory', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QAfterSortBy>
-      thenByWorkingDirectoryDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'workingDirectory', Sort.desc);
-    });
-  }
 }
 
 extension IsarMcpServiceQueryWhereDistinct
     on QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> {
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> distinctByArgsJson(
+  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> distinctByContent(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'argsJson', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> distinctByCommand(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'command', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> distinctByEnvJson(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'envJson', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> distinctByHeadersJson(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'headersJson', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct>
-      distinctByLastUpdated() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'lastUpdated');
+      return query.addDistinctBy(r'content', caseSensitive: caseSensitive);
     });
   }
 
@@ -8972,41 +7405,6 @@ extension IsarMcpServiceQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'mcpId', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> distinctByName(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> distinctByTimeout() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'timeout');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> distinctByToolsJson(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'toolsJson', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct> distinctByUrl(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'url', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<IsarMcpService, IsarMcpService, QDistinct>
-      distinctByWorkingDirectory({bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'workingDirectory',
-          caseSensitive: caseSensitive);
     });
   }
 }
@@ -9019,72 +7417,15 @@ extension IsarMcpServiceQueryProperty
     });
   }
 
-  QueryBuilder<IsarMcpService, String, QQueryOperations> argsJsonProperty() {
+  QueryBuilder<IsarMcpService, String, QQueryOperations> contentProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'argsJson');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, String, QQueryOperations> commandProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'command');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, String?, QQueryOperations> envJsonProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'envJson');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, String?, QQueryOperations>
-      headersJsonProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'headersJson');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, DateTime?, QQueryOperations>
-      lastUpdatedProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'lastUpdated');
+      return query.addPropertyName(r'content');
     });
   }
 
   QueryBuilder<IsarMcpService, String, QQueryOperations> mcpIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'mcpId');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, String, QQueryOperations> nameProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'name');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, int?, QQueryOperations> timeoutProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'timeout');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, String?, QQueryOperations> toolsJsonProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'toolsJson');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, String?, QQueryOperations> urlProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'url');
-    });
-  }
-
-  QueryBuilder<IsarMcpService, String?, QQueryOperations>
-      workingDirectoryProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'workingDirectory');
     });
   }
 }

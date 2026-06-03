@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:mcp_client/mcp_client.dart';
 import '../models/chat/chat_session.dart';
-import '../models/bigmodel/mcp_config.dart';
+import '../models/chat/mcp_config.dart';
 import '../controllers/mcp_controller.dart';
 
 /// MCP工具调用结果
@@ -35,12 +35,17 @@ class McpToolResult {
   };
 }
 
-/// MCP 连接信息（初始化后获取的服务器信息 + 工具列表）
+/// MCP 连接信息（初始化后获取的服务器信息 + 工具列表 + 生成的 prompt）
 class McpConnectionInfo {
   final String serverName;
   final List<McpToolInfo> tools;
+  final String prompt; // LLM 用的工具介绍文本
 
-  const McpConnectionInfo({required this.serverName, required this.tools});
+  const McpConnectionInfo({
+    required this.serverName,
+    required this.tools,
+    required this.prompt,
+  });
 }
 
 /// MCP服务管理类
@@ -108,15 +113,50 @@ class McpService {
     return _mcpController.getMcpByName(name);
   }
 
-  /// 刷新单个 MCP 服务的工具列表（支持 stdio 和 SSE 两种传输方式）
-  /// 刷新单个 MCP 服务的工具列表（支持 stdio 和 SSE 两种传输方式）
+  /// 根据配置创建对应的 Transport（支持 stdio / SSE / StreamableHTTP）
+  static Future<ClientTransport> _createTransport(
+    Mcp config, {
+    Duration? timeout,
+  }) async {
+    if (config.url != null && config.url!.isNotEmpty) {
+      final t = config.type ?? 'sse';
+      if (t == 'streamableHttp' || t == 'http') {
+        debugPrint('🔗 使用 Streamable HTTP 传输: ${config.url}');
+        return StreamableHttpClientTransport.create(
+          baseUrl: config.url!,
+          headers: config.headers,
+          timeout: timeout,
+        );
+      } else {
+        debugPrint('🔗 使用 SSE 传输: ${config.url}');
+        return SseClientTransport.create(
+          serverUrl: config.url!,
+          headers: config.headers,
+        );
+      }
+    } else {
+      final cmd = config.command;
+      final args = config.args;
+      if (cmd == null || cmd.isEmpty) {
+        throw Exception('Stdio MCP 配置缺少 command: ${config.name}');
+      }
+      debugPrint('🔗 使用 stdio 传输: $cmd ${args?.join(' ') ?? ''}');
+      return StdioClientTransport.create(
+        command: cmd,
+        arguments: args ?? [],
+        environment: config.env,
+        workingDirectory: config.workingDirectory,
+      );
+    }
+  }
+
+  /// 刷新单个 MCP 服务的工具列表（支持 stdio、SSE 和 Streamable HTTP 传输方式）
+  /// 刷新单个 MCP 服务的工具列表（支持 stdio、SSE 和 Streamable HTTP 传输方式）
   /// 返回获取到的工具信息列表，失败时抛出异常。
   ///
   /// 使用 [config.timeout] 作为超时时间，未设置则默认 30 秒。
   /// 超时时抛出 [TimeoutException]。
-  static Future<List<McpToolInfo>> refreshServiceTools(
-    Mcp config,
-  ) async {
+  static Future<List<McpToolInfo>> refreshServiceTools(Mcp config) async {
     final timeoutSec = config.timeout ?? _defaultConnectionTimeoutSeconds;
     debugPrint('🔄 ====== 开始刷新 MCP 服务工具: ${config.name} ======');
     debugPrint(
@@ -138,48 +178,35 @@ class McpService {
 
     try {
       // 根据配置类型选择传输方式
-      ClientTransport transport;
-      if (config.url != null && config.url!.isNotEmpty) {
-        // SSE (URL-based) 传输
-        debugPrint('🔗 使用 SSE 传输: ${config.url}');
-        final startTime = DateTime.now();
-        transport = await SseClientTransport.create(
-          serverUrl: config.url!,
-          headers: config.headers,
-        ).timeout(
-          Duration(seconds: timeoutSec),
-          onTimeout: () => throw TimeoutException(
-            '连接 SSE 端点超时 (${timeoutSec}s): ${config.url}',
-          ),
-        );
-        debugPrint(
-          '   ⏱ SSE Transport 创建耗时: ${DateTime.now().difference(startTime).inMilliseconds}ms',
-        );
-      } else {
-        // stdio 传输
-        debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
-        transport = await StdioClientTransport.create(
-          command: config.command,
-          arguments: config.args,
-          environment: config.env,
-          workingDirectory: config.workingDirectory,
-        ).timeout(
-          Duration(seconds: timeoutSec),
-          onTimeout: () => throw TimeoutException(
-            '启动 stdio 进程超时 (${timeoutSec}s): ${config.command}',
-          ),
-        );
-      }
+      final startTime = DateTime.now();
+      final transport = await _createTransport(
+        config,
+        timeout: Duration(seconds: timeoutSec),
+      ).timeout(
+        Duration(seconds: timeoutSec),
+        onTimeout:
+            () =>
+                throw TimeoutException(
+                  '创建 Transport 超时 (${timeoutSec}s): ${config.name}',
+                ),
+      );
+      debugPrint(
+        '   ⏱ Transport 创建耗时: ${DateTime.now().difference(startTime).inMilliseconds}ms',
+      );
 
       // 连接（connect 内部会自动调用 initialize）
       debugPrint('🔌 调用 client.connect(transport)...');
       final connectStart = DateTime.now();
-      await client.connect(transport).timeout(
-        Duration(seconds: timeoutSec),
-        onTimeout: () => throw TimeoutException(
-          '连接 MCP 服务器超时 (${timeoutSec}s): ${config.name}',
-        ),
-      );
+      await client
+          .connect(transport)
+          .timeout(
+            Duration(seconds: timeoutSec),
+            onTimeout:
+                () =>
+                    throw TimeoutException(
+                      '连接 MCP 服务器超时 (${timeoutSec}s): ${config.name}',
+                    ),
+          );
       debugPrint(
         '   ⏱ connect 耗时: ${DateTime.now().difference(connectStart).inMilliseconds}ms',
       );
@@ -189,9 +216,11 @@ class McpService {
       final listStart = DateTime.now();
       final tools = await client.listTools().timeout(
         Duration(seconds: timeoutSec),
-        onTimeout: () => throw TimeoutException(
-          '获取工具列表超时 (${timeoutSec}s): ${config.name}',
-        ),
+        onTimeout:
+            () =>
+                throw TimeoutException(
+                  '获取工具列表超时 (${timeoutSec}s): ${config.name}',
+                ),
       );
       debugPrint(
         '   ⏱ listTools 耗时: ${DateTime.now().difference(listStart).inMilliseconds}ms',
@@ -226,9 +255,7 @@ class McpService {
       return toolInfos;
     } catch (e, stack) {
       final isTimeout = e is TimeoutException;
-      debugPrint(
-        '${isTimeout ? '⏱' : '❌'} ====== 刷新失败: ${config.name} ======',
-      );
+      debugPrint('${isTimeout ? '⏱' : '❌'} ====== 刷新失败: ${config.name} ======');
       debugPrint('   错误类型: ${e.runtimeType}');
       debugPrint('   错误信息: $e');
       debugPrint('   堆栈: $stack');
@@ -252,9 +279,7 @@ class McpService {
   ///
   /// 使用 [config.timeout] 作为超时时间，未设置则默认 30 秒。
   /// 超时时抛出 [TimeoutException]。
-  static Future<McpConnectionInfo> connectAndGetInfo(
-    Mcp config,
-  ) async {
+  static Future<McpConnectionInfo> connectAndGetInfo(Mcp config) async {
     final timeoutSec = config.timeout ?? _defaultConnectionTimeoutSeconds;
     debugPrint('🔗 ====== 连接 MCP 服务器并获取信息 ======');
     debugPrint('   配置: url=${config.url}, command=${config.command}');
@@ -270,39 +295,28 @@ class McpService {
     );
 
     try {
-      ClientTransport transport;
-      if (config.url != null && config.url!.isNotEmpty) {
-        debugPrint('🔗 使用 SSE 传输: ${config.url}');
-        transport = await SseClientTransport.create(
-          serverUrl: config.url!,
-          headers: config.headers,
-        ).timeout(
-          Duration(seconds: timeoutSec),
-          onTimeout: () => throw TimeoutException(
-            '连接 SSE 端点超时 (${timeoutSec}s): ${config.url}',
-          ),
-        );
-      } else {
-        debugPrint('🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}');
-        transport = await StdioClientTransport.create(
-          command: config.command,
-          arguments: config.args,
-          environment: config.env,
-          workingDirectory: config.workingDirectory,
-        ).timeout(
-          Duration(seconds: timeoutSec),
-          onTimeout: () => throw TimeoutException(
-            '启动 stdio 进程超时 (${timeoutSec}s): ${config.command}',
-          ),
-        );
-      }
-
-      await client.connect(transport).timeout(
+      final transport = await _createTransport(
+        config,
+        timeout: Duration(seconds: timeoutSec),
+      ).timeout(
         Duration(seconds: timeoutSec),
-        onTimeout: () => throw TimeoutException(
-          '连接 MCP 服务器超时 (${timeoutSec}s): ${config.name}',
-        ),
+        onTimeout:
+            () =>
+                throw TimeoutException(
+                  '创建 Transport 超时 (${timeoutSec}s): ${config.name}',
+                ),
       );
+
+      await client
+          .connect(transport)
+          .timeout(
+            Duration(seconds: timeoutSec),
+            onTimeout:
+                () =>
+                    throw TimeoutException(
+                      '连接 MCP 服务器超时 (${timeoutSec}s): ${config.name}',
+                    ),
+          );
 
       final serverInfo = client.serverInfo;
       final serverName =
@@ -313,9 +327,11 @@ class McpService {
 
       final tools = await client.listTools().timeout(
         Duration(seconds: timeoutSec),
-        onTimeout: () => throw TimeoutException(
-          '获取工具列表超时 (${timeoutSec}s): $serverName',
-        ),
+        onTimeout:
+            () =>
+                throw TimeoutException(
+                  '获取工具列表超时 (${timeoutSec}s): $serverName',
+                ),
       );
       debugPrint('📊 获取到 ${tools.length} 个工具');
 
@@ -328,16 +344,24 @@ class McpService {
             );
           }).toList();
 
-      // 缓存工具信息（供 buildMcpToolsInfoForApi 等使用）
+      // 缓存工具信息
       _cachedConfigs[serverName] = config.copyWith(
         tools: toolInfos,
         lastUpdated: DateTime.now(),
       );
 
+      // 生成 LLM 用的工具介绍文本
+      final tempMcp = config.copyWith(name: serverName, tools: toolInfos);
+      final prompt = buildMcpPrompt(tempMcp);
+
       debugPrint('✅ ====== 获取信息成功: $serverName，断开连接 ======');
 
       // 立即断开，工具信息已保存到本地缓存
-      return McpConnectionInfo(serverName: serverName, tools: toolInfos);
+      return McpConnectionInfo(
+        serverName: serverName,
+        tools: toolInfos,
+        prompt: prompt,
+      );
     } catch (e, stack) {
       final isTimeout = e is TimeoutException;
       debugPrint('${isTimeout ? '⏱' : '❌'} ====== 连接失败: ${config.name} ======');
@@ -385,26 +409,7 @@ class McpService {
       );
 
       // 创建并连接传输层 - 根据配置选择传输方式
-      ClientTransport transport;
-      if (config.url != null && config.url!.isNotEmpty) {
-        // SSE (URL-based) 传输
-        debugPrint('🔗 使用 SSE 传输: ${config.url}');
-        transport = await SseClientTransport.create(
-          serverUrl: config.url!,
-          headers: config.headers,
-        );
-      } else {
-        // stdio 传输
-        debugPrint(
-          '🔗 使用 stdio 传输: ${config.command} ${config.args.join(' ')}',
-        );
-        transport = await StdioClientTransport.create(
-          command: config.command,
-          arguments: config.args,
-          environment: config.env,
-          workingDirectory: config.workingDirectory,
-        );
-      }
+      final transport = await _createTransport(config);
 
       // 连接客户端到传输层
       await client.connect(transport);
@@ -723,10 +728,10 @@ class McpService {
     return buffer.toString().trim();
   }
 
-  /// 获取会话的真实MCP工具信息用于API调用
-  static String buildMcpToolsInfoForApi(ChatSession session) {
-    final enabledServices = _getEnabledServices(session);
-    if (enabledServices.isEmpty) {
+  /// 生成 MCP 工具介绍文本（添加/刷新时调用，存入 Mcp.prompt）
+  static String buildMcpPrompt(Mcp mcp) {
+    final toolInfos = mcp.tools;
+    if (toolInfos == null || toolInfos.isEmpty) {
       return '';
     }
 
@@ -735,192 +740,141 @@ class McpService {
     buffer.writeln();
 
     // 工具调用格式要求
-    buffer.writeln('### 🚨 工具调用格式要求 - 必须严格遵守');
-    buffer.writeln();
-    buffer.writeln('**工具调用必须使用以下 `<tool_calls>` 格式：**');
-    buffer.writeln();
-    buffer.writeln('```xml');
-    buffer.writeln('<tool_calls>');
-    buffer.writeln('<invoke name="工具名称">');
-    buffer.writeln('<arguments>');
-    buffer.writeln('{"参数名1": "参数值1", "参数名2": "参数值2"}');
-    buffer.writeln('</arguments>');
-    buffer.writeln('</invoke>');
-    buffer.writeln('</tool_calls>');
-    buffer.writeln('```');
-    buffer.writeln();
-    buffer.writeln('**无参数的工具调用：**');
-    buffer.writeln('```xml');
-    buffer.writeln('<tool_calls>');
-    buffer.writeln('<invoke name="工具名称">');
-    buffer.writeln('</invoke>');
-    buffer.writeln('</tool_calls>');
-    buffer.writeln('```');
-    buffer.writeln();
-    buffer.writeln('**关键要求：**');
-    buffer.writeln('- ✅ 工具名称必须与下方列出的工具名**完全匹配**（区分大小写）');
-    buffer.writeln('- ✅ 参数必须是**有效的JSON格式**，字符串值用双引号包围');
-    buffer.writeln('- ✅ 必须提供所有**必需参数**，可选参数可以省略');
-    buffer.writeln('- ✅ 参数类型必须正确（字符串、数字、布尔值、数组、对象）');
-    buffer.writeln('- ✅ 每次只能调用**一个工具**，等待结果后再调用下一个');
-    buffer.writeln('- ❌ 不要在工具调用前后添加额外的标记或说明');
+
+    buffer.writeln('### 📋 ${mcp.name} 服务工具');
     buffer.writeln();
 
-    for (final config in enabledServices) {
-      // 首先尝试从缓存中获取最新的配置信息
-      final cachedConfig = _cachedConfigs[config.mcpId];
-      final toolInfos = cachedConfig?.tools ?? config.tools;
+    for (int i = 0; i < toolInfos.length; i++) {
+      final tool = toolInfos[i];
+      buffer.writeln('#### ${i + 1}. **${tool.name}**');
+      buffer.writeln('**功能描述**: ${tool.description}');
+      buffer.writeln();
 
-      if (toolInfos != null && toolInfos.isNotEmpty) {
-        buffer.writeln('### 📋 ${config.name} 服务工具');
-        buffer.writeln();
+      // 详细的参数信息
+      if (tool.inputSchema.isNotEmpty) {
+        final schema = tool.inputSchema;
+        final properties = schema['properties'] as Map<String, dynamic>? ?? {};
+        final required = (schema['required'] as List<dynamic>?) ?? [];
 
-        for (int i = 0; i < toolInfos.length; i++) {
-          final tool = toolInfos[i];
-          buffer.writeln('#### ${i + 1}. **${tool.name}**');
-          buffer.writeln('**功能描述**: ${tool.description}');
-          buffer.writeln();
+        if (properties.isNotEmpty) {
+          buffer.writeln('**参数详情**:');
+          for (final entry in properties.entries) {
+            final propName = entry.key;
+            final propInfo = entry.value as Map<String, dynamic>? ?? {};
+            final type = propInfo['type'] ?? 'string';
+            final description = propInfo['description'] ?? '无描述';
+            final isRequired = required.contains(propName);
+            final mark = isRequired ? '🔴 必需' : '⚪ 可选';
 
-          // 详细的参数信息
-          if (tool.inputSchema.isNotEmpty) {
-            final schema = tool.inputSchema;
-            final properties =
-                schema['properties'] as Map<String, dynamic>? ?? {};
-            final required = (schema['required'] as List<dynamic>?) ?? [];
+            buffer.writeln('- **$propName** ($type) - $mark');
+            buffer.writeln('  说明: $description');
 
-            if (properties.isNotEmpty) {
-              buffer.writeln('**参数详情**:');
-              for (final entry in properties.entries) {
-                final propName = entry.key;
-                final propInfo = entry.value as Map<String, dynamic>? ?? {};
-                final type = propInfo['type'] ?? 'string';
-                final description = propInfo['description'] ?? '无描述';
-                final isRequired = required.contains(propName);
-                final mark = isRequired ? '🔴 必需' : '⚪ 可选';
-
-                buffer.writeln('- **$propName** ($type) - $mark');
-                buffer.writeln('  说明: $description');
-
-                // 显示枚举值
-                if (propInfo.containsKey('enum')) {
-                  final enumValues = propInfo['enum'] as List<dynamic>? ?? [];
-                  if (enumValues.isNotEmpty) {
-                    buffer.writeln('  可选值: ${enumValues.join(', ')}');
-                  }
-                }
-
-                // 显示默认值
-                if (propInfo.containsKey('default')) {
-                  buffer.writeln('  默认值: ${propInfo['default']}');
-                }
-                buffer.writeln();
-              }
-            } else {
-              buffer.writeln('**参数**: 无需参数');
-              buffer.writeln();
-            }
-
-            // 生成准确的调用示例
-            buffer.writeln('**📋 标准调用示例**:');
-
-            // 构建示例参数
-            final exampleArgs = <String, dynamic>{};
-            for (final entry in properties.entries) {
-              final propName = entry.key;
-              final propInfo = entry.value as Map<String, dynamic>? ?? {};
-              final type = propInfo['type'] ?? 'string';
-              final isRequired = required.contains(propName);
-
-              // 为必需参数生成示例值
-              if (isRequired) {
-                switch (type) {
-                  case 'string':
-                    if (propInfo.containsKey('enum')) {
-                      final enumValues =
-                          propInfo['enum'] as List<dynamic>? ?? [];
-                      exampleArgs[propName] =
-                          enumValues.isNotEmpty
-                              ? enumValues.first.toString()
-                              : 'example_string';
-                    } else if (propName.toLowerCase().contains('path')) {
-                      exampleArgs[propName] = '/path/to/file';
-                    } else if (propName.toLowerCase().contains('query')) {
-                      exampleArgs[propName] = '搜索关键词';
-                    } else {
-                      exampleArgs[propName] = 'example_string';
-                    }
-                    break;
-                  case 'number':
-                  case 'integer':
-                    exampleArgs[propName] = 42;
-                    break;
-                  case 'boolean':
-                    exampleArgs[propName] = true;
-                    break;
-                  case 'array':
-                    exampleArgs[propName] = ['item1', 'item2'];
-                    break;
-                  case 'object':
-                    exampleArgs[propName] = {'key': 'value'};
-                    break;
-                  default:
-                    exampleArgs[propName] = 'example_value';
-                }
+            // 显示枚举值
+            if (propInfo.containsKey('enum')) {
+              final enumValues = propInfo['enum'] as List<dynamic>? ?? [];
+              if (enumValues.isNotEmpty) {
+                buffer.writeln('  可选值: ${enumValues.join(', ')}');
               }
             }
 
-            // 生成示例
-            buffer.writeln('```xml');
-            buffer.writeln('<tool_calls>');
-            buffer.writeln('<invoke name="${tool.name}">');
-            if (exampleArgs.isNotEmpty) {
-              buffer.writeln('<arguments>');
-              try {
-                const encoder = JsonEncoder.withIndent('  ');
-                final jsonString = encoder.convert(exampleArgs);
-                buffer.writeln(jsonString);
-              } catch (e) {
-                buffer.writeln('{}');
-              }
-              buffer.writeln('</arguments>');
+            // 显示默认值
+            if (propInfo.containsKey('default')) {
+              buffer.writeln('  默认值: ${propInfo['default']}');
             }
-            buffer.writeln('</invoke>');
-            buffer.writeln('</tool_calls>');
-            buffer.writeln('```');
-            buffer.writeln();
-          } else {
-            buffer.writeln('**参数**: 无需参数');
-            buffer.writeln();
-            buffer.writeln('**调用示例**:');
-            buffer.writeln('```xml');
-            buffer.writeln('<tool_calls>');
-            buffer.writeln('<invoke name="${tool.name}">');
-            buffer.writeln('</invoke>');
-            buffer.writeln('</tool_calls>');
-            buffer.writeln('```');
             buffer.writeln();
           }
-
-          buffer.writeln('---');
+        } else {
+          buffer.writeln('**参数**: 无需参数');
           buffer.writeln();
         }
+
+        // 生成准确的调用示例
+        buffer.writeln('**📋 标准调用示例**:');
+
+        // 构建示例参数
+        final exampleArgs = <String, dynamic>{};
+        for (final entry in properties.entries) {
+          final propName = entry.key;
+          final propInfo = entry.value as Map<String, dynamic>? ?? {};
+          final type = propInfo['type'] ?? 'string';
+          final isRequired = required.contains(propName);
+
+          // 为必需参数生成示例值
+          if (isRequired) {
+            switch (type) {
+              case 'string':
+                if (propInfo.containsKey('enum')) {
+                  final enumValues = propInfo['enum'] as List<dynamic>? ?? [];
+                  exampleArgs[propName] =
+                      enumValues.isNotEmpty
+                          ? enumValues.first.toString()
+                          : 'example_string';
+                } else if (propName.toLowerCase().contains('path')) {
+                  exampleArgs[propName] = '/path/to/file';
+                } else if (propName.toLowerCase().contains('query')) {
+                  exampleArgs[propName] = '搜索关键词';
+                } else {
+                  exampleArgs[propName] = 'example_string';
+                }
+                break;
+              case 'number':
+              case 'integer':
+                exampleArgs[propName] = 42;
+                break;
+              case 'boolean':
+                exampleArgs[propName] = true;
+                break;
+              case 'array':
+                exampleArgs[propName] = ['item1', 'item2'];
+                break;
+              case 'object':
+                exampleArgs[propName] = {'key': 'value'};
+                break;
+              default:
+                exampleArgs[propName] = 'example_value';
+            }
+          }
+        }
+
+        // 生成示例
+        buffer.writeln('```xml');
+        buffer.writeln('<tool_calls>');
+        buffer.writeln('<invoke name="${tool.name}">');
+        if (exampleArgs.isNotEmpty) {
+          buffer.writeln('<arguments>');
+          try {
+            const encoder = JsonEncoder.withIndent('  ');
+            final jsonString = encoder.convert(exampleArgs);
+            buffer.writeln(jsonString);
+          } catch (e) {
+            buffer.writeln('{}');
+          }
+          buffer.writeln('</arguments>');
+        }
+        buffer.writeln('</invoke>');
+        buffer.writeln('</tool_calls>');
+        buffer.writeln('```');
+        buffer.writeln();
       } else {
-        // 如果没有工具信息，使用通用描述
-        buffer.writeln('### ${config.name} 服务');
-        buffer.writeln('⏳ 服务正在初始化中，工具信息将在连接后更新。');
+        buffer.writeln('**参数**: 无需参数');
+        buffer.writeln();
+        buffer.writeln('**调用示例**:');
+        buffer.writeln('```xml');
+        buffer.writeln('<tool_calls>');
+        buffer.writeln('<invoke name="${tool.name}">');
+        buffer.writeln('</invoke>');
+        buffer.writeln('</tool_calls>');
+        buffer.writeln('```');
         buffer.writeln();
       }
+
+      buffer.writeln('---');
+      buffer.writeln();
     }
 
     // 添加最终的重要提醒
-    buffer.writeln('### ⚠️ 重要提醒');
-    buffer.writeln('1. **严格按照上述格式调用工具**，任何格式错误都会导致工具调用失败');
-    buffer.writeln('2. **工具名称必须完全匹配**，区分大小写');
-    buffer.writeln('3. **JSON格式必须有效**，字符串值用双引号，数字不用引号');
-    buffer.writeln('4. **每次只调用一个工具**，等待结果返回后再决定下一步');
-    buffer.writeln('5. **先理解用户需求，选择合适的工具，然后准确调用**');
+
     buffer.writeln();
-    buffer.writeln('💡 **调用流程建议**: 说明意图 → 工具调用 → 等待结果 → 解释结果 → 必要时继续调用其他工具');
 
     return buffer.toString();
   }
@@ -929,48 +883,23 @@ class McpService {
   static List<Map<String, dynamic>> buildOpenAIToolsFormat(
     ChatSession session,
   ) {
-    final tools = getSessionAvailableTools(session);
-    if (tools.isEmpty) {
+    final mcp = session.mcp;
+    if (mcp == null) {
+      return [];
+    }
+
+    final toolInfos = mcp.tools;
+    if (toolInfos == null || toolInfos.isEmpty) {
+      debugPrint('📝 session.mcp (${mcp.name}) 没有工具信息');
       return [];
     }
 
     final openAITools = <Map<String, dynamic>>[];
-
-    for (final tool in tools) {
+    for (final tool in toolInfos) {
       try {
-        // 构建OpenAI function格式
-        final functionDef = <String, dynamic>{
-          'type': 'function',
-          'function': <String, dynamic>{
-            'name': tool.name,
-            'description': tool.description,
-          },
-        };
-
-        // 处理参数schema
-        if (tool.inputSchema.isNotEmpty) {
-          final schema = Map<String, dynamic>.from(tool.inputSchema);
-
-          // 确保schema符合OpenAI格式要求
-          if (!schema.containsKey('type')) {
-            schema['type'] = 'object';
-          }
-          if (!schema.containsKey('properties')) {
-            schema['properties'] = <String, dynamic>{};
-          }
-
-          // 添加参数schema
-          functionDef['function']['parameters'] = schema;
-        } else {
-          // 无参数的工具
-          functionDef['function']['parameters'] = {
-            'type': 'object',
-            'properties': <String, dynamic>{},
-            'required': <String>[],
-          };
-        }
-
-        openAITools.add(functionDef);
+        openAITools.add(
+          _toolToOpenAiFormat(tool.name, tool.description, tool.inputSchema),
+        );
         debugPrint('✅ 转换MCP工具为OpenAI格式: ${tool.name}');
       } catch (e) {
         debugPrint('❌ 转换MCP工具失败: ${tool.name}, 错误: $e');
@@ -979,6 +908,36 @@ class McpService {
 
     debugPrint('🔧 生成OpenAI tools数量: ${openAITools.length}');
     return openAITools;
+  }
+
+  static Map<String, dynamic> _toolToOpenAiFormat(
+    String name,
+    String description,
+    Map<String, dynamic> inputSchema,
+  ) {
+    final functionDef = <String, dynamic>{
+      'type': 'function',
+      'function': <String, dynamic>{'name': name, 'description': description},
+    };
+
+    if (inputSchema.isNotEmpty) {
+      final schema = Map<String, dynamic>.from(inputSchema);
+      if (!schema.containsKey('type')) {
+        schema['type'] = 'object';
+      }
+      if (!schema.containsKey('properties')) {
+        schema['properties'] = <String, dynamic>{};
+      }
+      functionDef['function']['parameters'] = schema;
+    } else {
+      functionDef['function']['parameters'] = {
+        'type': 'object',
+        'properties': <String, dynamic>{},
+        'required': <String>[],
+      };
+    }
+
+    return functionDef;
   }
 
   // ──────────────────────────────────────────────

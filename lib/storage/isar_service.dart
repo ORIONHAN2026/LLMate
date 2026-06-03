@@ -211,16 +211,7 @@ class IsarService {
             final mcpId = (map['mcpId'] as String?) ?? name;
             return IsarMcpService()
               ..mcpId = mcpId
-              ..name = name
-              ..command = (map['command'] as String?) ?? ''
-              ..argsJson = map['args'] != null ? jsonEncode(map['args']) : '[]'
-              ..envJson = map['env'] != null ? jsonEncode(map['env']) : null
-              ..workingDirectory = map['workingDirectory'] as String?
-              ..timeout = map['timeout'] as int?
-              ..url = map['url'] as String?
-              ..headersJson = map['headers'] != null ? jsonEncode(map['headers']) : null
-              ..toolsJson = map['tools'] != null ? jsonEncode(map['tools']) : null
-              ..lastUpdated = map['lastUpdated'] != null ? DateTime.tryParse(map['lastUpdated'].toString()) : null;
+              ..content = jsonEncode(map);
           }).toList();
 
           await isar.writeTxn(() async {

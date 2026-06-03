@@ -81,7 +81,7 @@ class IsarChatSession {
   late String? skillId;
 }
 
-/// Isar 集合：MCP 服务配置（独立字段存储，不再使用 JSON 大对象）
+/// Isar 集合：MCP 服务配置（mcpId + 完整 JSON content）
 @collection
 class IsarMcpService {
   Id id = Isar.autoIncrement;
@@ -89,16 +89,8 @@ class IsarMcpService {
   @Index(unique: true)
   late String mcpId;
 
-  late String name;
-  late String command;
-  late String argsJson;       // JSON for List<String>
-  late String? envJson;       // JSON for Map<String,String>
-  late String? workingDirectory;
-  late int? timeout;
-  late String? url;
-  late String? headersJson;   // JSON for Map<String,String>
-  late String? toolsJson;     // JSON for List<McpToolInfo>
-  late DateTime? lastUpdated;
+  /// 完整配置 JSON（标准 MCP 服务配置格式）
+  late String content;
 }
 
 /// Isar 集合：通用键值设置（如主题偏好）

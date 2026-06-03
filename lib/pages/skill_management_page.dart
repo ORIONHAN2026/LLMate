@@ -197,7 +197,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
     );
 
     if (shouldDelete == true) {
-      await SkillService.deleteSkill(skill.id);
+      await SkillService.deleteSkill(skill.skillId);
       await _refreshSkills();
       if (mounted) {
         SnackBarUtils.showInfo(context, '已删除技能: ${skill.name}');
@@ -260,7 +260,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                           Text(skill.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 2),
                           Text(
-                            '文件夹: ${skill.id}',
+                            '文件夹: ${skill.skillId}',
                             style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: Colors.grey[500]),
                           ),
                           if (skill.description.isNotEmpty) ...[
@@ -498,7 +498,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    skill.id,
+                    skill.skillId,
                     style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

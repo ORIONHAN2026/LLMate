@@ -79,7 +79,7 @@ class SessionController extends GetxController {
     }
 
     // 会话打开时预初始化 MCP 连接
-    McpService.initForSession(s);
+    // McpService.initForSession(s);
 
     currentSession.value = s;
     await _persistCurrentSession();
@@ -340,9 +340,8 @@ class SessionController extends GetxController {
 
       await isar.writeTxn(() async {
         // 只查找旧当前会话（而非加载全部），清除 isCurrent 标记
-        final allSessions = await isar.isarChatSessions
-            .buildQuery<IsarChatSession>()
-            .findAll();
+        final allSessions =
+            await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
         IsarChatSession? oldCurrent;
         for (final s in allSessions) {
           if (s.isCurrent) {
@@ -356,8 +355,7 @@ class SessionController extends GetxController {
         }
 
         // 设置新当前会话
-        final entity = await isar.isarChatSessions
-            .getBySessionId(currentId);
+        final entity = await isar.isarChatSessions.getBySessionId(currentId);
         if (entity != null) {
           final updated = _chatSessionToIsar(currentSession.value!);
           updated.id = entity.id;
@@ -398,16 +396,12 @@ class SessionController extends GetxController {
       ..skillId = session.skillId
       ..attachmentsJson =
           session.attachments.isNotEmpty
-              ? jsonEncode(
-                session.attachments.map((a) => a.toJson()).toList(),
-              )
+              ? jsonEncode(session.attachments.map((a) => a.toJson()).toList())
               : null
       ..sessionQuickCommandsJson =
           session.sessionQuickCommands.isNotEmpty
               ? jsonEncode(
-                session.sessionQuickCommands
-                    .map((c) => c.toJson())
-                    .toList(),
+                session.sessionQuickCommands.map((c) => c.toJson()).toList(),
               )
               : null
       ..memoryRounds = session.memoryRounds
@@ -422,9 +416,10 @@ class SessionController extends GetxController {
     if (entity.messagesJson != null && entity.messagesJson!.isNotEmpty) {
       try {
         final list = jsonDecode(entity.messagesJson!) as List<dynamic>;
-        messages = list
-            .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
-            .toList();
+        messages =
+            list
+                .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
+                .toList();
       } catch (_) {}
     }
 

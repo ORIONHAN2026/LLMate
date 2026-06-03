@@ -25,7 +25,6 @@ import '../services/image_tool_service.dart';
 import '../services/file_tool_service.dart';
 import '../utils/snackbar_utils.dart';
 import 'attachment_list_widget.dart';
-import 'inline_attachment_controller.dart';
 
 /// 聊天输入框组件
 ///
@@ -77,7 +76,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   final sessionController = Get.find<SessionController>();
 
   // 输入控制器和焦点
-  late final InlineAttachmentEditingController _inputController;
+  late final TextEditingController _inputController;
   late final FocusNode _inputFocusNode;
 
   // 内部状态
@@ -116,7 +115,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       if (mounted) setState(() {});
     });
 
-    _inputController = InlineAttachmentEditingController();
+    _inputController = TextEditingController();
     _inputFocusNode = FocusNode();
     _hasText = _inputController.text.isNotEmpty;
     _inputController.addListener(_onTextChanged);
@@ -270,33 +269,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     _textChangeTimer = Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
         _saveInputContentToSession();
-        _syncOrphanedAttachments();
       }
     });
-  }
-
-  /// 同步：如果用户在文本中手动删除了某个附件的内联标记，
-  /// 则同时从会话中移除该附件。
-  void _syncOrphanedAttachments() {
-    final markedNames = _inputController.getMarkedFilenames().toSet();
-    final sessionAttachments = _currentAttachments;
-
-    final orphans = sessionAttachments
-        .where((a) => !markedNames.contains(a.name))
-        .toList();
-
-    if (orphans.isEmpty) return;
-
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final updatedAttachments = List<ChatAttachment>.from(currentSession.attachments);
-    updatedAttachments.removeWhere((a) => orphans.any((o) => o.id == a.id));
-
-    final updatedSession = currentSession.copyWith(
-      attachments: updatedAttachments,
-    );
-    sessionController.updateSession(updatedSession);
   }
 
   /// 保存输入内容到会话
@@ -664,11 +638,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     await sessionController.updateSession(updatedSession);
     debugPrint('批量添加 ${newAttachments.length} 个附件到会话: ${updatedSession.name}');
 
-    // 在输入框中以富文本样式插入附件标记
-    for (final attachment in newAttachments) {
-      _inputController.insertAttachmentMarker(attachment.name);
-    }
-
     // 异步处理每个文件内容
     for (int i = 0; i < newAttachments.length; i++) {
       final attachment = newAttachments[i];
@@ -1030,13 +999,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  /// 移除附件（同时移除输入框中的内联标记）
+  /// 移除附件
   void _removeAttachment(ChatAttachment attachment) {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
-
-    // 从输入框文本中移除对应的内联标记
-    _inputController.removeAttachmentMarker(attachment.name);
 
     final updatedAttachments = List<ChatAttachment>.from(
       currentSession.attachments,
@@ -1139,6 +1105,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       const SizedBox(width: 8),
                       _buildMcpToolsToggle(),
                       const SizedBox(width: 8),
+                      _buildConnectPromptToggle(),
+                      const SizedBox(width: 8),
+
                       _buildSkillToggle(),
                       const SizedBox(width: 8),
                       _buildMemoryToggle(),
@@ -1680,6 +1649,303 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
+  /// 构建连接器与技能关系描述按钮
+  Widget _buildConnectPromptToggle() {
+    final currentSession = sessionController.currentSession.value;
+    final hasMcpOrSkill =
+        currentSession?.mcp != null || currentSession?.skill != null;
+    final hasConnectPrompt = currentSession?.connectPrompt != null &&
+        currentSession!.connectPrompt!.isNotEmpty;
+
+    return Tooltip(
+      message:
+          hasConnectPrompt
+              ? '连接器与技能关系描述: ${currentSession!.connectPrompt!.length > 20 ? '${currentSession.connectPrompt!.substring(0, 20)}...' : currentSession.connectPrompt}'
+              : (hasMcpOrSkill ? '点击设置连接器与技能关系描述' : '需要先选择连接器或技能'),
+      child: GestureDetector(
+        onTap:
+            hasMcpOrSkill && !_isSending
+                ? () => _showConnectPromptDialog()
+                : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                CupertinoIcons.link,
+                size: 13,
+                color:
+                    hasMcpOrSkill && !_isSending
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6)
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3),
+              ),
+              if (hasConnectPrompt) ...[
+                const SizedBox(width: 4),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 80),
+                  child: Text(
+                    '已设置',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 显示连接器与技能关系描述输入弹窗
+  Future<void> _showConnectPromptDialog() async {
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
+
+    final controller = TextEditingController(
+      text: currentSession.connectPrompt ?? '',
+    );
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.15),
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 8,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 40,
+            vertical: 120,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 300),
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 标题栏
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Theme.of(context).dividerColor,
+                            width: 0.5,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            CupertinoIcons.link,
+                            size: 16,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.4),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '连接器和技能的关系描述',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          // 清空按钮
+                          if (controller.text.trim().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: CupertinoButton(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                minSize: 0,
+                                borderRadius: BorderRadius.circular(6),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.1),
+                                onPressed: () {
+                                  controller.clear();
+                                  setDialogState(() {});
+                                },
+                                child: Text(
+                                  '清空',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.7),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    // 输入区域
+                    Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: TextField(
+                          controller: controller,
+                          maxLines: 5,
+                          minLines: 3,
+                          autofocus: true,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: '请输入连接器和技能之间的使用关系描述...',
+                            hintStyle: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.3),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.15),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).primaryColor,
+                                width: 1.5,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.all(12),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 底部按钮
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: Theme.of(context).dividerColor,
+                            width: 0.5,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          CupertinoButton(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            minSize: 0,
+                            borderRadius: BorderRadius.circular(6),
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop(null);
+                            },
+                            child: Text(
+                              '取消',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          CupertinoButton(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            minSize: 0,
+                            borderRadius: BorderRadius.circular(6),
+                            color: Theme.of(context).primaryColor,
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop(
+                                controller.text.trim(),
+                              );
+                            },
+                            child: const Text(
+                              '确定',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: CupertinoColors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    ).then((result) {
+      if (result != null && result is String) {
+        _applyConnectPrompt(result);
+      }
+      // 延迟 dispose，避免弹窗退出动画期间 TextField 访问已释放的 controller
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.dispose();
+      });
+    });
+  }
+
+  /// 应用连接器与技能关系描述
+  void _applyConnectPrompt(String prompt) {
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
+
+    final updatedSession = currentSession.copyWith(
+      connectPrompt: prompt.isEmpty ? null : prompt,
+    );
+    sessionController.updateSession(updatedSession);
+
+    if (mounted) {
+      SnackBarUtils.showInfo(
+        context,
+        prompt.isEmpty ? '已清空关系描述' : '已保存关系描述',
+      );
+    }
+  }
+
   /// 构建技能切换按钮
   Widget _buildSkillToggle() {
     final currentSession = sessionController.currentSession.value;
@@ -1907,10 +2173,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     ),
                                   ),
                                   // 服务参数（如果有）
-                                  if (service.args.isNotEmpty) ...[
+                                  if (service.args?.isNotEmpty == true) ...[
                                     const SizedBox(height: 4),
                                     Text(
-                                      '参数: ${service.args.join(' ')}',
+                                      '参数: ${service.args!.join(' ')}',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Theme.of(context)
@@ -2233,8 +2499,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       if (query.isEmpty) return true;
                       return s.name.toLowerCase().contains(query) ||
                           (s.url?.toLowerCase().contains(query) ?? false) ||
-                          s.command.toLowerCase().contains(query) ||
-                          s.args.any((a) => a.toLowerCase().contains(query));
+                          (s.command?.toLowerCase().contains(query) ?? false) ||
+                          (s.args?.any((a) => a.toLowerCase().contains(query)) ?? false);
                     }).toList();
 
                 final clearCount =
@@ -2300,7 +2566,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     subtitle:
                                         service.url?.isNotEmpty == true
                                             ? service.url
-                                            : '${service.command} ${service.args.join(' ')}',
+                                            : '${service.command ?? ''} ${service.args?.join(' ') ?? ''}',
                                     tag: toolCount > 0 ? '$toolCount个工具' : null,
                                     isSelected: isSelected,
                                     onTap: () {
@@ -2364,7 +2630,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     var skills = SkillService.skills;
 
     final session = sessionController.currentSession.value;
-    final currentSkillId = session?.skill?.id;
+    final currentSkillId = session?.skill?.skillId;
     final searchController = TextEditingController();
 
     showDialog(
@@ -2480,7 +2746,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     skills = SkillService.skills;
 
                                     Navigator.of(dialogContext).pop();
-                                    _applySkillSelection(newSkill.id);
+                                    _applySkillSelection(newSkill.skillId);
 
                                     if (mounted) {
                                       SnackBarUtils.showSuccess(
@@ -2545,7 +2811,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   }
                                   final skillIndex = index - clearCount;
                                   final skill = filtered[skillIndex];
-                                  final isSelected = currentSkillId == skill.id;
+                                  final isSelected = currentSkillId == skill.skillId;
                                   return _buildCommandItem(
                                     title: skill.name,
                                     subtitle: skill.description,
@@ -2553,7 +2819,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     onTap: () {
                                       Navigator.of(dialogContext).pop();
                                       _applySkillSelection(
-                                        isSelected ? null : skill.id,
+                                        isSelected ? null : skill.skillId,
                                       );
                                     },
                                   );
@@ -2604,14 +2870,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   /// 发送消息的主要方法
   Future<void> _sendMessage() async {
-    final rawText = _inputController.text.trim();
-
-    // 将内联附件标记替换为纯文件名，使发送的消息读起来像完整语句
-    final text = rawText.replaceAllMapped(
-      InlineAttachmentEditingController.markerPattern,
-      (match) => match.group(1) ?? '',
-    ).trim();
-
+    final text = _inputController.text.trim();
     debugPrint('发送消息: $text');
 
     // 防止发送空消息（没有文本且没有附件）或重复发送

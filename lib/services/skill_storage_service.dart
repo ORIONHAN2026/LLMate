@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -40,16 +41,17 @@ class SkillStorageService {
         final folderName = p.basename(entry.path);
         final stat = await entry.stat();
 
-        skills.add(Skill(
-          id: folderName,
+        final skill = Skill(
+          skillId: folderName,
           name: frontmatter.name.isNotEmpty ? frontmatter.name : folderName,
           description: frontmatter.description,
           prompt: body,
           icon: Skill.deriveIcon(folderName),
           createdAt: stat.changed,
           updatedAt: stat.changed,
-          folderPath: entry.path,
-        ));
+          path: entry.path,
+        );
+        skills.add(skill.copyWith(content: jsonEncode(skill.toJson())));
       } catch (e) {
         debugPrint('⚠️ 解析技能失败 (${p.basename(entry.path)}): $e');
       }
@@ -90,23 +92,24 @@ $prompt
 
     final stat = await folder.stat();
 
-    return Skill(
-      id: folderName,
+    final skill = Skill(
+      skillId: folderName,
       name: name,
       description: description,
       prompt: prompt,
       icon: icon,
       createdAt: stat.changed,
       updatedAt: stat.changed,
-      folderPath: folder.path,
+      path: folder.path,
     );
+    return skill.copyWith(content: jsonEncode(skill.toJson()));
   }
 
   /// 更新技能的 SKILL.md
   static Future<void> updateSkill(Skill skill) async {
-    final mdFile = File(p.join(skill.folderPath, 'SKILL.md'));
+    final mdFile = File(p.join(skill.path, 'SKILL.md'));
     if (!await mdFile.exists()) {
-      throw Exception('SKILL.md 不存在: ${skill.folderPath}');
+      throw Exception('SKILL.md 不存在: ${skill.path}');
     }
 
     final mdContent = '''---
@@ -121,8 +124,8 @@ ${skill.prompt}
   }
 
   /// 删除技能文件夹
-  static Future<void> deleteSkill(String folderPath) async {
-    final folder = Directory(folderPath);
+  static Future<void> deleteSkill(String path) async {
+    final folder = Directory(path);
     if (await folder.exists()) {
       await folder.delete(recursive: true);
     }

@@ -3,7 +3,6 @@ import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import '../../models/chat/chat_attachment.dart';
-import '../../services/mcp_service.dart';
 import '../../services/system_tool_service.dart';
 import '../../services/skill_service.dart';
 import 'common/message_builder.dart';
@@ -286,27 +285,60 @@ abstract class BaseLlmProvider {
     final hasMcp = session?.mcp != null;
     final hasSkill = session?.skill != null;
     if (!hasMcp || hasSkill) {
-      allTools.addAll(_buildSystemTools());
+      allTools.addAll(SystemToolService.buildOpenAIToolsFormat());
     }
-    allTools.addAll(_buildMcpTools(session));
-    allTools.addAll(_buildSkillTools(session));
+    // MCP 服务工具（直接使用 session.mcp.tools）
+    final mcp = session?.mcp;
+    if (mcp != null && mcp.tools != null && mcp.tools!.isNotEmpty) {
+      for (final tool in mcp.tools!) {
+        final schema = <String, dynamic>{
+          'type': 'function',
+          'function': <String, dynamic>{
+            'name': tool.name,
+            'description': tool.description,
+          },
+        };
+        if (tool.inputSchema.isNotEmpty) {
+          final s = Map<String, dynamic>.from(tool.inputSchema);
+          if (!s.containsKey('type')) s['type'] = 'object';
+          if (!s.containsKey('properties')) s['properties'] = <String, dynamic>{};
+          schema['function']['parameters'] = s;
+        } else {
+          schema['function']['parameters'] = {
+            'type': 'object',
+            'properties': <String, dynamic>{},
+            'required': <String>[],
+          };
+        }
+        allTools.add(schema);
+      }
+    }
+    // 技能工具（遍历 skill.tools，和 MCP 一样）
+    if (session?.skill != null && session!.skill!.tools != null) {
+      for (final tool in session.skill!.tools!) {
+        final schema = <String, dynamic>{
+          'type': 'function',
+          'function': <String, dynamic>{
+            'name': tool.name,
+            'description': tool.description,
+          },
+        };
+        if (tool.inputSchema.isNotEmpty) {
+          final s = Map<String, dynamic>.from(tool.inputSchema);
+          if (!s.containsKey('type')) s['type'] = 'object';
+          if (!s.containsKey('properties')) s['properties'] = <String, dynamic>{};
+          schema['function']['parameters'] = s;
+        } else {
+          schema['function']['parameters'] = {
+            'type': 'object',
+            'properties': <String, dynamic>{},
+            'required': <String>[],
+          };
+        }
+        allTools.add(schema);
+      }
+    }
     return allTools;
-  }
-
-  /// 1. 系统内置工具（file_read/write, word/pdf/excel/ppt 读写等）
-  List<Map<String, dynamic>> _buildSystemTools() {
-    return SystemToolService.buildOpenAIToolsFormat();
-  }
-
-  /// 2. MCP 服务工具（按会话绑定的 mcpServer 过滤）
-  List<Map<String, dynamic>> _buildMcpTools(ChatSession? session) {
-    if (session == null) return [];
-    return McpService.buildOpenAIToolsFormat(session);
-  }
-
-  /// 3. 技能工具（会话 + 模型绑定的 Skill 作为可调用工具）
-  List<Map<String, dynamic>> _buildSkillTools(ChatSession? session) {
-    return SkillService.buildSkillTools(session);
   }
 
   /// 模型设置覆盖消息列表（最后一步，子类可覆写）

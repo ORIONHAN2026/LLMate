@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:chathub/models/bigmodel/chat_model.dart';
-import 'package:chathub/models/bigmodel/mcp_config.dart';
+import 'package:chathub/models/chat/mcp_config.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
 
 class McpTab extends StatefulWidget {
@@ -31,7 +31,6 @@ class _TrainingTabState extends State<McpTab> {
       children: [
         Row(
           children: [
-            
             const Spacer(),
             ElevatedButton.icon(
               onPressed: _showAddMcpServiceDialog,
@@ -62,14 +61,18 @@ class _TrainingTabState extends State<McpTab> {
                         Icon(
                           CupertinoIcons.device_desktop,
                           size: 48,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.4),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           '暂无MCP服务',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -78,7 +81,9 @@ class _TrainingTabState extends State<McpTab> {
                           '点击上方"添加服务"按钮来配置MCP服务',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.5),
                           ),
                         ),
                       ],
@@ -202,17 +207,19 @@ class _TrainingTabState extends State<McpTab> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'command: ${service.command.isEmpty ? '(空)' : service.command}',
+                  'command: ${service.command?.isEmpty != false ? '(空)' : service.command}',
                   style: TextStyle(
                     fontSize: 10,
                     fontFamily: 'monospace',
                     color:
-                        service.command.isEmpty ? Colors.red : Colors.black87,
+                        service.command?.isEmpty != false
+                            ? Colors.red
+                            : Colors.black87,
                   ),
                 ),
-                if (service.args.isNotEmpty)
+                if (service.args?.isNotEmpty == true)
                   Text(
-                    'args: [${service.args.map((arg) => '"$arg"').join(', ')}]',
+                    'args: [${service.args!.map((arg) => '"$arg"').join(', ')}]',
                     style: const TextStyle(
                       fontSize: 10,
                       fontFamily: 'monospace',
@@ -578,9 +585,9 @@ class _TrainingTabState extends State<McpTab> {
                         color: Colors.grey[600],
                       ),
                     ),
-                    if (service.args.isNotEmpty)
+                    if (service.args?.isNotEmpty == true)
                       Text(
-                        '参数: ${service.args.join(' ')}',
+                        '参数: ${service.args!.join(' ')}',
                         style: TextStyle(
                           fontSize: 10,
                           fontFamily: 'monospace',
@@ -676,9 +683,7 @@ class _TrainingTabState extends State<McpTab> {
   void _parseAndAddMcpConfig(String configText) {
     try {
       final Map<String, dynamic> json = jsonDecode(configText);
-      final currentServices = List<Mcp>.from(
-        _currentModel.mcpServices ?? [],
-      );
+      final currentServices = List<Mcp>.from(_currentModel.mcpServices ?? []);
 
       // 检查是否是简化格式（直接包含name, command, args）
       if (json.containsKey('name') && json.containsKey('command')) {
@@ -691,10 +696,15 @@ class _TrainingTabState extends State<McpTab> {
         }
 
         final service = Mcp(
+          mcpId:
+              'mcp_${DateTime.now().millisecondsSinceEpoch}_${currentServices.length}',
           name: serviceName,
-          command: json['command'] as String,
-          args: List<String>.from(json['args'] ?? []),
-          env: json['env'] != null ? Map<String, String>.from(json['env']) : {},
+          command: json['command'] as String?,
+          args: (json['args'] as List<dynamic>?)?.cast<String>(),
+          env:
+              json['env'] != null
+                  ? Map<String, String>.from(json['env'])
+                  : null,
           workingDirectory: json['workingDirectory'] as String?,
           timeout: json['timeout'] as int?,
         );
@@ -713,13 +723,15 @@ class _TrainingTabState extends State<McpTab> {
           }
 
           final service = Mcp(
+            mcpId:
+                'mcp_${DateTime.now().millisecondsSinceEpoch}_${currentServices.length}',
             name: serviceName,
-            command: serviceConfig['command'] as String,
-            args: List<String>.from(serviceConfig['args'] ?? []),
+            command: serviceConfig['command'] as String?,
+            args: (serviceConfig['args'] as List<dynamic>?)?.cast<String>(),
             env:
                 serviceConfig['env'] != null
                     ? Map<String, String>.from(serviceConfig['env'])
-                    : {},
+                    : null,
             workingDirectory: serviceConfig['workingDirectory'] as String?,
             timeout: serviceConfig['timeout'] as int?,
           );
@@ -738,13 +750,15 @@ class _TrainingTabState extends State<McpTab> {
           }
 
           final service = Mcp(
+            mcpId:
+                'mcp_${DateTime.now().millisecondsSinceEpoch}_${currentServices.length}',
             name: serviceName,
-            command: serviceConfig['command'] as String,
-            args: List<String>.from(serviceConfig['args'] ?? []),
+            command: serviceConfig['command'] as String?,
+            args: (serviceConfig['args'] as List<dynamic>?)?.cast<String>(),
             env:
                 serviceConfig['env'] != null
                     ? Map<String, String>.from(serviceConfig['env'])
-                    : {},
+                    : null,
             workingDirectory: serviceConfig['workingDirectory'] as String?,
             timeout: serviceConfig['timeout'] as int?,
           );

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_setting.dart';
 import '../chat/skill.dart';
-import 'mcp_config.dart';
+import '../chat/mcp_config.dart';
 
 /// 聊天模型数据结构
 class ChatModel {
@@ -32,7 +32,6 @@ class ChatModel {
 
   // Skill 技能列表 - 模型绑定的技能配置
   final List<Skill>? skills;
-
 
   const ChatModel({
     required this.modelId,
@@ -111,6 +110,7 @@ class ChatModel {
                       print('Item data: $item');
                       // 返回一个默认配置而不是抛出异常
                       return Mcp(
+                        mcpId: item['name'] ?? 'unknown',
                         name: item['name'] ?? 'unknown',
                         command: '',
                         args: [],
@@ -145,32 +145,31 @@ class ChatModel {
               : null,
       skills:
           map['skills'] != null
-              ? (map['skills'] as List)
-                  .where((item) => item != null)
-                  .map((item) {
-                    try {
-                      return Skill.fromJson(
-                        item is Map<String, dynamic>
-                            ? item
-                            : Map<String, dynamic>.from(item),
-                      );
-                    } catch (e) {
-                      print('Error parsing skill: $e');
-                      print('Item data: $item');
-                      final now = DateTime.now();
-                      return Skill(
-                        id: item['id'] ?? '',
-                        name: item['name'] ?? '未知技能',
-                        description: item['description'] ?? '',
-                        prompt: item['prompt'] ?? '',
-                        icon: item['icon'] ?? 'star',
-                        createdAt: now,
-                        updatedAt: now,
-                        folderPath: '',
-                      );
-                    }
-                  })
-                  .toList()
+              ? (map['skills'] as List).where((item) => item != null).map((
+                item,
+              ) {
+                try {
+                  return Skill.fromJson(
+                    item is Map<String, dynamic>
+                        ? item
+                        : Map<String, dynamic>.from(item),
+                  );
+                } catch (e) {
+                  print('Error parsing skill: $e');
+                  print('Item data: $item');
+                  final now = DateTime.now();
+                  return Skill(
+                    skillId: item['id'] ?? '',
+                    name: item['name'] ?? '未知技能',
+                    description: item['description'] ?? '',
+                    prompt: item['prompt'] ?? '',
+                    icon: item['icon'] ?? 'star',
+                    createdAt: now,
+                    updatedAt: now,
+                    path: '',
+                  );
+                }
+              }).toList()
               : null,
     );
   }
@@ -196,14 +195,10 @@ class ChatModel {
       result['chatSettings'] = chatSettings!.toJson();
     }
 
-    // 保存 MCP 服务列表
+    // 保存 MCP 服务列表（含工具缓存等内部字段）
     if (mcpServices != null) {
       result['mcpServices'] =
-          mcpServices!.map((service) {
-            final serviceJson = service.toJson();
-            serviceJson['name'] = service.name; // 确保名称被保存
-            return serviceJson;
-          }).toList();
+          mcpServices!.map((service) => service.toFullJson()).toList();
     }
 
     // 保存快捷指令列表
@@ -214,8 +209,7 @@ class ChatModel {
 
     // 保存技能列表
     if (skills != null) {
-      result['skills'] =
-          skills!.map((skill) => skill.toJson()).toList();
+      result['skills'] = skills!.map((skill) => skill.toJson()).toList();
     }
 
     return result;
@@ -574,11 +568,11 @@ class ChatModel {
     return copyWith(mcpServices: currentServices);
   }
 
-  /// 将 MCP 服务配置导出为 JSON
+  /// 将 MCP 服务配置导出为标准 JSON
   List<Map<String, dynamic>> getMcpServicesJson() {
     return mcpServices?.map((service) {
           final json = service.toJson();
-          json['name'] = service.name; // 确保名称被包含
+          json['name'] = service.name;
           return json;
         }).toList() ??
         [];
@@ -666,7 +660,7 @@ class ChatModel {
   /// 添加技能
   ChatModel addSkill(Skill skill) {
     final currentSkills = skills?.toList() ?? <Skill>[];
-    if (!currentSkills.any((s) => s.id == skill.id)) {
+    if (!currentSkills.any((s) => s.skillId == skill.skillId)) {
       currentSkills.add(skill);
     }
     return copyWith(skills: currentSkills);
@@ -675,14 +669,14 @@ class ChatModel {
   /// 移除技能
   ChatModel removeSkill(String skillId) {
     final currentSkills = skills?.toList() ?? <Skill>[];
-    currentSkills.removeWhere((s) => s.id == skillId);
+    currentSkills.removeWhere((s) => s.skillId == skillId);
     return copyWith(skills: currentSkills);
   }
 
   /// 更新技能
   ChatModel updateSkill(String skillId, Skill newSkill) {
     final currentSkills = skills?.toList() ?? <Skill>[];
-    final index = currentSkills.indexWhere((s) => s.id == skillId);
+    final index = currentSkills.indexWhere((s) => s.skillId == skillId);
     if (index != -1) {
       currentSkills[index] = newSkill;
     }
@@ -692,19 +686,19 @@ class ChatModel {
   /// 获取指定ID的技能
   Skill? getSkill(String skillId) {
     return skills?.firstWhere(
-      (s) => s.id == skillId,
+      (s) => s.skillId == skillId,
       orElse: () => throw StateError('Skill not found'),
     );
   }
 
   /// 检查是否存在指定的技能
   bool hasSkill(String skillId) {
-    return skills?.any((s) => s.id == skillId) ?? false;
+    return skills?.any((s) => s.skillId == skillId) ?? false;
   }
 
   /// 获取所有技能ID
   List<String> getSkillIds() {
-    return skills?.map((s) => s.id).toList() ?? [];
+    return skills?.map((s) => s.skillId).toList() ?? [];
   }
 
   /// 清空所有技能
@@ -718,7 +712,7 @@ class ChatModel {
     for (final skillJson in skillsJson) {
       try {
         final skill = Skill.fromJson(skillJson);
-        if (!currentSkills.any((s) => s.id == skill.id)) {
+        if (!currentSkills.any((s) => s.skillId == skill.skillId)) {
           currentSkills.add(skill);
         }
       } catch (e) {

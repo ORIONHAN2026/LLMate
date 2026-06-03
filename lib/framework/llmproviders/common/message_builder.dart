@@ -56,6 +56,22 @@ class MessageBuilder {
       }
     }
 
+    // 4.5. MCP 工具描述注入（添加/刷新时已生成 prompt，直接读取）
+    if (session?.mcp?.prompt != null && session!.mcp!.prompt!.isNotEmpty) {
+      systemMessages.add({'role': 'system', 'content': session.mcp!.prompt!});
+    }
+
+    // 4.6. 连接器与技能关系描述提示词
+    if (session?.connectPrompt != null &&
+        session!.connectPrompt!.isNotEmpty) {
+      final mcpName = session.mcp?.name ?? '未选择连接器';
+      final skillName = session.skill?.name ?? '未选择技能';
+      systemMessages.add({
+        'role': 'system',
+        'content': '连接器【$mcpName】和技能[$skillName]的使用关系：${session.connectPrompt}',
+      });
+    }
+
     // 5. 深度思考模式：注入推理增强提示词
     if (session?.deepThink == true) {
       systemMessages.add({

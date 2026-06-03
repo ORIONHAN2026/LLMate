@@ -1116,12 +1116,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       const SizedBox(width: 8),
                       _buildCleanHistoryToggle(),
 
-                      Container(
-                        height: 16,
-                        width: 1,
-                        color: Theme.of(context).dividerColor,
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                      ),
+                      // Container(
+                      //   height: 16,
+                      //   width: 1,
+                      //   color: Theme.of(context).dividerColor,
+                      //   margin: const EdgeInsets.symmetric(horizontal: 2),
+                      // ),
                     ],
                   ),
                   // 右侧发送/停止按钮
@@ -1261,13 +1261,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          decoration:
-              isDeepThink
-                  ? BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(4),
-                  )
-                  : null,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1280,7 +1273,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           context,
                         ).colorScheme.onSurface.withOpacity(0.3)
                         : isDeepThink
-                        ? Theme.of(context).colorScheme.primary
+                        ? Theme.of(context).colorScheme.onSurface
                         : Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.6),
@@ -1299,7 +1292,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             context,
                           ).colorScheme.onSurface.withOpacity(0.3)
                           : isDeepThink
-                          ? Theme.of(context).colorScheme.primary
+                          ? Theme.of(context).colorScheme.onSurface
                           : Theme.of(
                             context,
                           ).colorScheme.onSurface.withOpacity(0.6),
@@ -1327,10 +1320,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         onDoubleTap:
             hasWorkDir && !_isSending
                 ? () {
-                    try {
-                      Process.run('open', [workDir!]);
-                    } catch (_) {}
-                  }
+                  try {
+                    Process.run('open', [workDir!]);
+                  } catch (_) {}
+                }
                 : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -1607,9 +1600,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
     final displayText =
-        hasSelectedService
-            ? mcp.name
-            : (hasMcpServices ? '请选择' : '无MCP服务');
+        hasSelectedService ? mcp.name : (hasMcpServices ? '请选择' : '无MCP服务');
 
     return Tooltip(
       message: hasMcpServices ? '点击选择MCP服务' : '当前模型未配置MCP服务',

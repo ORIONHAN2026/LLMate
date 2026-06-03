@@ -67,28 +67,33 @@ const IsarChatModelSchema = CollectionSchema(
       name: r'name',
       type: IsarType.string,
     ),
-    r'provider': PropertySchema(
+    r'platform': PropertySchema(
       id: 10,
+      name: r'platform',
+      type: IsarType.string,
+    ),
+    r'provider': PropertySchema(
+      id: 11,
       name: r'provider',
       type: IsarType.string,
     ),
     r'skillsJson': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'skillsJson',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'status',
       type: IsarType.string,
     ),
     r'type': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'type',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -193,6 +198,12 @@ int _isarChatModelEstimateSize(
   bytesCount += 3 + object.modelId.length * 3;
   bytesCount += 3 + object.name.length * 3;
   {
+    final value = object.platform;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.provider;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -230,11 +241,12 @@ void _isarChatModelSerialize(
   writer.writeString(offsets[7], object.model);
   writer.writeString(offsets[8], object.modelId);
   writer.writeString(offsets[9], object.name);
-  writer.writeString(offsets[10], object.provider);
-  writer.writeString(offsets[11], object.skillsJson);
-  writer.writeString(offsets[12], object.status);
-  writer.writeString(offsets[13], object.type);
-  writer.writeDateTime(offsets[14], object.updatedAt);
+  writer.writeString(offsets[10], object.platform);
+  writer.writeString(offsets[11], object.provider);
+  writer.writeString(offsets[12], object.skillsJson);
+  writer.writeString(offsets[13], object.status);
+  writer.writeString(offsets[14], object.type);
+  writer.writeDateTime(offsets[15], object.updatedAt);
 }
 
 IsarChatModel _isarChatModelDeserialize(
@@ -255,11 +267,12 @@ IsarChatModel _isarChatModelDeserialize(
   object.model = reader.readString(offsets[7]);
   object.modelId = reader.readString(offsets[8]);
   object.name = reader.readString(offsets[9]);
-  object.provider = reader.readStringOrNull(offsets[10]);
-  object.skillsJson = reader.readStringOrNull(offsets[11]);
-  object.status = reader.readString(offsets[12]);
-  object.type = reader.readStringOrNull(offsets[13]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[14]);
+  object.platform = reader.readStringOrNull(offsets[10]);
+  object.provider = reader.readStringOrNull(offsets[11]);
+  object.skillsJson = reader.readStringOrNull(offsets[12]);
+  object.status = reader.readString(offsets[13]);
+  object.type = reader.readStringOrNull(offsets[14]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[15]);
   return object;
 }
 
@@ -295,10 +308,12 @@ P _isarChatModelDeserializeProp<P>(
     case 11:
       return (reader.readStringOrNull(offset)) as P;
     case 12:
-      return (reader.readString(offset)) as P;
-    case 13:
       return (reader.readStringOrNull(offset)) as P;
+    case 13:
+      return (reader.readString(offset)) as P;
     case 14:
+      return (reader.readStringOrNull(offset)) as P;
+    case 15:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2094,6 +2109,160 @@ extension IsarChatModelQueryFilter
   }
 
   QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'platform',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'platform',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'platform',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'platform',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'platform',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'platform',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'platform',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'platform',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'platform',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'platform',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'platform',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
+      platformIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'platform',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterFilterCondition>
       providerIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -2901,6 +3070,19 @@ extension IsarChatModelQuerySortBy
     });
   }
 
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterSortBy> sortByPlatform() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'platform', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterSortBy>
+      sortByPlatformDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'platform', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarChatModel, IsarChatModel, QAfterSortBy> sortByProvider() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'provider', Sort.asc);
@@ -3107,6 +3289,19 @@ extension IsarChatModelQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterSortBy> thenByPlatform() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'platform', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChatModel, IsarChatModel, QAfterSortBy>
+      thenByPlatformDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'platform', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarChatModel, IsarChatModel, QAfterSortBy> thenByProvider() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'provider', Sort.asc);
@@ -3245,6 +3440,13 @@ extension IsarChatModelQueryWhereDistinct
     });
   }
 
+  QueryBuilder<IsarChatModel, IsarChatModel, QDistinct> distinctByPlatform(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'platform', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<IsarChatModel, IsarChatModel, QDistinct> distinctByProvider(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -3348,6 +3550,12 @@ extension IsarChatModelQueryProperty
   QueryBuilder<IsarChatModel, String, QQueryOperations> nameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'name');
+    });
+  }
+
+  QueryBuilder<IsarChatModel, String?, QQueryOperations> platformProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'platform');
     });
   }
 

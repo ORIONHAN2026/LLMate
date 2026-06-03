@@ -1376,6 +1376,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   selectedProviderData['name'],
                   CupertinoIcons.device_desktop,
                 ),
+                const SizedBox(height: 8),
+                _buildSummaryItem(
+                  '平台',
+                  _resolveProviderPlatformName(_selectedProvider),
+                  CupertinoIcons.cloud,
+                ),
                 const SizedBox(height: 8), // 从12减少到8
                 _buildSummaryItem(
                   'API 地址',
@@ -1582,11 +1588,18 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         'description': '${selectedProviderData['name']} 在线模型服务',
         'type': 'online', // 标记为在线模型
         'provider': _selectedProvider,
+        'platform': _resolveProviderPlatformName(_selectedProvider),
         'apiKey': inputApiKey, // 使用控制器中的最新值
         'apiUrl': finalApiUrl, // 使用完整的API端点
       };
       Navigator.pop(context, newModel);
     }
+  }
+
+  /// 根据 provider ID 解析平台中文展示名
+  String _resolveProviderPlatformName(String providerId) {
+    final p = ModelProvider.fromString(providerId);
+    return p?.displayName ?? providerId;
   }
 
   // 构建模型能力标签（带勾选标记）

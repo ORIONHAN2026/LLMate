@@ -16,6 +16,7 @@ class ChatModel {
   final String? description;
   final String? type; // 'local', 'online'
   final String? provider; // 提供商：deepseek, openai, anthropic等
+  final String? platform; // 平台展示名称，如：阿里云百炼、DeepSeek、OpenAI等
   final String? apiKey;
   final String? apiUrl;
   final DateTime? createdAt;
@@ -41,6 +42,7 @@ class ChatModel {
     this.description,
     this.type,
     this.provider,
+    this.platform,
     this.apiKey,
     this.apiUrl,
     this.createdAt,
@@ -86,6 +88,7 @@ class ChatModel {
       description: map['description'],
       type: map['type'],
       provider: map['provider'],
+      platform: map['platform'] ?? _resolvePlatformName(map['provider']),
       apiKey: map['apiKey'],
       apiUrl: map['apiUrl'],
       createdAt:
@@ -184,6 +187,7 @@ class ChatModel {
       'description': description,
       'type': type,
       'provider': provider,
+      'platform': platform,
       'apiKey': apiKey,
       'apiUrl': apiUrl,
       'createdAt': createdAt?.toIso8601String(),
@@ -241,6 +245,7 @@ class ChatModel {
     String? description,
     String? type,
     String? provider,
+    String? platform,
     String? apiKey,
     String? apiUrl,
     ChatSettings? chatSettings,
@@ -253,6 +258,7 @@ class ChatModel {
       description: description,
       type: type,
       provider: provider,
+      platform: platform ?? _resolvePlatformName(provider),
       apiKey: apiKey,
       apiUrl: apiUrl,
       createdAt: DateTime.now(),
@@ -274,6 +280,7 @@ class ChatModel {
     String? description,
     String? type,
     String? provider,
+    String? platform,
     String? apiKey,
     String? apiUrl,
     DateTime? createdAt,
@@ -291,6 +298,7 @@ class ChatModel {
       description: description ?? this.description,
       type: type ?? this.type,
       provider: provider ?? this.provider,
+      platform: platform ?? this.platform,
       apiKey: apiKey ?? this.apiKey,
       apiUrl: apiUrl ?? this.apiUrl,
       createdAt: createdAt ?? this.createdAt,
@@ -375,6 +383,13 @@ class ChatModel {
     }
 
     return null; // 没有匹配的图标
+  }
+
+  /// 根据 provider ID 解析出平台中文展示名称
+  static String? _resolvePlatformName(String? providerId) {
+    if (providerId == null) return null;
+    final p = ModelProvider.fromString(providerId);
+    return p?.displayName ?? providerId;
   }
 
   @override

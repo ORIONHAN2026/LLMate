@@ -133,6 +133,7 @@ class ModelStorageService {
       ..status = (map['status'] as String?) ?? 'inactive'
       ..type = map['type'] as String?
       ..provider = map['provider'] as String?
+      ..platform = map['platform'] as String?
       ..apiKey = map['apiKey'] as String?
       ..apiUrl = map['apiUrl'] as String?
       ..createdAt = map['createdAt'] != null
@@ -160,6 +161,7 @@ class ModelStorageService {
       'status': m.status,
       if (m.type != null) 'type': m.type,
       if (m.provider != null) 'provider': m.provider,
+      if (m.platform != null) 'platform': m.platform,
       if (m.apiKey != null) 'apiKey': m.apiKey,
       if (m.apiUrl != null) 'apiUrl': m.apiUrl,
       if (m.createdAt != null) 'createdAt': m.createdAt!.toIso8601String(),

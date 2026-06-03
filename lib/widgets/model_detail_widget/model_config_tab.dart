@@ -78,7 +78,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
             _buildConfigItem('模型', _currentModel.provider ?? '未知'),
 
             _buildEditableModelItem(),
-            _buildConfigItem('平台', '阿里云百炼'),
+            _buildConfigItem('平台', _currentModel.platform ?? '未知'),
 
             _buildConfigItem('API地址', _currentModel.apiUrl ?? widget.apiUrl),
             // _buildConfigItem('模型ID', _currentModel.modelId),

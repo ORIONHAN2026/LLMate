@@ -20,6 +20,8 @@ class IsarChatModel {
   @Index()
   late String? provider;
 
+  late String? platform;
+
   late String? apiKey;
   late String? apiUrl;
   late DateTime? createdAt;

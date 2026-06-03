@@ -12,7 +12,7 @@ import '../controllers/session_controller.dart';
 import '../controllers/mcp_controller.dart';
 import '../models/bigmodel/models.dart';
 import '../framework/llm_framework.dart';
-import '../services/model_storage_service.dart';
+import '../controllers/model_controller.dart';
 import '../services/mcp_service.dart';
 import '../services/skill_service.dart';
 import '../services/skill_storage_service.dart';
@@ -194,7 +194,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 加载可用模型列表
   Future<void> _loadModels() async {
     try {
-      final modelMaps = await ModelStorageService.loadModels();
+      final modelController = Get.find<ModelController>();
+      final modelMaps = await modelController.loadModels();
       final models = modelMaps.map((map) => ChatModel.fromMap(map)).toList();
       setState(() {
         _availableModels = models;

@@ -9,7 +9,7 @@ import '../controllers/session_controller.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/mcp_config.dart';
 import '../services/mcp_service.dart';
-import '../services/model_storage_service.dart';
+import '../controllers/model_controller.dart';
 import '../utils/snackbar_utils.dart';
 
 /// MCP 服务市场条目
@@ -46,6 +46,7 @@ class McpMarketplacePage extends StatefulWidget {
 
 class _McpMarketplacePageState extends State<McpMarketplacePage> {
   final sessionController = Get.find<SessionController>();
+  final modelController = Get.find<ModelController>();
   final _searchController = TextEditingController();
   String _selectedCategory = '全部';
   List<_MarketItem> _filteredItems = [];
@@ -226,14 +227,14 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
         session.copyWith(chatModel: updatedModel),
       );
     }
-    final models = await ModelStorageService.loadModels();
+    final models = await modelController.loadModels();
     final updatedModels =
         models.map((m) {
           final cm = ChatModel.fromMap(m);
           if (cm.modelId == updatedModel.modelId) return updatedModel.toMap();
           return m;
         }).toList();
-    await ModelStorageService.saveModels(updatedModels);
+    await modelController.saveModelsData(updatedModels);
   }
 
   void _showDetailSheet(_MarketItem item) {

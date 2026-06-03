@@ -8,7 +8,7 @@ import 'controllers/theme_controller.dart';
 import 'controllers/mcp_controller.dart';
 import 'pages/home.dart';
 import 'pages/loading_page.dart';
-import 'services/model_storage_service.dart';
+
 import 'models/bigmodel/chat_model.dart';
 import 'storage/isar_service.dart';
 
@@ -233,7 +233,7 @@ class _AppInitializerState extends State<AppInitializer> {
       final mcpController = Get.put(McpController());
 
       // 加载模型数据
-      final modelMaps = await ModelStorageService.loadModels();
+      final modelMaps = await modelController.loadModels();
       final models = modelMaps.map((m) => ChatModel.fromMap(m)).toList();
       modelController.setModels(models);
 

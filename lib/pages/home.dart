@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
 import '../models/bigmodel/models.dart';
-import '../services/model_storage_service.dart';
+import '../controllers/model_controller.dart';
 import '../services/skill_service.dart';
 import '../widgets/chat_left_sidebar.dart';
 import '../widgets/chat_input_widget.dart';
@@ -92,7 +92,8 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   // 加载模型数据
   Future<void> _loadModels() async {
     try {
-      final models = await ModelStorageService.loadModels();
+      final modelController = Get.find<ModelController>();
+      final models = await modelController.loadModels();
 
       setState(() {
         // 保存当前选中的模型名称

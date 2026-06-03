@@ -1,6 +1,7 @@
 import 'package:chathub/utils/snackbar_utils.dart';
 
 import '../controllers/session_controller.dart';
+import '../controllers/model_controller.dart';
 // Update the import path below to the correct relative path if the file exists elsewhere, for example:
 import '../models/chat/chat_session.dart';
 // If the file does not exist, create 'lib/models/chat_session.dart' with the required class definition.
@@ -8,7 +9,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import '../services/model_storage_service.dart';
+import '../controllers/model_controller.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../dialogs/add_online_model_dialog.dart';
 import '../widgets/model_detail_page.dart';
@@ -73,6 +74,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
   List<ChatModel> _availableModels = [];
   final sessionController = Get.find<SessionController>();
+  final modelController = Get.find<ModelController>();
   List<ChatSession> get chatSessions => sessionController.sessions;
   ChatSession? get currentSession => sessionController.currentSession.value;
   @override
@@ -83,7 +85,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
   // 加载模型列表
   Future<void> _loadModels() async {
-    final modelsData = await ModelStorageService.loadModels();
+    final modelsData = await modelController.loadModels();
     final models =
         modelsData.map((modelData) {
           // 确保所有必需字段都存在，如果没有modelId则自动生成
@@ -147,7 +149,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
   // 保存模型列表
   Future<void> _saveModels() async {
     final modelsData = _availableModels.map((model) => model.toMap()).toList();
-    await ModelStorageService.saveModels(modelsData);
+    await modelController.saveModelsData(modelsData);
   }
 
   // 清理使用已删除模型的会话中的 chatModel 字段

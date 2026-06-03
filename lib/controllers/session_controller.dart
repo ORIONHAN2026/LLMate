@@ -10,6 +10,7 @@ import '../models/bigmodel/mcp_config.dart';
 import '../storage/isar_models.dart';
 import '../storage/isar_service.dart';
 import '../services/mcp_service.dart';
+import 'model_controller.dart';
 
 class SessionController extends GetxController {
   var sessions = <ChatSession>[].obs;
@@ -24,6 +25,24 @@ class SessionController extends GetxController {
   }
 
   Future<void> setCurrentSession(ChatSession? session) async {
+    // 每次进入会话时，根据 modelId 动态重新加载 chatModel
+    if (session != null && session.modelId != null && session.modelId!.isNotEmpty) {
+      final sid = session.modelId!;
+      try {
+        final modelController = Get.find<ModelController>();
+        final updatedChatModel = modelController.models.firstWhere(
+          (m) => m.modelId == sid,
+        );
+        session = session.copyWith(chatModel: updatedChatModel);
+      } catch (_) {
+        // 模型已被删除，chatModel 保持为 null
+      }
+      // 同步更新 sessions 列表中的对应项
+      final idx = sessions.indexWhere((s) => s.sessionId == session!.sessionId);
+      if (idx != -1) {
+        sessions[idx] = session!;
+      }
+    }
     currentSession.value = session;
     // 会话打开时预初始化 MCP 连接
     if (session != null) {
@@ -177,7 +196,7 @@ class SessionController extends GetxController {
       for (int i = 0; i < sessions.length; i++) {
         final session = sessions[i];
 
-        if (session.chatModel?.modelId == updatedModel.modelId) {
+        if (session.modelId == updatedModel.modelId) {
           sessions[i] = session.copyWith(chatModel: updatedModel);
           hasUpdates = true;
           updatedCount++;
@@ -334,10 +353,8 @@ class SessionController extends GetxController {
       ..messagesJson = jsonEncode(
         session.messages.map((m) => m.toJson()).toList(),
       )
-      ..chatModelJson =
-          session.chatModel != null
-              ? jsonEncode(session.chatModel!.toMap())
-              : null
+      ..modelId = session.modelId
+      ..chatModelJson = null // 已废弃，仅占位
       ..mcpServerJson =
           session.mcpServer != null
               ? jsonEncode(session.mcpServer!.toJson())
@@ -378,13 +395,18 @@ class SessionController extends GetxController {
       } catch (_) {}
     }
 
-    // 解析 ChatModel
+    // 根据 modelId 动态解析 ChatModel
+    final String? modelId = entity.modelId;
     ChatModel? chatModel;
-    if (entity.chatModelJson != null && entity.chatModelJson!.isNotEmpty) {
+    if (modelId != null && modelId.isNotEmpty) {
       try {
-        final map = jsonDecode(entity.chatModelJson!) as Map<String, dynamic>;
-        chatModel = ChatModel.fromMap(map);
-      } catch (_) {}
+        final modelController = Get.find<ModelController>();
+        chatModel = modelController.models.firstWhere(
+          (m) => m.modelId == modelId,
+        );
+      } catch (_) {
+        // 模型已被删除，chatModel 为 null
+      }
     }
 
     // 解析 McpServerConfig
@@ -417,6 +439,7 @@ class SessionController extends GetxController {
       inputContent: entity.inputContent,
       lastSelectedDirectory: entity.lastSelectedDirectory,
       workDirectory: entity.workDirectory,
+      modelId: modelId,
       chatModel: chatModel,
       mcpServer: mcpServer,
       skill: skill,

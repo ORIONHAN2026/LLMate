@@ -39,6 +39,10 @@ class ChatSession {
 
   // ============================
 
+  /// 绑定的模型ID，用于动态加载 chatModel
+  final String? modelId;
+
+  /// 运行时动态解析的模型对象（不持久化，由 modelId 解析而来）
   final ChatModel? chatModel;
   final List<ChatMessage> messages;
   final List<ChatCommand> sessionQuickCommands;
@@ -48,6 +52,7 @@ class ChatSession {
     required this.name,
     required this.createdAt,
     required this.messages,
+    String? modelId,
     this.chatModel,
     this.isFavorite = false,
     this.inputContent = '',
@@ -62,7 +67,7 @@ class ChatSession {
     this.memoryRounds = 20,
     this.deepThink = false,
     this.sessionQuickCommands = const [],
-  });
+  }) : modelId = modelId ?? chatModel?.modelId;
 
   // 获取会话的预览文本
   String get previewText {
@@ -120,6 +125,20 @@ class ChatSession {
     bool? deepThink,
     List<ChatCommand>? sessionQuickCommands,
   }) {
+    // 当显式设置 chatModel 时，自动同步 modelId
+    final String? resolvedModelId;
+    final ChatModel? resolvedChatModel;
+    if (clearChatModel) {
+      resolvedModelId = null;
+      resolvedChatModel = null;
+    } else if (chatModel != null) {
+      resolvedModelId = chatModel.modelId;
+      resolvedChatModel = chatModel;
+    } else {
+      resolvedModelId = modelId;
+      resolvedChatModel = this.chatModel;
+    }
+
     return ChatSession(
       sessionId: sessionId ?? this.sessionId,
       name: title ?? name,
@@ -137,7 +156,8 @@ class ChatSession {
           clearWorkDirectory ? null : (workDirectory ?? this.workDirectory),
       mcpServer: clearMcpServer ? null : (mcpServer ?? this.mcpServer),
       skill: clearSkill ? null : (skill ?? this.skill),
-      chatModel: clearChatModel ? null : (chatModel ?? this.chatModel),
+      modelId: resolvedModelId,
+      chatModel: resolvedChatModel,
       memoryRounds: memoryRounds ?? this.memoryRounds,
       deepThink: deepThink ?? this.deepThink,
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
@@ -145,6 +165,12 @@ class ChatSession {
   }
 
   factory ChatSession.fromJson(Map<String, dynamic> json) {
+    // 优先从 modelId 字段读取，兼容旧数据的 chatModel 字段提取 modelId
+    final String? modelId = json['modelId'] as String? ??
+        (json['chatModel'] is Map<String, dynamic>
+            ? (json['chatModel'] as Map<String, dynamic>)['modelId'] as String?
+            : null);
+
     return ChatSession(
       sessionId: json['id'] ?? '',
       name: json['name'] ?? '新对话',
@@ -182,6 +208,7 @@ class ChatSession {
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
               .toList() ??
           [],
+      modelId: modelId,
       chatModel:
           json['chatModel'] != null
               ? ChatModel.fromMap(json['chatModel'])
@@ -209,6 +236,7 @@ class ChatSession {
       'deepThink': deepThink,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
+      if (modelId != null) 'modelId': modelId,
       'chatModel': chatModel?.toMap(),
     };
   }
@@ -219,7 +247,9 @@ class ChatSession {
         if (Directory(lastSelectedDirectory!).existsSync()) {
           return lastSelectedDirectory;
         }
-      } catch (e) {}
+      } catch (e) {
+        // 目录不存在或无法访问，返回 null
+      }
     }
     return null;
   }

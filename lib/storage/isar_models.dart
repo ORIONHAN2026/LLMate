@@ -55,6 +55,7 @@ class IsarChatSession {
 
   // JSON blobs for complex nested data
   late String? messagesJson;
+  @Deprecated('使用 modelId 替代，chatModelJson 仅用于旧数据迁移')
   late String? chatModelJson;
   late String? mcpServerJson;
   late String? skillJson;
@@ -70,6 +71,9 @@ class IsarChatSession {
   /// 标记是否为当前活动会话
   @Index()
   late bool isCurrent;
+
+  /// 绑定的模型ID（用于动态解析 ChatModel，放在末尾避免破坏旧数据字段索引）
+  late String? modelId;
 }
 
 /// Isar 集合：MCP 服务配置

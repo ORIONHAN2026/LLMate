@@ -160,8 +160,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
       // 遍历所有会话，检查是否使用了被删除的模型
       for (final session in currentSessions) {
-        if (session.chatModel != null &&
-            session.chatModel!.modelId == modelId) {
+        if (session.modelId == modelId) {
           // 创建清空模型的新会话对象
           final updatedSession = session.copyWith(clearChatModel: true);
           updatedSessions.add(updatedSession);
@@ -178,7 +177,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         await sessionController.setSessions(updatedSessions);
 
         // 如果当前会话使用了被删除的模型，需要更新当前会话引用
-        if (currentSession?.chatModel?.modelId == modelId) {
+        if (currentSession?.modelId == modelId) {
           final updatedCurrentSession = updatedSessions.firstWhere(
             (session) => session.sessionId == currentSession!.sessionId,
             orElse: () => currentSession!,

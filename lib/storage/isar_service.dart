@@ -40,18 +40,44 @@ class IsarService {
     // 确保目录存在
     await Directory(dbPath).create(recursive: true);
 
-    _isar = await Isar.open(
-      [
-        IsarChatModelSchema,
-        IsarChatSessionSchema,
-        IsarMcpServiceSchema,
-        IsarSettingsSchema,
-      ],
-      directory: dbPath,
-      inspector: kDebugMode,
-    );
+    try {
+      _isar = await Isar.open(
+        [
+          IsarChatModelSchema,
+          IsarChatSessionSchema,
+          IsarMcpServiceSchema,
+          IsarSettingsSchema,
+        ],
+        directory: dbPath,
+        inspector: kDebugMode,
+      );
 
-    debugPrint('✅ Isar 数据库初始化完成: $dbPath');
+      debugPrint('✅ Isar 数据库初始化完成: $dbPath');
+    } catch (e) {
+      // Schema 不匹配（字段新增/删除） → 删除旧库重建
+      debugPrint('⚠️ Isar 数据库 schema 不匹配，正在重建: $e');
+      try {
+        final dbDir = Directory(dbPath);
+        if (dbDir.existsSync()) {
+          await dbDir.delete(recursive: true);
+          await dbDir.create(recursive: true);
+        }
+        _isar = await Isar.open(
+          [
+            IsarChatModelSchema,
+            IsarChatSessionSchema,
+            IsarMcpServiceSchema,
+            IsarSettingsSchema,
+          ],
+          directory: dbPath,
+          inspector: kDebugMode,
+        );
+        debugPrint('✅ Isar 数据库重建完成');
+      } catch (e2) {
+        debugPrint('❌ Isar 数据库重建失败: $e2');
+        rethrow;
+      }
+    }
 
     // 迁移旧的 SharedPreferences 数据
     await _migrateFromSharedPreferences();
@@ -129,6 +155,10 @@ class IsarService {
               ..lastSelectedDirectory = map['lastSelectedDirectory'] as String?
               ..messagesJson = map['messages'] != null ? jsonEncode(map['messages']) : '[]'
               ..chatModelJson = map['chatModel'] != null ? jsonEncode(map['chatModel']) : null
+              ..modelId = map['modelId'] as String? ??
+                  (map['chatModel'] is Map
+                      ? (map['chatModel'] as Map)['modelId'] as String?
+                      : null)
               ..mcpServerJson = map['mcpServer'] != null ? jsonEncode(map['mcpServer']) : null
               ..skillJson = map['skill'] != null ? jsonEncode(map['skill']) : null
               ..attachmentsJson = map['attachments'] != null ? jsonEncode(map['attachments']) : null

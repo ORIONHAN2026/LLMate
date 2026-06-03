@@ -2,9 +2,6 @@ import 'package:chathub/models/bigmodel/chat_model.dart';
 import 'package:chathub/models/chat/chat_setting.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/widgets/model_detail_widget/model_config_tab.dart';
-import 'package:chathub/widgets/model_detail_widget/chat_settings_tab.dart';
-import 'package:chathub/widgets/model_detail_widget/chat_commands_tab.dart';
-import 'package:chathub/widgets/model_detail_widget/mcp_tab.dart';
 import 'package:chathub/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -30,10 +27,6 @@ class ModelDetailPage extends StatefulWidget {
 }
 
 class _ModelDetailPageState extends State<ModelDetailPage> {
-  // 静态Map用于记录每个模型的tab状态
-  static final Map<String, int> _modelTabStates = <String, int>{};
-
-  int _selectedDetailTab = 0;
   late ChatModel _currentModel;
   bool _isModelDeleted = false; // 添加删除状态标记
   late TextEditingController _apiKeyController;
@@ -60,13 +53,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
   @override
   void didUpdateWidget(ModelDetailPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 当 widget 更新时，保存旧模型的tab状态
     if (oldWidget.model != widget.model) {
-      // 保存旧模型的tab状态
-      if (oldWidget.model.modelId.isNotEmpty) {
-        _modelTabStates[oldWidget.model.modelId] = _selectedDetailTab;
-      }
-
       setState(() {
         _isModelDeleted = false; // 重置删除状态
       });
@@ -76,9 +63,6 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
 
   void _initializeData() {
     _currentModel = widget.model;
-
-    // 恢复该模型之前的tab状态，如果没有记录则默认为0
-    _selectedDetailTab = _modelTabStates[_currentModel.modelId] ?? 0;
 
     _apiKeyController.text = _currentModel.apiKey ?? '';
     _modelNameController.text = _currentModel.name;
@@ -108,11 +92,6 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
 
   @override
   void dispose() {
-    // 在页面销毁前保存当前模型的tab状态
-    if (_currentModel.modelId.isNotEmpty) {
-      _modelTabStates[_currentModel.modelId] = _selectedDetailTab;
-    }
-
     _debounceTimer?.cancel();
     _apiKeyController.dispose();
     _modelNameController.dispose();
@@ -129,7 +108,11 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle, size: 64, color: Theme.of(context).colorScheme.primary),
+            Icon(
+              Icons.check_circle,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             const SizedBox(height: 16),
             Text(
               '模型已删除',
@@ -142,12 +125,18 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
             const SizedBox(height: 8),
             Text(
               '模型 "${_currentModel.name}" 已成功删除',
-              style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
             ),
             const SizedBox(height: 24),
             Text(
               '请从左侧列表选择其他模型查看详情',
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
             ),
           ],
         ),
@@ -158,69 +147,24 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
       children: [
         // 模型详情头部
         _buildModelHeader(),
-        const SizedBox(height: 12), // 从16减少到12
-        // Tab导航
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16), // 从24减少到16
-          child: Row(
-            children: [
-              _buildTab('模型设置', 0, CupertinoIcons.gear),
-              _buildTab('对话设置', 1, CupertinoIcons.chat_bubble_2),
-              _buildTab('快捷指令', 2, CupertinoIcons.command),
-              // _buildTab('RAG知识库', 3, CupertinoIcons.book_fill),
-              // _buildTab('MCP服务', 4, CupertinoIcons.cloud),
-            ],
-          ),
-        ),
-        // Tab内容
+        const SizedBox(height: 12),
+        // 模型配置内容
         Expanded(
           child: Container(
-            padding: const EdgeInsets.all(16), // 从24减少到16
-            child: _buildTabContent(),
+            padding: const EdgeInsets.all(16),
+            child: ModelConfigTab(
+              model: _currentModel,
+              apiUrl: widget.apiUrl,
+              onModelUpdated: (model) {
+                setState(() {
+                  _currentModel = model;
+                });
+                widget.onModelUpdated(model);
+              },
+            ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildTab(String title, int index, IconData icon) {
-    final isSelected = _selectedDetailTab == index;
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedDetailTab = index;
-            // 保存当前模型的tab状态
-            _modelTabStates[_currentModel.modelId] = index;
-          });
-        },
-        borderRadius: BorderRadius.circular(8), // 从12减少到8
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8), // 从12减少到8
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8), // 从12减少到8
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 12, // 从14减少到12
-                color: isSelected ? Theme.of(context).primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-              const SizedBox(width: 6), // 从8减少到6
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12, // 从14减少到12
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? Theme.of(context).primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -253,7 +197,9 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                   _currentModel.description ?? '无描述',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
                   ), // 从14减少到12
                 ),
               ],
@@ -298,7 +244,10 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                 label: const Text('删除'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.error,
-                  side: BorderSide(color: Theme.of(context).colorScheme.error, width: 1),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.error,
+                    width: 1,
+                  ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 4,
@@ -317,53 +266,6 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
     );
   }
 
-  Widget _buildTabContent() {
-    switch (_selectedDetailTab) {
-      case 0:
-        return ModelConfigTab(
-          model: _currentModel,
-          apiUrl: widget.apiUrl,
-          onModelUpdated: (model) {
-            setState(() {
-              _currentModel = model;
-            });
-            widget.onModelUpdated(model);
-          },
-        );
-      case 1:
-        return ChatSettingsTab(
-          model: _currentModel,
-          onModelUpdated: (model) {
-            setState(() {
-              _currentModel = model;
-            });
-            widget.onModelUpdated(model);
-          },
-        );
-      case 2:
-        return ChatCommandsTab(
-          model: _currentModel,
-          onModelUpdated: (model) {
-            setState(() {
-              _currentModel = model;
-            });
-            widget.onModelUpdated(model);
-          },
-        );
-      case 3:
-        return McpTab(
-          model: _currentModel,
-          onModelUpdated: (model) {
-            setState(() {
-              _currentModel = model;
-            });
-            widget.onModelUpdated(model);
-          },
-        );
-      default:
-        return const SizedBox();
-    }
-  }
 
   void _showDeleteConfirmation() async {
     final bool? shouldDelete = await ConfirmDeleteDialog.show(

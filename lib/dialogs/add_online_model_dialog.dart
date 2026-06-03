@@ -710,7 +710,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                 .map((model) {
                                   final isSelected =
                                       _selectedOnlineModel == model['id'];
-                                  final hasCapabilities = model['context'] != null;
+                                  final hasCapabilities =
+                                      model['context'] != null;
                                   return InkWell(
                                     onTap: () {
                                       setState(() {
@@ -808,8 +809,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                                 // 模型能力指标（带勾选标记）
                                                 if (hasCapabilities) ...[
                                                   const SizedBox(height: 4),
-                                                  _buildCapabilityTags(model, isSelected),
-                                                ] else if (model['specs'] != null) ...[
+                                                  _buildCapabilityTags(
+                                                    model,
+                                                    isSelected,
+                                                  ),
+                                                ] else if (model['specs'] !=
+                                                    null) ...[
                                                   const SizedBox(height: 2),
                                                   Text(
                                                     model['specs'],
@@ -821,7 +826,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                                           .withOpacity(0.5),
                                                     ),
                                                     maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ],
 
@@ -1587,8 +1593,14 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   Widget _buildCapabilityTags(Map<String, dynamic> model, bool isSelected) {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final dimColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.35);
-    final tagColor = isSelected ? primaryColor.withOpacity(0.15) : Theme.of(context).colorScheme.surface;
-    final tagBorder = isSelected ? primaryColor.withOpacity(0.3) : Theme.of(context).dividerColor.withOpacity(0.5);
+    final tagColor =
+        isSelected
+            ? primaryColor.withOpacity(0.15)
+            : Theme.of(context).colorScheme.surface;
+    final tagBorder =
+        isSelected
+            ? primaryColor.withOpacity(0.3)
+            : Theme.of(context).dividerColor.withOpacity(0.5);
 
     // 能力列表：[标签名, 字段key, 显示名]
     final capabilities = [
@@ -1603,68 +1615,97 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     return Wrap(
       spacing: 4,
       runSpacing: 3,
-      children: capabilities.map((cap) {
-        final fieldKey = cap[0];
-        final label = cap[1];
-        final isSupported = model[fieldKey] == true;
-        final isContext = fieldKey == 'context';
+      children:
+          capabilities.map((cap) {
+            final fieldKey = cap[0];
+            final label = cap[1];
+            final isSupported = model[fieldKey] == true;
+            final isContext = fieldKey == 'context';
 
-        // 上下文用特殊样式显示值
-        if (isContext) {
-          final contextValue = model['context'] ?? '';
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: isSelected ? primaryColor.withOpacity(0.12) : Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: isSelected ? primaryColor.withOpacity(0.4) : Theme.of(context).dividerColor.withOpacity(0.4), width: 0.5),
-            ),
-            child: Text(
-              contextValue,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-            ),
-          );
-        }
+            // 上下文用特殊样式显示值
+            if (isContext) {
+              final contextValue = model['context'] ?? '';
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color:
+                      isSelected
+                          ? primaryColor.withOpacity(0.12)
+                          : Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(
+                    color:
+                        isSelected
+                            ? primaryColor.withOpacity(0.4)
+                            : Theme.of(context).dividerColor.withOpacity(0.4),
+                    width: 0.5,
+                  ),
+                ),
+                child: Text(
+                  contextValue,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color:
+                        isSelected
+                            ? primaryColor
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              );
+            }
 
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-          decoration: BoxDecoration(
-            color: isSupported ? tagColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(3),
-            border: Border.all(
-              color: isSupported ? tagBorder : dimColor.withOpacity(0.3),
-              width: 0.5,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isSupported ? Icons.check_circle_outline : Icons.cancel_outlined,
-                size: 9,
-                color: isSupported
-                    ? (isSelected ? primaryColor : const Color(0xFF10B981))
-                    : dimColor,
-              ),
-              const SizedBox(width: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 9,
-                  color: isSupported
-                      ? (isSelected ? primaryColor : Theme.of(context).colorScheme.onSurface.withOpacity(0.7))
-                      : dimColor,
-                  fontWeight: isSupported ? FontWeight.w500 : FontWeight.normal,
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSupported ? tagColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(
+                  color: isSupported ? tagBorder : dimColor.withOpacity(0.3),
+                  width: 0.5,
                 ),
               ),
-            ],
-          ),
-        );
-      }).toList(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSupported
+                        ? Icons.check_circle_outline
+                        : Icons.cancel_outlined,
+                    size: 9,
+                    color:
+                        isSupported
+                            ? (isSelected
+                                ? primaryColor
+                                : const Color(0xFF10B981))
+                            : dimColor,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color:
+                          isSupported
+                              ? (isSelected
+                                  ? primaryColor
+                                  : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.7))
+                              : dimColor,
+                      fontWeight:
+                          isSupported ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
     );
   }
 
@@ -1721,37 +1762,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           ),
           child: Column(
             children: [
-              // 对话标题
-              // Container(
-              //   width: double.infinity,
-              //   padding: const EdgeInsets.all(12),
-              //   decoration: BoxDecoration(
-              //     color: Colors.grey[50],
-              //     borderRadius: const BorderRadius.only(
-              //       topLeft: Radius.circular(6),
-              //       topRight: Radius.circular(6),
-              //     ),
-              //   ),
-              //   child: Row(
-              //     children: [
-              //       const Icon(
-              //         CupertinoIcons.chat_bubble_2,
-              //         size: 14,
-              //         color: Color(0xFF3B82F6),
-              //       ),
-              //       const SizedBox(width: 8),
-              //       const Text(
-              //         '配置测试对话',
-              //         style: TextStyle(
-              //           fontSize: 12,
-              //           fontWeight: FontWeight.w500,
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
-
-              // 对话内容 - 可滚动
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(12),
@@ -2056,6 +2066,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         apiUrl: finalApiUrl,
         createdAt: DateTime.now(),
       );
+      print(tempModel.toJson());
 
       // 使用 LLM Hub 创建 provider 进行测试
       final provider = LlmHub.createProvider(tempModel);

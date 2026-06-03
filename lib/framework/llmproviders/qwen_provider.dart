@@ -108,6 +108,7 @@ class QwenProvider extends BaseLlmProvider {
       if (kDebugMode) {
         print('$providerName 发送请求到: ${model!.apiUrl}');
         print('请求数据: ${jsonEncode(requestData)} 请求数据结束');
+        print('请求头: ${jsonEncode(buildAuthHeaders())} 请求数据结束');
       }
 
       final response = await dio.post<ResponseBody>(

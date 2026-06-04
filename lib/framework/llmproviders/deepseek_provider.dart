@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'package:chathub/models/bigmodel/deepseek_response.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -104,6 +105,9 @@ class DeepSeekProvider extends BaseLlmProvider {
         session: session,
         extra: extra,
       );
+
+      // 保存请求数据到文件
+      await _saveRequestDataToFile(requestData);
 
       if (kDebugMode) {
         print('$providerName 发送请求到: ${model!.apiUrl}');
@@ -257,6 +261,53 @@ class DeepSeekProvider extends BaseLlmProvider {
       return 'API 响应格式错误，请检查API配置';
     return 'API 错误：$es';
   }
+
+  /// 保存请求数据到本地文件
+  /// 文件保存在 /Users/orion/Documents/Flutter/llmchat/log_request/ 下，文件名格式：request_YYYYMMDD_HHMMSS_mmm.json
+  static Future<void> _saveRequestDataToFile(Map<String, dynamic> requestData) async {
+    try {
+      // 固定日志目录
+      final logDir = Directory('/Users/orion/Documents/Flutter/llmchat/log_request');
+      if (!await logDir.exists()) {
+        await logDir.create(recursive: true);
+      }
+      
+      // 生成文件名：request_20250604_142230_123.json
+      final now = DateTime.now();
+      final timestamp = 
+          '${now.year}${_pad(now.month)}${_pad(now.day)}_'
+          '${_pad(now.hour)}${_pad(now.minute)}${_pad(now.second)}_'
+          '${now.millisecond.toString().padLeft(3, '0')}';
+      final fileName = 'request_$timestamp.json';
+      final filePath = '${logDir.path}/$fileName';
+      
+      // 添加元数据
+      final dataToSave = {
+        'timestamp': now.toIso8601String(),
+        'provider': 'DeepSeek',
+        'requestData': requestData,
+      };
+      
+      // 写入文件
+      final file = File(filePath);
+      await file.writeAsString(
+        const JsonEncoder.withIndent('  ').convert(dataToSave),
+        encoding: utf8,
+      );
+      
+      if (kDebugMode) {
+        print('📁 请求数据已保存到: $filePath');
+      }
+    } catch (e) {
+      // 保存失败不影响主流程，仅记录错误
+      if (kDebugMode) {
+        print('⚠️ 保存请求数据失败: $e');
+      }
+    }
+  }
+  
+  /// 数字补零
+  static String _pad(int n) => n.toString().padLeft(2, '0');
 
   @override
   Future<Map<String, dynamic>?> getModelInfo() async {

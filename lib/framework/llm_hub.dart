@@ -5,6 +5,8 @@ import '../models/bigmodel/chat_model.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/chat_message.dart';
 import '../services/tool_execution_service.dart';
+import '../memory/memory_service.dart';
+import '../memory/memory_models.dart';
 import 'llmproviders/base_provider.dart';
 import 'llmproviders/openai_provider.dart';
 import 'llmproviders/deepseek_provider.dart';
@@ -57,6 +59,7 @@ class LlmClient {
   final ChatSession _session;
   final BaseLlmProvider _provider;
   bool _cancelled = false;
+  MemoryRecallResult? _lastRecallResult;
 
   // ── 构造 ──
 
@@ -77,6 +80,96 @@ class LlmClient {
 
   String buildSystemPrompt({ChatSession? session}) =>
       _provider.buildSystemPrompt(session);
+
+  /// 执行记忆召回
+  Future<MemoryRecallResult?> _performMemoryRecall(String userText) async {
+    try {
+      final memoryService = MemoryService();
+      if (!memoryService.isInitialized) return null;
+
+      return await memoryService.recall(
+        userText: userText,
+        sessionKey: _session.sessionId,
+        userId: 'user_${_session.sessionId}',
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('⚠️ Memory recall failed: $e');
+      return null;
+    }
+  }
+
+  /// 将召回的记忆注入消息列表
+  List<Map<String, dynamic>> _injectMemoryContext(
+    List<Map<String, dynamic>> messages,
+    MemoryRecallResult recall,
+    String userContent,
+  ) {
+    // 1. 注入系统上下文（L3画像等）
+    if (recall.systemContextAppend?.isNotEmpty == true) {
+      var hasSystem = false;
+      for (var i = 0; i < messages.length; i++) {
+        if (messages[i]['role'] == 'system') {
+          final existingContent = messages[i]['content'] as String? ?? '';
+          messages[i] = {
+            ...messages[i],
+            'content': '$existingContent\n\n${recall.systemContextAppend}',
+          };
+          hasSystem = true;
+          break;
+        }
+      }
+
+      if (!hasSystem && messages.isNotEmpty) {
+        messages.insert(0, {
+          'role': 'system',
+          'content': recall.systemContextAppend,
+        });
+      }
+    }
+
+    // 2. 注入L1相关记忆到用户消息
+    if (recall.relevantMemories.isNotEmpty) {
+      final memoryContext = recall.formattedMemoryContext;
+      final enhancedContent = '$memoryContext\n\n## 当前问题\n$userContent';
+
+      // 找到最后一条用户消息并增强
+      for (var i = messages.length - 1; i >= 0; i--) {
+        if (messages[i]['role'] == 'user') {
+          messages[i] = {
+            ...messages[i],
+            'content': enhancedContent,
+          };
+          break;
+        }
+      }
+    }
+
+    return messages;
+  }
+
+  /// 捕获对话到记忆系统
+  Future<void> _captureToMemory(
+    String userText,
+    String assistantText,
+    List<Map<String, dynamic>> messages,
+  ) async {
+    try {
+      final memoryService = MemoryService();
+      if (!memoryService.isInitialized) return;
+
+      await memoryService.captureTurn(
+        sessionKey: _session.sessionId,
+        sessionId: _session.sessionId,
+        userText: userText,
+        assistantText: assistantText,
+        messages: messages,
+      );
+
+      if (kDebugMode) debugPrint('📝 Conversation captured to memory');
+    } catch (e) {
+      if (kDebugMode) debugPrint('⚠️ Memory capture failed: $e');
+    }
+  }
 
   /// 发送消息并获取流式响应（递归处理 MCP 工具调用，直到无工具调用为止）
   /// chunk: {content,think,tool,toolcall}
@@ -103,10 +196,24 @@ class LlmClient {
         debugPrint('  [$i] ${m.role.name}: $preview (id: ${m.msgId})');
       }
     }
-    final messages = _provider.buildMessages(
+
+    // ========== 记忆召回 ==========
+    // 在用户消息发送前，召回相关记忆
+    _lastRecallResult = await _performMemoryRecall(userMessage.content);
+    if (kDebugMode && _lastRecallResult != null) {
+      debugPrint('🧠 [LLMChat] Memory recalled: ${_lastRecallResult!.relevantMemories.length} memories, strategy: ${_lastRecallResult!.recallStrategy}');
+    }
+
+    var messages = _provider.buildMessages(
       userMessage: userMessage,
       session: _session,
     );
+
+    // 注入记忆上下文
+    if (_lastRecallResult != null) {
+      messages = _injectMemoryContext(messages, _lastRecallResult!, userMessage.content);
+    }
+
     if (kDebugMode) {
       debugPrint('🧠 [LLMChat] buildMessages 返回 ${messages.length} 条消息');
       for (int i = 0; i < messages.length; i++) {
@@ -117,6 +224,9 @@ class LlmClient {
         debugPrint('  [$i] ${m['role']}: $preview');
       }
     }
+
+    // 累积完整响应用于记忆捕获
+    final responseBuffer = StringBuffer();
 
     // 循环：LLM 返回工具调用后追加结果并重发，直到无工具调用或检测到重复调用
     int toolIteration = 0;
@@ -163,6 +273,7 @@ class LlmClient {
         final c = chunk['content'] ?? '';
         if (c.isNotEmpty) {
           loopAccContent += c;
+          responseBuffer.write(c); // 累积响应内容
           if (kDebugMode) debugPrint('📤 [LLMChat] content: $c');
           yield {'content': c};
         }
@@ -185,6 +296,15 @@ class LlmClient {
           _finalizeNativeToolCalls(nativeToolCallDeltas);
 
       if (_cancelled || parsedCalls.isEmpty) {
+        // ========== 记忆捕获 ==========
+        // 对话结束，捕获到记忆系统
+        if (!_cancelled && responseBuffer.isNotEmpty) {
+          await _captureToMemory(
+            userMessage.content,
+            responseBuffer.toString(),
+            messages,
+          );
+        }
         return;
       }
 

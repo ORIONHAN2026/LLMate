@@ -131,10 +131,24 @@ class McpService {
         );
       } else if (transportType == McpTransportType.sse) {
         debugPrint('🔗 使用 SSE 传输: ${config.url}');
-        return SseClientTransport.create(
-          serverUrl: config.url!,
-          headers: config.headers,
-        );
+        try {
+          return await SseClientTransport.create(
+            serverUrl: config.url!,
+            headers: config.headers,
+          );
+        } catch (e) {
+          final es = e.toString();
+          // SSE 端点不支持（405 Method Not Allowed），回退到 Streamable HTTP
+          if (es.contains('405') || es.contains('Method not allowed')) {
+            debugPrint('🔗 SSE 不支持 (405)，自动回退到 Streamable HTTP: ${config.url}');
+            return StreamableHttpClientTransport.create(
+              baseUrl: config.url!,
+              headers: config.headers,
+              timeout: timeout,
+            );
+          }
+          rethrow;
+        }
       } else {
         // type 未指定，先尝试 SSE，405 时自动回退 Streamable HTTP
         debugPrint('🔗 传输类型未指定，先尝试 SSE: ${config.url}');
@@ -199,10 +213,12 @@ class McpService {
     );
     debugPrint('   📦 创建 Client: aidock-client-${config.name} v1.0.0');
 
+    ClientTransport? transport;
+    
     try {
       // 根据配置类型选择传输方式
       final startTime = DateTime.now();
-      final transport = await _createTransport(
+      transport = await _createTransport(
         config,
         timeout: Duration(seconds: timeoutSec),
       ).timeout(
@@ -220,16 +236,51 @@ class McpService {
       // 连接（connect 内部会自动调用 initialize）
       debugPrint('🔌 调用 client.connect(transport)...');
       final connectStart = DateTime.now();
-      await client
-          .connect(transport)
-          .timeout(
-            Duration(seconds: timeoutSec),
-            onTimeout:
-                () =>
-                    throw TimeoutException(
-                      '连接 MCP 服务器超时 (${timeoutSec}s): ${config.name}',
-                    ),
+      
+      try {
+        await client
+            .connect(transport)
+            .timeout(
+              Duration(seconds: timeoutSec),
+              onTimeout:
+                  () =>
+                      throw TimeoutException(
+                        '连接 MCP 服务器超时 (${timeoutSec}s): ${config.name}',
+                      ),
+            );
+      } on McpError catch (e) {
+        final errorStr = e.toString();
+        // 检测 SSE 405 错误，回退到 Streamable HTTP
+        if ((errorStr.contains('405') || 
+            errorStr.contains('Method not allowed') ||
+            errorStr.contains('Method Not Allowed')) &&
+            config.url != null && config.url!.isNotEmpty) {
+          debugPrint('   ⚠️ SSE 连接失败 (405)，尝试回退到 Streamable HTTP...');
+          
+          // 重新创建 Streamable HTTP 传输
+          transport = await StreamableHttpClientTransport.create(
+            baseUrl: config.url!,
+            headers: config.headers,
+            timeout: Duration(seconds: timeoutSec),
           );
+          
+          // 使用新 transport 重新连接
+          debugPrint('🔌 使用 Streamable HTTP 重新连接...');
+          final reconnectStart = DateTime.now();
+          await client.connect(transport).timeout(
+            Duration(seconds: timeoutSec),
+            onTimeout: () => throw TimeoutException(
+              'Streamable HTTP 连接超时 (${timeoutSec}s): ${config.name}',
+            ),
+          );
+          debugPrint(
+            '   ⏱ Streamable HTTP 连接耗时: ${DateTime.now().difference(reconnectStart).inMilliseconds}ms',
+          );
+        } else {
+          rethrow;
+        }
+      }
+      
       debugPrint(
         '   ⏱ connect 耗时: ${DateTime.now().difference(connectStart).inMilliseconds}ms',
       );
@@ -432,10 +483,40 @@ class McpService {
       );
 
       // 创建并连接传输层 - 根据配置选择传输方式
-      final transport = await _createTransport(config);
-
-      // 连接客户端到传输层
-      await client.connect(transport);
+      ClientTransport? transport;
+      
+      try {
+        transport = await _createTransport(config);
+        
+        // 连接客户端到传输层
+        await client.connect(transport);
+      } on McpError catch (e) {
+        final errorStr = e.toString();
+        // 检测 SSE 405 错误，回退到 Streamable HTTP
+        if ((errorStr.contains('405') || 
+            errorStr.contains('Method not allowed') ||
+            errorStr.contains('Method Not Allowed')) &&
+            config.url != null && config.url!.isNotEmpty) {
+          debugPrint('   ⚠️ SSE 连接失败 (405)，尝试回退到 Streamable HTTP: ${config.name}');
+          
+          // 断开失败的连接
+          try {
+            client.disconnect();
+          } catch (_) {}
+          
+          // 重新创建 Streamable HTTP 传输
+          transport = await StreamableHttpClientTransport.create(
+            baseUrl: config.url!,
+            headers: config.headers,
+          );
+          
+          // 使用新 transport 重新连接
+          debugPrint('🔌 使用 Streamable HTTP 重新连接: ${config.name}');
+          await client.connect(transport);
+        } else {
+          rethrow;
+        }
+      }
 
       // 初始化客户端
       try {

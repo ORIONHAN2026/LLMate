@@ -34,7 +34,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
   bool _isHovered = false;
   final sessionController = Get.find<SessionController>();
 
-  // 根据消息ID查找包含该消息的会话
+  // 根据消息ID同步查找包含该消息的会话（仅内存）
   ChatSession? _findSessionContainingMessage(String messageId) {
     for (final session in sessionController.sessions) {
       if (session.messages.any((msg) => msg.msgId == messageId)) {
@@ -42,6 +42,16 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       }
     }
     return null;
+  }
+
+  // 根据消息ID异步查找包含该消息的会话（内存+Isar）
+  Future<ChatSession?> _findSessionContainingMessageAsync(String messageId) async {
+    // 先尝试内存查找
+    final memorySession = _findSessionContainingMessage(messageId);
+    if (memorySession != null) return memorySession;
+
+    // 内存未找到，从Isar加载
+    return await sessionController.findSessionByMessageId(messageId);
   }
 
   @override
@@ -329,7 +339,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
   // 统一的重新生成方法
   void _regenerateMessage(RegenerateActionType actionType) async {
-    final session = _findSessionContainingMessage(widget.message.msgId);
+    final session = await _findSessionContainingMessageAsync(widget.message.msgId);
     if (session == null) {
       if (mounted) {
         SnackBarUtils.showError(context, '找不到包含该消息的会话');
@@ -669,10 +679,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
   }
 
   // 删除该消息之后的回复
-  void _deleteReplyAfterMessage(ChatMessage message) {
+  Future<void> _deleteReplyAfterMessage(ChatMessage message) async {
     try {
       // 根据消息ID查找包含该消息的会话
-      final session = _findSessionContainingMessage(message.msgId);
+      final session = await _findSessionContainingMessageAsync(message.msgId);
       if (session != null) {
         final messageIndex = session.messages.indexWhere(
           (m) => m.msgId == message.msgId,
@@ -698,10 +708,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
   }
 
   // 从消息创建新对话
-  void _createNewSessionFromMessage(BuildContext context, ChatMessage message) {
+  Future<void> _createNewSessionFromMessage(BuildContext context, ChatMessage message) async {
     try {
       // 根据消息ID查找包含该消息的会话
-      final session = _findSessionContainingMessage(message.msgId);
+      final session = await _findSessionContainingMessageAsync(message.msgId);
       if (session == null) {
         if (mounted) {
           SnackBarUtils.showError(context, '找不到包含该消息的会话');

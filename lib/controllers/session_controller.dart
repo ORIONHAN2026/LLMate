@@ -354,13 +354,13 @@ class SessionController extends GetxController {
           await isar.isarChatSessions.put(oldCurrent);
         }
 
-        // 设置新当前会话
+        // 设置新当前会话 - 使用 putBySessionId 避免唯一索引冲突
         final entity = await isar.isarChatSessions.getBySessionId(currentId);
         if (entity != null) {
-          final updated = _chatSessionToIsar(currentSession.value!);
-          updated.id = entity.id;
-          updated.isCurrent = true;
-          await isar.isarChatSessions.put(updated);
+          // 直接更新现有实体的字段，而不是创建新对象
+          _updateIsarSessionFromChatSession(entity, currentSession.value!);
+          entity.isCurrent = true;
+          await isar.isarChatSessions.put(entity);
         } else {
           // 新会话首次持久化
           final newEntity = _chatSessionToIsar(currentSession.value!);
@@ -407,6 +407,78 @@ class SessionController extends GetxController {
       ..memoryRounds = session.memoryRounds
       ..deepThink = session.deepThink
       ..isCurrent = false; // 由调用方设置
+  }
+
+  /// 更新 IsarChatSession 实体字段（复用现有实体，避免唯一索引冲突）
+  void _updateIsarSessionFromChatSession(
+    IsarChatSession entity,
+    ChatSession session,
+  ) {
+    entity.sessionId = session.sessionId;
+    entity.name = session.name;
+    entity.createdAt = session.createdAt;
+    entity.isFavorite = session.isFavorite;
+    entity.isSending = session.isSending;
+    entity.shouldStopResponse = session.shouldStopResponse;
+    entity.scrollPosition = session.scrollPosition;
+    entity.inputContent = session.inputContent;
+    entity.lastSelectedDirectory = session.lastSelectedDirectory;
+    entity.workDirectory = session.workDirectory;
+    entity.messagesJson = jsonEncode(
+      session.messages.map((m) => m.toJson()).toList(),
+    );
+    entity.modelId = session.modelId;
+    entity.mcpId = session.mcpId;
+    entity.skillId = session.skillId;
+    entity.attachmentsJson =
+        session.attachments.isNotEmpty
+            ? jsonEncode(session.attachments.map((a) => a.toJson()).toList())
+            : null;
+    entity.sessionQuickCommandsJson =
+        session.sessionQuickCommands.isNotEmpty
+            ? jsonEncode(
+              session.sessionQuickCommands.map((c) => c.toJson()).toList(),
+            )
+            : null;
+    entity.memoryRounds = session.memoryRounds;
+    entity.deepThink = session.deepThink;
+  }
+
+  /// 根据消息ID查找会话（先从内存查找，未找到则从Isar加载）
+  Future<ChatSession?> findSessionByMessageId(String messageId) async {
+    // 先从内存列表查找
+    for (final session in sessions) {
+      if (session.messages.any((msg) => msg.msgId == messageId)) {
+        return session;
+      }
+    }
+
+    // 内存中未找到，从Isar加载所有会话搜索
+    try {
+      final isar = IsarService.instance.isar;
+      final allSessions =
+          await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
+      for (final entity in allSessions) {
+        if (entity.messagesJson != null && entity.messagesJson!.isNotEmpty) {
+          try {
+            final list = jsonDecode(entity.messagesJson!) as List<dynamic>;
+            final messages =
+                list
+                    .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
+                    .toList();
+            if (messages.any((msg) => msg.msgId == messageId)) {
+              return _isarToChatSession(entity);
+            }
+          } catch (_) {
+            // 解析失败，继续检查下一个
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('从Isar搜索会话失败: $e');
+    }
+
+    return null;
   }
 
   /// IsarChatSession → ChatSession

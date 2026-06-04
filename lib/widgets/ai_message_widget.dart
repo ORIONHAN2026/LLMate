@@ -103,7 +103,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     }
   }
 
-  // 根据消息ID查找包含该消息的会话
+  // 根据消息ID同步查找包含该消息的会话（仅内存）
   ChatSession? _findSessionContainingMessage(String messageId) {
     for (final session in sessionController.sessions) {
       if (session.messages.any((msg) => msg.msgId == messageId)) {
@@ -111,6 +111,16 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       }
     }
     return null;
+  }
+
+  // 根据消息ID异步查找包含该消息的会话（内存+Isar）
+  Future<ChatSession?> _findSessionContainingMessageAsync(String messageId) async {
+    // 先尝试内存查找
+    final memorySession = _findSessionContainingMessage(messageId);
+    if (memorySession != null) return memorySession;
+
+    // 内存未找到，从Isar加载
+    return await sessionController.findSessionByMessageId(messageId);
   }
 
   // 检查消息是否正在流式更新
@@ -474,7 +484,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
   // 统一的重新生成方法
   void _regenerateMessage(RegenerateActionType actionType) async {
-    final session = _findSessionContainingMessage(widget.message.msgId);
+    final session = await _findSessionContainingMessageAsync(widget.message.msgId);
     if (session == null) {
       if (mounted) {
         SnackBarUtils.showError(context, '找不到包含该消息的会话');
@@ -1164,10 +1174,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   }
 
   // 从消息创建新对话
-  void _createNewSessionFromMessage(BuildContext context, ChatMessage message) {
+  Future<void> _createNewSessionFromMessage(BuildContext context, ChatMessage message) async {
     try {
       // 根据消息ID查找包含该消息的会话
-      final session = _findSessionContainingMessage(message.msgId);
+      final session = await _findSessionContainingMessageAsync(message.msgId);
       if (session == null) {
         SnackBarUtils.showError(context, '找不到包含该消息的会话');
         return;

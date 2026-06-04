@@ -104,10 +104,11 @@ abstract class BaseLlmProvider {
   /// 根据会话设置更新 provider 状态
   void applySessionSettings(ChatSession session) {
     _thinkEnabled = session.deepThink;
-    _workDir = (session.workDirectory != null &&
-            session.workDirectory!.trim().isNotEmpty)
-        ? session.workDirectory!.trim()
-        : null;
+    _workDir =
+        (session.workDirectory != null &&
+                session.workDirectory!.trim().isNotEmpty)
+            ? session.workDirectory!.trim()
+            : null;
   }
 
   /// 子类可重写此方法处理配置
@@ -296,7 +297,9 @@ abstract class BaseLlmProvider {
         if (tool.inputSchema.isNotEmpty) {
           final s = Map<String, dynamic>.from(tool.inputSchema);
           if (!s.containsKey('type')) s['type'] = 'object';
-          if (!s.containsKey('properties')) s['properties'] = <String, dynamic>{};
+          if (!s.containsKey('properties')) {
+            s['properties'] = <String, dynamic>{};
+          }
           schema['function']['parameters'] = s;
         } else {
           schema['function']['parameters'] = {
@@ -321,7 +324,8 @@ abstract class BaseLlmProvider {
         if (tool.inputSchema.isNotEmpty) {
           final s = Map<String, dynamic>.from(tool.inputSchema);
           if (!s.containsKey('type')) s['type'] = 'object';
-          if (!s.containsKey('properties')) s['properties'] = <String, dynamic>{};
+          if (!s.containsKey('properties'))
+            s['properties'] = <String, dynamic>{};
           schema['function']['parameters'] = s;
         } else {
           schema['function']['parameters'] = {

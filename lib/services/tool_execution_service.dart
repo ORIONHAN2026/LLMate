@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:mcp_client/mcp_client.dart';
+import '../framework/llmproviders/base_provider.dart';
 import '../models/chat/chat_session.dart';
 import 'mcp_service.dart';
 import 'system_tool_service.dart';
@@ -108,20 +109,23 @@ class ToolExecutionService {
     required Map<String, dynamic> arguments,
     required String callId,
   }) async {
+    // 还原被转义的工具名（OpenAI function calling 不允许函数名含点号等特殊字符）
+    final resolvedName = BaseLlmProvider.resolveOriginalToolName(toolName);
+
     // ── 系统内置工具 ──
-    if (SystemToolService.hasTool(toolName)) {
+    if (SystemToolService.hasTool(resolvedName)) {
       return SystemToolService.execute(
         session: session,
-        toolName: toolName,
+        toolName: resolvedName,
         arguments: arguments,
         callId: callId,
       );
     }
 
     // ── Shell 命令（exec / bash / shell / sh / run / command）──
-    if (_shellToolNames.contains(toolName)) {
+    if (_shellToolNames.contains(resolvedName)) {
       return _executeShellCommand(
-        toolName: toolName,
+        toolName: resolvedName,
         arguments: arguments,
         callId: callId,
       );
@@ -130,7 +134,7 @@ class ToolExecutionService {
     // ── MCP 工具：尝试 MCP 客户端 ──
     final mc = await McpService.getOrInitClient(session);
     if (mc != null) {
-      final result = await _callMCPTool(mc, toolName, arguments, callId);
+      final result = await _callMCPTool(mc, resolvedName, arguments, callId);
       // 成功或非连接类错误 → 直接返回
       if (result != null) return result;
 

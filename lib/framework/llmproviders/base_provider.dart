@@ -21,6 +21,14 @@ abstract class BaseLlmProvider {
   /// 连接超时（毫秒）
   static const int defaultTimeout = 30000;
 
+  /// 安全函数名 → 原始函数名 映射（用于还原 MCP/Skill 工具名中的非法字符）
+  static final Map<String, String> _safeNameToOriginal = {};
+
+  /// 根据安全名称还原原始工具名；若未映射则原样返回
+  static String resolveOriginalToolName(String safeName) {
+    return _safeNameToOriginal[safeName] ?? safeName;
+  }
+
   /// 代码文件类型集合
   static const Set<String> codeFileExtensions = {
     '.dart',
@@ -255,8 +263,6 @@ abstract class BaseLlmProvider {
       }
       if (session.deepThink) {
         data['thinking'] = {'type': 'enabled'};
-      } else {
-        data['thinking'] = {'type': 'disabled'};
       }
     }
 
@@ -287,10 +293,15 @@ abstract class BaseLlmProvider {
     final mcp = session?.mcp;
     if (mcp != null && mcp.tools != null && mcp.tools!.isNotEmpty) {
       for (final tool in mcp.tools!) {
+        // OpenAI function calling 要求函数名仅含 [a-zA-Z0-9_-]，将不合法字符替换为下划线
+        final safeName = tool.name.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+        if (safeName != tool.name) {
+          _safeNameToOriginal[safeName] = tool.name;
+        }
         final schema = <String, dynamic>{
           'type': 'function',
           'function': <String, dynamic>{
-            'name': tool.name,
+            'name': safeName,
             'description': tool.description,
           },
         };
@@ -308,16 +319,25 @@ abstract class BaseLlmProvider {
             'required': <String>[],
           };
         }
-        allTools.add(schema);
+
+        //增加一个顾虑，只有工具描述中包含"退款"的工具才加载
+        if (tool.description.contains("腾讯文档") || true) {
+          allTools.add(schema);
+        }
       }
     }
     // 技能工具（遍历 skill.tools，和 MCP 一样）
     if (session?.skill != null && session!.skill!.tools != null) {
       for (final tool in session.skill!.tools!) {
+        // OpenAI function calling 要求函数名仅含 [a-zA-Z0-9_-]，将不合法字符替换为下划线
+        final safeName = tool.name.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+        if (safeName != tool.name) {
+          _safeNameToOriginal[safeName] = tool.name;
+        }
         final schema = <String, dynamic>{
           'type': 'function',
           'function': <String, dynamic>{
-            'name': tool.name,
+            'name': safeName,
             'description': tool.description,
           },
         };

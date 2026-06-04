@@ -7,7 +7,7 @@ import 'excel_tool_service.dart';
 import 'file_tool_service.dart';
 import 'pdf_tool_service.dart';
 import 'ppt_tool_service.dart';
-import 'python_tool_service.dart';
+import 'node_tool_service.dart';
 import 'url_fetch_tool_service.dart';
 import 'word_tool_service.dart';
 
@@ -26,12 +26,12 @@ class SystemToolDefinition {
 /// 内置系统工具注册中心。
 ///
 /// 提供以下内置工具：
-/// - `python_execute`: 执行 Python 脚本
+/// - `node_execute`: 执行 Node.js 脚本
 /// - `file_read`: 读取文本文件
 /// - `file_write`: 写入/创建文本文件
 class SystemToolService {
   // ── 基础工具 ──
-  static const String pythonExecuteTool = 'python_execute';
+  static const String nodeExecuteTool = 'node_execute';
   static const String fileReadTool = 'file_read';
   static const String fileWriteTool = 'file_write';
 
@@ -50,9 +50,9 @@ class SystemToolService {
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
-      name: pythonExecuteTool,
+      name: nodeExecuteTool,
       description:
-          '执行 Python 脚本。支持内联代码和 .py 文件两种方式。可选安装 pip 依赖。'
+          '执行 Node.js 脚本。支持内联代码和 .js/.ts 文件两种方式。可选安装 npm 依赖。'
           '适合数据分析、文件批处理、API 调用、爬虫、文档生成等任何场景。返回 stdout/stderr 输出。',
       parameters: {
         'type': 'object',
@@ -60,11 +60,11 @@ class SystemToolService {
           'script': {
             'type': 'string',
             'description':
-                'Python 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。',
+                'Node.js 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。',
           },
           'filePath': {
             'type': 'string',
-            'description': '要执行的 .py 文件完整路径。与 script 二选一。',
+            'description': '要执行的 .js 或 .ts 文件完整路径。与 script 二选一。',
           },
           'args': {
             'type': 'array',
@@ -74,7 +74,7 @@ class SystemToolService {
           'requirements': {
             'type': 'array',
             'description':
-                '需要安装的 pip 包名列表（如 ["requests", "pandas"]），执行前自动 pip3 install。',
+                '需要安装的 npm 包名列表（如 ["axios", "lodash"]），执行前自动 npm install。',
             'items': {'type': 'string'},
           },
         },
@@ -345,8 +345,8 @@ class SystemToolService {
     }
 
     switch (toolName) {
-      case pythonExecuteTool:
-        return PythonToolService.execute(
+      case nodeExecuteTool:
+        return NodeToolService.execute(
           arguments: arguments,
           callId: callId,
         );

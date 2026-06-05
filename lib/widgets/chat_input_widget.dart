@@ -2636,10 +2636,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
 
-    final updatedSession = currentSession.copyWith(
+    var updatedSession = currentSession.copyWith(
       mcp: service,
       clearMcp: service == null,
     );
+
+    // 如果会话名是默认的"新对话"，自动改为 MCP 服务名
+    if (service != null && updatedSession.name == '新对话') {
+      updatedSession = updatedSession.copyWith(title: service.name);
+    }
 
     await sessionController.updateSession(updatedSession);
 
@@ -2889,10 +2894,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final selectedSkill =
         skillId != null ? SkillService.getSkillById(skillId) : null;
 
-    final updatedSession = currentSession.copyWith(
+    var updatedSession = currentSession.copyWith(
       skill: selectedSkill,
       clearSkill: skillId == null,
     );
+
+    // 如果会话名是默认的"新对话"，自动改为技能名
+    if (selectedSkill != null && updatedSession.name == '新对话') {
+      updatedSession = updatedSession.copyWith(title: selectedSkill.name);
+    }
 
     sessionController.updateSession(updatedSession);
 

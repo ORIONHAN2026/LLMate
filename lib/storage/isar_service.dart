@@ -47,6 +47,7 @@ class IsarService {
           IsarChatSessionSchema,
           IsarMcpServiceSchema,
           IsarSettingsSchema,
+          IsarVendorKeySchema,
         ],
         directory: dbPath,
         inspector: kDebugMode,
@@ -87,6 +88,7 @@ class IsarService {
             IsarChatSessionSchema,
             IsarMcpServiceSchema,
             IsarSettingsSchema,
+            IsarVendorKeySchema,
           ],
           directory: dbPath,
           inspector: kDebugMode,
@@ -177,6 +179,7 @@ class IsarService {
           IsarChatSessionSchema,
           IsarMcpServiceSchema,
           IsarSettingsSchema,
+          IsarVendorKeySchema,
         ],
         directory: backupPath,
         inspector: false,
@@ -216,6 +219,13 @@ class IsarService {
         if (settings.isNotEmpty) {
           await isar.isarSettings.putAll(settings);
           debugPrint('   ✅ 恢复设置: ${settings.length} 条');
+        }
+
+        // 迁移供应商 API 密钥
+        final vendorKeys = await backupIsar.isarVendorKeys.where().findAll();
+        if (vendorKeys.isNotEmpty) {
+          await isar.isarVendorKeys.putAll(vendorKeys);
+          debugPrint('   ✅ 恢复供应商密钥: ${vendorKeys.length} 条');
         }
       });
 
@@ -418,6 +428,25 @@ class IsarService {
         debugPrint('   ✅ 迁移主题设置: isDarkMode=$isDark');
       }
 
+      // 迁移供应商 API 密钥（从 SharedPreferences 到 Isar）
+      const vendorIds = ['aliyun', 'modelscope', 'tencent'];
+      for (final vid in vendorIds) {
+        final key = prefs.getString('mcp_vendor_key_$vid');
+        if (key != null && key.isNotEmpty) {
+          final existing = await isar.isarVendorKeys.getByVendorId(vid);
+          if (existing == null) {
+            await isar.writeTxn(() async {
+              await isar.isarVendorKeys.put(IsarVendorKey()
+                ..vendorId = vid
+                ..apiKey = key
+                ..updatedAt = DateTime.now());
+            });
+            migratedCount++;
+            debugPrint('   ✅ 迁移供应商密钥: $vid');
+          }
+        }
+      }
+
       // 标记迁移完成
       if (migratedCount > 0) {
         await prefs.setBool(migratedKey, true);
@@ -429,6 +458,44 @@ class IsarService {
     } catch (e) {
       debugPrint('❌ 数据迁移失败: $e');
     }
+  }
+
+  // ── 供应商 API 密钥 CRUD ──
+
+  /// 获取供应商 API 密钥
+  static Future<String?> getVendorKey(String vendorId) async {
+    final isar = instance.isar;
+    final record = await isar.isarVendorKeys.getByVendorId(vendorId);
+    return record?.apiKey;
+  }
+
+  /// 保存供应商 API 密钥（插入或更新）
+  static Future<void> saveVendorKey(String vendorId, String apiKey) async {
+    final isar = instance.isar;
+    await isar.writeTxn(() async {
+      final existing = await isar.isarVendorKeys.getByVendorId(vendorId);
+      if (existing != null) {
+        existing.apiKey = apiKey;
+        existing.updatedAt = DateTime.now();
+        await isar.isarVendorKeys.put(existing);
+      } else {
+        await isar.isarVendorKeys.put(IsarVendorKey()
+          ..vendorId = vendorId
+          ..apiKey = apiKey
+          ..updatedAt = DateTime.now());
+      }
+    });
+  }
+
+  /// 删除供应商 API 密钥
+  static Future<void> deleteVendorKey(String vendorId) async {
+    final isar = instance.isar;
+    await isar.writeTxn(() async {
+      final existing = await isar.isarVendorKeys.getByVendorId(vendorId);
+      if (existing != null) {
+        await isar.isarVendorKeys.delete(existing.id);
+      }
+    });
   }
 
   /// 关闭数据库

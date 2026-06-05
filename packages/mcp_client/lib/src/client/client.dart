@@ -104,7 +104,14 @@ class Client {
     print('[MCP-Client] 🔗 connect() 开始...');
     _connecting = true;
     _transport = transport;
-    _transport!.onMessage.listen(_handleMessage);
+    _transport!.onMessage.listen(
+      _handleMessage,
+      onError: (error) {
+        // 兜底处理 transport stream 级别的错误，防止成为未处理异常
+        print('[MCP-Client] ⚠️ Transport stream error: $error');
+        _errorStreamController.add(McpError('Transport stream error: $error'));
+      },
+    );
     _transport!.onClose
         .then((_) {
           // Only send disconnect event if we're still connected

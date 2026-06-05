@@ -5,7 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../controllers/session_controller.dart';
 import '../controllers/mcp_controller.dart';
@@ -13,6 +13,7 @@ import '../models/bigmodel/chat_model.dart';
 import '../models/chat/mcp_config.dart';
 import '../services/mcp_service.dart';
 import '../controllers/model_controller.dart';
+import '../storage/isar_service.dart';
 import '../utils/snackbar_utils.dart';
 
 // ────────────────────────────────────────────
@@ -67,24 +68,19 @@ class _VendorInfo {
     this.apiKey,
   });
 
-  String get _storageKey => 'mcp_vendor_key_$id';
-
   Future<void> loadApiKey() async {
     if (!requiresAuth) return;
-    final prefs = await SharedPreferences.getInstance();
-    apiKey = prefs.getString(_storageKey);
+    apiKey = await IsarService.getVendorKey(id);
   }
 
   Future<void> saveApiKey(String key) async {
     apiKey = key;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storageKey, key);
+    await IsarService.saveVendorKey(id, key);
   }
 
   Future<void> clearApiKey() async {
     apiKey = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_storageKey);
+    await IsarService.deleteVendorKey(id);
   }
 }
 
@@ -603,10 +599,9 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
         ),
         title: const Text('MCP 应用市场'),
         actions: [
-          IconButton(
-            icon: const Icon(CupertinoIcons.add_circled, size: 22),
-            tooltip: '自定义添加 MCP 服务',
+          TextButton(
             onPressed: _showAddMcpDialog,
+            child: const Text('添加自定义连接器', style: TextStyle(fontSize: 14)),
           ),
           const SizedBox(width: 4),
         ],
@@ -924,17 +919,63 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
 
   // ── 自定义添加 MCP 服务 ──
 
+  /// 从用户输入的 JSON 文本解析并构建 Mcp 配置。
+  /// 返回 null 表示解析失败，需要就地显示错误提示。
+  Mcp? _parseMcpFromJson(String jsonText) {
+    try {
+      final json = jsonDecode(jsonText) as Map<String, dynamic>;
+
+      Map<String, dynamic> serviceJson = json;
+      final mcpServers = json['mcpServers'] as Map<String, dynamic>?;
+      if (mcpServers != null && mcpServers.isNotEmpty) {
+        serviceJson = mcpServers.entries.first.value as Map<String, dynamic>;
+      }
+
+      final hasUrl =
+          serviceJson['url'] is String && (serviceJson['url'] as String).isNotEmpty;
+      if (hasUrl) {
+        final typeVal = serviceJson['type'] as String?;
+        if (typeVal == null || typeVal.isEmpty) {
+          serviceJson['type'] = 'http';
+        } else if (typeVal != 'sse' &&
+            typeVal != 'http' &&
+            typeVal != 'streamableHttp') {
+          return null; // 不支持的传输类型，由调用方处理
+        }
+      }
+
+      return Mcp(
+        mcpId: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
+        name: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
+        command: serviceJson['command'] as String?,
+        args: (serviceJson['args'] as List<dynamic>?)?.cast<String>(),
+        url: serviceJson['url'] as String?,
+        headers: serviceJson['headers'] != null
+            ? Map<String, String>.from(serviceJson['headers'])
+            : null,
+        env: serviceJson['env'] != null
+            ? Map<String, String>.from(serviceJson['env'])
+            : null,
+        workingDirectory: serviceJson['workingDirectory'] as String?,
+        type: hasUrl
+            ? McpTransportTypeExt.fromString(serviceJson['type'] as String?)
+            : null,
+      );
+    } on FormatException {
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _showAddMcpDialog() {
     final jsonCtrl = TextEditingController(
       text: const JsonEncoder.withIndent('  ').convert({
         'command': 'npx',
         'args': ['-y', 'package-name'],
-        'timeout': 30,
       }),
     );
-    bool isConnecting = false;
-    String? errorMessage;
-    int timeoutSec = 30;
+    String? parseError;
 
     showDialog(
       context: context,
@@ -946,270 +987,124 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                   title: const Text('添加 MCP 服务'),
                   content: SizedBox(
                     width: 480,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'name 和描述将从 MCP 服务器远程获取',
-                            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.circular(8),
                           ),
+                          child: TextField(
+                            controller: jsonCtrl,
+                            maxLines: 8,
+                            minLines: 5,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontFamily: 'monospace',
+                              color: Color(0xFFD4D4D4),
+                              height: 1.5,
+                            ),
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              isDense: true,
+                            ),
+                            keyboardType: TextInputType.multiline,
+                            onChanged: (_) {
+                              if (parseError != null) {
+                                setDialogState(() => parseError = null);
+                              }
+                            },
+                          ),
+                        ),
+                        if (parseError != null) ...[
                           const SizedBox(height: 12),
-                          Text(
-                            '如果 JSON 中包含 "mcpServers" 字段，会自动从中提取服务配置',
-                            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Text(
-                                '连接超时',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 60,
-                                height: 28,
-                                child: TextField(
-                                  enabled: !isConnecting,
-                                  keyboardType: TextInputType.number,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 12),
-                                  decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 2,
-                                      horizontal: 6,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    isDense: true,
-                                  ),
-                                  controller: TextEditingController(text: '$timeoutSec'),
-                                  onChanged: (v) {
-                                    final parsed = int.tryParse(v);
-                                    if (parsed != null && parsed > 0) timeoutSec = parsed;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text('秒', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'JSON 配置',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '支持 command/args 或 url/headers 格式。URL 型默认使用 HTTP 传输',
-                            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                          ),
-                          const SizedBox(height: 8),
                           Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E1E),
+                              color: Theme.of(context).colorScheme.error.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.error.withOpacity(0.3),
+                              ),
                             ),
-                            child: TextField(
-                              controller: jsonCtrl,
-                              maxLines: 8,
-                              minLines: 5,
-                              enabled: !isConnecting,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontFamily: 'monospace',
-                                color: Color(0xFFD4D4D4),
-                                height: 1.5,
-                              ),
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide.none,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  CupertinoIcons.exclamationmark_circle,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.error,
                                 ),
-                                contentPadding: const EdgeInsets.all(12),
-                                isDense: true,
-                              ),
-                              keyboardType: TextInputType.multiline,
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    parseError!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(context).colorScheme.error,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          if (isConnecting) ...[
-                            const SizedBox(height: 12),
-                            const Center(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      strokeCap: StrokeCap.round,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text('正在连接服务器...', style: TextStyle(fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                          ],
-                          if (errorMessage != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.error.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.error.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    CupertinoIcons.exclamationmark_circle,
-                                    size: 16,
-                                    color: Theme.of(context).colorScheme.error,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      errorMessage!,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Theme.of(context).colorScheme.error,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
                         ],
-                      ),
+                      ],
                     ),
                   ),
                   actions: [
                     TextButton(
-                      onPressed: isConnecting ? null : () => Navigator.pop(ctx),
+                      onPressed: () => Navigator.pop(ctx),
                       child: const Text('取消'),
                     ),
                     FilledButton(
-                      onPressed:
-                          isConnecting
-                              ? null
-                              : () async {
-                                try {
-                                  final json =
-                                      jsonDecode(jsonCtrl.text) as Map<String, dynamic>;
+                      onPressed: () {
+                        final jsonText = jsonCtrl.text.trim();
+                        try {
+                          jsonDecode(jsonText);
+                        } on FormatException catch (e) {
+                          setDialogState(() {
+                            parseError = 'JSON 格式错误: ${e.message}';
+                          });
+                          return;
+                        }
 
-                                  Map<String, dynamic> serviceJson = json;
-                                  final mcpServers =
-                                      json['mcpServers'] as Map<String, dynamic>?;
-                                  if (mcpServers != null && mcpServers.isNotEmpty) {
-                                    serviceJson =
-                                        mcpServers.entries.first.value as Map<String, dynamic>;
-                                  }
+                        final config = _parseMcpFromJson(jsonText);
+                        if (config == null) {
+                          setDialogState(() {
+                            parseError = '不支持的传输类型，仅支持 sse / http / streamableHttp';
+                          });
+                          return;
+                        }
 
-                                  final tempName =
-                                      'mcp_${DateTime.now().millisecondsSinceEpoch}';
-                                  final effectiveTimeout =
-                                      serviceJson['timeout'] as int? ?? timeoutSec;
-
-                                  final hasUrl =
-                                      serviceJson['url'] is String &&
-                                      (serviceJson['url'] as String).isNotEmpty;
-                                  if (hasUrl) {
-                                    final typeVal = serviceJson['type'] as String?;
-                                    if (typeVal == null || typeVal.isEmpty) {
-                                      serviceJson['type'] = 'http';
-                                    } else if (typeVal != 'sse' &&
-                                        typeVal != 'http' &&
-                                        typeVal != 'streamableHttp') {
-                                      setDialogState(() {
-                                        errorMessage =
-                                            '❌ 不支持的传输类型: "$typeVal"\n\n支持的类型：\n  "type": "sse"  — SSE 长连接传输\n  "type": "http" — Streamable HTTP 传输';
-                                      });
-                                      return;
-                                    }
-                                  }
-
-                                  final config = Mcp(
-                                    mcpId: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
-                                    name: tempName,
-                                    command: serviceJson['command'] as String?,
-                                    args:
-                                        (serviceJson['args'] as List<dynamic>?)
-                                            ?.cast<String>(),
-                                    timeout: effectiveTimeout,
-                                    url: serviceJson['url'] as String?,
-                                    headers:
-                                        serviceJson['headers'] != null
-                                            ? Map<String, String>.from(serviceJson['headers'])
-                                            : null,
-                                    env:
-                                        serviceJson['env'] != null
-                                            ? Map<String, String>.from(serviceJson['env'])
-                                            : null,
-                                    workingDirectory: serviceJson['workingDirectory'] as String?,
-                                    type:
-                                        hasUrl
-                                            ? McpTransportTypeExt.fromString(
-                                              serviceJson['type'] as String?,
-                                            )
-                                            : null,
-                                  );
-
-                                  setDialogState(() {
-                                    errorMessage = null;
-                                    isConnecting = true;
-                                  });
-
-                                  final info = await McpService.connectAndGetInfo(config);
-
-                                  final realConfig = config.copyWith(
-                                    name: info.serverName,
-                                    description: info.description,
-                                    tools: info.tools,
-                                    lastUpdated: DateTime.now(),
-                                    prompt: info.prompt,
-                                  );
-
-                                  Navigator.pop(ctx);
-                                  _addServiceWithInfo(realConfig, toolCount: info.tools.length);
-                                } on TimeoutException catch (e) {
-                                  setDialogState(() {
-                                    isConnecting = false;
-                                    errorMessage =
-                                        '⏱ 连接超时\n\n${e.message}\n\n请检查服务器地址是否正确，或尝试增大超时时间后重试。';
-                                  });
-                                } catch (e) {
-                                  setDialogState(() {
-                                    isConnecting = false;
-                                    final msg = e.toString();
-                                    errorMessage =
-                                        '❌ 连接失败\n\n${msg.length > 200 ? '${msg.substring(0, 200)}...' : msg}\n\n请检查配置是否正确，修改后重试。';
-                                  });
-                                }
-                              },
-                      child: Text(isConnecting ? '连接中...' : '连接并添加'),
+                        Navigator.pop(ctx);
+                        _showCustomAddProgressDialog(config);
+                      },
+                      child: const Text('连接并添加'),
                     ),
                   ],
                 ),
               ),
+    );
+  }
+
+  void _showCustomAddProgressDialog(Mcp config) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _CustomAddProgressDialog(
+        config: config,
+        onSuccess: (finalConfig, toolCount) {
+          _addServiceWithInfo(finalConfig, toolCount: toolCount);
+        },
+      ),
     );
   }
 
@@ -1267,30 +1162,49 @@ class _MarketplaceAddDialogState extends State<_MarketplaceAddDialog> {
   Future<void> _startAdd() async {
     try {
       // 步骤1: 构建配置
-      setState(() {
-        _statusText = '正在构建 MCP 配置...';
-        _detailText = widget.item.name;
-      });
+      _updateStatus('正在构建 MCP 配置...', widget.item.name);
       final config = widget.buildConfig(widget.item);
 
-      // 步骤2: 连接并获取工具列表
-      setState(() {
-        _statusText = '正在连接 MCP 服务...';
-        _detailText = widget.item.name;
-      });
+      // 步骤2: 发送初始化请求
+      _updateStatus('正在连接 MCP 服务...', widget.item.name);
 
-      final info = await McpService.connectAndGetInfo(
-        config,
-        preDefinedName: widget.item.name,
-        preDefinedDescription: widget.item.description,
+      McpConnectionInfo info;
+      try {
+        info = await McpService.connectAndGetInfo(
+          config,
+          preDefinedName: widget.item.name,
+          preDefinedDescription: widget.item.description,
+        );
+      } on TimeoutException catch (e) {
+        final isAliyun = widget.item.vendorId == 'aliyun';
+        setState(() {
+          _isError = true;
+          _statusText = '连接超时';
+          _errorMessage = (e.message ?? '请检查网络连接和 API 密钥配置') +
+              (isAliyun ? '\n\n请确认已经在阿里云百炼上开通此服务' : '');
+          _detailText = '';
+        });
+        return;
+      } catch (connectError) {
+        // MCP 连接错误：显示详细错误信息供排查
+        final msg = connectError.toString();
+        final detail = msg.length > 500 ? '${msg.substring(0, 500)}...' : msg;
+        setState(() {
+          _isError = true;
+          _statusText = '连接失败';
+          _errorMessage = detail;
+          _detailText = '服务: ${widget.item.name}\n端点: ${config.url ?? config.command ?? "未知"}';
+        });
+        return;
+      }
+
+      // 步骤3: 工具列表
+      _updateStatus(
+        '获取到 ${info.tools.length} 个工具，正在保存...',
+        info.tools.isEmpty
+            ? '该服务未返回可用工具'
+            : info.tools.map((t) => '  • ${t.name}').join('\n'),
       );
-
-      // 步骤3: 构建工具列表展示
-      final toolListText = info.tools.map((t) => '  • ${t.name}').join('\n');
-      setState(() {
-        _statusText = '获取到 ${info.tools.length} 个工具，正在保存...';
-        _detailText = toolListText;
-      });
 
       final finalConfig = config.copyWith(
         name: info.serverName,
@@ -1299,8 +1213,19 @@ class _MarketplaceAddDialogState extends State<_MarketplaceAddDialog> {
         lastUpdated: DateTime.now(),
       );
 
-      // 步骤4: 回调成功并关闭
-      widget.onSuccess(finalConfig, info.tools.length);
+      // 步骤4: 持久化
+      _updateStatus('正在保存...', '');
+      try {
+        widget.onSuccess(finalConfig, info.tools.length);
+      } catch (saveError) {
+        setState(() {
+          _isError = true;
+          _statusText = '保存失败';
+          _errorMessage = saveError.toString();
+          _detailText = '工具已获取成功，但保存到本地数据库时出错';
+        });
+        return;
+      }
 
       setState(() {
         _statusText = '添加成功';
@@ -1308,20 +1233,32 @@ class _MarketplaceAddDialogState extends State<_MarketplaceAddDialog> {
         _isDone = true;
       });
     } on TimeoutException catch (e) {
+      final isAliyun = widget.item.vendorId == 'aliyun';
       setState(() {
         _isError = true;
         _statusText = '连接超时';
-        _errorMessage = e.message ?? '请检查网络连接和 API 密钥配置';
+        _errorMessage = (e.message ?? '请检查网络连接和 API 密钥配置') +
+            (isAliyun ? '\n\n请确认已经在阿里云百炼上开通此服务' : '');
         _detailText = '';
       });
     } catch (e) {
+      // 捕获所有其他异常
+      final msg = e.toString();
       setState(() {
         _isError = true;
-        _statusText = '添加失败';
-        _errorMessage = e.toString().length > 300
-            ? '${e.toString().substring(0, 300)}...'
-            : e.toString();
+        _statusText = '错误';
+        _errorMessage = msg.length > 500 ? '${msg.substring(0, 500)}...' : msg;
         _detailText = '';
+      });
+    }
+  }
+
+  void _updateStatus(String status, String detail) {
+    if (mounted) {
+      setState(() {
+        _statusText = status;
+        _detailText = detail;
+        _isError = false;
       });
     }
   }
@@ -1397,12 +1334,19 @@ class _MarketplaceAddDialogState extends State<_MarketplaceAddDialog> {
                 decoration: BoxDecoration(
                   color: _isDone
                       ? Colors.green.withOpacity(0.06)
-                      : Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                      : Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withOpacity(0.4),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   _detailText,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.5),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
                   maxLines: 10,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1419,7 +1363,259 @@ class _MarketplaceAddDialogState extends State<_MarketplaceAddDialog> {
                 ),
                 child: Text(
                   _errorMessage,
-                  style: const TextStyle(fontSize: 12, color: Colors.redAccent, height: 1.4),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.redAccent,
+                    height: 1.4,
+                  ),
+                  maxLines: 6,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        if (_isError) ...[
+          if (widget.item.vendorId == 'aliyun')
+            TextButton.icon(
+              onPressed: () async {
+                final uri = Uri.parse('https://bailian.console.aliyun.com/#/mcp-market');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              icon: const Icon(CupertinoIcons.globe, size: 16),
+              label: const Text('云百炼'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _isError = false;
+                _errorMessage = '';
+                _detailText = '';
+              });
+              _startAdd();
+            },
+            child: const Text('重试'),
+          ),
+        ] else if (!_isDone) ...[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+        ] else ...[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('完成'),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── 自定义添加进度弹窗 ──
+
+class _CustomAddProgressDialog extends StatefulWidget {
+  final Mcp config;
+  final void Function(Mcp config, int toolCount) onSuccess;
+
+  const _CustomAddProgressDialog({
+    required this.config,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_CustomAddProgressDialog> createState() => _CustomAddProgressDialogState();
+}
+
+class _CustomAddProgressDialogState extends State<_CustomAddProgressDialog> {
+  String _statusText = '正在准备...';
+  String _detailText = '';
+  String _errorMessage = '';
+  bool _isError = false;
+  bool _isDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAdd();
+  }
+
+  Future<void> _startAdd() async {
+    try {
+      // 步骤1: 连接 MCP 服务
+      _updateStatus('正在连接 MCP 服务...', '');
+      final info = await McpService.connectAndGetInfo(widget.config);
+
+      // 步骤2: 获取工具
+      _updateStatus(
+        '获取到 ${info.tools.length} 个工具，正在保存...',
+        info.tools.isEmpty
+            ? '该服务未返回可用工具'
+            : info.tools.map((t) => '  • ${t.name}').join('\n'),
+      );
+
+      final finalConfig = widget.config.copyWith(
+        name: info.serverName,
+        description: info.description,
+        tools: info.tools,
+        lastUpdated: DateTime.now(),
+      );
+
+      // 步骤3: 持久化
+      _updateStatus('正在保存...', '');
+      try {
+        widget.onSuccess(finalConfig, info.tools.length);
+      } catch (saveError) {
+        setState(() {
+          _isError = true;
+          _statusText = '保存失败';
+          _errorMessage = saveError.toString();
+          _detailText = '工具已获取成功，但保存到本地数据库时出错';
+        });
+        return;
+      }
+
+      setState(() {
+        _statusText = '添加成功';
+        _detailText = '${info.serverName}\n${info.tools.length} 个工具';
+        _isDone = true;
+      });
+    } on TimeoutException catch (e) {
+      setState(() {
+        _isError = true;
+        _statusText = '连接超时';
+        _errorMessage = (e.message ?? '请检查网络连接和 API 密钥配置');
+        _detailText = '';
+      });
+    } catch (e) {
+      final msg = e.toString();
+      setState(() {
+        _isError = true;
+        _statusText = '错误';
+        _errorMessage = msg.length > 500 ? '${msg.substring(0, 500)}...' : msg;
+        _detailText = '';
+      });
+    }
+  }
+
+  void _updateStatus(String status, String detail) {
+    if (mounted) {
+      setState(() {
+        _statusText = status;
+        _detailText = detail;
+        _isError = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(
+            _isError
+                ? CupertinoIcons.exclamationmark_circle
+                : _isDone
+                    ? CupertinoIcons.checkmark_alt_circle
+                    : CupertinoIcons.cube_box,
+            color: _isError
+                ? Colors.redAccent
+                : _isDone
+                    ? Colors.green
+                    : Theme.of(context).colorScheme.primary,
+            size: 22,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _isError ? '添加失败' : _isDone ? '完成' : '添加 MCP 服务',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 320,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (!_isDone && !_isError)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                Expanded(
+                  child: Text(
+                    _statusText,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: _isError ? Colors.redAccent : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_detailText.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _isDone
+                      ? Colors.green.withOpacity(0.06)
+                      : Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _detailText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                  maxLines: 10,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+            if (_errorMessage.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _errorMessage,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.redAccent,
+                    height: 1.4,
+                  ),
                   maxLines: 6,
                   overflow: TextOverflow.ellipsis,
                 ),

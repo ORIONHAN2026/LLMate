@@ -162,7 +162,19 @@ class StreamableHttpClientTransport implements ClientTransport {
     }
 
     _sendRequest(message).catchError((error) {
-      _messageController.addError(error);
+      // 将传输层错误封装为 JSON-RPC 错误响应，避免 stream error 变为未处理异常
+      if (message is Map && message['id'] != null) {
+        _messageController.add({
+          'jsonrpc': '2.0',
+          'id': message['id'],
+          'error': {
+            'code': -32603,
+            'message': error.toString(),
+          },
+        });
+      } else {
+        _logger.error('Transport send error (no request id): $error');
+      }
     });
   }
 

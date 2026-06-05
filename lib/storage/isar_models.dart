@@ -106,3 +106,19 @@ class IsarSettings {
   late String value;
 }
 
+/// Isar 集合：MCP 供应商 API 密钥
+@collection
+class IsarVendorKey {
+  Id id = Isar.autoIncrement;
+
+  /// 供应商唯一标识（如 aliyun, modelscope, tencent）
+  @Index(unique: true)
+  late String vendorId;
+
+  /// API 密钥（加密存储建议）
+  late String apiKey;
+
+  /// 最后更新时间
+  late DateTime updatedAt;
+}
+

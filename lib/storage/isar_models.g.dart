@@ -8361,3 +8361,841 @@ extension IsarSettingsQueryProperty
     });
   }
 }
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
+extension GetIsarVendorKeyCollection on Isar {
+  IsarCollection<IsarVendorKey> get isarVendorKeys => this.collection();
+}
+
+const IsarVendorKeySchema = CollectionSchema(
+  name: r'IsarVendorKey',
+  id: 6400204150897309604,
+  properties: {
+    r'apiKey': PropertySchema(
+      id: 0,
+      name: r'apiKey',
+      type: IsarType.string,
+    ),
+    r'updatedAt': PropertySchema(
+      id: 1,
+      name: r'updatedAt',
+      type: IsarType.dateTime,
+    ),
+    r'vendorId': PropertySchema(
+      id: 2,
+      name: r'vendorId',
+      type: IsarType.string,
+    )
+  },
+  estimateSize: _isarVendorKeyEstimateSize,
+  serialize: _isarVendorKeySerialize,
+  deserialize: _isarVendorKeyDeserialize,
+  deserializeProp: _isarVendorKeyDeserializeProp,
+  idName: r'id',
+  indexes: {
+    r'vendorId': IndexSchema(
+      id: -4437098950868530640,
+      name: r'vendorId',
+      unique: true,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'vendorId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
+  links: {},
+  embeddedSchemas: {},
+  getId: _isarVendorKeyGetId,
+  getLinks: _isarVendorKeyGetLinks,
+  attach: _isarVendorKeyAttach,
+  version: '3.1.0+1',
+);
+
+int _isarVendorKeyEstimateSize(
+  IsarVendorKey object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  bytesCount += 3 + object.apiKey.length * 3;
+  bytesCount += 3 + object.vendorId.length * 3;
+  return bytesCount;
+}
+
+void _isarVendorKeySerialize(
+  IsarVendorKey object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeString(offsets[0], object.apiKey);
+  writer.writeDateTime(offsets[1], object.updatedAt);
+  writer.writeString(offsets[2], object.vendorId);
+}
+
+IsarVendorKey _isarVendorKeyDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = IsarVendorKey();
+  object.apiKey = reader.readString(offsets[0]);
+  object.id = id;
+  object.updatedAt = reader.readDateTime(offsets[1]);
+  object.vendorId = reader.readString(offsets[2]);
+  return object;
+}
+
+P _isarVendorKeyDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readString(offset)) as P;
+    case 1:
+      return (reader.readDateTime(offset)) as P;
+    case 2:
+      return (reader.readString(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+Id _isarVendorKeyGetId(IsarVendorKey object) {
+  return object.id;
+}
+
+List<IsarLinkBase<dynamic>> _isarVendorKeyGetLinks(IsarVendorKey object) {
+  return [];
+}
+
+void _isarVendorKeyAttach(
+    IsarCollection<dynamic> col, Id id, IsarVendorKey object) {
+  object.id = id;
+}
+
+extension IsarVendorKeyByIndex on IsarCollection<IsarVendorKey> {
+  Future<IsarVendorKey?> getByVendorId(String vendorId) {
+    return getByIndex(r'vendorId', [vendorId]);
+  }
+
+  IsarVendorKey? getByVendorIdSync(String vendorId) {
+    return getByIndexSync(r'vendorId', [vendorId]);
+  }
+
+  Future<bool> deleteByVendorId(String vendorId) {
+    return deleteByIndex(r'vendorId', [vendorId]);
+  }
+
+  bool deleteByVendorIdSync(String vendorId) {
+    return deleteByIndexSync(r'vendorId', [vendorId]);
+  }
+
+  Future<List<IsarVendorKey?>> getAllByVendorId(List<String> vendorIdValues) {
+    final values = vendorIdValues.map((e) => [e]).toList();
+    return getAllByIndex(r'vendorId', values);
+  }
+
+  List<IsarVendorKey?> getAllByVendorIdSync(List<String> vendorIdValues) {
+    final values = vendorIdValues.map((e) => [e]).toList();
+    return getAllByIndexSync(r'vendorId', values);
+  }
+
+  Future<int> deleteAllByVendorId(List<String> vendorIdValues) {
+    final values = vendorIdValues.map((e) => [e]).toList();
+    return deleteAllByIndex(r'vendorId', values);
+  }
+
+  int deleteAllByVendorIdSync(List<String> vendorIdValues) {
+    final values = vendorIdValues.map((e) => [e]).toList();
+    return deleteAllByIndexSync(r'vendorId', values);
+  }
+
+  Future<Id> putByVendorId(IsarVendorKey object) {
+    return putByIndex(r'vendorId', object);
+  }
+
+  Id putByVendorIdSync(IsarVendorKey object, {bool saveLinks = true}) {
+    return putByIndexSync(r'vendorId', object, saveLinks: saveLinks);
+  }
+
+  Future<List<Id>> putAllByVendorId(List<IsarVendorKey> objects) {
+    return putAllByIndex(r'vendorId', objects);
+  }
+
+  List<Id> putAllByVendorIdSync(List<IsarVendorKey> objects,
+      {bool saveLinks = true}) {
+    return putAllByIndexSync(r'vendorId', objects, saveLinks: saveLinks);
+  }
+}
+
+extension IsarVendorKeyQueryWhereSort
+    on QueryBuilder<IsarVendorKey, IsarVendorKey, QWhere> {
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterWhere> anyId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+}
+
+extension IsarVendorKeyQueryWhere
+    on QueryBuilder<IsarVendorKey, IsarVendorKey, QWhereClause> {
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterWhereClause> idEqualTo(
+      Id id) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterWhereClause> idNotEqualTo(
+      Id id) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            )
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            )
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterWhereClause> idGreaterThan(
+      Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.greaterThan(lower: id, includeLower: include),
+      );
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterWhereClause> idLessThan(
+      Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.lessThan(upper: id, includeUpper: include),
+      );
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterWhereClause> idBetween(
+    Id lowerId,
+    Id upperId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterWhereClause> vendorIdEqualTo(
+      String vendorId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'vendorId',
+        value: [vendorId],
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterWhereClause>
+      vendorIdNotEqualTo(String vendorId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'vendorId',
+              lower: [],
+              upper: [vendorId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'vendorId',
+              lower: [vendorId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'vendorId',
+              lower: [vendorId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'vendorId',
+              lower: [],
+              upper: [vendorId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+}
+
+extension IsarVendorKeyQueryFilter
+    on QueryBuilder<IsarVendorKey, IsarVendorKey, QFilterCondition> {
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'apiKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'apiKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'apiKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'apiKey',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'apiKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'apiKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'apiKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'apiKey',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'apiKey',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      apiKeyIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'apiKey',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition> idEqualTo(
+      Id value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition> idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition> idBetween(
+    Id lower,
+    Id upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      updatedAtEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'updatedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      updatedAtGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'updatedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      updatedAtLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'updatedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      updatedAtBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'updatedAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'vendorId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'vendorId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'vendorId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'vendorId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'vendorId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'vendorId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'vendorId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'vendorId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'vendorId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterFilterCondition>
+      vendorIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'vendorId',
+        value: '',
+      ));
+    });
+  }
+}
+
+extension IsarVendorKeyQueryObject
+    on QueryBuilder<IsarVendorKey, IsarVendorKey, QFilterCondition> {}
+
+extension IsarVendorKeyQueryLinks
+    on QueryBuilder<IsarVendorKey, IsarVendorKey, QFilterCondition> {}
+
+extension IsarVendorKeyQuerySortBy
+    on QueryBuilder<IsarVendorKey, IsarVendorKey, QSortBy> {
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> sortByApiKey() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'apiKey', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> sortByApiKeyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'apiKey', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> sortByUpdatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'updatedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy>
+      sortByUpdatedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'updatedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> sortByVendorId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'vendorId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy>
+      sortByVendorIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'vendorId', Sort.desc);
+    });
+  }
+}
+
+extension IsarVendorKeyQuerySortThenBy
+    on QueryBuilder<IsarVendorKey, IsarVendorKey, QSortThenBy> {
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> thenByApiKey() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'apiKey', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> thenByApiKeyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'apiKey', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> thenById() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> thenByIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> thenByUpdatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'updatedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy>
+      thenByUpdatedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'updatedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy> thenByVendorId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'vendorId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QAfterSortBy>
+      thenByVendorIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'vendorId', Sort.desc);
+    });
+  }
+}
+
+extension IsarVendorKeyQueryWhereDistinct
+    on QueryBuilder<IsarVendorKey, IsarVendorKey, QDistinct> {
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QDistinct> distinctByApiKey(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'apiKey', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QDistinct> distinctByUpdatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'updatedAt');
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, IsarVendorKey, QDistinct> distinctByVendorId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'vendorId', caseSensitive: caseSensitive);
+    });
+  }
+}
+
+extension IsarVendorKeyQueryProperty
+    on QueryBuilder<IsarVendorKey, IsarVendorKey, QQueryProperty> {
+  QueryBuilder<IsarVendorKey, int, QQueryOperations> idProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, String, QQueryOperations> apiKeyProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'apiKey');
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, DateTime, QQueryOperations> updatedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'updatedAt');
+    });
+  }
+
+  QueryBuilder<IsarVendorKey, String, QQueryOperations> vendorIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'vendorId');
+    });
+  }
+}

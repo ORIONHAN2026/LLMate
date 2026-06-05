@@ -14,6 +14,7 @@ import '../models/bigmodel/models.dart';
 import '../framework/llm_framework.dart';
 import '../controllers/model_controller.dart';
 import '../services/mcp_service.dart';
+import '../models/chat/skill.dart';
 import '../services/skill_service.dart';
 import '../services/skill_storage_service.dart';
 import '../services/word_tool_service.dart';
@@ -1604,7 +1605,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return Tooltip(
       message: hasMcpServices ? '点击选择连接器(MCP)' : '当前模型未配置连接器(MCP)',
       child: GestureDetector(
-        onTap: hasMcpServices && !_isSending ? _showMcpServiceSelection : null,
+        onTap:
+            hasMcpServices && !_isSending
+                ? (hasSelectedService
+                    ? () => _showMcpDetail(mcp)
+                    : _showMcpServiceSelection)
+                : null,
         onDoubleTap:
             hasMcpServices && !_isSending ? _showMcpServicesList : null,
         child: Container(
@@ -1972,7 +1978,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               : (hasSkills ? '点击选择技能' : '暂无可选技能'),
       child: GestureDetector(
         onTap:
-            hasSkills && !_isSending ? () => _showSkillSelectionList() : null,
+            hasSkills && !_isSending
+                ? (activeSkill != null
+                    ? () => _showSkillDetail(activeSkill)
+                    : () => _showSkillSelectionList())
+                : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
@@ -3448,6 +3458,607 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     });
   }
 
+  /// 显示技能详情弹窗（与技能管理页面保持一致）
+  void _showSkillDetail(Skill skill) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '技能详情',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, anim1, anim2) {
+        return Center(
+          child: FadeTransition(
+            opacity: anim1,
+            child: StatefulBuilder(
+              builder: (ctx, setSheetState) {
+                final tools = skill.tools;
+                final hasTools = tools != null && tools.isNotEmpty;
+                final emoji = _getSkillEmoji(skill.icon);
+
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 700,
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+                  ),
+                  child: Material(
+                    color: Theme.of(ctx).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 头部
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            skill.name,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            emoji,
+                                            style: const TextStyle(fontSize: 10),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      skill.description.isNotEmpty
+                                          ? skill.description
+                                          : '文件夹: ${skill.skillId}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // 工具列表
+                          if (hasTools) ...[
+                            Text(
+                              '工具列表 (${tools.length})',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: tools.take(50).map((t) {
+                                final label = t.description.isNotEmpty
+                                    ? '${t.name} · ${t.description}'
+                                    : t.name;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.15),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    label,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            if (tools.length > 50)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '... 还有 ${tools.length - 50} 个工具',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 6),
+                            const Divider(),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // 系统提示词
+                          if (skill.prompt.isNotEmpty) ...[
+                            Text(
+                              '系统提示词',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E1E1E),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                skill.prompt,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontFamily: 'monospace',
+                                  color: Color(0xFFD4D4D4),
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // JSON 配置
+                          Text(
+                            'JSON 数据',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              const JsonEncoder.withIndent('  ')
+                                  .convert(skill.toJson()),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontFamily: 'monospace',
+                                color: Color(0xFFD4D4D4),
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 技能图标 -> emoji 映射
+  String _getSkillEmoji(String icon) {
+    for (final option in _iconOptions) {
+      if (option['key'] == icon) return option['emoji']!;
+    }
+    return '⭐';
+  }
+
+  static const List<Map<String, String>> _iconOptions = [
+    {'key': 'code', 'emoji': '💻'},
+    {'key': 'globe', 'emoji': '🌐'},
+    {'key': 'pencil', 'emoji': '✏️'},
+    {'key': 'chart', 'emoji': '📊'},
+    {'key': 'lightbulb', 'emoji': '💡'},
+    {'key': 'doc', 'emoji': '📄'},
+    {'key': 'star', 'emoji': '⭐'},
+    {'key': 'search', 'emoji': '🔍'},
+    {'key': 'image', 'emoji': '🖼️'},
+    {'key': 'gear', 'emoji': '⚙️'},
+    {'key': 'wand', 'emoji': '🪄'},
+  ];
+
+  /// 显示 MCP 服务详情弹窗（与 MCP 管理页面保持一致）
+  void _showMcpDetail(Mcp service) {
+    final mcpc = Get.find<McpController>();
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'MCP 详情',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, anim1, anim2) {
+        Mcp mutableService = service;
+        return Center(
+          child: FadeTransition(
+            opacity: anim1,
+            child: StatefulBuilder(
+              builder: (ctx, setSheetState) {
+                final tools = mutableService.tools;
+                final hasTools = tools != null && tools.isNotEmpty;
+
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 700,
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+                  ),
+                  child: Material(
+                    color: Theme.of(ctx).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 头部
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            mutableService.name,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            _getMcpTypeLabel(mutableService),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color:
+                                                  Theme.of(context).colorScheme.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      mutableService.description?.isNotEmpty == true
+                                          ? mutableService.description!
+                                          : _buildMcpSubtitle(mutableService),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // 工具列表
+                          if (hasTools) ...[
+                            Row(
+                              children: [
+                                Text(
+                                  '工具列表 (${tools.length})',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                                const Spacer(),
+                                GestureDetector(
+                                  onTap: () async {
+                                    try {
+                                      final newTools =
+                                          await McpService.refreshServiceTools(
+                                            mutableService,
+                                          );
+                                      final updatedService = mutableService.copyWith(
+                                        description:
+                                            McpService.getCachedConfig(
+                                              mutableService.mcpId,
+                                            )?.description,
+                                        tools: newTools,
+                                        lastUpdated: DateTime.now(),
+                                        prompt: McpService.buildMcpPrompt(
+                                          mutableService.copyWith(tools: newTools),
+                                        ),
+                                      );
+                                      await mcpc.updateService(
+                                        mutableService.mcpId,
+                                        updatedService,
+                                      );
+                                      mutableService = updatedService;
+                                      setSheetState(() {});
+                                      SnackBarUtils.showSuccess(
+                                        ctx,
+                                        '已刷新 ${newTools.length} 个工具',
+                                      );
+                                    } catch (e) {
+                                      if (ctx.mounted) {
+                                        SnackBarUtils.showError(
+                                          ctx,
+                                          '刷新失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.refresh,
+                                        size: 13,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '刷新',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Theme.of(context).colorScheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children:
+                                  tools.take(50).map((t) {
+                                    final label =
+                                        t.description.isNotEmpty
+                                            ? '${t.name} · ${t.description}'
+                                            : t.name;
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.08),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.15),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        label,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Theme.of(context).colorScheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                            ),
+                            if (tools.length > 50)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '... 还有 ${tools.length - 50} 个工具',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 6),
+                            const Divider(),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // 未获取工具时的获取按钮
+                          if (!hasTools) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  try {
+                                    final newTools =
+                                        await McpService.refreshServiceTools(
+                                          mutableService,
+                                        );
+                                    final updatedService = mutableService.copyWith(
+                                      description:
+                                          McpService.getCachedConfig(
+                                            mutableService.mcpId,
+                                          )?.description,
+                                      tools: newTools,
+                                      lastUpdated: DateTime.now(),
+                                      prompt: McpService.buildMcpPrompt(
+                                        mutableService.copyWith(tools: newTools),
+                                      ),
+                                    );
+                                    await mcpc.updateService(
+                                      mutableService.mcpId,
+                                      updatedService,
+                                    );
+                                    mutableService = updatedService;
+                                    setSheetState(() {});
+                                    SnackBarUtils.showSuccess(
+                                      ctx,
+                                      '已获取 ${newTools.length} 个工具',
+                                    );
+                                  } catch (e) {
+                                    if (ctx.mounted) {
+                                      SnackBarUtils.showError(
+                                        ctx,
+                                        '获取失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: const Icon(
+                                  CupertinoIcons.arrow_down_to_line_alt,
+                                  size: 15,
+                                ),
+                                label: const Text('获取工具列表'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // JSON 配置
+                          Text(
+                            'JSON 配置',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              const JsonEncoder.withIndent('  ')
+                                  .convert(mutableService.toJson()),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontFamily: 'monospace',
+                                color: Color(0xFFD4D4D4),
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// MCP 服务类型标签
+  String _getMcpTypeLabel(Mcp service) {
+    if (service.url != null && service.url!.isNotEmpty) {
+      switch (service.type) {
+        case McpTransportType.sse:
+          return 'SSE';
+        case McpTransportType.http:
+        case McpTransportType.streamableHttp:
+          return 'HTTP';
+        default:
+          return 'URL';
+      }
+    }
+    return 'Stdio';
+  }
+
+  /// MCP 服务副标题（URL 或 命令）
+  String _buildMcpSubtitle(Mcp service) {
+    if (service.url != null && service.url!.isNotEmpty) {
+      final typeLabel =
+          (service.type == McpTransportType.http ||
+                  service.type == McpTransportType.streamableHttp)
+              ? ' [HTTP]'
+              : (service.type == McpTransportType.sse ? ' [SSE]' : '');
+      return '${service.url!}$typeLabel';
+    }
+    return '${service.command ?? ''} ${service.args?.join(' ') ?? ''}';
+  }
 
   /// 将 MCP 工具调用结果发送回 LLM 并流式获取最终回复
 }

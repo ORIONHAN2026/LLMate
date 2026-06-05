@@ -32,9 +32,14 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
   }
 
   Future<void> _loadSkills() async {
-    // 强制重新扫描文件系统以获取最新技能列表
-    SkillService.reset();
-    await SkillService.ensureLoaded();
+    try {
+      // 强制重新扫描文件系统以获取最新技能列表
+      SkillService.reset();
+      await SkillService.ensureLoaded();
+    } catch (e) {
+      // 加载失败时静默处理，避免崩溃
+      debugPrint('加载技能列表失败: $e');
+    }
     if (mounted) {
       setState(() {
         _skills = List<Skill>.from(SkillService.skills);
@@ -142,29 +147,39 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                   SnackBarUtils.showError(context, '请输入技能名称');
                   return;
                 }
+                final skillName = nameCtrl.text.trim();
                 Navigator.pop(ctx);
-                if (isEdit) {
-                  final updated = existing.copyWith(
-                    description: descCtrl.text.trim(),
-                    prompt: promptCtrl.text.trim(),
-                    icon: selectedIcon,
-                    updatedAt: DateTime.now(),
-                  );
-                  await SkillService.updateSkill(updated);
-                } else {
-                  await SkillService.addSkill(
-                    name: nameCtrl.text.trim(),
-                    description: descCtrl.text.trim(),
-                    prompt: promptCtrl.text.trim(),
-                    icon: selectedIcon,
-                  );
-                }
-                await _refreshSkills();
-                if (mounted) {
-                  SnackBarUtils.showInfo(
-                    context,
-                    isEdit ? '已更新技能: ${nameCtrl.text.trim()}' : '已创建技能: ${nameCtrl.text.trim()}',
-                  );
+                try {
+                  if (isEdit) {
+                    final updated = existing.copyWith(
+                      description: descCtrl.text.trim(),
+                      prompt: promptCtrl.text.trim(),
+                      icon: selectedIcon,
+                      updatedAt: DateTime.now(),
+                    );
+                    await SkillService.updateSkill(updated);
+                  } else {
+                    await SkillService.addSkill(
+                      name: skillName,
+                      description: descCtrl.text.trim(),
+                      prompt: promptCtrl.text.trim(),
+                      icon: selectedIcon,
+                    );
+                  }
+                  await _refreshSkills();
+                  if (mounted) {
+                    SnackBarUtils.showInfo(
+                      context,
+                      isEdit ? '已更新技能: $skillName' : '已创建技能: $skillName',
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    SnackBarUtils.showError(
+                      context,
+                      isEdit ? '更新技能失败: $e' : '创建技能失败: $e',
+                    );
+                  }
                 }
               },
               child: Text(isEdit ? '保存' : '创建'),
@@ -198,10 +213,16 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
     );
 
     if (shouldDelete == true) {
-      await SkillService.deleteSkill(skill.skillId);
-      await _refreshSkills();
-      if (mounted) {
-        SnackBarUtils.showInfo(context, '已删除技能: ${skill.name}');
+      try {
+        await SkillService.deleteSkill(skill.skillId);
+        await _refreshSkills();
+        if (mounted) {
+          SnackBarUtils.showInfo(context, '已删除技能: ${skill.name}');
+        }
+      } catch (e) {
+        if (mounted) {
+          SnackBarUtils.showError(context, '删除技能失败: $e');
+        }
       }
     }
   }

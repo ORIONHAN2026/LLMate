@@ -450,7 +450,7 @@ ${toolSummary.toString()}
   }
 
   /// 默认连接超时（秒）
-  static const int _defaultConnectionTimeoutSeconds = 30;
+  static const int _defaultConnectionTimeoutSeconds = 10;
 
   /// 连接 MCP 服务器并获取服务器名称和工具列表。
   /// 用于首次添加服务时，从远程获取服务器信息。**完成后断开连接**。

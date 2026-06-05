@@ -2,7 +2,7 @@
   "vendor": {
     "id": "tencent",
     "name": "腾讯云",
-    "description": "腾讯云平台 MCP 服务，需配置 API Key 后使用",
+    "description": "腾讯云平台服务，需配置 API Key 后使用。注意：腾讯云暂无类似阿里百炼的统一 MCP 服务市场，以下为合理推测的服务地址，如需使用请核实官方文档。",
     "icon": "cloud_fill",
     "color": "#0052D9",
     "requiresAuth": true,
@@ -12,28 +12,28 @@
   },
   "items": [
     {
-      "name": "腾讯云语音识别",
-      "description": "腾讯云语音识别 MCP 服务，支持实时语音识别、录音文件识别，覆盖多种语言和方言。",
+      "name": "腾讯云语音识别 (ASR)",
+      "description": "腾讯云语音识别服务，支持实时语音识别、录音文件识别，覆盖多种语言和方言。",
       "category": "语音服务",
-      "content": "{\"url\":\"https://mcp.tencentcloudapi.com/tencent-asr\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+      "content": "{\"url\":\"https://asr.tencentcloudapi.com\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
     },
     {
-      "name": "腾讯云智能体开发平台",
-      "description": "腾讯云智能体开发平台（LKE）MCP 服务，支持知识库问答、智能对话、文档解析等能力。",
+      "name": "腾讯云智能体开发平台 (ADP)",
+      "description": "腾讯云智能体开发平台，提供 LLM+RAG、Workflow、Multi-agent 等能力，支持知识库问答和智能对话。",
       "category": "AI助手",
-      "content": "{\"url\":\"https://mcp.tencentcloudapi.com/tencent-lke\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+      "content": "{\"url\":\"https://lke.tencentcloudapi.com\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
     },
     {
-      "name": "腾讯云OCR识别",
-      "description": "腾讯云 OCR 文字识别 MCP 服务，支持身份证、银行卡、营业执照、票据等各类卡证识别。",
+      "name": "腾讯云OCR文字识别",
+      "description": "腾讯云 OCR 文字识别服务，支持身份证、银行卡、营业执照、票据等各类卡证识别。",
       "category": "开发工具",
-      "content": "{\"url\":\"https://mcp.tencentcloudapi.com/tencent-ocr\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+      "content": "{\"url\":\"https://ocr.tencentcloudapi.com\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
     },
     {
-      "name": "腾讯云翻译",
-      "description": "腾讯云机器翻译 MCP 服务，支持文本翻译、语种识别，覆盖 200+ 语言方向。",
+      "name": "腾讯云机器翻译 (TMT)",
+      "description": "腾讯云机器翻译服务，支持文本翻译、语种识别，覆盖 200+ 语言方向。",
       "category": "AI助手",
-      "content": "{\"url\":\"https://mcp.tencentcloudapi.com/tencent-tmt\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+      "content": "{\"url\":\"https://tmt.tencentcloudapi.com\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
     }
   ]
 }

@@ -456,6 +456,7 @@ class McpService {
 
   /// 初始化MCP客户端
   static Future<bool> initializeClient(Mcp config) async {
+    final timeoutSec = config.timeout ?? _defaultConnectionTimeoutSeconds;
     try {
       debugPrint('🔧 初始化MCP客户端: ${config.name}');
 
@@ -465,10 +466,18 @@ class McpService {
         // 检查客户端是否仍然连接
         try {
           // 尝试获取工具列表来验证连接状态
-          final tools = await client.listTools();
+          final tools = await client.listTools().timeout(
+            Duration(seconds: timeoutSec),
+            onTimeout: () => throw TimeoutException(
+              '验证连接超时 (${timeoutSec}s): ${config.name}',
+            ),
+          );
           _availableTools[config.mcpId] = tools;
           debugPrint('✓ MCP客户端已存在且连接正常: ${config.name}, 工具数量: ${tools.length}');
           return true;
+        } on TimeoutException {
+          debugPrint('⏱ 验证现有连接超时: ${config.name}，重新初始化');
+          await _cleanupClient(config.mcpId);
         } catch (e) {
           debugPrint('⚠️ 现有客户端连接异常，重新初始化: ${config.name}, 错误: $e');
           // 清理旧客户端
@@ -486,10 +495,23 @@ class McpService {
       ClientTransport? transport;
       
       try {
-        transport = await _createTransport(config);
+        transport = await _createTransport(
+          config,
+          timeout: Duration(seconds: timeoutSec),
+        ).timeout(
+          Duration(seconds: timeoutSec),
+          onTimeout: () => throw TimeoutException(
+            '创建 Transport 超时 (${timeoutSec}s): ${config.name}',
+          ),
+        );
         
         // 连接客户端到传输层
-        await client.connect(transport);
+        await client.connect(transport).timeout(
+          Duration(seconds: timeoutSec),
+          onTimeout: () => throw TimeoutException(
+            '连接 MCP 服务器超时 (${timeoutSec}s): ${config.name}',
+          ),
+        );
       } on McpError catch (e) {
         final errorStr = e.toString();
         // 检测 SSE 405 错误，回退到 Streamable HTTP
@@ -508,11 +530,22 @@ class McpService {
           transport = await StreamableHttpClientTransport.create(
             baseUrl: config.url!,
             headers: config.headers,
+            timeout: Duration(seconds: timeoutSec),
+          ).timeout(
+            Duration(seconds: timeoutSec),
+            onTimeout: () => throw TimeoutException(
+              '创建 Streamable HTTP Transport 超时 (${timeoutSec}s): ${config.name}',
+            ),
           );
           
           // 使用新 transport 重新连接
           debugPrint('🔌 使用 Streamable HTTP 重新连接: ${config.name}');
-          await client.connect(transport);
+          await client.connect(transport).timeout(
+            Duration(seconds: timeoutSec),
+            onTimeout: () => throw TimeoutException(
+              'Streamable HTTP 连接超时 (${timeoutSec}s): ${config.name}',
+            ),
+          );
         } else {
           rethrow;
         }
@@ -520,7 +553,12 @@ class McpService {
 
       // 初始化客户端
       try {
-        await client.initialize();
+        await client.initialize().timeout(
+          Duration(seconds: timeoutSec),
+          onTimeout: () => throw TimeoutException(
+            '初始化客户端超时 (${timeoutSec}s): ${config.name}',
+          ),
+        );
       } catch (e) {
         // 如果初始化失败，可能是因为客户端已经初始化过
         if (e.toString().contains('already initialized')) {
@@ -532,7 +570,12 @@ class McpService {
       }
 
       // 获取可用工具
-      final tools = await client.listTools();
+      final tools = await client.listTools().timeout(
+        Duration(seconds: timeoutSec),
+        onTimeout: () => throw TimeoutException(
+          '获取工具列表超时 (${timeoutSec}s): ${config.name}',
+        ),
+      );
 
       // 存储客户端和工具列表
       _clients[config.mcpId] = client;
@@ -544,6 +587,9 @@ class McpService {
       await _updateConfigWithToolInfo(config, tools);
 
       return true;
+    } on TimeoutException catch (e) {
+      debugPrint('⏱ MCP客户端初始化超时: ${config.name}, ${e.message}');
+      return false;
     } catch (e) {
       debugPrint('❌ MCP客户端初始化失败: ${config.name}, 错误: $e');
       return false;
@@ -1067,10 +1113,18 @@ class McpService {
 
     Client? mc = getMCPClient(svc);
     if (mc == null) {
-      await ensureGlobalConfigsLoaded();
-      final inited = await initializeSessionMcpServices(session);
-      if (inited.isEmpty) return null;
-      mc = getMCPClient(svc);
+      try {
+        await ensureGlobalConfigsLoaded();
+        final inited = await initializeSessionMcpServices(session);
+        if (inited.isEmpty) return null;
+        mc = getMCPClient(svc);
+      } on TimeoutException catch (e) {
+        debugPrint('⏱ getOrInitClient 超时: $svc, ${e.message}');
+        return null;
+      } catch (e) {
+        debugPrint('❌ getOrInitClient 失败: $svc, 错误: $e');
+        return null;
+      }
     }
 
     return mc;
@@ -1093,8 +1147,14 @@ class McpService {
     debugPrint('🚀 会话打开，预初始化 MCP: $svc');
     // 放到微任务中，不阻塞 UI
     Future.microtask(() async {
-      await ensureGlobalConfigsLoaded();
-      await initializeSessionMcpServices(session);
+      try {
+        await ensureGlobalConfigsLoaded();
+        await initializeSessionMcpServices(session);
+      } on TimeoutException catch (e) {
+        debugPrint('⏱ MCP 预初始化超时: $svc, ${e.message}');
+      } catch (e) {
+        debugPrint('❌ MCP 预初始化失败: $svc, 错误: $e');
+      }
     });
   }
 }

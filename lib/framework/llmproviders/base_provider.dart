@@ -320,10 +320,7 @@ abstract class BaseLlmProvider {
           };
         }
 
-        //增加一个顾虑，只有工具描述中包含"退款"的工具才加载
-        if (tool.description.contains("腾讯文档") || true) {
-          allTools.add(schema);
-        }
+        allTools.add(schema);
       }
     }
     // 技能工具（遍历 skill.tools，和 MCP 一样）

@@ -146,12 +146,17 @@ class McpController extends GetxController {
       final isar = IsarService.instance.isar;
       await isar.writeTxn(() async {
         final existing = await isar.isarMcpServices.getByMcpId(oldMcpId);
+        final entity = _mcpToEntity(newService);
         if (existing != null) {
           if (oldMcpId != newService.mcpId) {
+            // mcpId 变更：先删除旧记录，再插入新记录
             await isar.isarMcpServices.delete(existing.id);
+          } else {
+            // mcpId 不变：复用旧记录 id，避免唯一索引冲突
+            entity.id = existing.id;
           }
-          await isar.isarMcpServices.put(_mcpToEntity(newService));
         }
+        await isar.isarMcpServices.put(entity);
       });
     } catch (e) {
       debugPrint('❌ 更新 MCP 服务失败: $e');

@@ -1,0 +1,525 @@
+{
+  "timestamp": "2026-06-05T01:10:09.933338",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-flash",
+    "messages": [
+      {
+        "role": "system",
+        "content": "你是个变态\n"
+      },
+      {
+        "role": "system",
+        "content": "## 🚫 联网搜索禁令\n\n你**禁止**进行任何形式的 Web 搜索或联网查询。具体规则：\n\n1. ❌ **禁止调用任何搜索工具**：不得使用 web_search、search、browser、fetch_url 等任何与网络搜索、网页访问相关的工具。\n2. ❌ **禁止声称进行了搜索**：不要在回复中说\"让我搜索一下\"、\"我在网上查了\"、\"根据搜索结果\"等类似表述。\n3. ❌ **禁止主动建议联网**：不要建议用户去搜索、查询外部网站或联网获取信息。\n4. ✅ **仅使用已有知识**：请基于你已有的训练知识直接回答问题。如果不确定或不知道，直接说明即可。\n\n**再次强调：绝对不允许任何形式的联网搜索。**"
+      },
+      {
+        "role": "user",
+        "content": "我有什么功能"
+      },
+      {
+        "role": "assistant",
+        "content": "你好！我是你的智能订阅管理助手，可以帮你做以下这些事情：\n\n---\n\n## 📦 **商品管理**\n- 📋 **浏览商品列表** — 查看所有可订阅的商品，可按分类（如乳制品）或关键词搜索\n- 🔍 **查看商品详情** — 了解某个产品的具体信息\n\n## 📍 **地址管理**\n- 📋 **查看收货地址列表** — 你所有保存的地址\n- ➕ **添加新地址** — 新增收货地址（含标签、配送时段等）\n- ✏️ **编辑/删除地址** — 更新或移除地址\n- ⭐ **设置默认地址** — 一键设为默认\n\n## 🔄 **订阅管理**\n- 📋 **查看订阅总览** — 按地址分组查看所有订阅\n- 🔍 **按地址或商品查询订阅** — 快速定位\n- ➕ **创建新订阅** — 选择商品、地址，设置每日消耗量和配送量\n- ✏️ **修改订阅** — 调整配送量、消耗量、开关状态、库存\n- ❌ **删除订阅** — 取消某个订阅\n- ⏰ **延迟配送** — 推迟一次配送\n\n## 👤 **个人设置**\n- 更新个人信息（姓名、邮箱、公司等）\n- 设置自动支付、银行账户信息\n\n---\n\n简单说，**从选商品、填地址、创建订阅，到修改、暂停、延迟配送，全流程我都能帮你搞定！** 🚀\n\n有什么想试试的吗？比如查查当前有哪些商品，或者看看你现有的订阅？"
+      },
+      {
+        "role": "user",
+        "content": "查询下我都定了什么"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 0.7,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "node_execute",
+          "description": "执行 Node.js 脚本。支持内联代码和 .js/.ts 文件两种方式。可选安装 npm 依赖。适合数据分析、文件批处理、API 调用、爬虫、文档生成等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Node.js 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .js 或 .ts 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 npm 包名列表（如 [\"axios\", \"lodash\"]），执行前自动 npm install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "query_subscriptions_by_address",
+          "description": "根据地址描述（如：父母家、公司、家）查询该地址的订阅商品列表",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressHint": {
+                "type": "string",
+                "description": "地址描述或关键词（如：父母家、公司、家、张三）"
+              }
+            },
+            "required": [
+              "addressHint"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "query_subscriptions_by_product",
+          "description": "根据产品名称或关键词查询订阅了该产品的地址列表",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "productHint": {
+                "type": "string",
+                "description": "产品名称或关键词（如：牛奶、酸奶）"
+              }
+            },
+            "required": [
+              "productHint"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_overview",
+          "description": "获取订阅总览，按地址分组显示所有订阅商品",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "product_list",
+          "description": "获取产品列表，支持分类筛选和关键词搜索",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "description": "分类筛选（如：乳制品）"
+              },
+              "keyword": {
+                "type": "string",
+                "description": "关键词搜索"
+              },
+              "page": {
+                "type": "number",
+                "description": "页码"
+              },
+              "pageSize": {
+                "type": "number",
+                "description": "每页数量"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "product_get",
+          "description": "获取产品详情",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "productId": {
+                "type": "string",
+                "description": "产品 ID"
+              }
+            },
+            "required": [
+              "productId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_list",
+          "description": "获取用户订阅列表",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_detail",
+          "description": "获取订阅详情",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "subscriptionId": {
+                "type": "string",
+                "description": "订阅 ID"
+              }
+            },
+            "required": [
+              "subscriptionId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_add",
+          "description": "创建订阅",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "配送地址 ID"
+              },
+              "dailyUseSubUnitCount": {
+                "type": "number",
+                "description": "每日消耗子单位数量"
+              },
+              "deliveryUnitCount": {
+                "type": "number",
+                "description": "每次配送单位数"
+              },
+              "productId": {
+                "type": "string",
+                "description": "产品 ID"
+              }
+            },
+            "required": [
+              "productId",
+              "addressId",
+              "dailyUseSubUnitCount",
+              "deliveryUnitCount"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_set",
+          "description": "更新订阅设置",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "dailyUseSubUnitCount": {
+                "type": "number",
+                "description": "每日消耗子单位数量（可选）"
+              },
+              "deliveryUnitCount": {
+                "type": "number",
+                "description": "每次配送单位数（可选）"
+              },
+              "status": {
+                "type": "string",
+                "description": "状态 on/off（可选）"
+              },
+              "subUnitStock": {
+                "type": "number",
+                "description": "子单位库存（可选）"
+              },
+              "subscriptionId": {
+                "type": "string",
+                "description": "订阅 ID"
+              }
+            },
+            "required": [
+              "subscriptionId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_delete",
+          "description": "删除订阅",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "subscriptionId": {
+                "type": "string",
+                "description": "订阅 ID"
+              }
+            },
+            "required": [
+              "subscriptionId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_delay",
+          "description": "延迟订阅配送",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "subscriptionId": {
+                "type": "string",
+                "description": "订阅 ID"
+              }
+            },
+            "required": [
+              "subscriptionId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "user_set",
+          "description": "设置用户资料，可更新个人信息和支付设置",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "autopay": {
+                "type": "boolean",
+                "description": "自动支付（可选）"
+              },
+              "avatar": {
+                "type": "string",
+                "description": "头像 URL（可选）"
+              },
+              "bankAccount": {
+                "type": "string",
+                "description": "银行账号（可选）"
+              },
+              "bankName": {
+                "type": "string",
+                "description": "银行名称（可选）"
+              },
+              "checkNotifyTime": {
+                "type": "string",
+                "description": "检查通知时间（可选）"
+              },
+              "company": {
+                "type": "string",
+                "description": "公司名称（可选）"
+              },
+              "deliverySubscribeTemplateId": {
+                "type": "string",
+                "description": "配送订阅模板 ID（可选）"
+              },
+              "email": {
+                "type": "string",
+                "description": "邮箱（可选）"
+              },
+              "gender": {
+                "type": "string",
+                "description": "性别（可选）"
+              },
+              "name": {
+                "type": "string",
+                "description": "用户名称（可选）"
+              },
+              "taxNumber": {
+                "type": "string",
+                "description": "税号（可选）"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_list",
+          "description": "获取用户的收货地址列表",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_get",
+          "description": "获取地址详情",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "地址 ID"
+              }
+            },
+            "required": [
+              "addressId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_add",
+          "description": "添加新收货地址",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "deliveryShelfImage": {
+                "type": "string",
+                "description": "货架图片 URL（可选）"
+              },
+              "deliveryTimeWindow": {
+                "type": "string",
+                "description": "配送时段（morning/afternoon/evening）"
+              },
+              "detail": {
+                "type": "string",
+                "description": "详细地址"
+              },
+              "name": {
+                "type": "string",
+                "description": "收货人姓名"
+              },
+              "phone": {
+                "type": "string",
+                "description": "收货人电话"
+              },
+              "region": {
+                "type": "array",
+                "description": "地区数组（如：[\"上海市\", \"上海市\", \"松江区\"]）",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tag": {
+                "type": "string",
+                "description": "地址标签（如：家、公司）"
+              }
+            },
+            "required": [
+              "name",
+              "phone",
+              "region",
+              "detail"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_set",
+          "description": "更新收货地址信息",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "地址 ID"
+              },
+              "deliveryShelfImage": {
+                "type": "string",
+                "description": "货架图片 URL（可选）"
+              },
+              "deliveryTimeWindow": {
+                "type": "string",
+                "description": "配送时段（可选）"
+              },
+              "detail": {
+                "type": "string",
+                "description": "详细地址（可选）"
+              },
+              "name": {
+                "type": "string",
+                "description": "收货人姓名（可选）"
+              },
+              "phone": {
+                "type": "string",
+                "description": "收货人电话（可选）"
+              },
+              "region": {
+                "type": "array",
+                "description": "地区数组（可选，如：[\"上海市\", \"上海市\", \"松江区\"]）",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tag": {
+                "type": "string",
+                "description": "地址标签（可选）"
+              }
+            },
+            "required": [
+              "addressId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_delete",
+          "description": "删除收货地址",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "地址 ID"
+              }
+            },
+            "required": [
+              "addressId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_set_default",
+          "description": "设置默认收货地址",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "地址 ID"
+              }
+            },
+            "required": [
+              "addressId"
+            ]
+          }
+        }
+      }
+    ],
+    "tool_choice": "auto"
+  }
+}

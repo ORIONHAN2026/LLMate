@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-06-05T09:36:18.887405",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-flash",
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 🚫 联网搜索禁令\n\n你**禁止**进行任何形式的 Web 搜索或联网查询。具体规则：\n\n1. ❌ **禁止调用任何搜索工具**：不得使用 web_search、search、browser、fetch_url 等任何与网络搜索、网页访问相关的工具。\n2. ❌ **禁止声称进行了搜索**：不要在回复中说\"让我搜索一下\"、\"我在网上查了\"、\"根据搜索结果\"等类似表述。\n3. ❌ **禁止主动建议联网**：不要建议用户去搜索、查询外部网站或联网获取信息。\n4. ✅ **仅使用已有知识**：请基于你已有的训练知识直接回答问题。如果不确定或不知道，直接说明即可。\n\n**再次强调：绝对不允许任何形式的联网搜索。**"
+      },
+      {
+        "role": "system",
+        "content": "## 📁 工作目录\n\n当前会话的工作目录为：`/Users/orion/Documents/大都会-申电云/需求单`\n\n规则：\n- 使用 file_write 或 node_execute 生成文件时，如用户未指定保存路径，默认保存到该工作目录。\n- 相对路径均相对于此工作目录解析。\n- 读取文件时，如果用户提供的是相对路径或文件名，请在工作目录下查找。"
+      },
+      {
+        "role": "user",
+        "content": "整理下工作目录下的需求单，列出来给我"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 0.7,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "node_execute",
+          "description": "执行 Node.js 脚本。支持内联代码和 .js/.ts 文件两种方式。可选安装 npm 依赖。适合数据分析、文件批处理、API 调用、爬虫、文档生成等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Node.js 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .js 或 .ts 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 npm 包名列表（如 [\"axios\", \"lodash\"]），执行前自动 npm install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "tool_choice": "auto"
+  }
+}

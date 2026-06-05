@@ -69,10 +69,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _rotationAnimation = Tween<double>(
-      begin: -15 / 360,
-      end: 15 / 360,
-    ).animate(
+    _rotationAnimation = Tween<double>(begin: -15 / 360, end: 15 / 360).animate(
       CurvedAnimation(
         parent: _rotationAnimationController,
         curve: Curves.easeInOut,
@@ -96,7 +93,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     final isToolCalling = widget.message.isToolCalling;
     final wasToolCalling = oldWidget.message.isToolCalling;
 
-    if (isToolCalling && !wasToolCalling) {
+    if (isToolCalling) {
       _rotationAnimationController.repeat(reverse: true);
     } else if (!isToolCalling && wasToolCalling) {
       _rotationAnimationController.stop();
@@ -114,7 +111,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   }
 
   // 根据消息ID异步查找包含该消息的会话（内存+Isar）
-  Future<ChatSession?> _findSessionContainingMessageAsync(String messageId) async {
+  Future<ChatSession?> _findSessionContainingMessageAsync(
+    String messageId,
+  ) async {
     // 先尝试内存查找
     final memorySession = _findSessionContainingMessage(messageId);
     if (memorySession != null) return memorySession;
@@ -484,7 +483,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
   // 统一的重新生成方法
   void _regenerateMessage(RegenerateActionType actionType) async {
-    final session = await _findSessionContainingMessageAsync(widget.message.msgId);
+    final session = await _findSessionContainingMessageAsync(
+      widget.message.msgId,
+    );
     if (session == null) {
       if (mounted) {
         SnackBarUtils.showError(context, '找不到包含该消息的会话');
@@ -1174,7 +1175,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   }
 
   // 从消息创建新对话
-  Future<void> _createNewSessionFromMessage(BuildContext context, ChatMessage message) async {
+  Future<void> _createNewSessionFromMessage(
+    BuildContext context,
+    ChatMessage message,
+  ) async {
     try {
       // 根据消息ID查找包含该消息的会话
       final session = await _findSessionContainingMessageAsync(message.msgId);
@@ -1411,7 +1415,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 '思考中...',
                 style: TextStyle(
                   fontSize: 10,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.4),
                   fontWeight: FontWeight.w500,
                 ),
               ),

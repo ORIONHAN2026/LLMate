@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../controllers/session_controller.dart';
+import '../controllers/mcp_controller.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/mcp_config.dart';
 import '../services/mcp_service.dart';
@@ -64,7 +65,8 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
   static const List<_MarketItem> _allItems = [
     _MarketItem(
       name: 'filesystem',
-      description: '文件系统访问服务，读取、写入和管理本地文件，支持目录浏览',
+      description:
+          '文件系统访问服务，读取、写入和管理本地文件，支持目录浏览文件系统访问服务，读取、写入和管理本地文件，支持目录浏览文件系统访问服务，读取、写入和管理本地文件，支持目录浏览文件系统访问服务，读取、写入和管理本地文件，支持目录浏览文件系统访问服务，读取、写入和管理本地文件，支持目录浏览文件系统访问服务，读取、写入和管理本地文件，支持目录浏览',
       command: 'npx',
       args: ['-y', '@modelcontextprotocol/server-filesystem', '/Users'],
       category: '文件系统',
@@ -237,371 +239,6 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
     await modelController.saveModelsData(updatedModels);
   }
 
-  void _showDetailSheet(_MarketItem item) {
-    final isAdded = _addedNames.contains(item.name);
-    final initialJson = const JsonEncoder.withIndent(
-      '  ',
-    ).convert({'command': item.command, 'args': item.args, 'timeout': 30});
-    final jsonCtrl = TextEditingController(text: initialJson);
-    int timeoutSec = 30;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder:
-          (ctx) => StatefulBuilder(
-            builder: (ctx, setSheetState) {
-              bool isSheetConnecting = false;
-              String? sheetError;
-
-              return DraggableScrollableSheet(
-                initialChildSize: 0.55,
-                minChildSize: 0.3,
-                maxChildSize: 0.85,
-                expand: false,
-                builder:
-                    (ctx, sc) => SingleChildScrollView(
-                      controller: sc,
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          Text(
-                            item.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            item.description,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // 超时设置
-                          Row(
-                            children: [
-                              Text(
-                                '连接超时',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 60,
-                                height: 28,
-                                child: TextField(
-                                  enabled: !isSheetConnecting,
-                                  keyboardType: TextInputType.number,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 12),
-                                  decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 2,
-                                      horizontal: 6,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    isDense: true,
-                                  ),
-                                  controller: TextEditingController(
-                                    text: '$timeoutSec',
-                                  ),
-                                  onChanged: (v) {
-                                    final parsed = int.tryParse(v);
-                                    if (parsed != null && parsed > 0)
-                                      timeoutSec = parsed;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '秒',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'JSON 配置',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E1E),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: TextField(
-                              controller: jsonCtrl,
-                              maxLines: 8,
-                              minLines: 5,
-                              enabled: !isSheetConnecting,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontFamily: 'monospace',
-                                color: Color(0xFFD4D4D4),
-                                height: 1.5,
-                              ),
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: const EdgeInsets.all(12),
-                                isDense: true,
-                              ),
-                              keyboardType: TextInputType.multiline,
-                            ),
-                          ),
-                          if (isSheetConnecting) ...[
-                            const SizedBox(height: 12),
-                            const Center(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      strokeCap: StrokeCap.round,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    '正在连接服务器...',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          // 错误提示
-                          if (sheetError != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.error.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.error.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    CupertinoIcons.exclamationmark_circle,
-                                    size: 16,
-                                    color: Theme.of(context).colorScheme.error,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      sheetError!,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            Theme.of(context).colorScheme.error,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            child:
-                                isAdded
-                                    ? OutlinedButton.icon(
-                                      onPressed: () {
-                                        Navigator.pop(ctx);
-                                        _removeService(item.name);
-                                      },
-                                      icon: const Icon(
-                                        CupertinoIcons.delete,
-                                        size: 16,
-                                      ),
-                                      label: const Text('移除服务'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor:
-                                            Theme.of(context).colorScheme.error,
-                                        side: BorderSide(
-                                          color:
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.error,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                    )
-                                    : FilledButton.icon(
-                                      onPressed:
-                                          isSheetConnecting
-                                              ? null
-                                              : () async {
-                                                try {
-                                                  final json =
-                                                      jsonDecode(jsonCtrl.text)
-                                                          as Map<
-                                                            String,
-                                                            dynamic
-                                                          >;
-                                                  final effectiveTimeout =
-                                                      json['timeout'] as int? ??
-                                                      timeoutSec;
-                                                  final config = Mcp(
-                                                    mcpId:
-                                                        'mcp_${DateTime.now().millisecondsSinceEpoch}',
-                                                    name: item.name,
-                                                    command:
-                                                        json['command']
-                                                            as String?,
-                                                    args:
-                                                        (json['args']
-                                                                as List<
-                                                                  dynamic
-                                                                >?)
-                                                            ?.cast<String>(),
-                                                    timeout: effectiveTimeout,
-                                                  );
-
-                                                  setSheetState(() {
-                                                    sheetError = null;
-                                                    isSheetConnecting = true;
-                                                  });
-
-                                                  // 连接远程获取工具
-                                                  try {
-                                                    final info =
-                                                        await McpService.connectAndGetInfo(
-                                                          config,
-                                                        );
-                                                    final realConfig = config
-                                                        .copyWith(
-                                                          name: info.serverName,
-                                                          tools: info.tools,
-                                                          lastUpdated:
-                                                              DateTime.now(),
-                                                        );
-                                                    final model = _currentModel;
-                                                    if (model != null &&
-                                                        ctx.mounted) {
-                                                      await _saveModel(
-                                                        model.addMcpService(
-                                                          realConfig,
-                                                        ),
-                                                      );
-                                                      if (mounted)
-                                                        setState(() {});
-                                                      Navigator.pop(ctx);
-                                                      SnackBarUtils.showSuccess(
-                                                        context,
-                                                        '已添加: ${info.serverName} (${info.tools.length} 个工具)',
-                                                      );
-                                                    }
-                                                  } on TimeoutException catch (
-                                                    e
-                                                  ) {
-                                                    setSheetState(() {
-                                                      isSheetConnecting = false;
-                                                      sheetError =
-                                                          '⏱ 连接超时\n\n${e.message}\n\n请增大超时时间后重试。';
-                                                    });
-                                                  } catch (_) {
-                                                    // 连接失败，用预定义名称直接添加
-                                                    final model = _currentModel;
-                                                    if (model != null &&
-                                                        ctx.mounted) {
-                                                      await _saveModel(
-                                                        model.addMcpService(
-                                                          config,
-                                                        ),
-                                                      );
-                                                      if (mounted)
-                                                        setState(() {});
-                                                      Navigator.pop(ctx);
-                                                      SnackBarUtils.showInfo(
-                                                        context,
-                                                        '已添加: ${config.name}（工具信息获取失败，可稍后手动刷新）',
-                                                      );
-                                                    }
-                                                  }
-                                                } catch (e) {
-                                                  setSheetState(() {
-                                                    isSheetConnecting = false;
-                                                    sheetError =
-                                                        '❌ JSON 格式错误: $e';
-                                                  });
-                                                }
-                                              },
-                                      icon: const Icon(
-                                        CupertinoIcons.plus,
-                                        size: 16,
-                                      ),
-                                      label: Text(
-                                        isSheetConnecting ? '连接中...' : '连接并添加',
-                                      ),
-                                      style: FilledButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                    ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-              );
-            },
-          ),
-    );
-  }
-
   Future<void> _addService(Mcp config) async {
     final model = _currentModel;
     if (model == null) {
@@ -669,6 +306,14 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('MCP 应用市场'),
+        actions: [
+          IconButton(
+            icon: const Icon(CupertinoIcons.add_circled, size: 22),
+            tooltip: '自定义添加 MCP 服务',
+            onPressed: _showAddMcpDialog,
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body:
           _currentModel == null
@@ -794,7 +439,7 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // 列表
+                  // 列表（2列网格）
                   Expanded(
                     child:
                         _filteredItems.isEmpty
@@ -807,10 +452,18 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                                 ),
                               ),
                             )
-                            : ListView.builder(
+                            : GridView.builder(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
+                                vertical: 8,
                               ),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 10,
+                                    crossAxisSpacing: 10,
+                                    childAspectRatio: 6,
+                                  ),
                               itemCount: _filteredItems.length,
                               itemBuilder:
                                   (_, i) => _buildItemCard(_filteredItems[i]),
@@ -824,7 +477,6 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
   Widget _buildItemCard(_MarketItem item) {
     final isAdded = _addedNames.contains(item.name);
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -832,114 +484,455 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
           color: Theme.of(context).dividerColor.withOpacity(0.4),
         ),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _showDetailSheet(item),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(width: 12),
+            // 中间：名称 + 描述
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    item.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    item.description,
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // 右侧按钮
+            GestureDetector(
+              onTap: () {
+                if (isAdded) {
+                  _removeService(item.name);
+                } else {
+                  _addService(
+                    Mcp(
+                      mcpId: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
+                      name: item.name,
+                      command: item.command,
+                      args: item.args,
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: item.color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(item.icon, color: item.color, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.name,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            item.category,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.description,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () {
-                  if (isAdded) {
-                    _removeService(item.name);
-                  } else {
-                    _addService(
-                      Mcp(
-                        mcpId: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
-                        name: item.name,
-                        command: item.command,
-                        args: item.args,
-                      ),
-                    );
-                  }
-                },
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
                     color:
                         isAdded
-                            ? Theme.of(context).colorScheme.primaryContainer
+                            ? Colors.transparent
                             : Theme.of(
                               context,
-                            ).colorScheme.surfaceContainerHighest,
-                    shape: BoxShape.circle,
+                            ).colorScheme.onSurface.withOpacity(0.15),
                   ),
-                  child: Icon(
-                    isAdded
-                        ? CupertinoIcons.checkmark_alt
-                        : CupertinoIcons.plus,
-                    size: 14,
-                    color:
-                        isAdded
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey[500],
-                  ),
+                  color:
+                      isAdded
+                          ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1)
+                          : null,
+                ),
+                child: Icon(
+                  isAdded ? CupertinoIcons.checkmark_alt : CupertinoIcons.plus,
+                  size: 13,
+                  color:
+                      isAdded
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.4),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  // ── 自定义添加 MCP 服务 ──
+
+  void _showAddMcpDialog() {
+    final jsonCtrl = TextEditingController(
+      text: const JsonEncoder.withIndent('  ').convert({
+        'command': 'npx',
+        'args': ['-y', 'package-name'],
+        'timeout': 30,
+      }),
+    );
+    bool isConnecting = false;
+    String? errorMessage;
+    int timeoutSec = 30;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (ctx, setDialogState) => AlertDialog(
+                  title: const Text('添加 MCP 服务'),
+                  content: SizedBox(
+                    width: 480,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'name 和描述将从 MCP 服务器远程获取',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '如果 JSON 中包含 "mcpServers" 字段，会自动从中提取服务配置',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Text(
+                                '连接超时',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                width: 60,
+                                height: 28,
+                                child: TextField(
+                                  enabled: !isConnecting,
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 12),
+                                  decoration: InputDecoration(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 2,
+                                      horizontal: 6,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    isDense: true,
+                                  ),
+                                  controller: TextEditingController(
+                                    text: '$timeoutSec',
+                                  ),
+                                  onChanged: (v) {
+                                    final parsed = int.tryParse(v);
+                                    if (parsed != null && parsed > 0)
+                                      timeoutSec = parsed;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '秒',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'JSON 配置',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '支持 command/args 或 url/headers 格式。URL 型默认使用 HTTP 传输',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: TextField(
+                              controller: jsonCtrl,
+                              maxLines: 8,
+                              minLines: 5,
+                              enabled: !isConnecting,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontFamily: 'monospace',
+                                color: Color(0xFFD4D4D4),
+                                height: 1.5,
+                              ),
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: const EdgeInsets.all(12),
+                                isDense: true,
+                              ),
+                              keyboardType: TextInputType.multiline,
+                            ),
+                          ),
+                          if (isConnecting) ...[
+                            const SizedBox(height: 12),
+                            const Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      strokeCap: StrokeCap.round,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    '正在连接服务器...',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          if (errorMessage != null) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.error.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.error.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.exclamationmark_circle,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      errorMessage!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            Theme.of(context).colorScheme.error,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: isConnecting ? null : () => Navigator.pop(ctx),
+                      child: const Text('取消'),
+                    ),
+                    FilledButton(
+                      onPressed:
+                          isConnecting
+                              ? null
+                              : () async {
+                                try {
+                                  final json =
+                                      jsonDecode(jsonCtrl.text)
+                                          as Map<String, dynamic>;
+
+                                  Map<String, dynamic> serviceJson = json;
+                                  final mcpServers =
+                                      json['mcpServers']
+                                          as Map<String, dynamic>?;
+                                  if (mcpServers != null &&
+                                      mcpServers.isNotEmpty) {
+                                    serviceJson =
+                                        mcpServers.entries.first.value
+                                            as Map<String, dynamic>;
+                                  }
+
+                                  final tempName =
+                                      'mcp_${DateTime.now().millisecondsSinceEpoch}';
+                                  final effectiveTimeout =
+                                      serviceJson['timeout'] as int? ??
+                                      timeoutSec;
+
+                                  // URL 型 MCP，type 默认为 http
+                                  final hasUrl =
+                                      serviceJson['url'] is String &&
+                                      (serviceJson['url'] as String).isNotEmpty;
+                                  if (hasUrl) {
+                                    final typeVal =
+                                        serviceJson['type'] as String?;
+                                    if (typeVal == null || typeVal.isEmpty) {
+                                      serviceJson['type'] = 'http';
+                                    } else if (typeVal != 'sse' &&
+                                        typeVal != 'http' &&
+                                        typeVal != 'streamableHttp') {
+                                      setDialogState(() {
+                                        errorMessage =
+                                            '❌ 不支持的传输类型: "$typeVal"\n\n'
+                                            '支持的类型：\n'
+                                            '  "type": "sse"  — SSE 长连接传输\n'
+                                            '  "type": "http" — Streamable HTTP 传输';
+                                      });
+                                      return;
+                                    }
+                                  }
+
+                                  final config = Mcp(
+                                    mcpId:
+                                        'mcp_${DateTime.now().millisecondsSinceEpoch}',
+                                    name: tempName,
+                                    command: serviceJson['command'] as String?,
+                                    args:
+                                        (serviceJson['args'] as List<dynamic>?)
+                                            ?.cast<String>(),
+                                    timeout: effectiveTimeout,
+                                    url: serviceJson['url'] as String?,
+                                    headers:
+                                        serviceJson['headers'] != null
+                                            ? Map<String, String>.from(
+                                              serviceJson['headers'],
+                                            )
+                                            : null,
+                                    env:
+                                        serviceJson['env'] != null
+                                            ? Map<String, String>.from(
+                                              serviceJson['env'],
+                                            )
+                                            : null,
+                                    workingDirectory:
+                                        serviceJson['workingDirectory']
+                                            as String?,
+                                    type:
+                                        hasUrl
+                                            ? McpTransportTypeExt.fromString(
+                                              serviceJson['type'] as String?,
+                                            )
+                                            : null,
+                                  );
+
+                                  setDialogState(() {
+                                    errorMessage = null;
+                                    isConnecting = true;
+                                  });
+
+                                  final info =
+                                      await McpService.connectAndGetInfo(
+                                        config,
+                                      );
+
+                                  final realConfig = config.copyWith(
+                                    name: info.serverName,
+                                    description: info.description,
+                                    tools: info.tools,
+                                    lastUpdated: DateTime.now(),
+                                    prompt: info.prompt,
+                                  );
+
+                                  Navigator.pop(ctx);
+                                  _addServiceWithInfo(
+                                    realConfig,
+                                    toolCount: info.tools.length,
+                                  );
+                                } on TimeoutException catch (e) {
+                                  setDialogState(() {
+                                    isConnecting = false;
+                                    errorMessage =
+                                        '⏱ 连接超时\n\n${e.message}\n\n请检查服务器地址是否正确，或尝试增大超时时间后重试。';
+                                  });
+                                } catch (e) {
+                                  setDialogState(() {
+                                    isConnecting = false;
+                                    final msg = e.toString();
+                                    errorMessage =
+                                        '❌ 连接失败\n\n${msg.length > 200 ? '${msg.substring(0, 200)}...' : msg}\n\n请检查配置是否正确，修改后重试。';
+                                  });
+                                }
+                              },
+                      child: Text(isConnecting ? '连接中...' : '连接并添加'),
+                    ),
+                  ],
+                ),
+          ),
+    );
+  }
+
+  Future<void> _addServiceWithInfo(Mcp config, {required int toolCount}) async {
+    // 添加到全局 MCP 列表
+    final mcpc = Get.find<McpController>();
+    await mcpc.ensureLoaded();
+
+    if (mcpc.configs.any((s) => s.name == config.name)) {
+      SnackBarUtils.showInfo(context, '服务 "${config.name}" 已存在');
+      return;
+    }
+    await mcpc.addService(config);
+
+    // 同时添加到当前模型（如果有）
+    final model = _currentModel;
+    if (model != null) {
+      await _saveModel(model.addMcpService(config));
+    }
+
+    if (mounted) {
+      setState(() {});
+      SnackBarUtils.showSuccess(
+        context,
+        '已添加: ${config.name} (${toolCount} 个工具)',
+      );
+    }
   }
 }

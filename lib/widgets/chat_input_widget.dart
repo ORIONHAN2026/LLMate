@@ -2162,16 +2162,40 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     ],
                                   ),
                                   const SizedBox(height: 6),
-                                  // 服务命令
-                                  Text(
-                                    '命令: ${service.command}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withOpacity(0.7),
+                                  // 描述
+                                  if (service.description?.isNotEmpty == true) ...[
+                                    Text(
+                                      service.description!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface.withOpacity(0.6),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                  // URL 或命令
+                                  if (service.url?.isNotEmpty == true)
+                                    Text(
+                                      'URL: ${service.url}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface.withOpacity(0.7),
+                                      ),
+                                    )
+                                  else
+                                    Text(
+                                      '命令: ${service.command}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface.withOpacity(0.7),
+                                      ),
+                                    ),
                                   // 服务参数（如果有）
                                   if (service.args?.isNotEmpty == true) ...[
                                     const SizedBox(height: 4),
@@ -2564,9 +2588,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   return _buildCommandItem(
                                     title: service.name,
                                     subtitle:
-                                        service.url?.isNotEmpty == true
-                                            ? service.url
-                                            : '${service.command ?? ''} ${service.args?.join(' ') ?? ''}',
+                                        service.description?.isNotEmpty == true
+                                            ? service.description
+                                            : service.url?.isNotEmpty == true
+                                                ? service.url
+                                                : '${service.command ?? ''} ${service.args?.join(' ') ?? ''}',
                                     tag: toolCount > 0 ? '$toolCount个工具' : null,
                                     isSelected: isSelected,
                                     onTap: () {

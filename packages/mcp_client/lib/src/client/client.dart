@@ -53,6 +53,9 @@ class Client {
   /// Server information received during initialization
   Map<String, dynamic>? _serverInfo;
 
+  /// Server instructions (description) received during initialization
+  String? _instructions;
+
   /// Whether the client is currently connected
   bool get isConnected => _transport != null;
 
@@ -67,6 +70,9 @@ class Client {
 
   /// Get the server information
   Map<String, dynamic>? get serverInfo => _serverInfo;
+
+  /// Get the server instructions (optional description)
+  String? get instructions => _instructions;
 
   /// Stream of connection events
   Stream<ServerInfo> get onConnect => _connectStreamController.stream;
@@ -283,6 +289,7 @@ class Client {
     }
 
     _serverInfo = response['serverInfo'];
+    _instructions = response['instructions'] as String?;
     final capabilitiesData = response['capabilities'];
     _serverCapabilities = ServerCapabilities.fromJson(
       capabilitiesData != null
@@ -801,6 +808,9 @@ class Client {
   void _onDisconnect() {
     _transport = null;
     _initialized = false;
+    _serverInfo = null;
+    _instructions = null;
+    _serverCapabilities = null;
 
     // Complete any pending requests with an error
     for (final completer in _requestCompleters.values) {

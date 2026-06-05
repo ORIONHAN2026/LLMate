@@ -1036,6 +1036,7 @@ class ServerInfo {
   final String? protocolVersion;
   final Map<String, dynamic>? capabilities;
   final Map<String, dynamic>? metadata;
+  final String? instructions;
 
   const ServerInfo({
     required this.name,
@@ -1043,6 +1044,7 @@ class ServerInfo {
     this.protocolVersion,
     this.capabilities,
     this.metadata,
+    this.instructions,
   });
 
   Map<String, dynamic> toJson() {

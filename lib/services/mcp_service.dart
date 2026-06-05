@@ -5,7 +5,10 @@ import 'package:get/get.dart';
 import 'package:mcp_client/mcp_client.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/mcp_config.dart';
+import '../models/bigmodel/chat_model.dart';
 import '../controllers/mcp_controller.dart';
+import '../controllers/model_controller.dart';
+import '../framework/llm_hub.dart';
 
 /// MCP工具调用结果
 class McpToolResult {
@@ -38,11 +41,13 @@ class McpToolResult {
 /// MCP 连接信息（初始化后获取的服务器信息 + 工具列表 + 生成的 prompt）
 class McpConnectionInfo {
   final String serverName;
+  final String? description; // 服务器描述（来自 instructions）
   final List<McpToolInfo> tools;
   final String prompt; // LLM 用的工具介绍文本
 
   const McpConnectionInfo({
     required this.serverName,
+    this.description,
     required this.tools,
     required this.prompt,
   });
@@ -86,6 +91,9 @@ class McpService {
 
   /// 缓存的配置信息（运行时工具信息，不持久化）
   static final Map<String, Mcp> _cachedConfigs = {};
+
+  /// 通过 mcpId 获取缓存的配置（含运行时信息如 description、tools）
+  static Mcp? getCachedConfig(String mcpId) => _cachedConfigs[mcpId];
 
   /// 获取 McpController 实例
   static McpController get _mcpController => Get.find<McpController>();
@@ -316,7 +324,10 @@ class McpService {
             );
           }).toList();
 
+      final description = config.description ?? client.instructions;
+      debugPrint('   📝 服务器描述: $description');
       _cachedConfigs[config.mcpId] = config.copyWith(
+        description: description,
         tools: toolInfos,
         lastUpdated: DateTime.now(),
       );
@@ -342,6 +353,99 @@ class McpService {
       _clients.remove(config.mcpId);
       _availableTools.remove(config.mcpId);
       debugPrint('🧹 已断开刷新连接: ${config.name}');
+    }
+  }
+
+  // ── LLM 总结 MCP 服务信息 ──
+
+  /// 用 LLM 总结 MCP 服务，生成精简的名称和中文描述
+  ///
+  /// 使用 ModelController 中最后添加的模型来调用 LLM，
+  /// 根据原始服务器名称和工具列表生成一个友好的名称和描述。
+  ///
+  /// 返回 `{name, description}`，失败时返回 null。
+  static Future<Map<String, String>?> _summarizeMcpWithLLM({
+    required String serverName,
+    required List<McpToolInfo> tools,
+  }) async {
+    try {
+      final modelController = Get.find<ModelController>();
+      if (modelController.models.isEmpty) {
+        debugPrint('⚠️ [MCP-Summarize] 没有可用的模型，跳过总结');
+        return null;
+      }
+
+      // 使用最后添加的模型
+      final ChatModel model = modelController.models.last;
+      final provider = LlmHub.createProvider(model);
+
+      // 构建工具信息摘要
+      final toolSummary = StringBuffer();
+      for (final tool in tools) {
+        toolSummary.writeln('- ${tool.name}: ${tool.description}');
+      }
+
+      final prompt = '''
+你是一个技术工具命名专家。请根据以下 MCP (Model Context Protocol) 服务的信息，生成一个精简的中文名称和一段简洁的中文描述。
+
+要求：
+1. 名称：简洁易读，中文优先（可以包含英文关键词），不超过15个字
+2. 描述：一句话说明这个服务能做什么，不超过50个字
+3. 仅输出JSON格式，不要包含其他文字
+
+原始服务器名称：$serverName
+
+工具列表：
+${toolSummary.toString()}
+
+请按以下JSON格式输出：
+{"name": "生成的名称", "description": "生成的描述"}''';
+
+      debugPrint('🤖 [MCP-Summarize] 调用 LLM 总结服务: $serverName');
+      debugPrint('   模型: ${model.name} (${model.provider})');
+
+      final messages = [
+        {'role': 'user', 'content': prompt},
+      ];
+
+      final buffer = StringBuffer();
+      final stream = provider.sendMessageStreamWithMessages(messages);
+
+      await for (final chunk in stream) {
+        final content = chunk['content'] ?? '';
+        if (content.isNotEmpty) {
+          buffer.write(content);
+        }
+      }
+
+      final responseText = buffer.toString().trim();
+      debugPrint('🤖 [MCP-Summarize] LLM 响应: $responseText');
+
+      // 提取 JSON（可能包含 markdown 代码块）
+      String jsonStr = responseText;
+      final codeBlockMatch = RegExp(
+        r'```(?:json)?\s*([\s\S]*?)\s*```',
+      ).firstMatch(responseText);
+      if (codeBlockMatch != null) {
+        jsonStr = codeBlockMatch.group(1)!.trim();
+      }
+
+      final result = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final name = result['name'] as String?;
+      final description = result['description'] as String?;
+
+      if (name != null && name.isNotEmpty) {
+        debugPrint('✅ [MCP-Summarize] 总结完成: name=$name, desc=$description');
+        return {
+          'name': name,
+          'description': description ?? '',
+        };
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('⚠️ [MCP-Summarize] 总结失败: $e');
+      return null;
     }
   }
 
@@ -397,7 +501,8 @@ class McpService {
           serverInfo != null
               ? (serverInfo['name'] as String? ?? config.name)
               : config.name;
-      debugPrint('📋 服务器名称: $serverName');
+      final serverDescription = client.instructions;
+      debugPrint('📋 服务器名称: $serverName, 描述: $serverDescription');
 
       final tools = await client.listTools().timeout(
         Duration(seconds: timeoutSec),
@@ -418,21 +523,41 @@ class McpService {
             );
           }).toList();
 
+      // 用 LLM 总结生成更好的名称和描述
+      String finalName = serverName;
+      String? finalDescription = serverDescription;
+      if (toolInfos.isNotEmpty) {
+        final summary = await _summarizeMcpWithLLM(
+          serverName: serverName,
+          tools: toolInfos,
+        );
+        if (summary != null) {
+          finalName = summary['name'] ?? serverName;
+          finalDescription = summary['description'] ?? serverDescription;
+        }
+      }
+
       // 缓存工具信息
       _cachedConfigs[serverName] = config.copyWith(
+        description: finalDescription,
         tools: toolInfos,
         lastUpdated: DateTime.now(),
       );
 
       // 生成 LLM 用的工具介绍文本
-      final tempMcp = config.copyWith(name: serverName, tools: toolInfos);
+      final tempMcp = config.copyWith(
+        name: finalName,
+        description: finalDescription,
+        tools: toolInfos,
+      );
       final prompt = buildMcpPrompt(tempMcp);
 
-      debugPrint('✅ ====== 获取信息成功: $serverName，断开连接 ======');
+      debugPrint('✅ ====== 获取信息成功: $finalName，断开连接 ======');
 
       // 立即断开，工具信息已保存到本地缓存
       return McpConnectionInfo(
-        serverName: serverName,
+        serverName: finalName,
+        description: finalDescription,
         tools: toolInfos,
         prompt: prompt,
       );

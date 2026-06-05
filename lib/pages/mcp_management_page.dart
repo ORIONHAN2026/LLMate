@@ -309,7 +309,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                       serviceJson['timeout'] as int? ??
                                       timeoutSec;
 
-                                  // URL 型 MCP 必须指定 type 字段
+                                  // URL 型 MCP，type 默认为 http
                                   final hasUrl =
                                       serviceJson['url'] is String &&
                                       (serviceJson['url'] as String).isNotEmpty;
@@ -317,16 +317,8 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     final typeVal =
                                         serviceJson['type'] as String?;
                                     if (typeVal == null || typeVal.isEmpty) {
-                                      setDialogState(() {
-                                        errorMessage =
-                                            '❌ URL 型 MCP 服务必须在 JSON 中指定 "type" 字段\n\n'
-                                            '支持的类型：\n'
-                                            '  "type": "sse"  — SSE 长连接传输\n'
-                                            '  "type": "http" — Streamable HTTP 传输';
-                                      });
-                                      return;
-                                    }
-                                    if (typeVal != 'sse' &&
+                                      serviceJson['type'] = 'http';
+                                    } else if (typeVal != 'sse' &&
                                         typeVal != 'http' &&
                                         typeVal != 'streamableHttp') {
                                       setDialogState(() {
@@ -388,6 +380,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   // 用真实名称创建最终配置（prompt 已生成）
                                   final realConfig = config.copyWith(
                                     name: info.serverName,
+                                    description: info.description,
                                     tools: info.tools,
                                     lastUpdated: DateTime.now(),
                                     prompt: info.prompt,
@@ -574,8 +567,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
   }
 
   Widget _buildAddedServiceCard(Mcp service) {
-    final hasTools = service.tools != null && service.tools!.isNotEmpty;
-    final toolCount = service.tools?.length ?? 0;
+    final typeLabel = _getTypeLabel(service);
+    final description = service.description;
+    final subtitle = _buildSubtitle(service);
 
     return GestureDetector(
       onTap: () => _showAddedServiceDetail(service),
@@ -585,14 +579,11 @@ class _McpManagementPageState extends State<McpManagementPage> {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color:
-                hasTools
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                    : Theme.of(context).dividerColor.withOpacity(0.5),
+            color: Theme.of(context).dividerColor.withOpacity(0.5),
           ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // 左侧信息
             Expanded(
@@ -601,109 +592,66 @@ class _McpManagementPageState extends State<McpManagementPage> {
                 children: [
                   Row(
                     children: [
-                      Expanded(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                service.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            if (hasTools) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '$toolCount 个工具',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+                      Flexible(
+                        child: Text(
+                          service.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          typeLabel,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    _buildSubtitle(service),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.5),
-                      fontFamily: 'monospace',
+                  if (description != null && description.isNotEmpty)
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.65),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  else
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
+                        fontFamily: 'monospace',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  // 工具标签区域
-                  if (hasTools) ...[
-                    const SizedBox(height: 8),
-                    Divider(
-                      height: 1,
-                      color: Theme.of(context).dividerColor.withOpacity(0.3),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children:
-                          service.tools!.map((tool) {
-                            final label =
-                                tool.description.isNotEmpty
-                                    ? '${tool.name} · ${tool.description}'
-                                    : tool.name;
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withOpacity(0.15),
-                                ),
-                              ),
-                              child: Text(
-                                label,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -732,6 +680,21 @@ class _McpManagementPageState extends State<McpManagementPage> {
         ),
       ),
     );
+  }
+
+  String _getTypeLabel(Mcp service) {
+    if (service.url != null && service.url!.isNotEmpty) {
+      switch (service.type) {
+        case McpTransportType.sse:
+          return 'SSE';
+        case McpTransportType.http:
+        case McpTransportType.streamableHttp:
+          return 'HTTP';
+        default:
+          return 'URL';
+      }
+    }
+    return 'Stdio';
   }
 
   final Set<String> _refreshingServices = {};
@@ -774,6 +737,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
       final tools = await McpService.refreshServiceTools(service);
 
       final updatedService = service.copyWith(
+        description: McpService.getCachedConfig(service.mcpId)?.description,
         tools: tools,
         lastUpdated: DateTime.now(),
         prompt: McpService.buildMcpPrompt(service.copyWith(tools: tools)),
@@ -832,114 +796,264 @@ class _McpManagementPageState extends State<McpManagementPage> {
   }
 
   void _showAddedServiceDetail(Mcp service) {
-    showModalBottomSheet(
+    showGeneralDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder:
-          (ctx) => StatefulBuilder(
-            builder: (ctx, setSheetState) {
-              final tools = service.tools;
-              final hasTools = tools != null && tools.isNotEmpty;
+      barrierDismissible: true,
+      barrierLabel: 'MCP 详情',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (ctx, anim1, anim2) {
+        return Center(
+          child: FadeTransition(
+            opacity: anim1,
+            child: StatefulBuilder(
+              builder: (ctx, setSheetState) {
+                final tools = service.tools;
+                final hasTools = tools != null && tools.isNotEmpty;
 
-              return DraggableScrollableSheet(
-                initialChildSize: hasTools ? 0.6 : 0.4,
-                minChildSize: 0.3,
-                maxChildSize: 0.85,
-                expand: false,
-                builder: (ctx, scrollController) {
-                  return SingleChildScrollView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // 顶部拖动条
-                        Center(
-                          child: Container(
-                            width: 40,
-                            height: 4,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        // 头部
-                        Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(
-                                CupertinoIcons.gear,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    service.name,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _buildSubtitle(service),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontFamily: 'monospace',
-                                      color: Colors.grey[500],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 工具列表
-                        if (hasTools) ...[
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 700,
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+                  ),
+                  child: Material(
+                    color: Theme.of(ctx).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 头部
                           Row(
                             children: [
-                              Text(
-                                '工具列表 (${tools.length})',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            service.name,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            _getTypeLabel(service),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color:
+                                                  Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      service.description?.isNotEmpty == true
+                                          ? service.description!
+                                          : _buildSubtitle(service),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const Spacer(),
-                              GestureDetector(
-                                onTap: () async {
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // 工具列表
+                          if (hasTools) ...[
+                            Row(
+                              children: [
+                                Text(
+                                  '工具列表 (${tools.length})',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                                const Spacer(),
+                                GestureDetector(
+                                  onTap: () async {
+                                    try {
+                                      final newTools =
+                                          await McpService.refreshServiceTools(
+                                            service,
+                                          );
+                                      final updatedService = service.copyWith(
+                                        description:
+                                            McpService.getCachedConfig(
+                                              service.mcpId,
+                                            )?.description,
+                                        tools: newTools,
+                                        lastUpdated: DateTime.now(),
+                                        prompt: McpService.buildMcpPrompt(
+                                          service.copyWith(tools: newTools),
+                                        ),
+                                      );
+                                      await Get.find<McpController>()
+                                          .updateService(
+                                            service.mcpId,
+                                            updatedService,
+                                          );
+                                      service = updatedService;
+                                      setSheetState(() {});
+                                      if (ctx.mounted) {
+                                        await _loadServices();
+                                      }
+                                      SnackBarUtils.showSuccess(
+                                        ctx,
+                                        '已刷新 ${newTools.length} 个工具',
+                                      );
+                                    } catch (e) {
+                                      if (ctx.mounted) {
+                                        SnackBarUtils.showError(
+                                          ctx,
+                                          '刷新失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.refresh,
+                                        size: 13,
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '刷新',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children:
+                                  tools.take(50).map((t) {
+                                    final label =
+                                        t.description.isNotEmpty
+                                            ? '${t.name} · ${t.description}'
+                                            : t.name;
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary.withOpacity(0.08),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.15),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        label,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                            ),
+                            if (tools.length > 50)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '... 还有 ${tools.length - 50} 个工具',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 6),
+                            const Divider(),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // 未获取工具时的获取按钮
+                          if (!hasTools) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
                                   try {
                                     final newTools =
                                         await McpService.refreshServiceTools(
                                           service,
                                         );
                                     final updatedService = service.copyWith(
+                                      description:
+                                          McpService.getCachedConfig(
+                                            service.mcpId,
+                                          )?.description,
                                       tools: newTools,
                                       lastUpdated: DateTime.now(),
-                                      prompt: McpService.buildMcpPrompt(service.copyWith(tools: newTools)),
+                                      prompt: McpService.buildMcpPrompt(
+                                        service.copyWith(tools: newTools),
+                                      ),
                                     );
                                     await Get.find<McpController>()
                                         .updateService(
@@ -953,207 +1067,93 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     }
                                     SnackBarUtils.showSuccess(
                                       ctx,
-                                      '已刷新 ${newTools.length} 个工具',
+                                      '已获取 ${newTools.length} 个工具',
                                     );
                                   } catch (e) {
                                     if (ctx.mounted) {
                                       SnackBarUtils.showError(
                                         ctx,
-                                        '刷新失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
+                                        '获取失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
                                       );
                                     }
                                   }
                                 },
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      CupertinoIcons.refresh,
-                                      size: 13,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '刷新',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color:
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                      ),
-                                    ),
-                                  ],
+                                icon: const Icon(
+                                  CupertinoIcons.arrow_down_to_line_alt,
+                                  size: 15,
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children:
-                                tools.take(50).map((t) {
-                                  final label =
-                                      t.description.isNotEmpty
-                                          ? '${t.name} · ${t.description}'
-                                          : t.name;
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary.withOpacity(0.08),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary.withOpacity(0.15),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      label,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color:
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                          ),
-                          if (tools.length > 50)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                '... 还有 ${tools.length - 50} 个工具',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[500],
+                                label: const Text('获取工具列表'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
                                 ),
                               ),
                             ),
-                          const SizedBox(height: 6),
-                          const Divider(),
-                          const SizedBox(height: 12),
-                        ],
+                            const SizedBox(height: 16),
+                          ],
 
-                        // 未获取工具时的获取按钮
-                        if (!hasTools) ...[
+                          // JSON 配置
+                          Text(
+                            'JSON 配置',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _buildConfigJson(service),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontFamily: 'monospace',
+                                color: Color(0xFFD4D4D4),
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // 删除按钮
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
-                              onPressed: () async {
-                                try {
-                                  final newTools =
-                                      await McpService.refreshServiceTools(
-                                        service,
-                                      );
-                                  final updatedService = service.copyWith(
-                                    tools: newTools,
-                                    lastUpdated: DateTime.now(),
-                                    prompt: McpService.buildMcpPrompt(service.copyWith(tools: newTools)),
-                                  );
-                                  await Get.find<McpController>().updateService(
-                                    service.mcpId,
-                                    updatedService,
-                                  );
-                                  service = updatedService;
-                                  setSheetState(() {});
-                                  if (ctx.mounted) {
-                                    await _loadServices();
-                                  }
-                                  SnackBarUtils.showSuccess(
-                                    ctx,
-                                    '已获取 ${newTools.length} 个工具',
-                                  );
-                                } catch (e) {
-                                  if (ctx.mounted) {
-                                    SnackBarUtils.showError(
-                                      ctx,
-                                      '获取失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
-                                    );
-                                  }
-                                }
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _confirmRemoveService(service);
                               },
-                              icon: const Icon(
-                                CupertinoIcons.arrow_down_to_line_alt,
-                                size: 15,
-                              ),
-                              label: const Text('获取工具列表'),
+                              icon: const Icon(CupertinoIcons.delete, size: 16),
+                              label: const Text('移除服务'),
                               style: OutlinedButton.styleFrom(
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.error,
+                                side: BorderSide(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
+                                  vertical: 12,
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(height: 16),
                         ],
-
-                        // JSON 配置
-                        Text(
-                          'JSON 配置',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1E1E1E),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _buildConfigJson(service),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontFamily: 'monospace',
-                              color: Color(0xFFD4D4D4),
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        // 删除按钮
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _confirmRemoveService(service);
-                            },
-                            icon: const Icon(CupertinoIcons.delete, size: 16),
-                            label: const Text('移除服务'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor:
-                                  Theme.of(context).colorScheme.error,
-                              side: BorderSide(
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
+                      ),
                     ),
-                  );
-                },
-              );
-            },
+                  ),
+                );
+              },
+            ),
           ),
+        );
+      },
     );
   }
 

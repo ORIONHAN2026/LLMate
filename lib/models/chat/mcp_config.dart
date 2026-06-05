@@ -72,6 +72,7 @@ class Mcp {
   final String mcpId;
 
   final String name;
+  final String? description; // 从 MCP 服务器 instructions 获取的描述
 
   // ── 以下字段运行时从 content 解析，不独立持久化 ──
   final String? command; // Stdio 命令（URL 型为 null）
@@ -90,6 +91,7 @@ class Mcp {
     this.content,
     required this.mcpId,
     required this.name,
+    this.description,
     this.command,
     this.args,
     this.env,
@@ -124,6 +126,7 @@ class Mcp {
       content: content,
       mcpId: json['mcpId'] as String? ?? name,
       name: name,
+      description: json['description'] as String?,
       command: json['command'] as String?,
       args: json['args'] != null ? List<String>.from(json['args']) : null,
       env: json['env'] != null ? Map<String, String>.from(json['env']) : null,
@@ -179,6 +182,7 @@ class Mcp {
       data = toJson();
       data['mcpId'] = mcpId;
       data['name'] = name;
+      if (description != null) data['description'] = description;
       if (workingDirectory != null) data['workingDirectory'] = workingDirectory;
       if (tools != null) {
         data['tools'] = tools!.map((tool) => tool.toJson()).toList();
@@ -196,6 +200,7 @@ class Mcp {
     String? content,
     String? mcpId,
     String? name,
+    String? description,
     String? command,
     List<String>? args,
     Map<String, String>? env,
@@ -212,6 +217,7 @@ class Mcp {
       content: content ?? this.content,
       mcpId: mcpId ?? this.mcpId,
       name: name ?? this.name,
+      description: description ?? this.description,
       command: command ?? this.command,
       args: args ?? this.args,
       env: env ?? this.env,

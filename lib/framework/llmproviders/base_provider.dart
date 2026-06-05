@@ -180,10 +180,10 @@ abstract class BaseLlmProvider {
     }
 
     // 1c. 公共规则：禁止 Web 搜索
-    messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.noWebSearch,
-    });
+    // messages.add({
+    //   'role': 'system',
+    //   'content': CommonSystemPrompts.noWebSearch,
+    // });
 
     // 1c2. 禁止将内部系统工具视为用户可见功能
     messages.add({
@@ -269,6 +269,8 @@ abstract class BaseLlmProvider {
       }
       if (session.deepThink) {
         data['thinking'] = {'type': 'enabled'};
+      } else {
+        data['thinking'] = {'type': 'disabled'};
       }
     }
 

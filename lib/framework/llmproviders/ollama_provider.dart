@@ -225,6 +225,7 @@ class OllamaProvider extends BaseLlmProvider {
 
                   if (data['done'] == true) {
                     debugPrint('Ollama流式响应完成');
+                    yield {'done': 'true'};
                     return;
                   }
                 }
@@ -237,6 +238,8 @@ class OllamaProvider extends BaseLlmProvider {
       debugPrint('Ollama 流式响应处理错误: $e');
       yield {'content': '错误: 流式响应处理失败 - ${e.toString()}', 'think': null};
     }
+    // 安全兜底：流自然结束时也发送 done 信号
+    yield {'done': 'true'};
   }
 
   /// 处理内容块，分离思考内容和正文内容

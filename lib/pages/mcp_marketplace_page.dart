@@ -825,10 +825,6 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
 
   Widget _buildItemCard(_MarketItem item) {
     final isAdded = _addedNames.contains(item.name);
-    final vendor = _vendors.firstWhere(
-      (v) => v.id == item.vendorId,
-      orElse: () => _vendors.first,
-    );
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -860,10 +856,6 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (item.content.contains('"url"')) ...[
-                        const SizedBox(width: 4),
-                        Icon(CupertinoIcons.link, size: 12, color: vendor.color.withOpacity(0.7)),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 3),
@@ -928,7 +920,16 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
       Map<String, dynamic> serviceJson = json;
       final mcpServers = json['mcpServers'] as Map<String, dynamic>?;
       if (mcpServers != null && mcpServers.isNotEmpty) {
-        serviceJson = mcpServers.entries.first.value as Map<String, dynamic>;
+        // 兼容两种格式：
+        // 1. 直接配置: {"mcpServers": {"type":"http", "url":"...", ...}}
+        // 2. 命名配置: {"mcpServers": {"server-name": {"type":"http", ...}}}
+        if (mcpServers.containsKey('url') ||
+            mcpServers.containsKey('type') ||
+            mcpServers.containsKey('command')) {
+          serviceJson = mcpServers;
+        } else {
+          serviceJson = mcpServers.entries.first.value as Map<String, dynamic>;
+        }
       }
 
       final hasUrl =
@@ -1387,7 +1388,7 @@ class _MarketplaceAddDialogState extends State<_MarketplaceAddDialog> {
                 }
               },
               icon: const Icon(CupertinoIcons.globe, size: 16),
-              label: const Text('云百炼'),
+              label: const Text('去阿里云开通'),
             ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

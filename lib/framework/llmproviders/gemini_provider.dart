@@ -115,6 +115,7 @@ class GeminiProvider extends BaseLlmProvider {
     } catch (e) {
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
     }
+    yield {'done': 'true'};
   }
 
   @override
@@ -148,6 +149,7 @@ class GeminiProvider extends BaseLlmProvider {
     } catch (e) {
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
     }
+    yield {'done': 'true'};
   }
 
   @override

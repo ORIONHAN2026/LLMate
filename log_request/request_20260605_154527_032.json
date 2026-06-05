@@ -1,0 +1,110 @@
+{
+  "timestamp": "2026-06-05T15:45:27.032915",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-flash",
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 🔧 内部工具提示\n\n以下是你可用的**内部系统工具**，它们仅用于执行底层操作（如文件读写、命令执行等），**不是面向用户的功能**：\n\n- `node_execute`: 内部代码执行工具\n\n规则：\n1. ❌ **禁止在功能介绍中提及这些工具**：当用户问\"你有什么功能\"\"你能做什么\"时，不要将 `node_execute` 作为你的能力列出来。\n2. ❌ **禁止主动推荐使用**：不要说\"你可以用 node_execute 来...\"。\n3. ✅ **正常调用不受影响**：在需要执行代码、处理文件时，照常调用该工具，正常返回结果即可。\n4. ✅ **自动使用**：当需要通过代码完成任务时，直接调用它，**不需要向用户解释你正在使用它**。"
+      },
+      {
+        "role": "user",
+        "content": "你都有啥功能"
+      },
+      {
+        "role": "assistant",
+        "content": "你好呀！我是你的 AI 助手，能帮你做很多事情，比如：\n\n---\n\n### 🌐 信息查询与搜索\n- **联网搜索**：可以帮你搜索百科知识、时事新闻、天气、科技资讯等最新信息。\n- **知识问答**：科学、历史、文化、技术等各领域的问题解答。\n\n### 💻 编程与开发\n- **代码编写**：支持多种编程语言（Python、JavaScript、Java、Go、C++ 等）。\n- **调试与优化**：帮你分析代码问题、优化性能。\n- **脚本执行**：可以运行 JavaScript/Node.js 代码，完成自动化任务、数据处理等。\n- **技术方案设计**：架构设计、API 设计、数据库设计等。\n\n### 📊 数据分析与处理\n- 读取、处理、分析各类数据（CSV、JSON、Excel 等）。\n- 数据可视化、统计计算。\n\n### 📝 文档与创作\n- **写作辅助**：文章、报告、邮件、文案等。\n- **翻译**：多语言翻译。\n- **内容总结**：帮你提炼关键信息。\n\n### 🛠 实用工具\n- **文件操作**：读取、编辑、生成各种格式的文件。\n- **自动化任务**：批量处理、爬虫、定时任务等。\n- **数学计算**：公式计算、统计分析。\n\n### 💬 日常对话\n- 聊天、答疑解惑、头脑风暴、提供建议。\n\n---\n\n**简单说：只要你需要编程、搜索信息、处理数据、写文档、或者只是聊聊天，我都在行！** \n\n想让我做什么？直接吩咐就好 😊"
+      },
+      {
+        "role": "user",
+        "content": "查询下上海今天的天气"
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_00_jmAZXM3d9S19IrgBHb5G3097",
+            "type": "function",
+            "function": {
+              "name": "bailian_web_search",
+              "arguments": "{\"query\":\"上海今天天气 2025年\",\"count\":5}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "call_00_jmAZXM3d9S19IrgBHb5G3097",
+        "content": "{\"pages\":[{\"snippet\":\"01 儿童节 31 / 24℃ 0 mm 02 32 / 24℃ 0 mm 03 32℃ 24℃ 04 30℃ 22℃ 05 世界环境日 28℃ 21℃ 06 29℃ 21℃ 07 28℃ 22℃ 08 27℃ 21℃ 09 28℃ 21℃ 10 廿五 28℃ 20℃ 11 31℃ 21℃ 12 30℃ 23℃ 13 32℃ 23℃ 14 31℃ 23℃ 15 初一 33℃ 23℃ 16 28℃ 25℃ 17 36℃ 27℃ 18 30℃ 25℃ 19 端午节 31℃ 25℃ 20 31℃ 26℃ 21 夏至 31℃ 26℃ 22 32℃ 26℃ 23 32℃ 26℃ 24 初十 32℃\",\"hostname\":\"天气网\",\"hostlogo\":\"https://img.alicdn.com/imgextra/i2/O1CN01MJh8gM28s6MYPHsm6_!!6000000007987-2-tps-32-32.png\",\"title\":\"【上海天气】上海今天天气预报,今天,今天天气,7天,15天天气预报,天气预报一周,天气预报15天查询\",\"url\":\"https://www.weather.com.cn/weather40dn/101020100.shtml\"},{\"snippet\":\"上海 今天周五(6月5日) 周六(6月6日) 周日(6月7日) 周一(6月8日) 周二(6月9日) 周三(6月10日) 周四(6月11日) 市区/县 周五(6月5日)白天 周五(6月5日)夜间 天气现象 风向风力 最高气温 天气现象 风向风力 最低气温 上海 上海 多云 东北风 <3级 29 阴 东风 <3级 21 详情 闵行 多云 东北风 <3级 29 阴 东风 <3级 20 详情 宝山 阴 东北风 3-4级 30 阴 东风 <3级 21 详情 黄浦 多云 东北风 <3级 29 阴 东风 <3级 21 详情 嘉定 多云 东风 3-4级 29\",\"hostname\":\"天气网\",\"hostlogo\":\"https://img.alicdn.com/imgextra/i2/O1CN01MJh8gM28s6MYPHsm6_!!6000000007987-2-tps-32-32.png\",\"title\":\"地图版国内城市天气预报\",\"url\":\"https://www.weather.com.cn/textFC/shanghai.shtml\"},{\"snippet\":\"今天7天 8-15天 40天 雷达图 蓝天预报 今天 日一二三四五六 十五 31 30 /20℃ 0mm 实况 儿童节 01 31 /24℃ 0mm 实况 十七 02 32 /24℃ 0mm 实况 十八 03 31 /24℃ 38mm 实况 十九 04 30 /23℃ 4mm 实况 芒种 05 29° 21℃ 廿一 06 28° 20℃ 廿二 07 29° 22℃ 廿三 08 27° 20℃ 廿四 09 28° 21℃ 廿五 10 30° 21℃ 廿六 11 30° 21℃ 廿七 12 31° 23℃ 廿八 13 30° 23℃ 廿九 14 31° 23℃ 初一\",\"hostname\":\"天气网\",\"hostlogo\":\"https://img.alicdn.com/imgextra/i2/O1CN01MJh8gM28s6MYPHsm6_!!6000000007987-2-tps-32-32.png\",\"title\":\"【上海天气】上海40天天气预报,上海更长预报,上海天气日历,上海日历,15天天气预报,天气预报一周\",\"url\":\"https://www.weather.com.cn/weather40d/101020100.shtml\"},{\"snippet\":\"雷达图 2日 昨天 3日 今天 4日 明天 5日 后天 6日 周六 7日 周日 8日 周一 9日 周二 阴 <3级 小雨转大雨 <3级 小雨转多云 <3级 晴 <3级 阴 <3级 阴 <3级 阴 <3级 阴 <3级 32°c 32°c 30°c 28°c 29°c 28°c 27°c 28°c 24°c 24°c 22°c 21°c 21°c 22°c 21°c 21°c 逐小时预报 今日日落 18:54 明日日出 04:50 蓝天预报 08时 09时 10时 11时 12时 13时 14时 15时 16时 17时 18时 19时 20时 21时 22时 23时 00时 01时 02时 03时 04时 05时 06时\",\"hostname\":\"天气网\",\"hostlogo\":\"https://img.alicdn.com/imgextra/i2/O1CN01MJh8gM28s6MYPHsm6_!!6000000007987-2-tps-32-32.png\",\"title\":\"上海天气预报,上海7天天气预报,上海15天天气预报,上海天气查询 - 中国天气网\",\"url\":\"https://www.weather.com.cn/weathern/101020100.shtml\"},{\"snippet\":\"今天是2026年06月05日 星期五 农历 四月二十 中国天气首页 14:05 实况 27.7℃ 东北风 1级 相对湿度 51% AQI 42 优 感冒指数 润肤指数 洗车指数 火险指数 Created with Raphaël 2.1.2 更长时效预报(9天/40天) 今日进入芒种节气 局部小雨叨扰 热点新闻 今日进入芒种节气 局部小雨叨扰2026-06-05 06:37明日“芒种” 未来天气趋势如何?2026-06-04 17:25上午起雨势减弱→2026-06-04 05:59局部大雨到暴雨 明天还下吗?2026-06-03 16:56气温新高,明天继续升!雷雨将至……2026-06-02 17:23周中的雨跟台风有关吗??2026-06-01 17:38周初阳光相伴,周中起多阵雨2026-06-01 06:13好天气助力“六一” 下周几天有雨?2026-05-31 17:05五月阳光收尾,下周天气有变化!2026-05-30 17:22五月晴好收尾 汛期将至天气趋势如何?2026-05-29 17:51查看更多\",\"hostname\":\"天气网\",\"hostlogo\":\"https://img.alicdn.com/imgextra/i2/O1CN01MJh8gM28s6MYPHsm6_!!6000000007987-2-tps-32-32.png\",\"title\":\"上海天气\",\"url\":\"http://sh.weather.com.cn/\"}],\"request_id\":\"7cf90ec2-8fc5-912a-b5ff-b6184b457fee\",\"tools\":[{\"result\":\"上海市2025-06-05基本天气信息：\\n天气：阴\\n温度：33℃\\n风向：东南风\\n风力：3级\",\"type\":\"weather\"}],\"status\":0}"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 0.7,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "node_execute",
+          "description": "执行 Node.js 脚本。支持内联代码和 .js/.ts 文件两种方式。可选安装 npm 依赖。适合数据分析、文件批处理、API 调用、爬虫、文档生成等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Node.js 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .js 或 .ts 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 npm 包名列表（如 [\"axios\", \"lodash\"]），执行前自动 npm install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "bailian_web_search",
+          "description": "搜索可用于查询百科知识、时事新闻、天气等信息",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "description": "user query in the format of string",
+                "title": "Query",
+                "type": "string"
+              },
+              "count": {
+                "default": 5,
+                "description": "number of search results",
+                "title": "Count",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "query"
+            ]
+          }
+        }
+      }
+    ],
+    "tool_choice": "auto"
+  }
+}

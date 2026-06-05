@@ -1,0 +1,106 @@
+{
+  "timestamp": "2026-06-05T16:35:05.365714",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-flash",
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 🔧 内部工具提示\n\n以下是你可用的**内部系统工具**，它们仅用于执行底层操作（如文件读写、命令执行等），**不是面向用户的功能**：\n\n- `node_execute`: 内部代码执行工具\n\n规则：\n1. ❌ **禁止在功能介绍中提及这些工具**：当用户问\"你有什么功能\"\"你能做什么\"时，不要将 `node_execute` 作为你的能力列出来。\n2. ❌ **禁止主动推荐使用**：不要说\"你可以用 node_execute 来...\"。\n3. ✅ **正常调用不受影响**：在需要执行代码、处理文件时，照常调用该工具，正常返回结果即可。\n4. ✅ **自动使用**：当需要通过代码完成任务时，直接调用它，**不需要向用户解释你正在使用它**。"
+      },
+      {
+        "role": "user",
+        "content": "iphone"
+      },
+      {
+        "role": "assistant",
+        "content": "您想了解关于 iPhone 的什么信息呢？比如：\n\n- **最新款 iPhone**（iPhone 16 系列）的配置、价格\n- **不同型号对比**（Pro vs 标准版 vs Plus）\n- **购买建议**\n- **某个具体功能**（如摄像头、电池、屏幕等）\n\n请告诉我您想了解的具体内容，我会为您详细解答！😊"
+      },
+      {
+        "role": "user",
+        "content": "16吧"
+      },
+      {
+        "role": "assistant",
+        "content": "好的，我来查一下 iPhone 16 系列的最新折扣信息！",
+        "tool_calls": [
+          {
+            "id": "call_00_2y5BAgI2oi4fXR0ZVxdQ4130",
+            "type": "function",
+            "function": {
+              "name": "searchZheKou",
+              "arguments": "{\"keyword\":\"iPhone 16\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "call_00_2y5BAgI2oi4fXR0ZVxdQ4130",
+        "content": "[\"{\\\"code\\\":3000,\\\"message\\\":\\\"操作成功\\\",\\\"requestId\\\":\\\"739f8b4491664495ba012e900445e961\\\",\\\"success\\\":true,\\\"resultObj\\\":{\\\"content\\\":\\\"参考好价：<br />1.   [Apple 苹果 iPhone 16 手机 粉色 128G 双卡双待](https://cu.manmanbuy.com/discuxiao_562016702.aspx) 3973.51元 2026-05-30 22:49:23 <br />2.   [Apple iPhone 16 手机 深青色 128G 双卡双待](https://cu.manmanbuy.com/discuxiao_561859821.aspx) 4199元 2026-05-29 16:49:22 <br />3.   [Apple 苹果 iPhone 16 手机 双卡双待 白色 128G](https://cu.manmanbuy.com/discuxiao_563836814.aspx) 4198元 2026-06-05 10:23:42 <br />4.   [Apple 苹果 iPhone 16 黑色 128GB](https://cu.manmanbuy.com/discuxiao_563192050.aspx) 3998元(含国补) 2026-06-02 23:32:27 <br />5.   [Apple 苹果 iPhone 16 双卡双待 群青色 128G](https://cu.manmanbuy.com/discuxiao_563784672.aspx) 会员4172.51元不是京东会员的4198 2026-06-05 00:29:38 <br />6.   [Apple 苹果 iPhone 16 Pro 手机 白色钛金属 128G 双卡双待](https://cu.manmanbuy.com/discuxiao_562234756.aspx) 4998元，plus会员 2026-05-31 21:40:11 <br />7.   [Apple/苹果 iPhone 16 手机 双卡双待 群青色 256G](https://cu.manmanbuy.com/discuxiao_563146805.aspx) 4698元 2026-06-02 20:02:12 <br />8.   [【国家补贴】Apple/苹果 iPhone 16 手机](https://cu.manmanbuy.com/discuxiao_563918142.aspx) 4211.65元+12.65元淘金币(含国补) 2026-06-05 12:53:00 <br />9.   [Apple 苹果 iPhone 16 黑色 128G 双卡双待](https://cu.manmanbuy.com/discuxiao_563576607.aspx) 4172.51元 2026-06-04 09:48:19 <br />10.   [Apple 苹果 iPhone 16 手机 双卡双待 白色 128G](https://cu.manmanbuy.com/discuxiao_562173444.aspx) 4173.22元 2026-05-30 17:02:54 \\\",\\\"searchResultList\\\":[{\\\"title\\\":\\\"Apple 苹果 iPhone 16 手机 粉色 128G 双卡双待\\\",\\\"subTitle\\\":\\\"3973.51元\\\",\\\"price\\\":\\\"3973.51元\\\",\\\"img\\\":\\\"https://img14.360buyimg.com/pop/jfs/t1/205572/4/39431/19734/6788af0eF7a28814e/5a8cfc89503d036f.png\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_562016702.aspx\\\",\\\"date\\\":\\\"2026-05-30 22:49:23\\\"},{\\\"title\\\":\\\"Apple iPhone 16 手机 深青色 128G 双卡双待\\\",\\\"subTitle\\\":\\\"4199元\\\",\\\"price\\\":\\\"4199元\\\",\\\"img\\\":\\\"https://img14.360buyimg.com/pop/jfs/t1/265814/13/12569/20042/6788af0eF34e47e9d/8fafd22e8c42b94e.png\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_561859821.aspx\\\",\\\"date\\\":\\\"2026-05-29 16:49:22\\\"},{\\\"title\\\":\\\"Apple 苹果 iPhone 16 手机 双卡双待 白色 128G\\\",\\\"subTitle\\\":\\\"4198元\\\",\\\"price\\\":\\\"4198元\\\",\\\"img\\\":\\\"https://img14.360buyimg.com/pop/jfs/t1/111907/17/46672/16218/6788af0cFd5945180/7560978ad7158f8a.png\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_563836814.aspx\\\",\\\"date\\\":\\\"2026-06-05 10:23:42\\\"},{\\\"title\\\":\\\"Apple 苹果 iPhone 16 黑色 128GB\\\",\\\"subTitle\\\":\\\"3998元(含国补)\\\",\\\"price\\\":\\\"3998元\\\",\\\"img\\\":\\\"https://zhekou-background.manmanbuy.com/image/20260602/e91b9ac682ec45178ab2d51a281e9106.jpg?x-oss-process=image%2Fformat%2Cjpg%2Fresize%2Cw_500%2Fquality%2Cq_80\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_563192050.aspx\\\",\\\"date\\\":\\\"2026-06-02 23:32:27\\\"},{\\\"title\\\":\\\"Apple 苹果 iPhone 16 双卡双待 群青色 128G\\\",\\\"subTitle\\\":\\\"会员4172.51元不是京东会员的4198\\\",\\\"price\\\":\\\"4172.51元\\\",\\\"img\\\":\\\"https://img14.360buyimg.com/pop/jfs/t1/263971/19/12645/20207/6788af0dF4d2514bd/46bc3c025ed1738b.png\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_563784672.aspx\\\",\\\"date\\\":\\\"2026-06-05 00:29:38\\\"},{\\\"title\\\":\\\"Apple 苹果 iPhone 16 Pro 手机 白色钛金属 128G 双卡双待\\\",\\\"subTitle\\\":\\\"4998元，plus会员\\\",\\\"price\\\":\\\"4998元\\\",\\\"img\\\":\\\"https://img14.360buyimg.com/pop/jfs/t1/268230/25/12615/18760/6788aef4F2cab40db/b7b4fbecd8dd72bc.png\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_562234756.aspx\\\",\\\"date\\\":\\\"2026-05-31 21:40:11\\\"},{\\\"title\\\":\\\"Apple/苹果 iPhone 16 手机 双卡双待 群青色 256G\\\",\\\"subTitle\\\":\\\"4698元\\\",\\\"price\\\":\\\"4698元\\\",\\\"img\\\":\\\"https://img.alicdn.com/bao/uploaded/i1/2217587502021/O1CN01G51K0n1QnfWS6eUyV_!!4611686018427382725-2-item_pic.png\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_563146805.aspx\\\",\\\"date\\\":\\\"2026-06-02 20:02:12\\\"},{\\\"title\\\":\\\"【国家补贴】Apple/苹果 iPhone 16 手机\\\",\\\"subTitle\\\":\\\"4211.65元+12.65元淘金币(含国补)\\\",\\\"price\\\":\\\"4211.65元\\\",\\\"img\\\":\\\"https://img.alicdn.com/bao/uploaded/i4/2213124066374/O1CN01sASZTt1wxLf8k8iTc_!!4611686018427382854-0-item_pic.jpg\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_563918142.aspx\\\",\\\"date\\\":\\\"2026-06-05 12:53:00\\\"},{\\\"title\\\":\\\"Apple 苹果 iPhone 16 黑色 128G 双卡双待\\\",\\\"subTitle\\\":\\\"4172.51元\\\",\\\"price\\\":\\\"4172.51元\\\",\\\"img\\\":\\\"https://img14.360buyimg.com/pop/jfs/t1/267469/40/12616/15793/6788af0fFe3d924cc/8281d4653492153d.png\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_563576607.aspx\\\",\\\"date\\\":\\\"2026-06-04 09:48:19\\\"},{\\\"title\\\":\\\"Apple 苹果 iPhone 16 手机 双卡双待 白色 128G\\\",\\\"subTitle\\\":\\\"4173.22元\\\",\\\"price\\\":\\\"4173.22元\\\",\\\"img\\\":\\\"https://img14.360buyimg.com/pop/jfs/t1/111907/17/46672/16218/6788af0cFd5945180/7560978ad7158f8a.png\\\",\\\"gourl\\\":\\\"https://cu.manmanbuy.com/discuxiao_562173444.aspx\\\",\\\"date\\\":\\\"2026-05-30 17:02:54\\\"}]},\\\"data\\\":null,\\\"result\\\":null}\"]"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 0.7,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "node_execute",
+          "description": "执行 Node.js 脚本。支持内联代码和 .js/.ts 文件两种方式。可选安装 npm 依赖。适合数据分析、文件批处理、API 调用、爬虫、文档生成等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Node.js 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .js 或 .ts 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 npm 包名列表（如 [\"axios\", \"lodash\"]），执行前自动 npm install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "searchZheKou",
+          "description": "搜索折扣",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "keyword": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "keyword"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ],
+    "tool_choice": "auto",
+    "thinking": {
+      "type": "disabled"
+    }
+  }
+}

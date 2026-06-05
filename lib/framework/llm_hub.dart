@@ -178,6 +178,7 @@ class LlmClient {
   // ignore: non_constant_identifier_names
   Stream<Map<String, dynamic>> LLMChat(ChatMessage userMessage) async* {
     _cancelled = false;
+    bool doneReceived = false;
 
     // 使用 buildMessages 构建初始消息列表：
     //   [system 提示词] + [当前会话历史] + [当前用户消息]
@@ -286,7 +287,8 @@ class LlmClient {
 
         final done = chunk['done'] ?? '';
         if (done == 'true') {
-          yield {'done': 'true'};
+          doneReceived = true;
+          // 不在这里 yield done — 等工具调用全部处理完后再发
         }
       }
 
@@ -296,6 +298,10 @@ class LlmClient {
           _finalizeNativeToolCalls(nativeToolCallDeltas);
 
       if (_cancelled || parsedCalls.isEmpty) {
+        // 所有工具调用处理完毕，此时才发送 done 信号
+        if (doneReceived) {
+          yield {'done': 'true'};
+        }
         // ========== 记忆捕获 ==========
         // 对话结束，捕获到记忆系统
         if (!_cancelled && responseBuffer.isNotEmpty) {

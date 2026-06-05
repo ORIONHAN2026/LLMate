@@ -113,6 +113,7 @@ class AnthropicProvider extends BaseLlmProvider {
     } catch (e) {
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
     }
+    yield {'done': 'true'};
   }
 
   @override
@@ -141,6 +142,7 @@ class AnthropicProvider extends BaseLlmProvider {
     } catch (e) {
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
     }
+    yield {'done': 'true'};
   }
 
   @override

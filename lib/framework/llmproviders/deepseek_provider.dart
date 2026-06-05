@@ -216,6 +216,8 @@ class DeepSeekProvider extends BaseLlmProvider {
         }
       }
     }
+    // 安全兜底：流自然结束时也发送 done 信号
+    yield {'done': 'true'};
   }
 
   // ── 验证与错误处理 ──

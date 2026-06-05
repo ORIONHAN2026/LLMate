@@ -1,0 +1,39 @@
+{
+  "vendor": {
+    "id": "modelscope",
+    "name": "魔塔社区",
+    "description": "ModelScope 魔塔社区 MCP 服务，需配置 API Key 后使用",
+    "icon": "cube_fill",
+    "color": "#6C4AB6",
+    "requiresAuth": true,
+    "authHint": "魔塔 API Key",
+    "authKeyName": "Authorization",
+    "authTarget": "header"
+  },
+  "items": [
+    {
+      "name": "魔塔NLP模型",
+      "description": "魔塔社区 NLP 模型调用服务，支持文本理解、情感分析、命名实体识别等自然语言处理任务。",
+      "category": "AI助手",
+      "content": "{\"url\":\"https://api.modelscope.cn/mcp/modelscope-nlp\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+    },
+    {
+      "name": "魔塔CV模型",
+      "description": "魔塔社区计算机视觉模型服务，支持图像分类、目标检测、图像分割等任务。",
+      "category": "AI助手",
+      "content": "{\"url\":\"https://api.modelscope.cn/mcp/modelscope-cv\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+    },
+    {
+      "name": "魔塔语音模型",
+      "description": "魔塔社区语音模型服务，支持语音识别、语音合成、声纹识别等音频处理任务。",
+      "category": "AI助手",
+      "content": "{\"url\":\"https://api.modelscope.cn/mcp/modelscope-asr\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+    },
+    {
+      "name": "魔塔多模态模型",
+      "description": "魔塔社区多模态大模型服务，支持图文理解、视觉问答、图像描述等多模态任务。",
+      "category": "AI助手",
+      "content": "{\"url\":\"https://api.modelscope.cn/mcp/modelscope-multimodal\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+    }
+  ]
+}

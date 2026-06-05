@@ -185,6 +185,12 @@ abstract class BaseLlmProvider {
       'content': CommonSystemPrompts.noWebSearch,
     });
 
+    // 1c2. 禁止将内部系统工具视为用户可见功能
+    messages.add({
+      'role': 'system',
+      'content': CommonSystemPrompts.hideInternalTools,
+    });
+
     // 1d. 技能提示词（会话级 + 模型绑定技能）
     if (session?.skill != null) {
       final sp = SkillService.buildSkillPrompt(session!.skill);

@@ -1,0 +1,39 @@
+{
+  "vendor": {
+    "id": "tencent",
+    "name": "腾讯云",
+    "description": "腾讯云平台 MCP 服务，需配置 API Key 后使用",
+    "icon": "cloud_fill",
+    "color": "#0052D9",
+    "requiresAuth": true,
+    "authHint": "腾讯云 API Key",
+    "authKeyName": "Authorization",
+    "authTarget": "header"
+  },
+  "items": [
+    {
+      "name": "腾讯云语音识别",
+      "description": "腾讯云语音识别 MCP 服务，支持实时语音识别、录音文件识别，覆盖多种语言和方言。",
+      "category": "语音服务",
+      "content": "{\"url\":\"https://mcp.tencentcloudapi.com/tencent-asr\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+    },
+    {
+      "name": "腾讯云智能体开发平台",
+      "description": "腾讯云智能体开发平台（LKE）MCP 服务，支持知识库问答、智能对话、文档解析等能力。",
+      "category": "AI助手",
+      "content": "{\"url\":\"https://mcp.tencentcloudapi.com/tencent-lke\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+    },
+    {
+      "name": "腾讯云OCR识别",
+      "description": "腾讯云 OCR 文字识别 MCP 服务，支持身份证、银行卡、营业执照、票据等各类卡证识别。",
+      "category": "开发工具",
+      "content": "{\"url\":\"https://mcp.tencentcloudapi.com/tencent-ocr\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+    },
+    {
+      "name": "腾讯云翻译",
+      "description": "腾讯云机器翻译 MCP 服务，支持文本翻译、语种识别，覆盖 200+ 语言方向。",
+      "category": "AI助手",
+      "content": "{\"url\":\"https://mcp.tencentcloudapi.com/tencent-tmt\",\"type\":\"http\",\"headers\":{\"Authorization\":\"Bearer ${API_KEY}\"}}"
+    }
+  ]
+}

@@ -457,7 +457,14 @@ ${toolSummary.toString()}
   ///
   /// 使用 [config.timeout] 作为超时时间，未设置则默认 30 秒。
   /// 超时时抛出 [TimeoutException]。
-  static Future<McpConnectionInfo> connectAndGetInfo(Mcp config) async {
+  ///
+  /// [preDefinedName] 和 [preDefinedDescription]：当已明确知道名称和描述时，
+  /// 传入后可跳过 LLM 总结步骤，直接使用预定义值。
+  static Future<McpConnectionInfo> connectAndGetInfo(
+    Mcp config, {
+    String? preDefinedName,
+    String? preDefinedDescription,
+  }) async {
     final timeoutSec = config.timeout ?? _defaultConnectionTimeoutSeconds;
     debugPrint('🔗 ====== 连接 MCP 服务器并获取信息 ======');
     debugPrint('   配置: url=${config.url}, command=${config.command}');
@@ -523,10 +530,10 @@ ${toolSummary.toString()}
             );
           }).toList();
 
-      // 用 LLM 总结生成更好的名称和描述
-      String finalName = serverName;
-      String? finalDescription = serverDescription;
-      if (toolInfos.isNotEmpty) {
+      // 用 LLM 总结生成更好的名称和描述（如果没有预定义值）
+      String finalName = preDefinedName ?? serverName;
+      String? finalDescription = preDefinedDescription ?? serverDescription;
+      if (preDefinedName == null && toolInfos.isNotEmpty) {
         final summary = await _summarizeMcpWithLLM(
           serverName: serverName,
           tools: toolInfos,

@@ -82,11 +82,13 @@ class _McpManagementPageState extends State<McpManagementPage> {
           IconButton(
             icon: const Icon(CupertinoIcons.add_circled, size: 22),
             tooltip: '添加 MCP 服务',
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const McpMarketplacePage()),
-                ),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const McpMarketplacePage()),
+              );
+              _loadServices();
+            },
           ),
           const SizedBox(width: 4),
         ],

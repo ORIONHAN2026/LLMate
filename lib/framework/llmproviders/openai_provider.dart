@@ -229,31 +229,52 @@ class OpenAiProvider extends BaseLlmProvider {
   }
 
   String handleApiError(dynamic error) {
-    final es = error.toString();
-    if (es.contains(
-      'Dio can\'t establish a new connection after it was closed',
-    ))
-      return '连接错误，请重试发送消息';
-    if (es.contains('DioException') || es.contains('DioError')) {
-      // HTTP 状态码优先判断
-      if (es.contains('401') || es.contains('Unauthorized'))
-        return 'API 密钥无效，请检查密钥配置';
-      if (es.contains('403') || es.contains('Forbidden'))
-        return 'API 访问被拒绝，请检查权限设置';
-      if (es.contains('404') || es.contains('Not Found'))
-        return 'API 地址不存在，请检查 URL 配置';
-      if (es.contains('429') || es.contains('Too Many Requests'))
-        return 'API 调用频率过高，请稍后重试';
-      if (es.contains('500') || es.contains('Internal Server Error'))
-        return 'API 服务器内部错误，请稍后重试';
-      // 网络错误
-      if (es.contains('CONNECT_TIMEOUT')) return '网络连接超时，请检查网络设置';
-      if (es.contains('RECEIVE_TIMEOUT')) return 'API 响应超时，请稍后重试';
-      if (es.contains('CONNECTION_ERROR') || es.contains('Connection refused'))
-        return '网络连接被拒绝，请检查网络连接和API地址';
-      if (es.contains('Network is unreachable')) return '网络不可达，请检查网络连接';
-      return '网络连接错误：请检查网络设置和API配置';
+    // 优先从 DioException 的响应体中提取服务器错误信息
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      final responseData = error.response?.data;
+
+      String? serverMessage;
+      try {
+        if (responseData is String && responseData.isNotEmpty) {
+          final body = jsonDecode(responseData) as Map<String, dynamic>;
+          serverMessage = body['error']?['message'] as String?;
+        } else if (responseData is Map) {
+          serverMessage = responseData['error']?['message'] as String?;
+        }
+      } catch (_) {}
+      serverMessage ??= error.message;
+
+      switch (statusCode) {
+        case 401:
+          return 'API 密钥无效，请检查密钥配置';
+        case 402:
+          return '402错误：当前模型的服务异常，请去模型提供商查看是否存在欠费情况';
+        case 403:
+          return serverMessage ?? 'API 访问被拒绝，请检查权限设置';
+        case 404:
+          return 'API 地址不存在，请检查 URL 配置';
+        case 429:
+          return 'API 调用频率过高，请稍后重试';
+        case 500:
+        case 502:
+        case 503:
+          return 'API 服务器内部错误，请稍后重试';
+        default:
+          if (statusCode != null && statusCode >= 400) {
+            return serverMessage ?? 'API 请求失败 ($statusCode)';
+          }
+      }
     }
+
+    final es = error.toString();
+    if (es.contains('Dio can\'t establish a new connection after it was closed'))
+      return '连接错误，请重试发送消息';
+    if (es.contains('CONNECT_TIMEOUT')) return '网络连接超时，请检查网络设置';
+    if (es.contains('RECEIVE_TIMEOUT')) return 'API 响应超时，请稍后重试';
+    if (es.contains('CONNECTION_ERROR') || es.contains('Connection refused'))
+      return '网络连接被拒绝，请检查网络连接和API地址';
+    if (es.contains('Network is unreachable')) return '网络不可达，请检查网络连接';
     if (es.contains('SocketException') || es.contains('HandshakeException'))
       return '网络连接失败，请检查网络设置和证书配置';
     if (es.contains('FormatException') || es.contains('Invalid JSON'))

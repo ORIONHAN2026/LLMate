@@ -8,6 +8,7 @@ import 'controllers/theme_controller.dart';
 import 'controllers/mcp_controller.dart';
 import 'pages/home.dart';
 import 'pages/loading_page.dart';
+import 'services/scheduled_task_service.dart';
 
 import 'models/bigmodel/chat_model.dart';
 import 'storage/isar_service.dart';
@@ -242,6 +243,9 @@ class _AppInitializerState extends State<AppInitializer> {
 
       // 加载会话数据
       await sessionController.loadAll();
+
+      // 启动定时任务调度器
+      ScheduledTaskService().start();
 
       // 确保加载页面至少显示500ms，避免闪烁
       await Future.delayed(const Duration(milliseconds: 500));

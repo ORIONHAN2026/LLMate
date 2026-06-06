@@ -6,6 +6,7 @@ import 'package:chathub/models/chat/skill.dart';
 import 'chat_message.dart';
 import 'chat_attachment.dart';
 import 'chat_setting.dart';
+import 'scheduled_task.dart';
 
 // 聊天会话类
 class ChatSession {
@@ -55,6 +56,7 @@ class ChatSession {
   final ChatModel? chatModel;
   final List<ChatMessage> messages;
   final List<ChatCommand> sessionQuickCommands;
+  final ScheduledTask? scheduledTask;
 
   ChatSession({
     required this.sessionId,
@@ -79,6 +81,7 @@ class ChatSession {
     this.deepThink = false,
     this.connectPrompt,
     this.sessionQuickCommands = const [],
+    this.scheduledTask,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcpId = mcpId ?? mcp?.mcpId,
        skillId = skillId ?? skill?.skillId;
@@ -140,6 +143,8 @@ class ChatSession {
     String? connectPrompt,
     bool clearConnectPrompt = false,
     List<ChatCommand>? sessionQuickCommands,
+    ScheduledTask? scheduledTask,
+    bool clearScheduledTask = false,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -208,6 +213,8 @@ class ChatSession {
       connectPrompt:
           clearConnectPrompt ? null : (connectPrompt ?? this.connectPrompt),
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
+      scheduledTask:
+          clearScheduledTask ? null : (scheduledTask ?? this.scheduledTask),
     );
   }
 
@@ -258,6 +265,10 @@ class ChatSession {
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
               .toList() ??
           [],
+      scheduledTask:
+          json['scheduledTask'] is Map<String, dynamic>
+              ? ScheduledTask.fromJson(json['scheduledTask'])
+              : null,
       modelId: modelId,
       mcpId: mcpId,
       skillId: skillId,
@@ -287,6 +298,7 @@ class ChatSession {
       if (connectPrompt != null) 'connectPrompt': connectPrompt,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
+      if (scheduledTask != null) 'scheduledTask': scheduledTask!.toJson(),
       if (modelId != null) 'modelId': modelId,
       if (mcpId != null) 'mcpId': mcpId,
       if (skillId != null) 'skillId': skillId,

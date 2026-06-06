@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:chathub/models/chat/chat_message.dart';
+import 'package:chathub/models/chat/scheduled_task.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -404,6 +405,10 @@ class SessionController extends GetxController {
                 session.sessionQuickCommands.map((c) => c.toJson()).toList(),
               )
               : null
+      ..scheduledTasksJson =
+          session.scheduledTask != null
+              ? jsonEncode(session.scheduledTask!.toJson())
+              : null
       ..memoryRounds = session.memoryRounds
       ..deepThink = session.deepThink
       ..isCurrent = false; // 由调用方设置
@@ -439,6 +444,10 @@ class SessionController extends GetxController {
             ? jsonEncode(
               session.sessionQuickCommands.map((c) => c.toJson()).toList(),
             )
+            : null;
+    entity.scheduledTasksJson =
+        session.scheduledTask != null
+            ? jsonEncode(session.scheduledTask!.toJson())
             : null;
     entity.memoryRounds = session.memoryRounds;
     entity.deepThink = session.deepThink;
@@ -511,6 +520,19 @@ class SessionController extends GetxController {
 
     // mcp / skill 在 setCurrentSession 中动态解析（此时 MCP/Skill 可能尚未加载）
 
+    // 解析定时任务（兼容旧格式列表 → 取第一条）
+    ScheduledTask? scheduledTask;
+    if (entity.scheduledTasksJson != null && entity.scheduledTasksJson!.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(entity.scheduledTasksJson!);
+        if (decoded is List && decoded.isNotEmpty) {
+          scheduledTask = ScheduledTask.fromJson(decoded.first as Map<String, dynamic>);
+        } else if (decoded is Map<String, dynamic>) {
+          scheduledTask = ScheduledTask.fromJson(decoded);
+        }
+      } catch (_) {}
+    }
+
     return ChatSession(
       sessionId: entity.sessionId,
       name: entity.name,
@@ -529,6 +551,7 @@ class SessionController extends GetxController {
       chatModel: chatModel,
       memoryRounds: entity.memoryRounds,
       deepThink: entity.deepThink,
+      scheduledTask: scheduledTask,
     );
   }
 }

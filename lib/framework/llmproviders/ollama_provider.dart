@@ -323,6 +323,25 @@ class OllamaProvider extends BaseLlmProvider {
   }
 
   String handleApiError(dynamic error) {
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      final responseData = error.response?.data;
+
+      String? serverMessage;
+      try {
+        if (responseData is String && responseData.isNotEmpty) {
+          final body = jsonDecode(responseData) as Map<String, dynamic>;
+          serverMessage = body['error']?['message'] as String?;
+        } else if (responseData is Map) {
+          serverMessage = responseData['error']?['message'] as String?;
+        }
+      } catch (_) {}
+      serverMessage ??= error.message;
+
+      if (statusCode != null && statusCode >= 400) {
+        return serverMessage ?? 'Ollama API 请求失败 ($statusCode)';
+      }
+    }
     final es = error.toString();
     if (es.contains('Connection refused')) return '无法连接到 Ollama 服务，请确认服务已启动';
     if (es.contains('SocketException')) return '网络连接失败，请检查 Ollama 服务';

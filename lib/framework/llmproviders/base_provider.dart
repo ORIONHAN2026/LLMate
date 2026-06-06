@@ -262,7 +262,14 @@ abstract class BaseLlmProvider {
     };
 
     if (session != null) {
-      final tools = buildTools(session);
+      var tools = buildTools(session);
+
+      // 根据用户输入分词，过滤不相关的工具
+      // final userText = _extractUserText(userMessage, msgs);
+      // if (userText.isNotEmpty && tools.length > 1) {
+      //   tools = _filterToolsByUserInput(userText, tools);
+      // }
+
       if (tools.isNotEmpty) {
         data['tools'] = tools;
         data['tool_choice'] = 'auto';
@@ -372,6 +379,65 @@ abstract class BaseLlmProvider {
     List<Map<String, dynamic>> messages,
   ) {
     return messages;
+  }
+
+  // ── 工具过滤 ──
+
+  /// 从用户消息或消息列表中提取用户输入文本
+  static String _extractUserText(
+    ChatMessage? userMessage,
+    List<Map<String, dynamic>> messages,
+  ) {
+    if (userMessage != null && userMessage.content.isNotEmpty) {
+      return userMessage.content;
+    }
+    // 从消息列表中找最后一条用户消息
+    for (int i = messages.length - 1; i >= 0; i--) {
+      if (messages[i]['role'] == 'user') {
+        final c = messages[i]['content'];
+        if (c is String && c.isNotEmpty) return c;
+        if (c is List) {
+          // 多模态内容，取最后一条 text 部分
+          for (int j = c.length - 1; j >= 0; j--) {
+            if (c[j] is Map && c[j]['type'] == 'text') {
+              return c[j]['text']?.toString() ?? '';
+            }
+          }
+        }
+      }
+    }
+    return '';
+  }
+
+  /// 对用户输入分词，只保留描述/名称中包含至少一个词条的工具
+  static List<Map<String, dynamic>> _filterToolsByUserInput(
+    String userInput,
+    List<Map<String, dynamic>> tools,
+  ) {
+    if (userInput.isEmpty || tools.length <= 1) return tools;
+
+    // 分词：中文字符单独成词，连续字母数字作为一个词
+    final tokens = <String>{};
+    // 连续字母数字（英文单词、数字）
+    for (final m in RegExp(r'[a-zA-Z0-9]+').allMatches(userInput)) {
+      final w = m.group(0)!.toLowerCase();
+      if (w.length >= 2) tokens.add(w);
+    }
+    // 中文字符逐个提取
+    for (final m in RegExp(r'[\u4e00-\u9fff]').allMatches(userInput)) {
+      tokens.add(m.group(0)!);
+    }
+
+    if (tokens.isEmpty) return tools;
+
+    return tools.where((tool) {
+      final fn = tool['function'] as Map<String, dynamic>?;
+      if (fn == null) return true;
+      final name = (fn['name'] ?? '').toString().toLowerCase();
+      final desc = (fn['description'] ?? '').toString().toLowerCase();
+      final searchText = '$name $desc';
+      return tokens.any((token) => searchText.contains(token));
+    }).toList();
   }
 
   // ── 历史消息处理 ──

@@ -197,6 +197,36 @@ class AnthropicProvider extends BaseLlmProvider {
   }
 
   String handleApiError(dynamic error) {
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      final responseData = error.response?.data;
+
+      String? serverMessage;
+      try {
+        if (responseData is String && responseData.isNotEmpty) {
+          final body = jsonDecode(responseData) as Map<String, dynamic>;
+          serverMessage = body['error']?['message'] as String?;
+        } else if (responseData is Map) {
+          serverMessage = responseData['error']?['message'] as String?;
+        }
+      } catch (_) {}
+      serverMessage ??= error.message;
+
+      switch (statusCode) {
+        case 401:
+          return 'API 密钥无效';
+        case 402:
+          return '402错误：当前模型的服务异常，请去模型提供商查看是否存在欠费情况';
+        case 429:
+          return 'API 调用频率过高';
+        case 500:
+          return 'API 服务器内部错误';
+        default:
+          if (statusCode != null && statusCode >= 400) {
+            return serverMessage ?? 'API 请求失败 ($statusCode)';
+          }
+      }
+    }
     final es = error.toString();
     if (es.contains('401') || es.contains('Unauthorized')) return 'API 密钥无效';
     if (es.contains('429') || es.contains('Too Many Requests')) return 'API 调用频率过高';

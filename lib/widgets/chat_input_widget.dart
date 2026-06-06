@@ -25,6 +25,7 @@ import '../services/image_tool_service.dart';
 import '../services/file_tool_service.dart';
 import '../utils/snackbar_utils.dart';
 import 'attachment_list_widget.dart';
+import 'scheduled_task_dialog.dart';
 
 /// 聊天输入框组件
 ///
@@ -1113,6 +1114,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       const SizedBox(width: 8),
                       _buildMemoryToggle(),
                       const SizedBox(width: 8),
+                      _buildScheduledTaskToggle(),
+                      const SizedBox(width: 8),
                       _buildWorkDirectoryToggle(),
                       const SizedBox(width: 8),
                       _buildCleanHistoryToggle(),
@@ -1437,6 +1440,58 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   color: Theme.of(
                     context,
                   ).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建定时任务按钮
+  Widget _buildScheduledTaskToggle() {
+    final currentSession = sessionController.currentSession.value;
+    final task = currentSession?.scheduledTask;
+    final hasTask = task != null;
+    final label = hasTask ? task.humanReadable : '定时任务';
+
+    return Tooltip(
+      message: hasTask ? '定时: ${task.humanReadable}' : '设置定时消息',
+      child: GestureDetector(
+        onTap: _isSending ? null : () => ScheduledTaskDialog.show(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                hasTask ? Icons.schedule : Icons.schedule_outlined,
+                size: 13,
+                color:
+                    _isSending
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        : hasTask
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+              const SizedBox(width: 4),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 80),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: hasTask ? FontWeight.w700 : FontWeight.w500,
+                    color:
+                        _isSending
+                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                            : hasTask
+                            ? Theme.of(context).colorScheme.onSurface
+                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
                 ),
               ),
             ],

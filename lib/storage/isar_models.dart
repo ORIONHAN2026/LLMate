@@ -62,6 +62,7 @@ class IsarChatSession {
   @ignore late String? skillJson;
   late String? attachmentsJson;
   late String? sessionQuickCommandsJson;
+  late String? scheduledTasksJson;
 
   /// 记忆轮数（0 = 无记忆）
   late int memoryRounds;

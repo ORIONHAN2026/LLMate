@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/pages/modelssetting.dart';
-import 'package:chathub/pages/skill_management_page.dart';
 import 'package:chathub/pages/mcp_management_page.dart';
 import 'package:chathub/widgets/model_selector.dart';
 import 'package:flutter/material.dart';
@@ -526,7 +525,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('连接器管理(MCP)', style: TextStyle(fontSize: 12)),
+              const Text('工具管理(MCP)', style: TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -536,33 +535,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                   context,
                   MaterialPageRoute(
                     builder: (context) => const McpManagementPage(),
-                  ),
-                );
-              }
-            });
-          },
-        ),
-        // 技能管理
-        PopupMenuItem(
-          height: 48,
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.wand_stars,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
-              const Text('技能管理(SKILL)', style: TextStyle(fontSize: 12)),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () async {
-              if (mounted) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SkillManagementPage(),
                   ),
                 );
               }

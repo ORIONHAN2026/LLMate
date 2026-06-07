@@ -1110,8 +1110,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       _buildConnectPromptToggle(),
                       const SizedBox(width: 8),
 
-                      _buildSkillToggle(),
-                      const SizedBox(width: 8),
+                      // _buildSkillToggle(),
+                      // const SizedBox(width: 8),
                       _buildMemoryToggle(),
                       const SizedBox(width: 8),
                       _buildScheduledTaskToggle(),
@@ -1655,10 +1655,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
     final displayText =
-        hasSelectedService ? mcp.name : (hasMcpServices ? '选连接器' : '无连接器');
+        hasSelectedService ? mcp.name : (hasMcpServices ? '选MCP工具' : '无MCP工具');
 
     return Tooltip(
-      message: hasMcpServices ? '点击选择连接器(MCP)' : '当前模型未配置连接器(MCP)',
+      message: hasSelectedService ? '查看MCP工具详情' : (hasMcpServices ? '点击选择MCP工具' : '当前模型未配置MCP工具'),
       child: GestureDetector(
         onTap:
             hasMcpServices && !_isSending
@@ -1710,7 +1710,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建连接器与技能关系描述按钮
+  /// 构建工具工作逻辑描述按钮
   Widget _buildConnectPromptToggle() {
     final currentSession = sessionController.currentSession.value;
     final hasMcpOrSkill =
@@ -1721,8 +1721,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return Tooltip(
       message:
           hasConnectPrompt
-              ? '连接器与技能关系描述: ${currentSession.connectPrompt!.length > 20 ? '${currentSession.connectPrompt!.substring(0, 20)}...' : currentSession.connectPrompt}'
-              : (hasMcpOrSkill ? '点击设置连接器与技能关系描述' : '需要先选择连接器或技能'),
+              ? '工具工作逻辑描述: ${currentSession.connectPrompt!.length > 20 ? '${currentSession.connectPrompt!.substring(0, 20)}...' : currentSession.connectPrompt}'
+              : (hasMcpOrSkill ? '点击设计工具的工作逻辑描述' : '需要先选择MCP工具或技能'),
       child: GestureDetector(
         onTap:
             hasMcpOrSkill && !_isSending
@@ -1770,7 +1770,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 显示连接器与技能关系描述输入弹窗
+  /// 显示工具工作逻辑描述输入弹窗
   Future<void> _showConnectPromptDialog() async {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
@@ -1826,7 +1826,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '连接器和技能的关系描述',
+                              '工具的工作逻辑描述',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -1881,7 +1881,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                           decoration: InputDecoration(
-                            hintText: '请输入连接器和技能之间的使用关系描述...',
+                            hintText: '请输入工具的工作逻辑描述...',
                             hintStyle: TextStyle(
                               fontSize: 14,
                               color: Theme.of(
@@ -1989,7 +1989,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     });
   }
 
-  /// 应用连接器与技能关系描述
+  /// 应用工具工作逻辑描述
   void _applyConnectPrompt(String prompt) {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
@@ -3631,7 +3631,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               runSpacing: 4,
                               children: tools.take(50).map((t) {
                                 final label = t.description.isNotEmpty
-                                    ? '${t.name} · ${t.description}'
+                                    ? '${t.name}: ${t.description}'
                                     : t.name;
                                 return Container(
                                   padding: const EdgeInsets.symmetric(
@@ -3695,15 +3695,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1E1E1E),
+                                color: const Color(0xFFF5F5F5),
                                 borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFE0E0E0)),
                               ),
                               child: Text(
                                 skill.prompt,
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontFamily: 'monospace',
-                                  color: Color(0xFFD4D4D4),
+                                  color: Color(0xFF333333),
                                   height: 1.5,
                                 ),
                               ),
@@ -3712,31 +3713,82 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           ],
 
                           // JSON 配置
-                          Text(
-                            'JSON 数据',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E1E),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              const JsonEncoder.withIndent('  ')
-                                  .convert(skill.toJson()),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontFamily: 'monospace',
-                                color: Color(0xFFD4D4D4),
-                                height: 1.5,
-                              ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 代码块标题栏
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  color: const Color(0xFFF0F0F0),
+                                  child: Row(
+                                    children: [
+                                      const Text(
+                                        '{ }',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontFamily: 'monospace',
+                                          color: Color(0xFF999999),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Text(
+                                        'JSON',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontFamily: 'monospace',
+                                          color: Color(0xFF999999),
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      GestureDetector(
+                                        onTap: () {
+                                          Clipboard.setData(ClipboardData(
+                                            text: const JsonEncoder.withIndent('  ')
+                                                .convert(skill.toJson()),
+                                          ));
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('JSON 已复制'),
+                                              duration: Duration(seconds: 1),
+                                            ),
+                                          );
+                                        },
+                                        child: const Icon(
+                                          CupertinoIcons.doc_on_clipboard,
+                                          size: 12,
+                                          color: Color(0xFF999999),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // 代码内容
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  color: const Color(0xFFF5F5F5),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Text(
+                                      const JsonEncoder.withIndent('  ')
+                                          .convert(skill.toJson()),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontFamily: 'monospace',
+                                        color: Color(0xFF333333),
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -3953,7 +4005,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   tools.take(50).map((t) {
                                     final label =
                                         t.description.isNotEmpty
-                                            ? '${t.name} · ${t.description}'
+                                            ? '${t.name}: ${t.description}'
                                             : t.name;
                                     return Container(
                                       padding: const EdgeInsets.symmetric(
@@ -4055,31 +4107,82 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           ],
 
                           // JSON 配置
-                          Text(
-                            'JSON 配置',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E1E),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              const JsonEncoder.withIndent('  ')
-                                  .convert(mutableService.toJson()),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontFamily: 'monospace',
-                                color: Color(0xFFD4D4D4),
-                                height: 1.5,
-                              ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 代码块标题栏
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  color: const Color(0xFFF0F0F0),
+                                  child: Row(
+                                    children: [
+                                      const Text(
+                                        '{ }',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontFamily: 'monospace',
+                                          color: Color(0xFF999999),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Text(
+                                        'JSON',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontFamily: 'monospace',
+                                          color: Color(0xFF999999),
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      GestureDetector(
+                                        onTap: () {
+                                          Clipboard.setData(ClipboardData(
+                                            text: const JsonEncoder.withIndent('  ')
+                                                .convert(mutableService.toJson()),
+                                          ));
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('JSON 已复制'),
+                                              duration: Duration(seconds: 1),
+                                            ),
+                                          );
+                                        },
+                                        child: const Icon(
+                                          CupertinoIcons.doc_on_clipboard,
+                                          size: 12,
+                                          color: Color(0xFF999999),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // 代码内容
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  color: const Color(0xFFF5F5F5),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Text(
+                                      const JsonEncoder.withIndent('  ')
+                                          .convert(mutableService.toJson()),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontFamily: 'monospace',
+                                        color: Color(0xFF333333),
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 24),

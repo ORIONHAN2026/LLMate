@@ -3156,7 +3156,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 调用API生成流式响应
       String accumulatedContent = '';
       String accumulatedThink = '';
-      String accumulatedTool = '';
       final List<ContentBlock> blocks = [];
 
       // 直接使用LLM Hub框架
@@ -3237,7 +3236,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             toolcall.isNotEmpty) {
           accumulatedContent += contentChunk;
           accumulatedThink += effectiveThinkChunk;
-          accumulatedTool += toolcall;
 
           // 按顺序构建内容块（toolcall 不再混入 think）
           void appendBlock(ContentBlockType type, String text) {

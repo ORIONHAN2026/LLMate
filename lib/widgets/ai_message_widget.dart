@@ -853,7 +853,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       // 调用API生成流式响应
       String accumulatedContent = '';
       String accumulatedThink = ''; // 累积思考内容
-      String accumulatedTool = ''; // 累积工具执行内容
       final List<ContentBlock> blocks = [];
 
       // 使用 LLM Hub 创建客户端
@@ -906,11 +905,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
-
-        // 实时累积工具调用内容
-        if (toolcall.isNotEmpty) {
-          accumulatedTool += toolcall;
-        }
 
         // 按顺序构建内容块
         void appendBlock(ContentBlockType type, String text) {

@@ -7,6 +7,7 @@ import 'chat_message.dart';
 import 'chat_attachment.dart';
 import 'chat_setting.dart';
 import 'scheduled_task.dart';
+import 'memory_turn.dart';
 
 // 聊天会话类
 class ChatSession {
@@ -40,6 +41,17 @@ class ChatSession {
 
   /// 连接器和技能的关联关系描述提示词
   final String? connectPrompt;
+
+  // === 记忆压缩 ===
+
+  /// 最近对话记忆（user + assistant 轮次）
+  final List<MemoryTurn> memory;
+
+  /// 压缩后的记忆摘要（由 LLM 生成）
+  final String? compressedMemory;
+
+  /// 触发记忆压缩的轮数阈值（默认 20）
+  final int memoryCompressThreshold;
 
   // ============================
 
@@ -82,6 +94,9 @@ class ChatSession {
     this.connectPrompt,
     this.sessionQuickCommands = const [],
     this.scheduledTask,
+    this.memory = const [],
+    this.compressedMemory,
+    this.memoryCompressThreshold = 20,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcpId = mcpId ?? mcp?.mcpId,
        skillId = skillId ?? skill?.skillId;
@@ -145,6 +160,11 @@ class ChatSession {
     List<ChatCommand>? sessionQuickCommands,
     ScheduledTask? scheduledTask,
     bool clearScheduledTask = false,
+    List<MemoryTurn>? memory,
+    bool clearMemory = false,
+    String? compressedMemory,
+    bool clearCompressedMemory = false,
+    int? memoryCompressThreshold,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -215,6 +235,10 @@ class ChatSession {
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
       scheduledTask:
           clearScheduledTask ? null : (scheduledTask ?? this.scheduledTask),
+      memory: clearMemory ? [] : (memory ?? this.memory),
+      compressedMemory:
+          clearCompressedMemory ? null : (compressedMemory ?? this.compressedMemory),
+      memoryCompressThreshold: memoryCompressThreshold ?? this.memoryCompressThreshold,
     );
   }
 
@@ -269,6 +293,13 @@ class ChatSession {
           json['scheduledTask'] is Map<String, dynamic>
               ? ScheduledTask.fromJson(json['scheduledTask'])
               : null,
+      memory:
+          (json['memory'] as List<dynamic>?)
+              ?.map((t) => MemoryTurn.fromJson(t as Map<String, dynamic>))
+              .toList() ??
+          [],
+      compressedMemory: json['compressedMemory'] as String?,
+      memoryCompressThreshold: json['memoryCompressThreshold'] as int? ?? 20,
       modelId: modelId,
       mcpId: mcpId,
       skillId: skillId,
@@ -299,6 +330,9 @@ class ChatSession {
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
       if (scheduledTask != null) 'scheduledTask': scheduledTask!.toJson(),
+      'memory': memory.map((t) => t.toJson()).toList(),
+      if (compressedMemory != null) 'compressedMemory': compressedMemory,
+      'memoryCompressThreshold': memoryCompressThreshold,
       if (modelId != null) 'modelId': modelId,
       if (mcpId != null) 'mcpId': mcpId,
       if (skillId != null) 'skillId': skillId,

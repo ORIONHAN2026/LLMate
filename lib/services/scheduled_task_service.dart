@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../controllers/session_controller.dart';
@@ -111,6 +112,21 @@ class ScheduledTaskService {
 
       final responseStream = client.LLMChat(userMessage);
       await for (final chunkMap in responseStream) {
+        // 处理记忆更新
+        final memoryUpdatedJson = chunkMap['memory_updated'];
+        if (memoryUpdatedJson is String && memoryUpdatedJson.isNotEmpty) {
+          try {
+            final updated = ChatSession.fromJson(
+              jsonDecode(memoryUpdatedJson) as Map<String, dynamic>,
+            );
+            updatedSession = updatedSession.copyWith(
+              memory: updated.memory,
+              compressedMemory: updated.compressedMemory,
+            );
+            _sessionController.updateSession(updatedSession);
+          } catch (_) {}
+        }
+
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';
 

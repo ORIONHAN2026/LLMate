@@ -1097,10 +1097,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // 左侧功能按钮
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
+                  // 左侧功能按钮（可横向滚动）
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
                       _buildInputAttachToggle(),
                       const SizedBox(width: 8),
                       _buildDeepThinkToggle(),
@@ -1110,8 +1113,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       _buildConnectPromptToggle(),
                       const SizedBox(width: 8),
 
-                      // _buildSkillToggle(),
-                      // const SizedBox(width: 8),
+                      _buildSkillToggle(),
+                      const SizedBox(width: 8),
                       _buildMemoryToggle(),
                       const SizedBox(width: 8),
                       _buildScheduledTaskToggle(),
@@ -1125,7 +1128,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       //   color: Theme.of(context).dividerColor,
                       //   margin: const EdgeInsets.symmetric(horizontal: 2),
                       // ),
-                    ],
+                      ],
+                    ),
+                  ),
                   ),
                   // 右侧发送/停止按钮
                   Container(
@@ -3200,6 +3205,23 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           updateSession = updateSession.copyWith(isSending: false);
           sessionController.updateSession(updateSession);
           setState(() {});
+        }
+
+        // 处理记忆更新
+        final memoryUpdatedJson = chunkMap['memory_updated'];
+        if (memoryUpdatedJson is String && memoryUpdatedJson.isNotEmpty) {
+          try {
+            final updated = ChatSession.fromJson(
+              jsonDecode(memoryUpdatedJson) as Map<String, dynamic>,
+            );
+            // 合并 original sessionId/modelId 等信息
+            final merged = updateSession.copyWith(
+              memory: updated.memory,
+              compressedMemory: updated.compressedMemory,
+            );
+            updateSession = merged;
+            sessionController.updateSession(merged);
+          } catch (_) {}
         }
 
         if (contentChunk.isNotEmpty ||

@@ -210,14 +210,6 @@ abstract class BaseLlmProvider {
         messages.add({'role': 'system', 'content': sp});
       }
     }
-    if (m?.skills != null) {
-      for (final skill in m!.skills!) {
-        final sp = SkillService.buildSkillPrompt(skill);
-        if (sp.isNotEmpty) {
-          messages.add({'role': 'system', 'content': sp});
-        }
-      }
-    }
 
     // 1e. 深度思考模式
     if (_thinkEnabled) {
@@ -235,6 +227,14 @@ abstract class BaseLlmProvider {
       });
     }
 
+    // 1g. 记忆上下文（压缩记忆 + 最近记忆）
+    if (session != null) {
+      final memoryCtx = _buildMemoryContext(session);
+      if (memoryCtx.isNotEmpty) {
+        messages.add({'role': 'system', 'content': memoryCtx});
+      }
+    }
+
     // ── 2. 历史消息（滑动窗口，仅保留 user + assistant） ──
     if (session != null && session.messages.isNotEmpty) {
       _appendHistoryMessages(messages, session, userMessage);
@@ -248,6 +248,30 @@ abstract class BaseLlmProvider {
     messages = _applyModelOverrides(messages);
 
     return messages;
+  }
+
+  /// 构建记忆上下文，合并压缩记忆和最近记忆，注入系统提示词
+  static String _buildMemoryContext(ChatSession session) {
+    final buf = StringBuffer();
+    var hasContent = false;
+
+    if (session.compressedMemory != null &&
+        session.compressedMemory!.isNotEmpty) {
+      buf.writeln('## 📝 对话历史记忆（压缩摘要）');
+      buf.writeln(session.compressedMemory);
+      hasContent = true;
+    }
+
+    if (session.memory.isNotEmpty) {
+      if (hasContent) buf.writeln();
+      buf.writeln('## 💬 最近对话记录');
+      for (final turn in session.memory) {
+        final label = turn.role == 'user' ? '👤 用户' : '🤖 助手';
+        buf.writeln('$label: ${turn.content}');
+      }
+    }
+
+    return buf.toString();
   }
 
   /// 构建 OpenAI 兼容的请求体

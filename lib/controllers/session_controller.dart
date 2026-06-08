@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:chathub/models/chat/chat_message.dart';
 import 'package:chathub/models/chat/scheduled_task.dart';
+import 'package:chathub/models/chat/memory_turn.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -411,6 +412,11 @@ class SessionController extends GetxController {
               : null
       ..memoryRounds = session.memoryRounds
       ..deepThink = session.deepThink
+      ..memoryJson =
+          session.memory.isNotEmpty
+              ? jsonEncode(session.memory.map((t) => t.toJson()).toList())
+              : null
+      ..compressedMemory = session.compressedMemory
       ..isCurrent = false; // 由调用方设置
   }
 
@@ -451,6 +457,11 @@ class SessionController extends GetxController {
             : null;
     entity.memoryRounds = session.memoryRounds;
     entity.deepThink = session.deepThink;
+    entity.memoryJson =
+        session.memory.isNotEmpty
+            ? jsonEncode(session.memory.map((t) => t.toJson()).toList())
+            : null;
+    entity.compressedMemory = session.compressedMemory;
   }
 
   /// 根据消息ID查找会话（先从内存查找，未找到则从Isar加载）
@@ -533,6 +544,18 @@ class SessionController extends GetxController {
       } catch (_) {}
     }
 
+    // 解析记忆
+    List<MemoryTurn> memory = [];
+    if (entity.memoryJson != null && entity.memoryJson!.isNotEmpty) {
+      try {
+        final list = jsonDecode(entity.memoryJson!) as List<dynamic>;
+        memory =
+            list
+                .map((t) => MemoryTurn.fromJson(t as Map<String, dynamic>))
+                .toList();
+      } catch (_) {}
+    }
+
     return ChatSession(
       sessionId: entity.sessionId,
       name: entity.name,
@@ -552,6 +575,8 @@ class SessionController extends GetxController {
       memoryRounds: entity.memoryRounds,
       deepThink: entity.deepThink,
       scheduledTask: scheduledTask,
+      memory: memory,
+      compressedMemory: entity.compressedMemory,
     );
   }
 }

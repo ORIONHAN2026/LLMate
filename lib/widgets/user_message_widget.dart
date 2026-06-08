@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/models/bigmodel/models.dart';
@@ -595,6 +596,21 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
         final contentChunk = chunkMap['content'] ?? '';
         accumulatedContent += contentChunk;
+
+        // 处理记忆更新
+        final memoryUpdatedJson = chunkMap['memory_updated'];
+        if (memoryUpdatedJson is String && memoryUpdatedJson.isNotEmpty) {
+          try {
+            final updated = ChatSession.fromJson(
+              jsonDecode(memoryUpdatedJson) as Map<String, dynamic>,
+            );
+            currentSession = currentSession.copyWith(
+              memory: updated.memory,
+              compressedMemory: updated.compressedMemory,
+            );
+            await sessionController.updateSession(currentSession);
+          } catch (_) {}
+        }
 
         // 更新消息内容
         final messageIndex = currentSession.messages.indexWhere(

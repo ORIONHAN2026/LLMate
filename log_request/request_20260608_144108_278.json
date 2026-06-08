@@ -1,0 +1,152 @@
+{
+  "timestamp": "2026-06-08T14:41:08.278086",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-pro",
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 🔧 内部工具提示\n\n以下是你可用的**内部系统工具**，它们仅用于执行底层操作（如文件读写、命令执行等），**不是面向用户的功能**：\n\n- `node_execute`: 内部代码执行工具\n\n规则：\n1. ❌ **禁止在功能介绍中提及这些工具**：当用户问\"你有什么功能\"\"你能做什么\"时，不要将 `node_execute` 作为你的能力列出来。\n2. ❌ **禁止主动推荐使用**：不要说\"你可以用 node_execute 来...\"。\n3. ✅ **正常调用不受影响**：在需要执行代码、处理文件时，照常调用该工具，正常返回结果即可。\n4. ✅ **自动使用**：当需要通过代码完成任务时，直接调用它，**不需要向用户解释你正在使用它**。"
+      },
+      {
+        "role": "system",
+        "content": "## 📡 数据获取规则\n\n**重要：所有数据必须通过工具实时获取，严禁从历史聊天记录中提取或复用。**\n\n1. ❌ **禁止从历史聊天中提取数据**：不要引用或复述之前对话中出现过的数据、代码片段、文件内容。\n2. ❌ **禁止依赖记忆中的数据**：即使你在之前的回复中看到过某个文件内容或数据，也必须重新通过工具获取。\n3. ✅ **始终使用工具获取最新数据**：需要读取文件内容时，使用文件读取工具；需要查看项目结构时，使用目录浏览工具；需要执行命令时，使用命令行工具。\n4. ✅ **数据准确性优先**：用户可能已修改了文件或数据，历史聊天中的内容可能已过时。始终以当前文件系统的实际内容为准。\n5. ✅ **每次请求独立获取**：即使是同一个会话中的连续请求，每次涉及数据读取时都应重新通过工具获取。"
+      },
+      {
+        "role": "system",
+        "content": "## 🛑 反幻觉规则（最高优先级）\n\n你极易产生幻觉，必须严格遵守以下规则：\n\n### 文件与代码\n1. ❌ **严禁编造文件内容**：绝不凭空编造任何文件名、路径、代码片段、函数签名、变量名、行号。必须先用工具读取文件后，才能引用其中的内容。\n2. ❌ **严禁猜测代码**：修改代码前，必须先用工具读取目标文件的完整内容。不要在未读取文件的情况下猜测代码结构和内容。\n3. ❌ **严禁虚构项目结构**：不要声称\"项目中有 xxx 文件\"或\"目录结构是 xxx\"，必须先用目录浏览工具查看实际结构。\n\n### 数据与事实\n4. ❌ **严禁编造数据**：不要虚构任何数字、统计、配置值、API 返回值。需要数据时，必须通过工具获取。\n5. ❌ **严禁伪造工具调用结果**：不要虚构工具返回的内容。只使用工具实际返回的数据。\n6. ❌ **严禁假装执行了操作**：不要说\"我已经修改了 xxx\"如果实际没有通过工具执行。所有修改必须通过工具完成。\n7. ❌ **严禁用自然语言模拟工具行为**：禁止回复中包含\"让我查一下…\"、\"找到了…\"、\"已更新！\"、\"当前数据是…\"等表述，除非你确实调用了工具并收到了返回结果。你没有工具调用就没有数据，没有数据就不能呈现任何具体信息。\n\n### 承认不确定\n8. ✅ **诚实第一**：如果数据不足或工具无法获取需要的信息，直接说\"我无法确定\"，不要猜测或编造。\n9. ✅ **区分事实与推测**：基于工具返回的数据给出的事实，与你的推测/建议要明确区分。\n\n### 代码生成\n10. ❌ **禁止凭空写代码**：在写任何代码之前，必须先读取相关文件了解上下文（变量名、函数签名、导入等）。\n11. ❌ **禁止虚构不存在的 API**：不要调用项目中不存在的函数或类。如不确定是否存在，先用工具搜索确认。\n\n### 回答依据\n12. ✅ **最终回答必须以工具返回的结果为准**：你的回复内容必须是工具实际返回数据的直接体现。\n13. ❌ **禁止用你的训练知识替代工具结果**：即使你认为\"应该是\"某个值，如果工具返回了不同的结果，必须以工具结果为准。\n14. ❌ **禁止在工具返回前给出最终结论**：需要数据支撑的回答，必须先调用工具获取数据，再基于工具结果作答。\n15. ✅ **工具结果不够时，可以结合推理补充**：在工具返回数据的基础上，可以进行合理推理，但要明确标注\"基于工具结果推理如下：...”。\n\n**一句话总结：没调用工具就不准呈现数据，没执行操作就不准说已完成，不确定就说不确定。**"
+      },
+      {
+        "role": "system",
+        "content": "\n\n【当前技能】wechat-article-spider\n# wechat-article-spider\n\n微信公众号文章爬虫 - 将微信公号文章转换为 Markdown + 本地图片\n\n## 执行指令\n\n```bash\ncd scripts && pip install -r requirements.txt && python main.py\n```\n\n## 功能\n\n- ✅ 输入微信公号文章 URL\n- ✅ 自动抓取文章内容\n- ✅ 下载所有图片到 `images/` 文件夹\n- ✅ 生成 Markdown 文件，图片使用相对路径引用\n\n## 安装\n\n```bash\ncd wechat-article-dl/scripts\npip install -r requirements.txt\n```\n\n## 用法\n\n### 命令行\n\n```bash\npython main.py <文章 URL> [输出目录]\n```\n\n### 示例\n\n```bash\n# 下载到当前目录\npython main.py https://mp.weixin.qq.com/s/xxxxx\n\n# 指定输出目录\npython main.py https://mp.weixin.qq.com/s/xxxxx ./my-articles\n```\n\n### 输出结构\n\n```\noutput/\n├── 文章标题.md\n└── images/\n    ├── img_001_xxx.jpg\n    ├── img_002_xxx.png\n    └── ...\n```\n\n## 注意事项\n\n- 微信文章可能有反爬机制，如遇失败可稍后重试\n- 部分动态加载的图片可能无法获取\n- 图片文件名使用哈希值避免重复\n\n## 依赖\n\n- requests\n- beautifulsoup4\n- lxml\n\n【技能目录文件清单 - 请直接使用已有脚本，避免重复创建】\n技能路径: /Users/orion/Documents/Flutter/llmchat/skills/wechat-article-spider\n\n[scripts]\n  scraper.py  (5.2 KB)\n  requirements.txt  (52 B)\n  images.py  (2.7 KB)\n  main.py  (3.1 KB)\n"
+      },
+      {
+        "role": "system",
+        "content": "## 📁 工作目录\n\n当前会话的工作目录为：`/Users/orion/Documents/WorkBuddy工作空间/公众号分析`\n\n规则：\n- 使用 file_write 或 node_execute 生成文件时，如用户未指定保存路径，默认保存到该工作目录。\n- 相对路径均相对于此工作目录解析。\n- 读取文件时，如果用户提供的是相对路径或文件名，请在工作目录下查找。"
+      },
+      {
+        "role": "user",
+        "content": "https://mp.weixin.qq.com/s/FCKdRHxi9c6Vby2ZRKjVTw"
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_00_w07a7m6ks5rvBfRiRjI57253",
+            "type": "function",
+            "function": {
+              "name": "python_execute",
+              "arguments": "{\"filePath\":\"/Users/orion/Documents/Flutter/llmchat/skills/wechat-article-spider/scripts/main.py\",\"args\":[\"https://mp.weixin.qq.com/s/FCKdRHxi9c6Vby2ZRKjVTw\",\"/Users/orion/Documents/WorkBuddy工作空间/公众号分析\"],\"requirements\":[\"requests\",\"beautifulsoup4\",\"lxml\"]}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "call_00_w07a7m6ks5rvBfRiRjI57253",
+        "content": "📥 抓取文章：https://mp.weixin.qq.com/s/FCKdRHxi9c6Vby2ZRKjVTw\n✅ 抓取成功\n📰 标题：重磅！Anthropic内部Skills经验公开了！\n✍️ 作者：Datawhale\n🖼️  提取图片...\n📸 找到 14 张图片\n✅ 下载 13/14 张图片\n📝 转换 Markdown...\n✅ 保存成功：/Users/orion/Documents/WorkBuddy工作空间/公众号分析/重磅Anthropic内部Skills经验公开了.md\n📁 图片目录：/Users/orion/Documents/WorkBuddy工作空间/公众号分析/images/\n/Users/orion/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020\n  warnings.warn("
+      },
+      {
+        "role": "assistant",
+        "content": "文章已成功抓取并转换。来看看内容概览：",
+        "tool_calls": [
+          {
+            "id": "call_00_COEQ72S0zzmkcwORbrDs8171",
+            "type": "function",
+            "function": {
+              "name": "python_execute",
+              "arguments": "{\"script\":\"\\nwith open('/Users/orion/Documents/WorkBuddy工作空间/公众号分析/重磅Anthropic内部Skills经验公开了.md', 'r', encoding='utf-8') as f:\\n    content = f.read()\\n# 输出前2000字符预览\\nprint(content[:3000])\\n\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "call_00_COEQ72S0zzmkcwORbrDs8171",
+        "content": "# 重磅！Anthropic内部Skills经验公开了！\n\n**作者**: Datawhale\n**原文链接**: https://mp.weixin.qq.com/s/FCKdRHxi9c6Vby2ZRKjVTw\n**抓取时间**: 2026-06-08 14:41:05\n\n---\nDatawhale干货 作者：Anthropic团队 Anthropic 自己内部是怎么用 Claude Code Skills 的，这次终于公开了。 他们把内部团队的用法做了一次完整复盘：Skills 分成哪 9 类、哪类最值得花力气、怎么写才真的有用。这些经验之前只在 Anthropic 内部流转，现在一次讲清。 ![](images/img_002_8d502e8a.jpg) 今天把这个经验帖的核心干货给你梳理清楚。 ## 一、先把 Skill 理解对 Anthropic 先纠正了一个很常见的理解。 Skill 不只是几段提示词，它更接近一个围绕任务组织起来的文件夹。 这个文件夹里可以放 SKILL.md ，也可以放参考文档、脚本、模板、示例、hooks，甚至放会被后续任务继续读取的数据。Claude 调用 Skill 时，拿到的其实是一套完成任务所需的工作材料。 这个定义很重要。因为很多团队真正缺的，从来不是“再补一段提示词”，而是把 那些已经验证过的做法、容易错的细节、常用脚本和固定流程，一次整理好，后面反复复用。 ## 二、Anthropic 把内部 Skills 归成了 9 类 Anthropic 盘了一遍内部的 Skills，最后大致分成了 9 类。这 9 类连起来看，其实很像一条完整的软件工作流，从补知识到写代码，再到验证、部署、排障和运维。 ![Anthropic 内部 Skills 的 9 类分布（图源：Anthropic 官方博客，下同）](images/img_003_ab541812.jpg) Anthropic 内部 Skills 的 9 类分布 ### 前三类：给模型补知识、补验证、补数据 第一类是 library 和 API reference，给模型解释某个库、CLI 或 SDK 在团队内部到底该怎么用，把容易用错的规则和 gotchas 写清楚。 第二类是 product verification，负责判断产出有没有真的工作，比如在无头浏览器里完整跑一遍注册和结账流程。Anthropic 明说这类对输出质量提升最明显，值得让工程师专门花一周打磨。 第三类是 data fetching and analysis，连着数据仓库和监控系统，把取数方法、字段约定和常见分析路径封装好，模型不用再去猜表结构和字段名。 ### 中间三类：开始接住团队里的日常流程 第四类是 business process and team automation，把重复发生的团队流程压成一个命令就能跑的工作流，比如只输出相对昨天增量的 standup，或固定格式的周报。能看出来，Skill 接住的不只是代码任务，也包括协作任务。 第五类是 code scaffolding and templates，生成那些有固定骨架、但又带着大量自然语言约束的代码，比如新 service 或迁移文件。这正是纯模板引擎覆盖不了的部分。 第六类是 code quality and review，让代码尽量符合团队的质量标准。典型例子是拉一个“新鲜视角”subagent 来挑错的 adversarial-review ，这类能力还能做成 hook 接进 CI。 后三类：已经连到生产环境了 第七类是 CI/CD and deployment，把代码从开发态推到上线态。比如 babysit-pr 会盯完一个 PR 的全过程 ， deploy-<service> 会把 build、放量、错误率对比和回滚条件串成一条链路。 第八类是 runbooks，入口不是“我要写什么”，而是“现在出了什么症状”。报警、Slack thread、request ID 进来，它负责映射到该用哪些工具、查哪些路径，最后给出结构化结论。 第九类是 infrastructure operations，处理资源清理、依赖治理和成本排查这类例行操作。这些动作常带破坏性，所以 Skill 里要写清 guardrail，先通知、再确认，最后才真正执行。 ## 三、Anthropic 真正强调的，不只是“会写”，更是“写对” 把 9 类梳理完以后，Anthropic 接着讲的，其实是几条更底层的判断：什么样的 Skill 更稳，哪些地方最值得花力气。 ### 好的 Skill，往往都很聚焦 Anthropic 说得很直接，最好的 Skill 往往都很聚焦。能清楚落进某一类里的 Skill，通常更稳；试图同时覆盖太多目标的 Skill，反而更容易把模型带乱。 这个判断很有参考价值。因为很多团队一开始做 Skill，最容易犯的错误就是想“一次做大做全”，结果最后既不好触发，也不好维护。 ### 所有类型里，他们最看重「验证」 在所有类型里，Anthropic 特别强调 verification。因为模型最容易给人一种“已经做完了”的错觉，而真正容易掉链子的地方，恰恰是最后那一步验证。 原文甚至建议，值得让工程师单独花一周，把验证类 Skill 做到足够好。这个投入听起来很重，但如果它直接影响结果质量，其实很划算。 他们还给了两个非常实用的建议。一个是让 Claude 录下自己测试过程的视频，这样你能清楚看到它到底测了什么。 另一个是在关键节点加程序化断言。状态有没有变化，事件有没有真正落库，最终页面是不是到了目标状态，都尽量不要只靠“看起来差不多”。 ### 真正有价值的内容，往往是 gotchas Anthropic 对 Skill 里的内容优先级也讲得很清楚。最有信号量的部分，通常不是通用步骤，而是 gotchas。 因为 Claude 本来就会写代码，也会读代码库。那些“默认它也会做”的东西，写进 Skill 里只会增加上下文，不一定增加价值。 真正值得写的，是那些会把模型从默认思路里拽出来的细节。比如 subscriptions 表是 append-only，要找最高 version ，不能只看最新 created_at 。 再比如同一个字段，在 API gateway 里叫 @request_id ，到了 billing 服务里叫 trace_id 。还有 staging 返回 200，也不代表 Stripe webhook 真处理成功了，还得去看 payment_events 里的真实状态。 这类信息单看都不大，但一旦出错，最后结果就会偏。Skill 的价值，很多时候就体现在这些“团队里人人知道，但模型默认不知道”的地方。 ## 四、Skill 到底该怎么写 前面 Anthropic 团队讲完了“先做什么”，这一段他们共享了“具体怎么写，才能让 Skill 真起作用”的内部经验。 ### 1. 别把显而易见的话再写一遍 ![别把模型本来就会的东西再写一遍](images/img_004_4dccce8e.jpg) 别把模型本来就会的东西再写一遍 第一个"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 0.7,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "node_execute",
+          "description": "执行 Node.js 脚本。支持内联代码和 .js/.ts 文件两种方式。可选安装 npm 依赖。适合数据分析、文件批处理、API 调用、爬虫、文档生成等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Node.js 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .js 或 .ts 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 npm 包名列表（如 [\"axios\", \"lodash\"]），执行前自动 npm install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "python_execute",
+          "description": "执行 Python 脚本。支持内联代码和 .py 文件两种方式。可选 pip install 安装依赖。适合数据分析、文件处理、API 调用、爬虫、图像处理、自动化脚本等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Python 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .py 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 pip 包名列表（如 [\"requests\", \"beautifulsoup4\"]），执行前自动 pip install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "thinking": {
+      "type": "disabled"
+    }
+  },
+  "response": {
+    "timestamp": "2026-06-08T14:41:16.479725",
+    "isError": false,
+    "content": "文章抓取成功！以下是结果概览：\n\n---\n\n## 📄 文件输出\n\n| 文件 | 路径 |\n|------|------|\n| **Markdown** | `公众号分析/重磅Anthropic内部Skills经验公开了.md` |\n| **图片目录** | `公众号分析/images/`（13/14张下载成功） |\n\n---\n\n## 📰 文章概要\n\n**标题**：重磅！Anthropic内部Skills经验公开了！\n**作者**：Datawhale  \n**来源**：Anthropic 团队官方博客\n\n### 核心内容\n\n这篇文章分享了 **Anthropic 内部使用 Claude Code Skills 的实战经验**，主要包括：\n\n1. **Skill 的正确理解** — 不只是提示词，而是一个包含 `SKILL.md`、参考文档、脚本、模板、示例等的任务文件夹。\n\n2. **9 类 Skills 分类**：\n   - 前三类（补知识）：Library/API Reference、Product Verification、Data Fetching\n   - 中间三类（日常流程）：Business Process Automation、Code Scaffolding、Code Quality & Review\n   - 后三类（生产环境）：CI/CD & Deployment、Runbooks、Infrastructure Operations\n\n3. **核心经验**：\n   - 好的 Skill 要**聚焦**，不要试图一次做大做全\n   - **验证类 Skill 最值得投入**，建议工程师花一周打磨\n   - 最有价值的内容是 **gotchas**（那些团队内人人知道、但模型默认不知道的细节）\n\n4. **写作建议**：\n   - 别把模型本来就会的东西再写一遍\n   - 让 Claude 录下测试过程视频\n   - 关键节点加程序化断言\n\n---\n\n文件已保存到工作目录，你可以直接查看 Markdown 文件和下载的图片。"
+  }
+}

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/chat/chat_session.dart';
 import 'node_tool_service.dart';
+import 'python_tool_service.dart';
 
 class SystemToolDefinition {
   final String name;
@@ -21,8 +22,10 @@ class SystemToolDefinition {
 ///
 /// 提供以下内置工具：
 /// - `node_execute`: 执行 Node.js 脚本
+/// - `python_execute`: 执行 Python 脚本
 class SystemToolService {
   static const String nodeExecuteTool = 'node_execute';
+  static const String pythonExecuteTool = 'python_execute';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -51,6 +54,37 @@ class SystemToolService {
             'type': 'array',
             'description':
                 '需要安装的 npm 包名列表（如 ["axios", "lodash"]），执行前自动 npm install。',
+            'items': {'type': 'string'},
+          },
+        },
+      },
+    ),
+    SystemToolDefinition(
+      name: pythonExecuteTool,
+      description:
+          '执行 Python 脚本。支持内联代码和 .py 文件两种方式。可选 pip install 安装依赖。'
+          '适合数据分析、文件处理、API 调用、爬虫、图像处理、自动化脚本等任何场景。返回 stdout/stderr 输出。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'script': {
+            'type': 'string',
+            'description':
+                'Python 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。',
+          },
+          'filePath': {
+            'type': 'string',
+            'description': '要执行的 .py 文件完整路径。与 script 二选一。',
+          },
+          'args': {
+            'type': 'array',
+            'description': '传递给脚本的命令行参数列表。',
+            'items': {'type': 'string'},
+          },
+          'requirements': {
+            'type': 'array',
+            'description':
+                '需要安装的 pip 包名列表（如 ["requests", "beautifulsoup4"]），执行前自动 pip install。',
             'items': {'type': 'string'},
           },
         },
@@ -90,6 +124,11 @@ class SystemToolService {
     switch (toolName) {
       case nodeExecuteTool:
         return NodeToolService.execute(
+          arguments: arguments,
+          callId: callId,
+        );
+      case pythonExecuteTool:
+        return PythonToolService.execute(
           arguments: arguments,
           callId: callId,
         );

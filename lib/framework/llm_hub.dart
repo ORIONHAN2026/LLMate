@@ -4,9 +4,12 @@ import 'package:flutter/foundation.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/chat_message.dart';
+import '../models/chat/memory_turn.dart';
 import '../services/tool_execution_service.dart';
+import '../services/memory_compressor.dart';
 import '../memory/memory_service.dart';
 import '../memory/memory_models.dart';
+import '../controllers/session_controller.dart';
 import 'llmproviders/base_provider.dart';
 import 'llmproviders/openai_provider.dart';
 import 'llmproviders/deepseek_provider.dart';
@@ -302,14 +305,26 @@ class LlmClient {
         if (doneReceived) {
           yield {'done': 'true'};
         }
-        // ========== 记忆捕获 ==========
-        // 对话结束，捕获到记忆系统
+        // ========== 记忆捕获 & 压缩 ==========
         if (!_cancelled && responseBuffer.isNotEmpty) {
+          // 1. 捕获到 L0 记忆系统
           await _captureToMemory(
             userMessage.content,
             responseBuffer.toString(),
             messages,
           );
+
+          // 2. 累积到会话级记忆并检查压缩
+          final memoryUpdatedSession = await accumulateMemory(
+            userMessage.content,
+            responseBuffer.toString(),
+            null, // sessionController 由 caller 处理
+          );
+          if (memoryUpdatedSession != null) {
+            yield {
+              'memory_updated': jsonEncode(memoryUpdatedSession.toJson()),
+            };
+          }
         }
         return;
       }
@@ -409,6 +424,76 @@ class LlmClient {
   ) => _provider.sendMessageStreamWithMessages(messages, session: _session);
 
   void cancel() => _cancelled = true;
+
+  /// 发送压缩请求（非流式），用于记忆压缩
+  Future<String?> sendCompressRequest(String prompt) async {
+    try {
+      final response = await _provider.sendMessage(
+        userMessage: ChatMessage(
+          msgId: 'compress_${DateTime.now().millisecondsSinceEpoch}',
+          role: MessageRole.user,
+          content: prompt,
+          timestamp: DateTime.now(),
+          sessionId: _session.sessionId,
+        ),
+        session: _session,
+      );
+      return response;
+    } catch (e) {
+      if (kDebugMode) debugPrint('🧠 压缩请求失败: $e');
+      return null;
+    }
+  }
+
+  /// 累积记忆并触发压缩
+  ///
+  /// 每次 LLM 回复完成后调用，将本轮对话加入 memory 列表。
+  /// 当 memory 达到压缩阈值时触发 LLM 压缩。
+  Future<ChatSession?> accumulateMemory(
+    String userText,
+    String assistantText,
+    SessionController? sessionController,
+  ) async {
+    if (_session.memoryCompressThreshold <= 0) return null;
+
+    // 添加本轮到记忆
+    final now = DateTime.now();
+    final updatedMemory = List<MemoryTurn>.from(_session.memory)
+      ..add(MemoryTurn(role: 'user', content: userText, timestamp: now))
+      ..add(MemoryTurn(
+        role: 'assistant',
+        content: assistantText,
+        timestamp: now,
+      ));
+
+    final rounds = MemoryTurn.roundCount(updatedMemory);
+
+    // 检查是否需要压缩
+    if (rounds >= _session.memoryCompressThreshold) {
+      if (kDebugMode) {
+        debugPrint(
+          '🧠 [Memory] 记忆达到 ${rounds} 轮 (≥ ${_session.memoryCompressThreshold})，触发压缩',
+        );
+      }
+
+      // 异步压缩（不阻塞）
+      final compressed = await MemoryCompressor.compress(
+        session: _session,
+        compressedMemory: _session.compressedMemory,
+        memory: updatedMemory,
+      );
+
+      if (compressed != null) {
+        return _session.copyWith(
+          compressedMemory: compressed,
+          memory: [], // 清空原始记忆
+        );
+      }
+    }
+
+    // 不需要压缩，只更新记忆
+    return _session.copyWith(memory: updatedMemory);
+  }
 
   /// 将工具结果 JSON 中的文件路径替换为 Markdown 链接，
   /// 使其在 UI 中可以被点击打开。

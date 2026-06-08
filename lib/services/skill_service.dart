@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/chat/chat_session.dart';
@@ -107,15 +109,23 @@ class SkillService {
 
   // ======== Prompt 构建 ========
 
-  /// 将技能注入到 system prompt 中
+  /// 将技能注入到 system prompt 中，附带技能目录文件清单
   static String buildSkillPrompt(Skill? activeSkill) {
     if (activeSkill == null || activeSkill.prompt.isEmpty) {
       return '';
     }
-    return '\n\n【当前技能】${activeSkill.name}\n${activeSkill.prompt}';
+    final inventory = _buildFileInventory(activeSkill.path);
+    final buffer = StringBuffer();
+    buffer.writeln('\n\n【当前技能】${activeSkill.name}');
+    buffer.writeln(activeSkill.prompt);
+    if (inventory.isNotEmpty) {
+      buffer.writeln();
+      buffer.write(inventory);
+    }
+    return buffer.toString();
   }
 
-  /// 批量构建多个技能的 prompt
+  /// 批量构建多个技能的 prompt，附带各技能目录的文件清单
   static String buildMultiSkillPrompt(List<Skill> activeSkills) {
     if (activeSkills.isEmpty) return '';
     final buffer = StringBuffer('\n\n【已激活技能】');
@@ -124,9 +134,107 @@ class SkillService {
         buffer.writeln();
         buffer.writeln('## ${skill.name}');
         buffer.writeln(skill.prompt);
+        final inventory = _buildFileInventory(skill.path);
+        if (inventory.isNotEmpty) {
+          buffer.writeln();
+          buffer.write(inventory);
+        }
       }
     }
     return buffer.toString();
+  }
+
+  /// 扫描技能目录并生成文件清单，供大模型了解已存在的脚本和资源
+  static String _buildFileInventory(String skillPath) {
+    if (skillPath.isEmpty) return '';
+    final dir = Directory(skillPath);
+    if (!dir.existsSync()) return '';
+
+    // 需要忽略的文件/目录
+    const ignoreNames = {'SKILL.md', '_meta.json', '.DS_Store'};
+
+    final List<_FileEntry> entries = [];
+    _collectFiles(dir, dir.path, entries, ignoreNames);
+
+    if (entries.isEmpty) return '';
+
+    final buffer = StringBuffer();
+    buffer.writeln('【技能目录文件清单 - 请直接使用已有脚本，避免重复创建】');
+    buffer.writeln('技能路径: $skillPath');
+
+    // 按目录分组
+    final groups = <String, List<_FileEntry>>{};
+    for (final e in entries) {
+      groups.putIfAbsent(e.relDir, () => []).add(e);
+    }
+
+    for (final entry in groups.entries) {
+      final label = entry.key.isEmpty ? '根目录' : entry.key;
+      buffer.writeln('\n[$label]');
+      for (final file in entry.value) {
+        buffer.writeln('  ${file.name}  (${_formatSize(file.size)})');
+      }
+    }
+
+    // 如果有 requirements.txt，读取内容
+    _appendRequirementsContent(buffer, dir);
+
+    return buffer.toString();
+  }
+
+  /// 递归收集目录下的文件
+  static void _collectFiles(
+    Directory dir,
+    String rootPath,
+    List<_FileEntry> entries,
+    Set<String> ignoreNames,
+  ) {
+    final list = dir.listSync();
+    for (final entity in list) {
+      final name = entity.uri.pathSegments.last;
+      if (ignoreNames.contains(name)) continue;
+      if (entity is File) {
+        final relPath = entity.path.substring(rootPath.length + 1);
+        final parts = relPath.split(Platform.pathSeparator);
+        final fileName = parts.last;
+        final relDir =
+            parts.length > 1
+                ? parts.sublist(0, parts.length - 1).join(Platform.pathSeparator)
+                : '';
+        entries.add(
+          _FileEntry(name: fileName, relDir: relDir, size: entity.lengthSync()),
+        );
+      } else if (entity is Directory) {
+        _collectFiles(entity, rootPath, entries, ignoreNames);
+      }
+    }
+  }
+
+  /// 如果存在 requirements.txt，追加其内容
+  static void _appendRequirementsContent(StringBuffer buffer, Directory dir) {
+    final reqFile = File('${dir.path}/requirements.txt');
+    if (!reqFile.existsSync()) return;
+    // 也检查子目录中的 requirements.txt
+    for (final sub in dir.listSync(recursive: true)) {
+      if (sub is File && sub.uri.pathSegments.last == 'requirements.txt') {
+        try {
+          final content = sub.readAsStringSync().trim();
+          if (content.isNotEmpty) {
+            final relPath =
+                sub.path.substring(dir.path.length + 1);
+            buffer.writeln(
+              '\n[依赖: $relPath]\n$content\n(安装命令: cd "${dir.path}" && pip install -r "$relPath")',
+            );
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  static String _formatSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
   // ======== 工具方法 ========
@@ -200,4 +308,12 @@ class SkillService {
     _skills = [];
     _loaded = false;
   }
+}
+
+/// 文件条目（仅用于生成文件清单）
+class _FileEntry {
+  final String name;
+  final String relDir;
+  final int size;
+  const _FileEntry({required this.name, required this.relDir, required this.size});
 }

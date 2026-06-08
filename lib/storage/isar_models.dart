@@ -64,6 +64,10 @@ class IsarChatSession {
   late String? sessionQuickCommandsJson;
   late String? scheduledTasksJson;
 
+  // === 记忆压缩 ===
+  late String? memoryJson;
+  late String? compressedMemory;
+
   /// 记忆轮数（0 = 无记忆）
   late int memoryRounds;
 

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:chathub/controllers/session_controller.dart';
@@ -875,6 +876,21 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           botMessage.isToolCalling = false;
         }
 
+        // 处理记忆更新
+        final memoryUpdatedJson = chunkMap['memory_updated'];
+        if (memoryUpdatedJson is String && memoryUpdatedJson.isNotEmpty) {
+          try {
+            final updated = ChatSession.fromJson(
+              jsonDecode(memoryUpdatedJson) as Map<String, dynamic>,
+            );
+            currentSession = currentSession.copyWith(
+              memory: updated.memory,
+              compressedMemory: updated.compressedMemory,
+            );
+            await sessionController.updateSession(currentSession);
+          } catch (_) {}
+        }
+
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
 
@@ -1342,19 +1358,20 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
           if (widget.message.content.isNotEmpty)
             MarkdownBody(
-              data: _sanitizeMarkdown(
-                _linkifyContentPaths(widget.message.content),
-              ),
+              data: _sanitizeMarkdown(widget.message.content),
               styleSheet: _buildMarkdownStyleSheet(),
               selectable: true,
               onTapLink: (text, href, title) {
                 if (href != null) _openLink(href);
               },
             ),
+          _buildFileTags(widget.message.content),
         ],
       );
     }
 
+    // 收集所有 content 类型块的文本用于提取文件路径
+    final allContentText = StringBuffer();
     final children = <Widget>[];
     for (int i = 0; i < blocks.length; i++) {
       final block = blocks[i];
@@ -1365,9 +1382,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           children.add(_buildToolBlock(i, block.text));
         case ContentBlockType.toolCalling:
         case ContentBlockType.content:
+          allContentText.write(block.text);
           children.add(
             MarkdownBody(
-              data: _sanitizeMarkdown(_linkifyContentPaths(block.text)),
+              data: _sanitizeMarkdown(block.text),
               styleSheet: _buildMarkdownStyleSheet(),
               selectable: true,
               onTapLink: (text, href, title) {
@@ -1377,6 +1395,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           );
       }
     }
+
+    children.add(_buildFileTags(allContentText.toString()));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1582,24 +1602,109 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
   }
 
-  /// 将 AI 正文中的本地绝对路径转为 Markdown 链接
-  /// 例如 /Users/xxx/file.docx → [file.docx](file:///Users/xxx/file.docx)
-  /// 仅处理文件扩展名结尾的路径，避免误匹配
-  static String _linkifyContentPaths(String text) {
-    if (text.isEmpty) return text;
-
-    // 匹配常见的文件绝对路径（以常见扩展名结尾）
-    // 支持 .docx .xlsx .pdf .pptx .png .jpg .md .txt .csv .json .html .dart 等
+  /// 从正文中提取本地绝对文件路径
+  static List<String> _extractFilePaths(String text) {
+    if (text.isEmpty) return [];
     final pathRegex = RegExp(
-      r'(?<![(\[])(\/(?:Users|home|tmp|var|etc|opt|srv)\/[\w./\-_]+\.(?:docx?|xlsx?|xls|csv|pdf|pptx?|png|jpe?g|gif|webp|bmp|tiff?|md|txt|json|html?|css|dart|py|js|ts|java|xml|yaml|yml|toml|sh|log))',
+      r'(?<![(\[])(?<!file:\/{1,3})(\/(?:Users|home|tmp|var|etc|opt|srv)\/[\w./\-_\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+\.(?:docx?|xlsx?|xls|csv|pdf|pptx?|png|jpe?g|gif|webp|bmp|tiff?|md|txt|json|html?|css|dart|py|js|ts|java|xml|yaml|yml|toml|sh|log))',
       caseSensitive: false,
     );
-    return text.replaceAllMapped(pathRegex, (match) {
-      final path = match.group(0)!;
-      final fileName =
-          path.contains('/') ? path.substring(path.lastIndexOf('/') + 1) : path;
-      return '[$fileName](file://$path)';
-    });
+    return pathRegex
+        .allMatches(text)
+        .map((m) => m.group(0)!)
+        .toSet()
+        .toList();
+  }
+
+  /// 构建文件路径标签行（位于消息内容下方）
+  Widget _buildFileTags(String text) {
+    final paths = _extractFilePaths(text);
+    if (paths.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: paths.map((path) {
+          final fileName = path.contains('/')
+              ? path.substring(path.lastIndexOf('/') + 1)
+              : path;
+          return GestureDetector(
+            onTap: () => _openFile(path),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _iconForExtension(fileName),
+                    size: 12,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    fileName,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// 根据文件扩展名返回对应图标
+  IconData _iconForExtension(String fileName) {
+    final ext = fileName.contains('.')
+        ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase()
+        : '';
+    switch (ext) {
+      case 'pdf':
+        return CupertinoIcons.doc_text;
+      case 'doc':
+      case 'docx':
+        return CupertinoIcons.doc_plaintext;
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        return CupertinoIcons.table;
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+      case 'gif':
+      case 'webp':
+      case 'bmp':
+        return CupertinoIcons.photo;
+      case 'pptx':
+      case 'ppt':
+        return CupertinoIcons.doc_richtext;
+      case 'md':
+      case 'txt':
+        return CupertinoIcons.doc_text;
+      case 'json':
+      case 'xml':
+      case 'yaml':
+      case 'yml':
+      case 'toml':
+        return CupertinoIcons.doc_text;
+      default:
+        return CupertinoIcons.doc;
+    }
   }
 
   Widget _buildActionButton({

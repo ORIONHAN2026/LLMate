@@ -97,6 +97,12 @@ class DeepSeekProvider extends BaseLlmProvider {
   }) async* {
     if (model == null) throw StateError('$providerName 提供商未配置');
 
+    // 用于累积完整响应的缓冲区
+    final responseContentBuf = StringBuffer();
+    final responseThinkBuf = StringBuffer();
+    final responseToolCalls = <String>[];
+    String? logFilePath;
+
     try {
       final requestData = buildRequestData(
         userMessage: userMessage,
@@ -106,8 +112,10 @@ class DeepSeekProvider extends BaseLlmProvider {
         extra: extra,
       );
 
-      // 保存请求数据到文件
-      await _saveRequestDataToFile(requestData);
+      // 保存请求数据到文件，返回文件路径供后续追加响应
+      try {
+        logFilePath = await _saveRequestDataToFile(requestData);
+      } catch (_) {}
 
       if (kDebugMode) {
         print('$providerName 发送请求到: ${model!.apiUrl}');
@@ -124,14 +132,51 @@ class DeepSeekProvider extends BaseLlmProvider {
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        yield* _transformStreamResponse(response.data!.stream);
+        await for (final chunk in _transformStreamResponse(response.data!.stream)) {
+          // 累积响应内容
+          if (chunk['content'] != null) responseContentBuf.write(chunk['content']);
+          if (chunk['think'] != null) responseThinkBuf.write(chunk['think']);
+          if (chunk['toolcall'] != null) responseToolCalls.add(chunk['toolcall']!);
+
+          yield chunk;
+        }
+
+        // 流完成后，追加响应数据到同一个日志文件
+        if (logFilePath != null) {
+          await _appendResponseToFile(
+            logFilePath,
+            responseContentBuf.toString(),
+            responseThinkBuf.toString(),
+            responseToolCalls,
+          );
+        }
       } else {
+        if (logFilePath != null) {
+          await _appendResponseToFile(
+            logFilePath,
+            responseContentBuf.toString(),
+            responseThinkBuf.toString(),
+            responseToolCalls,
+            isError: true,
+            errorMessage: 'HTTP ${response.statusCode} ${response.statusMessage}',
+          );
+        }
         yield {
           'content': 'API 请求失败：${response.statusCode}${response.statusMessage}',
           'think': null,
         };
       }
     } catch (e) {
+      if (logFilePath != null) {
+        await _appendResponseToFile(
+          logFilePath,
+          responseContentBuf.toString(),
+          responseThinkBuf.toString(),
+          responseToolCalls,
+          isError: true,
+          errorMessage: e.toString(),
+        );
+      }
       if (kDebugMode) print('$providerName 流式响应错误: $e');
       yield {'content': '错误: ${handleApiError(e)}', 'think': null};
     }
@@ -291,9 +336,9 @@ class DeepSeekProvider extends BaseLlmProvider {
     return 'API 错误：$es';
   }
 
-  /// 保存请求数据到本地文件
+  /// 保存请求数据到本地文件，返回文件路径
   /// 文件保存在 /Users/orion/Documents/Flutter/llmchat/log_request/ 下，文件名格式：request_YYYYMMDD_HHMMSS_mmm.json
-  static Future<void> _saveRequestDataToFile(
+  static Future<String?> _saveRequestDataToFile(
     Map<String, dynamic> requestData,
   ) async {
     try {
@@ -331,10 +376,63 @@ class DeepSeekProvider extends BaseLlmProvider {
       if (kDebugMode) {
         print('📁 请求数据已保存到: $filePath');
       }
+
+      return filePath;
     } catch (e) {
       // 保存失败不影响主流程，仅记录错误
       if (kDebugMode) {
         print('⚠️ 保存请求数据失败: $e');
+      }
+      return null;
+    }
+  }
+
+  /// 追加响应数据到已有的请求日志文件
+  static Future<void> _appendResponseToFile(
+    String filePath,
+    String content,
+    String think,
+    List<String> toolCalls, {
+    bool isError = false,
+    String? errorMessage,
+  }) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) return;
+
+      // 读取已有数据
+      final existingContent = await file.readAsString();
+      Map<String, dynamic> data;
+      try {
+        data = jsonDecode(existingContent) as Map<String, dynamic>;
+      } catch (_) {
+        data = {};
+      }
+
+      // 添加响应数据
+      final response = <String, dynamic>{
+        'timestamp': DateTime.now().toIso8601String(),
+        'isError': isError,
+      };
+      if (content.isNotEmpty) response['content'] = content;
+      if (think.isNotEmpty) response['think'] = think;
+      if (toolCalls.isNotEmpty) response['toolCalls'] = toolCalls;
+      if (errorMessage != null) response['error'] = errorMessage;
+
+      data['response'] = response;
+
+      // 写回文件
+      await file.writeAsString(
+        const JsonEncoder.withIndent('  ').convert(data),
+        encoding: utf8,
+      );
+
+      if (kDebugMode) {
+        print('📥 响应数据已追加到: $filePath');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ 保存响应数据失败: $e');
       }
     }
   }

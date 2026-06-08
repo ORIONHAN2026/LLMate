@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/chat_session.dart';
@@ -59,7 +60,7 @@ class LlmHub {
 }
 
 class LlmClient {
-  final ChatSession _session;
+  ChatSession _session;
   final BaseLlmProvider _provider;
   bool _cancelled = false;
   MemoryRecallResult? _lastRecallResult;
@@ -426,35 +427,106 @@ class LlmClient {
   void cancel() => _cancelled = true;
 
   /// 发送压缩请求（非流式），用于记忆压缩
+  ///
+  /// 注意：不能直接用 _provider.sendMessage()，因为 OpenAI 兼容 provider
+  /// 的 sendMessage 硬编码了 response_format: json_object，但压缩提示词
+  /// 要求输出纯文本。这里对 OpenAI 兼容 provider 直接构造简单请求。
   Future<String?> sendCompressRequest(String prompt) async {
     try {
-      final response = await _provider.sendMessage(
-        userMessage: ChatMessage(
-          msgId: 'compress_${DateTime.now().millisecondsSinceEpoch}',
-          role: MessageRole.user,
-          content: prompt,
-          timestamp: DateTime.now(),
-          sessionId: _session.sessionId,
-        ),
-        session: _session,
-      );
-      return response;
+      final model = _session.chatModel;
+      if (model == null) return null;
+
+      final provider = model.provider?.toLowerCase() ?? '';
+      const openAICompat = ['openai', 'deepseek', 'zhipu', 'modelscope', 'qwen'];
+
+      if (openAICompat.contains(provider)) {
+        // OpenAI 兼容 provider：绕过 sendMessage 的 json_object 约束
+        return await _sendOpenAICompatPlainRequest(prompt, model);
+      } else {
+        // Anthropic / Gemini / Ollama：sendMessage 无 JSON 格式约束，可正常使用
+        final response = await _provider.sendMessage(
+          userMessage: ChatMessage(
+            msgId: 'compress_${DateTime.now().millisecondsSinceEpoch}',
+            role: MessageRole.user,
+            content: prompt,
+            timestamp: DateTime.now(),
+            sessionId: _session.sessionId,
+          ),
+          session: _session,
+        );
+        return response;
+      }
     } catch (e) {
       if (kDebugMode) debugPrint('🧠 压缩请求失败: $e');
       return null;
     }
   }
 
+  /// 为 OpenAI 兼容 API 发送纯文本请求（无 response_format 约束）
+  Future<String?> _sendOpenAICompatPlainRequest(
+    String prompt,
+    ChatModel model,
+  ) async {
+    if (model.apiUrl == null) return null;
+
+    final dio = Dio();
+    dio.options.connectTimeout = const Duration(milliseconds: 30000);
+    dio.options.receiveTimeout = const Duration(minutes: 5);
+    dio.options.sendTimeout = const Duration(minutes: 5);
+
+    final requestData = <String, dynamic>{
+      'model': model.model,
+      'messages': [
+        {'role': 'user', 'content': prompt},
+      ],
+      'stream': false,
+      'max_tokens': 4000,
+      'temperature': 0.3,
+    };
+
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+    };
+    if (model.apiKey != null && model.apiKey!.isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${model.apiKey}';
+    }
+
+    final response = await dio.post(
+      model.apiUrl!,
+      options: Options(headers: headers),
+      data: requestData,
+    );
+
+    if (response.statusCode == 200 && response.data != null) {
+      final data = response.data as Map<String, dynamic>;
+      final choices = data['choices'] as List?;
+      if (choices != null && choices.isNotEmpty) {
+        final message = choices[0]['message'];
+        if (message != null && message['content'] != null) {
+          return message['content'] as String;
+        }
+      }
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        '🧠 压缩请求异常: status=${response.statusCode}, '
+        'body=${response.data?.toString().substring(0, 200)}',
+      );
+    }
+    return null;
+  }
+
   /// 累积记忆并触发压缩
   ///
   /// 每次 LLM 回复完成后调用，将本轮对话加入 memory 列表。
-  /// 当 memory 达到压缩阈值时触发 LLM 压缩。
+  /// 当 memory 达到 memoryRounds 阈值时触发 LLM 压缩。
   Future<ChatSession?> accumulateMemory(
     String userText,
     String assistantText,
     SessionController? sessionController,
   ) async {
-    if (_session.memoryCompressThreshold <= 0) return null;
+    if (_session.memoryRounds <= 0) return null;
 
     // 添加本轮到记忆
     final now = DateTime.now();
@@ -468,11 +540,11 @@ class LlmClient {
 
     final rounds = MemoryTurn.roundCount(updatedMemory);
 
-    // 检查是否需要压缩
-    if (rounds >= _session.memoryCompressThreshold) {
+    // 检查是否需要压缩（使用 memoryRounds 作为阈值）
+    if (rounds >= _session.memoryRounds) {
       if (kDebugMode) {
         debugPrint(
-          '🧠 [Memory] 记忆达到 ${rounds} 轮 (≥ ${_session.memoryCompressThreshold})，触发压缩',
+          '🧠 [Memory] 记忆达到 ${rounds} 轮 (≥ ${_session.memoryRounds})，触发压缩',
         );
       }
 
@@ -484,15 +556,17 @@ class LlmClient {
       );
 
       if (compressed != null) {
-        return _session.copyWith(
+        _session = _session.copyWith(
           compressedMemory: compressed,
           memory: [], // 清空原始记忆
         );
+        return _session;
       }
     }
 
     // 不需要压缩，只更新记忆
-    return _session.copyWith(memory: updatedMemory);
+    _session = _session.copyWith(memory: updatedMemory);
+    return _session;
   }
 
   /// 将工具结果 JSON 中的文件路径替换为 Markdown 链接，

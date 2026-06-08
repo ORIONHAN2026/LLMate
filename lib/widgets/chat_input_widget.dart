@@ -2974,13 +2974,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
+  bool _sendingInProgress = false; // 本地防重入锁
+
   /// 发送消息的主要方法
   Future<void> _sendMessage() async {
+    // 本地防重入锁：避免并发调用
+    if (_sendingInProgress) return;
+    _sendingInProgress = true;
+
     final text = _inputController.text.trim();
     debugPrint('发送消息: $text');
 
     // 防止发送空消息（没有文本且没有附件）或重复发送
-    if ((text.isEmpty && _currentAttachments.isEmpty) || _isSending) return;
+    if ((text.isEmpty && _currentAttachments.isEmpty) || _isSending) {
+      _sendingInProgress = false;
+      return;
+    }
 
     // 检查是否有附件正在处理中
     final processingAttachments =
@@ -2990,6 +2999,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     if (processingAttachments.isNotEmpty) {
       // 有附件正在处理中，不发送消息，发送按钮状态已显示处理中
+      _sendingInProgress = false;
       return;
     }
 
@@ -3050,7 +3060,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       role: MessageRole.user,
       content: text,
       timestamp: DateTime.now(),
-      repoId: null,
       sessionId: updateSession.sessionId,
       attachments: List<ChatAttachment>.from(validAttachments), // 只包含已处理的附件
     );
@@ -3120,7 +3129,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         content: '',
         think: '',
         timestamp: DateTime.now(),
-        repoId: null,
         sessionId: updateSession.sessionId,
         isError: false,
         generationStartTime: startTime, // 记录生成开始时间
@@ -3255,7 +3263,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           if (messageIndex != -1) {
             botMessage.content = accumulatedContent;
             botMessage.think = accumulatedThink;
-            botMessage.toolContent = accumulatedTool;
             botMessage.contentBlocks = List<ContentBlock>.from(blocks);
 
             final updatedMessages = List<ChatMessage>.from(
@@ -3327,11 +3334,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       rethrow;
     } finally {
       // 一律重置发送状态，避免 stop 按钮残留
+      // 注意：必须使用局部变量 updateSession，不能读取 sessionController.currentSession.value
+      // 因为 updateSession() 内部是 Future.microtask 异步执行，
+      // finally 块同步运行时 currentSession.value 还是旧值（可能丢失 memory），
+      // 如果写入旧值会覆盖掉已写入的 memory 数据。
       try {
-        final finalSession = sessionController.currentSession.value;
-        if (finalSession?.isSending == true) {
+        if (updateSession.isSending == true) {
           sessionController.updateSession(
-            finalSession!.copyWith(isSending: false),
+            updateSession.copyWith(isSending: false),
           );
         }
         if (_streamingMessageIds.isNotEmpty) {
@@ -3348,6 +3358,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       } catch (e) {
         // 忽略释放资源时的错误
       }
+
+      _sendingInProgress = false;
     }
   }
 
@@ -3403,7 +3415,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         role: MessageRole.bot,
         content: '抱歉，服务暂时不可用，$error',
         timestamp: DateTime.now(),
-        repoId: null,
         sessionId: currentSession.sessionId,
         isError: true,
       );

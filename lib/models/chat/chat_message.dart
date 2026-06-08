@@ -3,36 +3,22 @@ import 'content_block.dart';
 
 enum MessageRole { user, bot, tool }
 
-// AI消息生成状态
-enum AiMessageStatus {
-  init, // 初始状态，等待生成
-  working, // 正在生成中
-  done, // 生成完成
-}
-
 class ChatMessage {
   final String msgId;
   final MessageRole role;
   String content;
   String think; // 思考内容，必填字段，默认为空字符串
-  String toolContent; // 工具执行描述，和 content/think 同级，独立展示
   List<ContentBlock> contentBlocks; // 按时间顺序排列的内容块（think/tool/content）
   final DateTime timestamp;
-  final String? repoId;
-  final bool? isTyping;
   final String? sessionId;
   final bool isError;
   final List<ChatAttachment> attachments; // 消息的附件列表
    
   // 消息关联字段
   final String? pairedMsgId; // 配对的消息ID（用于关联用户消息和AI回复）
-  
-  // AI消息状态字段
-  final AiMessageStatus? aiStatus; // AI消息生成状态（仅对bot类型消息有效）
-   
+
   // 工具调用相关字段
   final String? toolName; // 工具名称（用于tool类型消息）
-  final Map<String, dynamic>? toolArguments; // 工具参数（用于tool类型消息）
   bool isToolCalling; // 是否正在调用工具，默认为 false
 
   // 性能统计字段
@@ -48,18 +34,13 @@ class ChatMessage {
     required this.role,
     required this.content,
     this.think = '', // 思考内容，默认为空字符串
-    this.toolContent = '', // 工具执行描述，默认为空字符串
     this.contentBlocks = const [], // 内容块列表，默认为空
     required this.timestamp,
-    this.repoId,
-    this.isTyping = false,
     this.sessionId,
     this.isError = false,
     this.attachments = const [], // 默认为空列表
     this.pairedMsgId, // 配对的消息ID（可选）
-    this.aiStatus, // AI消息状态（可选）
     this.toolName, // 工具名称（可选）
-    this.toolArguments, // 工具参数（可选）
     this.isToolCalling = false, // 是否正在调用工具，默认为 false
     this.generationStartTime,
     this.generationEndTime,
@@ -103,8 +84,6 @@ class ChatMessage {
           json['timestamp'] != null
               ? DateTime.tryParse(json['timestamp']) ?? DateTime.now()
               : DateTime.now(),
-      repoId: json['repoId'],
-      isTyping: json['isTyping'] ?? false,
       sessionId: json['sessionId'],
       isError: json['isError'] ?? false,
       attachments:
@@ -113,12 +92,7 @@ class ChatMessage {
               .toList() ??
           [],
       pairedMsgId: json['pairedMessageId'],
-      aiStatus: _parseAiStatus(json['aiStatus']),
       toolName: json['toolName'],
-      toolArguments:
-          json['toolArguments'] != null
-              ? Map<String, dynamic>.from(json['toolArguments'])
-              : null,
       isToolCalling: json['isToolCalling'] ?? false,
       generationStartTime:
           json['generationStartTime'] != null
@@ -156,19 +130,6 @@ class ChatMessage {
     }
   }
 
-  static AiMessageStatus? _parseAiStatus(String? status) {
-    switch (status) {
-      case 'init':
-        return AiMessageStatus.init;
-      case 'working':
-        return AiMessageStatus.working;
-      case 'done':
-        return AiMessageStatus.done;
-      default:
-        return null;
-    }
-  }
-
   Map<String, dynamic> toJson() {
     return {
       'id': msgId,
@@ -176,16 +137,12 @@ class ChatMessage {
       'content': content,
       'think': think, // 思考内容
       'timestamp': timestamp.toIso8601String(),
-      'repoId': repoId,
-      'isTyping': isTyping,
       'sessionId': sessionId,
       'isError': isError,
       'attachments':
           attachments.map((attachment) => attachment.toJson()).toList(),
       'pairedMessageId': pairedMsgId,
-      'aiStatus': _aiStatusToString(aiStatus),
       'toolName': toolName,
-      'toolArguments': toolArguments,
       'isToolCalling': isToolCalling,
       'generationStartTime': generationStartTime?.toIso8601String(),
       'generationEndTime': generationEndTime?.toIso8601String(),
@@ -208,36 +165,18 @@ class ChatMessage {
     }
   }
 
-  static String? _aiStatusToString(AiMessageStatus? status) {
-    switch (status) {
-      case AiMessageStatus.init:
-        return 'init';
-      case AiMessageStatus.working:
-        return 'working';
-      case AiMessageStatus.done:
-        return 'done';
-      default:
-        return null;
-    }
-  }
-
   ChatMessage copyWith({
     String? msgId,
     MessageRole? role,
     String? content,
     String? think, // 思考内容
-    String? toolContent, // 工具执行描述
     List<ContentBlock>? contentBlocks, // 内容块列表
     DateTime? timestamp,
-    String? repoId,
-    bool? isTyping,
     String? sessionId,
     bool? isError,
     List<ChatAttachment>? attachments,
     String? pairedMsgId, // 配对的消息ID
-    AiMessageStatus? aiStatus, // AI消息状态
     String? toolName,
-    Map<String, dynamic>? toolArguments,
     bool? isToolCalling,
     DateTime? generationStartTime,
     DateTime? generationEndTime,
@@ -251,18 +190,13 @@ class ChatMessage {
       role: role ?? this.role,
       content: content ?? this.content,
       think: think ?? this.think, // 思考内容
-      toolContent: toolContent ?? this.toolContent, // 工具执行描述
       contentBlocks: contentBlocks ?? this.contentBlocks, // 内容块列表
       timestamp: timestamp ?? this.timestamp,
-      repoId: repoId ?? this.repoId,
-      isTyping: isTyping ?? this.isTyping,
       sessionId: sessionId ?? this.sessionId,
       isError: isError ?? this.isError,
       attachments: attachments ?? this.attachments,
       pairedMsgId: pairedMsgId ?? this.pairedMsgId, // 配对的消息ID
-      aiStatus: aiStatus ?? this.aiStatus, // AI消息状态
       toolName: toolName ?? this.toolName,
-      toolArguments: toolArguments ?? this.toolArguments,
       isToolCalling: isToolCalling ?? this.isToolCalling,
       generationStartTime: generationStartTime ?? this.generationStartTime,
       generationEndTime: generationEndTime ?? this.generationEndTime,

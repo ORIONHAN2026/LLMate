@@ -561,7 +561,6 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
         role: MessageRole.bot,
         content: '',
         timestamp: DateTime.now(),
-        repoId: null,
         sessionId: session.sessionId,
         isError: false,
       );
@@ -626,7 +625,6 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
             role: MessageRole.bot,
             content: accumulatedContent,
             timestamp: botMessage.timestamp,
-            repoId: null,
             sessionId: session.sessionId,
             isError:
                 accumulatedContent.startsWith('请求失败') ||

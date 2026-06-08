@@ -10,6 +10,7 @@ import '../models/bigmodel/models.dart';
 import '../controllers/model_controller.dart';
 import '../services/skill_service.dart';
 import '../widgets/chat_left_sidebar.dart';
+import '../widgets/chat_right_sidebar.dart';
 import '../widgets/chat_input_widget.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/utils/responsive_utils.dart';
@@ -37,7 +38,10 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   final GlobalKey _modelSelectorKey = GlobalKey(); // 模型选择器的key
   bool _isSidebarCollapsed = false; // 侧边栏折叠状态
   double _sidebarWidth = 280.0; // 左侧边栏宽度，可调整
+  bool _isRightSidebarCollapsed = false; // 右侧边栏折叠状态
+  double _rightSidebarWidth = 260.0; // 右侧边栏宽度
   bool _isResizeHandleHovered = false; // 拖动条悬停状态
+  bool _isRightResizeHandleHovered = false; // 右侧拖动条悬停状态
   // 中间聊天区域的最小可视宽度，避免被两侧面板挤压得太窄
   static const double _minChatAreaWidth = 520.0;
 
@@ -697,6 +701,92 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     );
   }
 
+  // 右侧边栏折叠按钮（顶部栏右侧）
+  Widget _buildRightSidebarToggle() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: IconButton(
+        onPressed: () {
+          setState(() {
+            _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
+          });
+        },
+        icon: Icon(
+          _isRightSidebarCollapsed
+              ? CupertinoIcons.sidebar_right
+              : CupertinoIcons.sidebar_right,
+          size: 16,
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: _isRightSidebarCollapsed ? 0.6 : 0.4),
+        ),
+        tooltip: _isRightSidebarCollapsed ? '展开右侧栏' : '收起右侧栏',
+      ),
+    );
+  }
+
+  // 右侧可调整大小的分隔条
+  Widget _buildRightResizableHandle() {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      onEnter: (_) => setState(() => _isRightResizeHandleHovered = true),
+      onExit: (_) => setState(() => _isRightResizeHandleHovered = false),
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          double proposed = (_rightSidebarWidth - details.delta.dx).clamp(
+            200.0,
+            400.0,
+          );
+          // 确保左侧和聊天区有足够空间
+          final leftWidth =
+              _isSidebarCollapsed ? 0 : _sidebarWidth;
+          final remaining = screenWidth - leftWidth - proposed;
+          if (remaining < _minChatAreaWidth) {
+            proposed = (screenWidth - leftWidth - _minChatAreaWidth).clamp(
+              200.0,
+              400.0,
+            );
+          }
+          setState(() => _rightSidebarWidth = proposed);
+        },
+        child: Container(
+          width: 2,
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 0),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color:
+                      _isRightResizeHandleHovered
+                          ? Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.3)
+                          : Theme.of(context).dividerColor,
+                  width: 1,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 构建右侧面板
+  Widget _buildRightSidePanel() {
+    return ChatRightSidebar(
+      width: _rightSidebarWidth,
+      isCollapsed: _isRightSidebarCollapsed,
+      onToggleCollapse: () {
+        setState(() {
+          _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ResponsiveBreakpoints(
@@ -782,6 +872,14 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               ],
             ),
           ),
+          // 右侧边栏
+          if (!_isRightSidebarCollapsed) ...[
+            _buildRightResizableHandle(),
+            SizedBox(
+              width: _rightSidebarWidth,
+              child: _buildRightSidePanel(),
+            ),
+          ],
         ],
       ),
     );
@@ -815,6 +913,14 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               ],
             ),
           ),
+          // 右侧边栏
+          if (!_isRightSidebarCollapsed) ...[
+            _buildRightResizableHandle(),
+            SizedBox(
+              width: _rightSidebarWidth,
+              child: _buildRightSidePanel(),
+            ),
+          ],
         ],
       ),
     );
@@ -863,6 +969,8 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             ),
           ),
           const SizedBox(width: 8),
+          // 右侧边栏折叠按钮
+          _buildRightSidebarToggle(),
         ],
       ),
     );

@@ -76,9 +76,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         curve: Curves.easeInOut,
       ),
     );
-    if (widget.message.isToolCalling) {
-      _rotationAnimationController.repeat(reverse: true);
-    }
+    _updateRotationAnimation();
   }
 
   @override
@@ -91,12 +89,23 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   @override
   void didUpdateWidget(covariant AiMessageWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final isToolCalling = widget.message.isToolCalling;
-    final wasToolCalling = oldWidget.message.isToolCalling;
+    final oldLastWasTool = oldWidget.message.contentBlocks.isNotEmpty &&
+        oldWidget.message.contentBlocks.last.type == ContentBlockType.tool;
+    final newLastIsTool = widget.message.contentBlocks.isNotEmpty &&
+        widget.message.contentBlocks.last.type == ContentBlockType.tool;
+    if (oldLastWasTool != newLastIsTool) {
+      _updateRotationAnimation();
+    }
+  }
 
-    if (isToolCalling) {
+  /// 根据最后一个内容块是否为 tool 类型来控制旋转动画
+  void _updateRotationAnimation() {
+    final blocks = widget.message.contentBlocks;
+    final isLastBlockTool =
+        blocks.isNotEmpty && blocks.last.type == ContentBlockType.tool;
+    if (isLastBlockTool) {
       _rotationAnimationController.repeat(reverse: true);
-    } else if (!isToolCalling && wasToolCalling) {
+    } else {
       _rotationAnimationController.stop();
     }
   }
@@ -461,8 +470,14 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         return;
       }
 
-      // 使用系统默认应用打开文件
-      final result = await Process.run('open', [filePath]);
+      // 根据操作系统选择命令打开文件
+      final command = Platform.isWindows
+          ? 'start'
+          : Platform.isMacOS
+              ? 'open'
+              : 'xdg-open';
+      final args = Platform.isWindows ? ['', filePath] : [filePath];
+      final result = await Process.run(command, args, runInShell: true);
       if (result.exitCode == 0) {
         debugPrint('成功打开文件: $filePath');
         if (mounted) {
@@ -727,7 +742,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             role: MessageRole.bot,
             content: '', // 清空内容，准备重新生成
             timestamp: messages[targetIndex].timestamp,
-            repoId: messages[targetIndex].repoId,
             sessionId: session.sessionId,
             isError: false,
           );
@@ -817,7 +831,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           role: MessageRole.bot,
           content: '',
           timestamp: DateTime.now(),
-          repoId: null,
           sessionId: session.sessionId,
           isError: false,
           generationStartTime: startTime, // 设置开始时间
@@ -939,11 +952,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             content: accumulatedContent,
             think:
                 accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
-            toolContent: accumulatedTool,
             contentBlocks: List<ContentBlock>.from(blocks),
             isToolCalling: botMessage.isToolCalling,
             timestamp: botMessage.timestamp,
-            repoId: null,
             sessionId: session.sessionId,
             isError: isError,
             generationStartTime: startTime,
@@ -985,10 +996,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           role: MessageRole.bot,
           content: accumulatedContent,
           think: accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
-          toolContent: accumulatedTool,
           contentBlocks: List<ContentBlock>.from(blocks),
           timestamp: botMessage.timestamp,
-          repoId: null,
           sessionId: session.sessionId,
           isError:
               accumulatedContent.startsWith('请求失败') ||
@@ -1373,13 +1382,19 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     // 收集所有 content 类型块的文本用于提取文件路径
     final allContentText = StringBuffer();
     final children = <Widget>[];
+    // 只有最后一个内容块是 tool 类型时，该 tool 块才显示动画
+    final isLastBlockTool =
+        blocks.isNotEmpty && blocks.last.type == ContentBlockType.tool;
+    final lastToolIndex = isLastBlockTool ? blocks.length - 1 : -1;
+
     for (int i = 0; i < blocks.length; i++) {
       final block = blocks[i];
       switch (block.type) {
         case ContentBlockType.think:
           children.add(_buildThinkBlock(block.text));
         case ContentBlockType.tool:
-          children.add(_buildToolBlock(i, block.text));
+          children.add(_buildToolBlock(i, block.text,
+              isAnimating: i == lastToolIndex));
         case ContentBlockType.toolCalling:
         case ContentBlockType.content:
           allContentText.write(block.text);
@@ -1459,7 +1474,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   }
 
   /// 工具执行块（折叠/展开，默认折叠显示扳手图标+描述）
-  Widget _buildToolBlock(int index, String text) {
+  Widget _buildToolBlock(int index, String text, {bool isAnimating = false}) {
     final isExpanded = _expandedToolIndices.contains(index);
 
     return Container(
@@ -1495,16 +1510,25 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  RotationTransition(
-                    turns: _rotationAnimation,
-                    child: Icon(
+                  if (isAnimating)
+                    RotationTransition(
+                      turns: _rotationAnimation,
+                      child: Icon(
+                        Icons.build_outlined,
+                        size: 14,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    )
+                  else
+                    Icon(
                       Icons.build_outlined,
                       size: 14,
                       color: Theme.of(
                         context,
                       ).colorScheme.onSurface.withOpacity(0.5),
                     ),
-                  ),
                   const SizedBox(width: 6),
                   Flexible(
                     child: ConstrainedBox(

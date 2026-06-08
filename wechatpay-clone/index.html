@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=9" />
+<title>微信支付 - 中国领先的第三方支付平台 ｜ 微信支付提供安全快捷的支付方式</title>
+<meta name="keywords" content="微信支付,微信支付官网,微信商户平台,移动支付,手机支付,微信支付开通,微信支付接入" />
+<meta name="description" content="微信支付是腾讯公司的支付业务品牌，微信支付商户平台支持线下场所、公众号、小程序、PC网站、APP、企业微信等经营场景快速接入微信支付。" />
+<link rel="shortcut icon" href="https://gtimg.wechatpay.cn/core/favicon.ico" type="image/x-icon"/>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="index">
+
+<!-- 顶部站点切换栏 -->
+<div class="sitebar">
+  <div class="wrap">
+      <span class="selected">境内商户</span>
+      <i class="vs"></i>
+      <a href="#">合作伙伴</a>
+      <i class="vs"></i>
+      <a href="#">International Business</a>
+  </div>
+</div>
+
+<!-- 头部导航 -->
+<div class="header">
+  <div class="wrap clr">
+      <h1 class="logo">微信支付商户平台</h1>
+      <div class="link">
+          <a class="selected" href="#">首页</a>
+          <a href="#">接入指引</a>
+          <a href="#">产品中心</a>
+          <a href="#">解决方案</a>
+          <a href="#">文档中心</a>
+          <a class="btn-primary btn-apply" href="#">接入微信支付</a>
+      </div>
+  </div>
+</div>
+
+<div class="container-wrp">
+
+<!-- Banner区域 -->
+<div class="banner">
+    <div class="slider">
+        <ul>
+            <li class="slide-item active" style="background-image: url('https://gtimg.wechatpay.cn/pay/img/home/banner/banner1.jpg');"></li>
+            <li class="slide-item" style="background-image: url('https://gtimg.wechatpay.cn/pay/img/home/banner/banner2.jpg');"></li>
+            <li class="slide-item" style="background-image: url('https://gtimg.wechatpay.cn/pay/img/home/banner/banner3.jpg');"></li>
+        </ul>
+        <ol class="slider-dots">
+            <li class="active"></li>
+            <li></li>
+            <li></li>
+        </ol>
+    </div>
+    <div class="wrap clr">
+        <!-- 登录框 -->
+        <div class="login">
+            <div class="login-weixin" id="wechatLogin">
+                <div class="scan-qrcode">
+                    <div class="qrcode-container">
+                        <div style="height: 62px;position: relative;">
+                            <div class="login-qrcode-title">微信扫一扫</div>
+                            <img class="switch-icon" src="https://td.cdn-go.cn/enterprise_payment/v0.0.7/pc-img.png" alt="切换账号登录"/>
+                        </div>
+                        <div class="qrcode-img">
+                            <div class="qrcode-placeholder">
+                                <img src="https://td.cdn-go.cn/enterprise_payment/v0.1.3/qrcode-mask.png" alt="二维码" style="width:212px;height:212px;"/>
+                            </div>
+                        </div>
+                        <div class="login-service">
+                            <a href="#">成为商家</a>
+                            <i class="vs"></i>
+                            <a href="#">绑定微信号</a>
+                            <i class="vs"></i>
+                            <a href="#">找回商户号</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 账号登录框 -->
+            <div class="login-common hide" id="accountLogin">
+                <form class="login-form" action="#" method="post">
+                    <div class="login-account-header">
+                        <div class="login-account-title">账号密码登录</div>
+                        <img class="switch-icon" src="https://td.cdn-go.cn/enterprise_payment/v0.0.7/qrcode-img.png" alt="切换扫码登录"/>
+                    </div>
+                    <div class="login-account-form">
+                        <div class="login-account">
+                            <label class="ico-account" for="username">登录账号</label>
+                            <input type="text" name="username" placeholder="登录账号" id="username">
+                        </div>
+                        <div class="login-password">
+                            <label class="ico-password" for="password">登录密码</label>
+                            <input type="password" name="password" placeholder="登录密码" id="password">
+                        </div>
+                    </div>
+                    <div class="login-verify">
+                        <span class="verify-input"><input type="text" name="checkword" maxlength="4" placeholder="验证码"></span>
+                        <div class="verify-image">验证码</div>
+                        <a class="verify-change" href="javascript:void(0);">换一张</a>
+                    </div>
+                    <div class="login-err-msg"></div>
+                    <div class="btn-login">登录</div>
+                    <div class="forget-password-block">
+                        <a href="javascript:void(0);" class="forget-password">忘记密码</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 公告栏 -->
+    <div class="notice">
+        <div class="wrap">
+            <h2>公告</h2>
+            <ul>
+                <li>
+                    <span class="ico-new"></span>
+                    <span class="name"><a href="#">微信支付商家助手小程序全新升级</a></span>
+                </li>
+                <li>
+                    <span class="ico-new"></span>
+                    <span class="name"><a href="#">关于商户平台安全升级的通知</a></span>
+                </li>
+                <li>
+                    <span class="name"><a href="#">微信支付服务商平台功能更新公告</a></span>
+                </li>
+            </ul>
+            <p class="more"><a href="#">更多<i class="arr">&gt;&gt;</i></a></p>
+        </div>
+        <div class="mask"></div>
+    </div>
+</div>
+
+<!-- 平台能力 -->
+<div class="platform">
+    <div class="wrap">
+        <h2 class="big-title underline">平台开放能力</h2>
+        <ul class="clr">
+            <li>
+                <a class="ability" href="#">
+                    <p class="ctr"><i class="ico"></i></p>
+                    <h3 class="tit underline">支付产品</h3>
+                    <p class="txt">满足商家在各类交易场景中快速收款的需求</p>
+                </a>
+            </li>
+            <li>
+                <a class="operate" href="#">
+                    <p class="ctr"><i class="ico"></i></p>
+                    <h3 class="tit underline">运营工具</h3>
+                    <p class="txt">红包，代金券，立减折扣等多种营销工具助力商户更好的经营</p>
+                </a>
+            </li>
+            <li>
+                <a class="capital" href="#">
+                    <p class="ctr"><i class="ico"></i></p>
+                    <h3 class="tit underline">资金管理</h3>
+                    <p class="txt">为商家提供安全，便捷，可配置的资金解决方案</p>
+                </a>
+            </li>
+            <li class="last">
+                <a class="safety" href="#">
+                    <p class="ctr"><i class="ico"></i></p>
+                    <h3 class="tit underline">拓展工具</h3>
+                    <p class="txt">开放技术能力，为商家提供全方位安全保障</p>
+                </a>
+            </li>
+        </ul>
+        <p class="more"><a href="#">查看更多<i class="arr">&gt;&gt;</i></a></p>
+    </div>
+</div>
+
+<!-- 行业解决方案 -->
+<div class="solution">
+    <h2 class="big-title underline">行业解决方案</h2>
+    <div class="accordion">
+        <ul>
+            <li class="selected" style="background:#f5f1ce url(https://gtimg.wechatpay.cn/pay/img/home/solution/1.jpg) no-repeat; background-size: cover;">
+                <a class="link-area" href="#"></a>
+                <div class="text-area">
+                    <i class="ico ico-ecommerce"></i>
+                    <h3 class="tit underline">生活服务</h3>
+                    <p class="txt">通过微信整合能力，助力挖掘流量洼地，整合平台内容、服务和支付能力，为用户提供更友好的体验，助力提升行业效率。</p>
+                </div>
+                <div class="text-mask"></div>
+            </li>
+            <li style="background:#fefdfb url(https://gtimg.wechatpay.cn/pay/img/home/solution/2.jpg) no-repeat; background-size: cover;">
+                <a class="link-area" href="#"></a>
+                <div class="text-area">
+                    <i class="ico ico-supermarket"></i>
+                    <h3 class="tit underline">智慧零售</h3>
+                    <p class="txt">顾客通过扫码购、自助收银等服务，运用微信大数据，对用户进行精准触达，实现会员、营销、导购的一站式运营。</p>
+                </div>
+                <div class="text-mask"></div>
+            </li>
+            <li style="background:#fefdfb url(https://gtimg.wechatpay.cn/pay/img/home/solution/3.jpg) no-repeat; background-size: cover;">
+                <a class="link-area" href="#"></a>
+                <div class="text-area">
+                    <i class="ico ico-drink"></i>
+                    <h3 class="tit underline">智慧餐饮</h3>
+                    <p class="txt">微信扫码点餐助力餐饮行业"免排队，轻松点"，通过精准营销，提高门店效率，增加粘性，助力餐饮行业智慧升级。</p>
+                </div>
+                <div class="text-mask"></div>
+            </li>
+            <li style="background:#f7f6f2 url(https://gtimg.wechatpay.cn/pay/img/home/solution/4.jpg) no-repeat; background-size: cover;">
+                <a class="link-area" href="#"></a>
+                <div class="text-area">
+                    <i class="ico ico-parking"></i>
+                    <h3 class="tit underline">智慧出行</h3>
+                    <p class="txt">通过扫码缴费/乘车、自助充值和线上支付，让大家在交通、酒店和景区等方面畅行无阻，出行更无忧，效率与温度并存。</p>
+                </div>
+                <div class="text-mask"></div>
+            </li>
+            <li style="background:#f2edea url(https://gtimg.wechatpay.cn/pay/img/home/solution/5.jpg) no-repeat; background-size: cover;">
+                <a class="link-area" href="#"></a>
+                <div class="text-area">
+                    <i class="ico ico-school"></i>
+                    <h3 class="tit underline">教育医疗</h3>
+                    <p class="txt">协助学校、教育机构和医院精准触达到每一位师生、医生和患者；微信小程序则可将教学、生活和医疗设施的管理线上化。</p>
+                </div>
+                <div class="text-mask"></div>
+            </li>
+            <li class="last" style="background:#fefdfb url(https://gtimg.wechatpay.cn/pay/img/home/solution/6.jpg) no-repeat; background-size: cover;">
+                <a class="link-area" href="#"></a>
+                <div class="text-area">
+                    <i class="ico ico-social"></i>
+                    <h3 class="tit underline">政务民生</h3>
+                    <p class="txt">微信线上办事，帮助简化医保社保、税务、签证、户政办理和生活缴费等办事流程，助力更多的人和事实现"最多跑一次"。</p>
+                </div>
+                <div class="text-mask"></div>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- 接入微信支付 -->
+<div class="applyment">
+    <div class="wrap">
+        <h2 class="big-title underline">接入微信支付</h2>
+        <div class="flow-sheet">
+            <ol>
+                <li>
+                    <p class="num">1</p>
+                    <p class="tit">提交资料</p>
+                    <p class="txt">在线提交营业执照、身份证、银行账户等基本信息，并按指引完成账户验证</p>
+                    <i class="ico ico-datum"></i>
+                    <i class="arr"></i>
+                </li>
+                <li>
+                    <p class="num">2</p>
+                    <p class="tit">签署协议</p>
+                    <p class="txt">微信支付团队会在1-2个工作日内完成审核，审核通过后请在线签约，即可体验各项产品能力</p>
+                    <i class="ico ico-audit"></i>
+                    <i class="arr"></i>
+                </li>
+                <li class="last">
+                    <p class="num">3</p>
+                    <p class="tit">绑定场景</p>
+                    <p class="txt">如需自行开发完成收款，需将商户号与APPID进行绑定，或开通微信收款商业版（免开发）完成收款</p>
+                    <i class="ico ico-agree"></i>
+                </li>
+            </ol>
+        </div>
+        <div class="flow-opt">
+            <a class="btn-primary btn-apply" href="#">接入微信支付</a>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- 底部 -->
+<div class="footer">
+    <div class="wrap">
+        <div class="footer-service">
+            <dl class="service-about">
+                <dt>关于我们</dt>
+                <dd><a href="#">关于微信支付</a></dd>
+                <dd><a href="#">平台使用协议</a></dd>
+                <dd><a href="#">支付服务协议</a></dd>
+                <dd><a href="#">联系我们</a></dd>
+            </dl>
+            <dl class="service-support">
+                <dt>服务支持</dt>
+                <dd><a href="#">开发文档（商户）</a></dd>
+                <dd><a href="#">开发文档（合作伙伴）</a></dd>
+                <dd><a href="#">物料下载</a></dd>
+            </dl>
+            <dl class="service-friend">
+                <dt>友情链接</dt>
+                <dd><a href="#">微信开放平台</a></dd>
+                <dd><a href="#">微信公众平台</a></dd>
+                <dd><a href="#">企业微信</a></dd>
+            </dl>
+            <dl class="service-help">
+                <dt>客服帮助</dt>
+                <dd><a href="#">自助服务专区</a></dd>
+                <dd>客服：95017-2</dd>
+                <dd>（工作时间：09:00-22:00）</dd>
+            </dl>
+            <dl class="service-qrcode">
+                <dt>关注微信支付商家助手公众号</dt>
+                <dd>
+                    <img class="img-qrcode" src="https://wx.gtimg.com/pay/img/common/qrcode_shanghuzhushou.jpg" alt="商家助手公众号">
+                </dd>
+            </dl>
+        </div>
+        <div class="footer-copyright">Powered By Tencent & Tenpay　Copyright 2005-2026 Tenpay All Rights Reserved.</div>
+    </div>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

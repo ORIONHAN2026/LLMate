@@ -35,13 +35,8 @@ class _ChatRightSidebarState extends State<ChatRightSidebar> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 顶部标题栏
+            // 顶部标题栏（下划线与聊天主窗口顶部栏对齐）
             _buildHeader(context),
-            // 分隔线
-            Container(
-              height: 1,
-              color: Theme.of(context).dividerColor,
-            ),
             // 内容区域
             Expanded(
               child:
@@ -56,15 +51,13 @@ class _ChatRightSidebarState extends State<ChatRightSidebar> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+      ),
       child: Row(
         children: [
-          Icon(
-            Icons.psychology_outlined,
-            size: 16,
-            color: Theme.of(context).colorScheme.primary,
-          ),
           const SizedBox(width: 8),
           Text(
             '会话记忆',
@@ -75,24 +68,6 @@ class _ChatRightSidebarState extends State<ChatRightSidebar> {
             ),
           ),
           const Spacer(),
-          // 折叠按钮
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onToggleCollapse,
-              borderRadius: BorderRadius.circular(4),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  CupertinoIcons.sidebar_right,
-                  size: 14,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.4),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -229,12 +204,12 @@ class _ChatRightSidebarState extends State<ChatRightSidebar> {
             decoration: BoxDecoration(
               color:
                   isUser
-                      ? Theme.of(context).colorScheme.primary.withValues(
-                        alpha: 0.1,
-                      )
-                      : Theme.of(context).colorScheme.tertiary.withValues(
-                        alpha: 0.1,
-                      ),
+                      ? Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.1)
+                      : Theme.of(
+                        context,
+                      ).colorScheme.tertiary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Icon(

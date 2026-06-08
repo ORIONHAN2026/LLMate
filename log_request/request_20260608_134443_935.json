@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-06-08T13:44:43.935450",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-pro",
+    "messages": [
+      {
+        "role": "user",
+        "content": "你是一个技术工具命名专家。请根据以下 MCP (Model Context Protocol) 服务的信息，生成一个精简的中文名称和一段简洁的中文描述。\n\n要求：\n1. 名称：简洁易读，中文优先（可以包含英文关键词），不超过15个字\n2. 描述：一句话说明这个服务能做什么，不超过50个字\n3. 仅输出JSON格式，不要包含其他文字\n\n原始服务器名称：zcaceres/fetch\n\n工具列表：\n- fetch_html: Fetch a website and return its unmodified contents as HTML\n- fetch_markdown: Fetch a website and return its contents converted to Markdown\n- fetch_txt: Fetch a website, convert the content to plain text (no HTML)\n- fetch_json: Fetch a JSON file from a URL\n- fetch_readable: Fetch a website and return its main content parsed by Mozilla Readability, converted to Markdown. Strips away navigation, ads, and boilerplate. Ideal for articles and blog posts.\n- fetch_youtube_transcript: Fetch a YouTube video page and extract its captions/transcript\n\n\n请按以下JSON格式输出：\n{\"name\": \"生成的名称\", \"description\": \"生成的描述\"}"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 0.7
+  }
+}

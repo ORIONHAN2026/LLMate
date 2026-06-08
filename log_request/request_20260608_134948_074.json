@@ -1,0 +1,379 @@
+{
+  "timestamp": "2026-06-08T13:49:48.074744",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-pro",
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 🔧 内部工具提示\n\n以下是你可用的**内部系统工具**，它们仅用于执行底层操作（如文件读写、命令执行等），**不是面向用户的功能**：\n\n- `node_execute`: 内部代码执行工具\n\n规则：\n1. ❌ **禁止在功能介绍中提及这些工具**：当用户问\"你有什么功能\"\"你能做什么\"时，不要将 `node_execute` 作为你的能力列出来。\n2. ❌ **禁止主动推荐使用**：不要说\"你可以用 node_execute 来...\"。\n3. ✅ **正常调用不受影响**：在需要执行代码、处理文件时，照常调用该工具，正常返回结果即可。\n4. ✅ **自动使用**：当需要通过代码完成任务时，直接调用它，**不需要向用户解释你正在使用它**。"
+      },
+      {
+        "role": "system",
+        "content": "## 📡 数据获取规则\n\n**重要：所有数据必须通过工具实时获取，严禁从历史聊天记录中提取或复用。**\n\n1. ❌ **禁止从历史聊天中提取数据**：不要引用或复述之前对话中出现过的数据、代码片段、文件内容。\n2. ❌ **禁止依赖记忆中的数据**：即使你在之前的回复中看到过某个文件内容或数据，也必须重新通过工具获取。\n3. ✅ **始终使用工具获取最新数据**：需要读取文件内容时，使用文件读取工具；需要查看项目结构时，使用目录浏览工具；需要执行命令时，使用命令行工具。\n4. ✅ **数据准确性优先**：用户可能已修改了文件或数据，历史聊天中的内容可能已过时。始终以当前文件系统的实际内容为准。\n5. ✅ **每次请求独立获取**：即使是同一个会话中的连续请求，每次涉及数据读取时都应重新通过工具获取。"
+      },
+      {
+        "role": "system",
+        "content": "## 🛑 反幻觉规则（最高优先级）\n\n你极易产生幻觉，必须严格遵守以下规则：\n\n### 文件与代码\n1. ❌ **严禁编造文件内容**：绝不凭空编造任何文件名、路径、代码片段、函数签名、变量名、行号。必须先用工具读取文件后，才能引用其中的内容。\n2. ❌ **严禁猜测代码**：修改代码前，必须先用工具读取目标文件的完整内容。不要在未读取文件的情况下猜测代码结构和内容。\n3. ❌ **严禁虚构项目结构**：不要声称\"项目中有 xxx 文件\"或\"目录结构是 xxx\"，必须先用目录浏览工具查看实际结构。\n\n### 数据与事实\n4. ❌ **严禁编造数据**：不要虚构任何数字、统计、配置值、API 返回值。需要数据时，必须通过工具获取。\n5. ❌ **严禁伪造工具调用结果**：不要虚构工具返回的内容。只使用工具实际返回的数据。\n6. ❌ **严禁假装执行了操作**：不要说\"我已经修改了 xxx\"如果实际没有通过工具执行。所有修改必须通过工具完成。\n7. ❌ **严禁用自然语言模拟工具行为**：禁止回复中包含\"让我查一下…\"、\"找到了…\"、\"已更新！\"、\"当前数据是…\"等表述，除非你确实调用了工具并收到了返回结果。你没有工具调用就没有数据，没有数据就不能呈现任何具体信息。\n\n### 承认不确定\n8. ✅ **诚实第一**：如果数据不足或工具无法获取需要的信息，直接说\"我无法确定\"，不要猜测或编造。\n9. ✅ **区分事实与推测**：基于工具返回的数据给出的事实，与你的推测/建议要明确区分。\n\n### 代码生成\n10. ❌ **禁止凭空写代码**：在写任何代码之前，必须先读取相关文件了解上下文（变量名、函数签名、导入等）。\n11. ❌ **禁止虚构不存在的 API**：不要调用项目中不存在的函数或类。如不确定是否存在，先用工具搜索确认。\n\n### 回答依据\n12. ✅ **最终回答必须以工具返回的结果为准**：你的回复内容必须是工具实际返回数据的直接体现。\n13. ❌ **禁止用你的训练知识替代工具结果**：即使你认为\"应该是\"某个值，如果工具返回了不同的结果，必须以工具结果为准。\n14. ❌ **禁止在工具返回前给出最终结论**：需要数据支撑的回答，必须先调用工具获取数据，再基于工具结果作答。\n15. ✅ **工具结果不够时，可以结合推理补充**：在工具返回数据的基础上，可以进行合理推理，但要明确标注\"基于工具结果推理如下：...”。\n\n**一句话总结：没调用工具就不准呈现数据，没执行操作就不准说已完成，不确定就说不确定。**"
+      },
+      {
+        "role": "user",
+        "content": "生成测试图片"
+      },
+      {
+        "role": "assistant",
+        "content": "错误: This exception was thrown because the response has a status code of 400 and RequestOptions.validateStatus was configured to throw for this status code.\nThe status code of 400 has the following meaning: \"Client error - the request contains bad syntax or cannot be fulfilled\"\nRead more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status\nIn order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.\n"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 0.7,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "node_execute",
+          "description": "执行 Node.js 脚本。支持内联代码和 .js/.ts 文件两种方式。可选安装 npm 依赖。适合数据分析、文件批处理、API 调用、爬虫、文档生成等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Node.js 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .js 或 .ts 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 npm 包名列表（如 [\"axios\", \"lodash\"]），执行前自动 npm install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "modelstudio_image_gen",
+          "description": "AI绘画（图像生成）服务，输入文本描述和图像分辨率，返回根据文本信息绘制的图片URL。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "watermark": {
+                "description": "是否添加水印，默认不设置。可设置为true或false。",
+                "type": "bool",
+                "title": "Watermark"
+              },
+              "size": {
+                "description": "输出图像的分辨率。默认值是1024*1024 最高可达200万像素",
+                "type": "string",
+                "title": "Size"
+              },
+              "negative_prompt": {
+                "description": "反向提示词，用来描述不希望在画面中看到的内容，可以对画面进行限制，超过500个字符自动截断",
+                "type": "string",
+                "title": "Negative Prompt"
+              },
+              "prompt_extend": {
+                "description": "是否开启prompt智能改写，开启后使用大模型对输入prompt进行智能改写",
+                "type": "bool",
+                "title": "Prompt Extend"
+              },
+              "prompt": {
+                "description": "正向提示词，用来描述生成图像中期望包含的元素和视觉特点,超过800自动截断",
+                "title": "Prompt",
+                "type": "string"
+              },
+              "n": {
+                "default": 1,
+                "description": "生成图片的数量。取值范围为1~4张 默认1",
+                "type": "integer",
+                "title": "N"
+              }
+            },
+            "required": [
+              "prompt"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "modelstudio_image_edit",
+          "description": "AI图像编辑（图生图）服务，输入原图URL、编辑功能、文本描述和分辨率，返回编辑后的图片URL。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "watermark": {
+                "description": "是否添加水印，默认不设置。可设置为true或false。",
+                "type": "bool",
+                "title": "Watermark"
+              },
+              "function": {
+                "description": "图像编辑功能。支持 stylization_all、stylization_local、description_edit、description_edit_with_mask、remove_watermark、expand、super_resolution、colorization、doodle、control_cartoon_feature。",
+                "title": "Function",
+                "type": "string"
+              },
+              "prompt": {
+                "description": "正向提示词，用来描述生成图像中期望包含的元素和视觉特点,超过800自动截断",
+                "title": "Prompt",
+                "type": "string"
+              },
+              "mask_image_url": {
+                "description": "仅当function为description_edit_with_mask时必填，其余情况无需填写。要求：URL，分辨率与base_image_url一致，格式：JPG、JPEG、PNG、BMP、TIFF、WEBP，大小不超过10MB，白色为编辑区域，黑色为不变区域。",
+                "type": "string",
+                "title": "Mask Image Url"
+              },
+              "n": {
+                "default": 1,
+                "description": "生成图片的数量。取值范围为1~4张 默认1",
+                "type": "integer",
+                "title": "N"
+              },
+              "base_image_url": {
+                "description": "输入图像的URL地址，需为公网可访问地址，支持 HTTP 或 HTTPS 协议。格式：JPG、JPEG、PNG、BMP、TIFF、WEBP，分辨率[512,4096]，大小不超过10MB。URL不能包含中文字符。",
+                "title": "Base Image Url",
+                "type": "string"
+              }
+            },
+            "required": [
+              "function",
+              "base_image_url",
+              "prompt"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "modelstudio_image_style_repaint",
+          "description": "人像风格重绘服务，输入原始图像和风格数据(索引或参考图像），返回重绘后的图像。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "style_index": {
+                "description": "人像风格类型索引值，当前支持以下风格：-1：参考上传图像风格, 0：复古漫画, 1：3D童话, 2：二次元, 3：小清新, 4：未来科技, 5：国画古风, 6：将军百战, 7：炫彩卡通, 8：清雅国风, 9：喜迎新年。",
+                "title": "Style Index",
+                "type": "integer"
+              },
+              "watermark": {
+                "description": "是否添加水印，默认不设置。可设置为true或false。",
+                "type": "bool",
+                "title": "Watermark"
+              },
+              "image_url": {
+                "description": "输入图像的URL地址。",
+                "title": "Image Url",
+                "type": "string"
+              },
+              "style_ref_url": {
+                "description": "风格参考图像的URL地址。当参数style_index等于-1时，必须传入，其他风格无需传入。",
+                "type": "string",
+                "title": "Style Ref Url"
+              }
+            },
+            "required": [
+              "image_url",
+              "style_index"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "modelstudio_image_out_painting_submit",
+          "description": "图像画面扩展（扩图）异步任务提交工具，基于image-out-painting 模型。\n支持三种扩图方式（按优先级）：\n1. 按宽高比（output_ratio）\n2. 按比例缩放（x_scale / y_scale）\n3. 指定方向像素填充（top/bottom/left/right_offset）\n可选旋转（angle），先旋转后扩图。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "top_offset": {
+                "description": "在图像上方添加的像素数。默认值为0,需满足 top_offset + bottom_offset < 3 × 原图高度。输入图像分辨率为1000×1000（宽×高），top_offset=500，扩展后的图像分辨率为1000×1500（宽×高）。保持宽度不变，只在图像上方添加500个像素。",
+                "type": "number",
+                "title": "Top Offset"
+              },
+              "left_offset": {
+                "description": "在图像左侧添加的像素数。默认值为0，需满足 left_offset + right_offset < 3 × 原图宽度。例如：输入图像分辨率为1000×1000（宽×高），left_offset=500，扩展后的图像分辨率为1500×1000（宽×高）。保持高度不变，只在图像左侧添加500个像素。",
+                "type": "number",
+                "title": "Left Offset"
+              },
+              "right_offset": {
+                "description": "在图像右侧添加的像素数。默认值为0，需满足 left_offset + right_offset < 3 × 原图宽度。例如：输入图像分辨率为1000×1000（宽×高），right_offset=500，扩展后的图像分辨率为1500×1000（宽×高）。保持高度不变，只在图像右侧添加500个像素。",
+                "type": "number",
+                "title": "Right Offset"
+              },
+              "y_scale": {
+                "description": "垂直方向扩展比例（居中扩展），默认 1.0。可以选择与 x_scale 搭配使用。取值范围 [1.0, 3.0]。例如：输入图像分辨率为1000×1000（宽×高），y_scale=2.0，扩展后的图像分辨率为1000×2000（宽×高）。保持宽度不变，上下各添加500个像素。",
+                "type": "number",
+                "title": "Y Scale"
+              },
+              "image_url": {
+                "description": "输入图像的公网可访问 URL。",
+                "title": "Image Url",
+                "type": "string"
+              },
+              "x_scale": {
+                "description": "水平方向扩展比例（居中扩展），默认 1.0。可以与 y_scale 搭配使用。取值范围 [1.0, 3.0]。例如：输入图像分辨率为1000×1000（宽×高），x_scale=2.0，扩展后的图像分辨率为2000×1000（宽×高）。保持高度不变，左右各添加500个像素。",
+                "type": "number",
+                "title": "X Scale"
+              },
+              "best_quality": {
+                "description": "是否启用最佳质量模式。默认 false（速度优先），设为 true 可提升细节但耗时增加。",
+                "type": "bool",
+                "title": "Best Quality"
+              },
+              "angle": {
+                "description": "逆时针旋转角度，取值范围 [0, 359]。默认为 0（不旋转）。",
+                "type": "number",
+                "title": "Angle"
+              },
+              "limit_image_size": {
+                "description": "是否限制输出图像大小（≤5MB）。默认 true，建议保持开启。模型生成的图像需要经过一层安全过滤后才能输出，当前不支持大于10M的图像处理。",
+                "type": "bool",
+                "title": "Limit Image Size"
+              },
+              "output_ratio": {
+                "description": "目标宽高比，可选值：[\"\", \"1:1\", \"3:4\", \"4:3\", \"9:16\", \"16:9\"]。默认值为\"\"，表示不设置输出图像的宽高比。",
+                "type": "string",
+                "title": "Output Ratio"
+              },
+              "bottom_offset": {
+                "description": "在图像下方添加的像素数。默认值为0，需满足 top_offset + bottom_offset < 3 × 原图高度。例如：输入图像分辨率为1000×1000（宽×高），bottom_offset=500，扩展后的图像分辨率为1000×1500（宽×高）。保持宽度不变，只在图像下方添加500个像素。",
+                "type": "number",
+                "title": "Bottom Offset"
+              },
+              "add_watermark": {
+                "description": "是否添加水印,True：默认值,添加水印,False：不添加水印。",
+                "type": "bool",
+                "title": "Add Watermark"
+              }
+            },
+            "required": [
+              "image_url",
+              "x_scale",
+              "y_scale"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "modelstudio_image_out_painting_fetch",
+          "description": "查询图像画面扩展（扩图）任务的结果。\n输入 Task ID，返回扩图后的图像 URL 和任务状态。\n请在提交任务后轮询此接口，直到状态变为 SUCCEEDED。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "description": "要查询的扩图任务 ID。",
+                "title": "Task Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "task_id"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "modelstudio_image_out_painting_auto",
+          "description": "图像画面扩展（扩图）同步自动执行工具。\n提交扩图任务并内部轮询结果，直接返回扩图后的图像 URL。\n无需手动查询任务状态，适合需要端到端结果的场景。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "top_offset": {
+                "description": "在图像上方添加的像素数。默认值为0,需满足 top_offset + bottom_offset < 3 × 原图高度。输入图像分辨率为1000×1000（宽×高），top_offset=500，扩展后的图像分辨率为1000×1500（宽×高）。保持宽度不变，只在图像上方添加500个像素。",
+                "type": "number",
+                "title": "Top Offset"
+              },
+              "left_offset": {
+                "description": "在图像左侧添加的像素数。默认值为0，需满足 left_offset + right_offset < 3 × 原图宽度。例如：输入图像分辨率为1000×1000（宽×高），left_offset=500，扩展后的图像分辨率为1500×1000（宽×高）。保持高度不变，只在图像左侧添加500个像素。",
+                "type": "number",
+                "title": "Left Offset"
+              },
+              "right_offset": {
+                "description": "在图像右侧添加的像素数。默认值为0，需满足 left_offset + right_offset < 3 × 原图宽度。例如：输入图像分辨率为1000×1000（宽×高），right_offset=500，扩展后的图像分辨率为1500×1000（宽×高）。保持高度不变，只在图像右侧添加500个像素。",
+                "type": "number",
+                "title": "Right Offset"
+              },
+              "y_scale": {
+                "description": "垂直方向扩展比例（居中扩展），默认 1.0。可以选择与 x_scale 搭配使用。取值范围 [1.0, 3.0]。例如：输入图像分辨率为1000×1000（宽×高），y_scale=2.0，扩展后的图像分辨率为1000×2000（宽×高）。保持宽度不变，上下各添加500个像素。",
+                "type": "number",
+                "title": "Y Scale"
+              },
+              "image_url": {
+                "description": "输入图像的公网可访问 URL。",
+                "title": "Image Url",
+                "type": "string"
+              },
+              "x_scale": {
+                "description": "水平方向扩展比例（居中扩展），默认 1.0。可以与 y_scale 搭配使用。取值范围 [1.0, 3.0]。例如：输入图像分辨率为1000×1000（宽×高），x_scale=2.0，扩展后的图像分辨率为2000×1000（宽×高）。保持高度不变，左右各添加500个像素。",
+                "type": "number",
+                "title": "X Scale"
+              },
+              "best_quality": {
+                "description": "是否启用最佳质量模式。默认 false（速度优先），设为 true 可提升细节但耗时增加。",
+                "type": "bool",
+                "title": "Best Quality"
+              },
+              "angle": {
+                "description": "逆时针旋转角度，取值范围 [0, 359]。默认为 0（不旋转）。",
+                "type": "number",
+                "title": "Angle"
+              },
+              "limit_image_size": {
+                "description": "是否限制输出图像大小（≤5MB）。默认 true，建议保持开启。模型生成的图像需要经过一层安全过滤后才能输出，当前不支持大于10M的图像处理。",
+                "type": "bool",
+                "title": "Limit Image Size"
+              },
+              "output_ratio": {
+                "description": "目标宽高比，可选值：[\"\", \"1:1\", \"3:4\", \"4:3\", \"9:16\", \"16:9\"]。默认值为\"\"，表示不设置输出图像的宽高比。",
+                "type": "string",
+                "title": "Output Ratio"
+              },
+              "bottom_offset": {
+                "description": "在图像下方添加的像素数。默认值为0，需满足 top_offset + bottom_offset < 3 × 原图高度。例如：输入图像分辨率为1000×1000（宽×高），bottom_offset=500，扩展后的图像分辨率为1000×1500（宽×高）。保持宽度不变，只在图像下方添加500个像素。",
+                "type": "number",
+                "title": "Bottom Offset"
+              },
+              "add_watermark": {
+                "description": "是否添加水印,True：默认值,添加水印,False：不添加水印。",
+                "type": "bool",
+                "title": "Add Watermark"
+              }
+            },
+            "required": [
+              "image_url",
+              "x_scale",
+              "y_scale"
+            ]
+          }
+        }
+      }
+    ],
+    "thinking": {
+      "type": "disabled"
+    }
+  }
+}

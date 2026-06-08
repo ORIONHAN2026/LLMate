@@ -1,0 +1,308 @@
+{
+  "timestamp": "2026-06-08T13:46:35.776768",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-pro",
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 🔧 内部工具提示\n\n以下是你可用的**内部系统工具**，它们仅用于执行底层操作（如文件读写、命令执行等），**不是面向用户的功能**：\n\n- `node_execute`: 内部代码执行工具\n\n规则：\n1. ❌ **禁止在功能介绍中提及这些工具**：当用户问\"你有什么功能\"\"你能做什么\"时，不要将 `node_execute` 作为你的能力列出来。\n2. ❌ **禁止主动推荐使用**：不要说\"你可以用 node_execute 来...\"。\n3. ✅ **正常调用不受影响**：在需要执行代码、处理文件时，照常调用该工具，正常返回结果即可。\n4. ✅ **自动使用**：当需要通过代码完成任务时，直接调用它，**不需要向用户解释你正在使用它**。"
+      },
+      {
+        "role": "system",
+        "content": "## 📡 数据获取规则\n\n**重要：所有数据必须通过工具实时获取，严禁从历史聊天记录中提取或复用。**\n\n1. ❌ **禁止从历史聊天中提取数据**：不要引用或复述之前对话中出现过的数据、代码片段、文件内容。\n2. ❌ **禁止依赖记忆中的数据**：即使你在之前的回复中看到过某个文件内容或数据，也必须重新通过工具获取。\n3. ✅ **始终使用工具获取最新数据**：需要读取文件内容时，使用文件读取工具；需要查看项目结构时，使用目录浏览工具；需要执行命令时，使用命令行工具。\n4. ✅ **数据准确性优先**：用户可能已修改了文件或数据，历史聊天中的内容可能已过时。始终以当前文件系统的实际内容为准。\n5. ✅ **每次请求独立获取**：即使是同一个会话中的连续请求，每次涉及数据读取时都应重新通过工具获取。"
+      },
+      {
+        "role": "system",
+        "content": "## 🛑 反幻觉规则（最高优先级）\n\n你极易产生幻觉，必须严格遵守以下规则：\n\n### 文件与代码\n1. ❌ **严禁编造文件内容**：绝不凭空编造任何文件名、路径、代码片段、函数签名、变量名、行号。必须先用工具读取文件后，才能引用其中的内容。\n2. ❌ **严禁猜测代码**：修改代码前，必须先用工具读取目标文件的完整内容。不要在未读取文件的情况下猜测代码结构和内容。\n3. ❌ **严禁虚构项目结构**：不要声称\"项目中有 xxx 文件\"或\"目录结构是 xxx\"，必须先用目录浏览工具查看实际结构。\n\n### 数据与事实\n4. ❌ **严禁编造数据**：不要虚构任何数字、统计、配置值、API 返回值。需要数据时，必须通过工具获取。\n5. ❌ **严禁伪造工具调用结果**：不要虚构工具返回的内容。只使用工具实际返回的数据。\n6. ❌ **严禁假装执行了操作**：不要说\"我已经修改了 xxx\"如果实际没有通过工具执行。所有修改必须通过工具完成。\n7. ❌ **严禁用自然语言模拟工具行为**：禁止回复中包含\"让我查一下…\"、\"找到了…\"、\"已更新！\"、\"当前数据是…\"等表述，除非你确实调用了工具并收到了返回结果。你没有工具调用就没有数据，没有数据就不能呈现任何具体信息。\n\n### 承认不确定\n8. ✅ **诚实第一**：如果数据不足或工具无法获取需要的信息，直接说\"我无法确定\"，不要猜测或编造。\n9. ✅ **区分事实与推测**：基于工具返回的数据给出的事实，与你的推测/建议要明确区分。\n\n### 代码生成\n10. ❌ **禁止凭空写代码**：在写任何代码之前，必须先读取相关文件了解上下文（变量名、函数签名、导入等）。\n11. ❌ **禁止虚构不存在的 API**：不要调用项目中不存在的函数或类。如不确定是否存在，先用工具搜索确认。\n\n### 回答依据\n12. ✅ **最终回答必须以工具返回的结果为准**：你的回复内容必须是工具实际返回数据的直接体现。\n13. ❌ **禁止用你的训练知识替代工具结果**：即使你认为\"应该是\"某个值，如果工具返回了不同的结果，必须以工具结果为准。\n14. ❌ **禁止在工具返回前给出最终结论**：需要数据支撑的回答，必须先调用工具获取数据，再基于工具结果作答。\n15. ✅ **工具结果不够时，可以结合推理补充**：在工具返回数据的基础上，可以进行合理推理，但要明确标注\"基于工具结果推理如下：...”。\n\n**一句话总结：没调用工具就不准呈现数据，没执行操作就不准说已完成，不确定就说不确定。**"
+      },
+      {
+        "role": "user",
+        "content": "能干啥"
+      },
+      {
+        "role": "assistant",
+        "content": "你好！我是基于 Claude-4.5-Opus 的 AI 助手，以下是我能帮你做的事情：\n\n---\n\n### 📚 **信息获取与阅读**\n- **网页抓取与阅读**：抓取任意网页内容，自动提取正文（去除广告、导航等干扰），支持 HTML / Markdown / 纯文本格式\n- **YouTube 字幕提取**：获取 YouTube 视频的字幕/转录文本\n- **JSON 数据获取**：从 URL 抓取 JSON 数据\n\n---\n\n### 💻 **代码执行与编程**\n- **Node.js 代码执行**：运行 JavaScript/TypeScript 脚本，支持安装 npm 依赖\n- **数据分析与批处理**：处理数据、生成报告、文件批处理等\n- **API 调用与爬虫**：通过代码调用外部 API、抓取数据\n\n---\n\n### ✍️ **写作与创作**\n- 文章撰写、润色、翻译\n- 技术文档编写\n- 创意写作（故事、剧本等）\n\n---\n\n### 🔍 **分析与推理**\n- 代码审查与调试\n- 技术问题分析与解答\n- 逻辑推理与决策建议\n\n---\n\n### 📄 **文件处理**\n- 读取和分析本地文件内容\n- 代码修改与重构\n\n---\n\n有什么具体需要，直接告诉我即可！"
+      },
+      {
+        "role": "user",
+        "content": "抓取一下 https://github.com/zcaceres/fetch-mcp"
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_00_A5ErzvLBQNK97t0KYY1B9072",
+            "type": "function",
+            "function": {
+              "name": "fetch_markdown",
+              "arguments": "{\"url\":\"https://github.com/zcaceres/fetch-mcp\",\"max_length\":8000}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "call_00_A5ErzvLBQNK97t0KYY1B9072",
+        "content": ":root { --tab-size-preference: 4; } pre, code { tab-size: var(--tab-size-preference); }       {\"locale\":\"en\",\"featureFlags\":\\[\"actions\\_custom\\_images\\_storage\\_billing\\_ui\\_visibility\",\"actions\\_image\\_version\\_event\",\"actions\\_workflow\\_language\\_service\\_allow\\_concurrency\\_queue\",\"agent\\_conflict\\_resolution\",\"alternate\\_user\\_config\\_repo\",\"arianotify\\_comprehensive\\_migration\",\"artifact\\_ui\\_v2\",\"billing\\_discount\\_threshold\\_notification\",\"billing\\_user\\_level\\_budgets\",\"billing\\_user\\_level\\_budgets\\_manage\",\"code\\_scanning\\_dfa\\_degraded\\_experience\\_notice\",\"codespaces\\_prebuild\\_region\\_target\\_update\",\"coding\\_agent\\_model\\_selection\",\"coding\\_agent\\_model\\_selection\\_all\\_skus\",\"coding\\_agent\\_session\\_ai\\_credits\",\"comment\\_viewer\\_copy\\_raw\\_markdown\",\"contentful\\_form\\_phone\\_v2\",\"contentful\\_primer\\_code\\_blocks\",\"copilot\\_agent\\_snippy\",\"copilot\\_api\\_agentic\\_issue\\_marshal\\_yaml\",\"copilot\\_ask\\_mode\\_dropdown\",\"copilot\\_automation\\_suggest\\_tools\\_enabled\",\"copilot\\_automations\\_suggested\\_automations\",\"copilot\\_chat\\_attach\\_multiple\\_images\",\"copilot\\_chat\\_category\\_rate\\_limit\\_messages\",\"copilot\\_chat\\_clear\\_model\\_selection\\_for\\_default\\_change\",\"copilot\\_chat\\_contextual\\_suggestions\\_updated\",\"copilot\\_chat\\_docked\\_panel\",\"copilot\\_chat\\_enable\\_tool\\_call\\_logs\",\"copilot\\_chat\\_input\\_commands\",\"copilot\\_chat\\_input\\_performance\\_optimizations\",\"copilot\\_chat\\_max\\_upsell\",\"copilot\\_chat\\_models\\_via\\_backend\",\"copilot\\_chat\\_opening\\_thread\\_switch\",\"copilot\\_chat\\_prettify\\_pasted\\_code\",\"copilot\\_chat\\_reduce\\_quota\\_checks\",\"copilot\\_chat\\_search\\_bar\\_redirect\",\"copilot\\_chat\\_structured\\_list\\_refs\",\"copilot\\_chat\\_vision\\_in\\_claude\",\"copilot\\_chat\\_vision\\_preview\\_gate\",\"copilot\\_cli\\_install\\_cta\\_max\\_plan\",\"copilot\\_cloud\\_agent\\_always\\_categorize\\_models\\_in\\_model\\_picker\",\"copilot\\_coding\\_agent\\_tbb\\_quota\\_banner\",\"copilot\\_custom\\_copilots\",\"copilot\\_custom\\_copilots\\_feature\\_preview\",\"copilot\\_delete\\_cli\\_sessions\",\"copilot\\_diff\\_explain\\_conversation\\_intent\",\"copilot\\_diff\\_reference\\_context\",\"copilot\\_dotcom\\_chat\\_memoize\\_messages\",\"copilot\\_duplicate\\_thread\",\"copilot\\_extensions\\_hide\\_in\\_dotcom\\_chat\",\"copilot\\_extensions\\_removal\\_on\\_marketplace\",\"copilot\\_features\\_sql\\_server\\_logo\",\"copilot\\_file\\_block\\_ref\\_matching\",\"copilot\\_fix\\_failed\\_workflows\",\"copilot\\_fix\\_failed\\_workflows\\_all\\_skus\",\"copilot\\_ftp\\_hyperspace\\_upgrade\\_prompt\",\"copilot\\_hide\\_hovercard\",\"copilot\\_icebreakers\\_experiment\\_dashboard\",\"copilot\\_icebreakers\\_experiment\\_hyperspace\",\"copilot\\_immersive\\_code\\_block\\_transition\\_wrap\",\"copilot\\_immersive\\_embedded\\_deferred\\_payload\",\"copilot\\_immersive\\_embedded\\_draggable\",\"copilot\\_immersive\\_embedded\\_header\\_button\",\"copilot\\_immersive\\_embedded\\_implicit\\_references\",\"copilot\\_immersive\\_embedded\\_skip\\_copilot\\_api\\_token\\_for\\_dotcom\\_context\",\"copilot\\_immersive\\_file\\_block\\_transition\\_open\",\"copilot\\_immersive\\_file\\_preview\\_keep\\_mounted\",\"copilot\\_immersive\\_job\\_result\\_preview\",\"copilot\\_immersive\\_structured\\_model\\_picker\",\"copilot\\_immersive\\_suggestion\\_pills\",\"copilot\\_immersive\\_task\\_hyperlinking\",\"copilot\\_immersive\\_task\\_within\\_chat\\_thread\",\"copilot\\_mc\\_cli\\_resume\\_any\\_users\\_task\",\"copilot\\_mission\\_control\\_agent\\_filtering\",\"copilot\\_mission\\_control\\_agents\\_task\\_list\",\"copilot\\_mission\\_control\\_always\\_send\\_integration\\_id\",\"copilot\\_mission\\_control\\_chronicle\\_commands\",\"copilot\\_mission\\_control\\_chronicle\\_commands\\_dropdown\",\"copilot\\_mission\\_control\\_cli\\_private\\_icon\",\"copilot\\_mission\\_control\\_cli\\_session\\_status\",\"copilot\\_mission\\_control\\_environment\\_list\\_icons\",\"copilot\\_mission\\_control\\_initial\\_data\\_spinner\",\"copilot\\_mission\\_control\\_logs\\_incremental\",\"copilot\\_mission\\_control\\_sandbox\\_remote\\_bypass\",\"copilot\\_mission\\_control\\_session\\_filters\",\"copilot\\_mission\\_control\\_task\\_alive\\_updates\",\"copilot\\_mission\\_control\\_task\\_sharing\",\"copilot\\_mission\\_control\\_tasks\\_repo\\_filter\",\"copilot\\_org\\_policy\\_page\\_focus\\_mode\",\"copilot\\_pr\\_chat\\_enhancements\",\"copilot\\_redirect\\_header\\_button\\_to\\_agents\",\"copilot\\_resource\\_panel\",\"copilot\\_scroll\\_preview\\_tabs\",\"copilot\\_share\\_active\\_subthread\",\"copilot\\_spaces\\_ga\",\"copilot\\_spaces\\_individual\\_policies\\_ga\",\"copilot\\_spaces\\_pagination\",\"copilot\\_spark\\_empty\\_state\",\"copilot\\_spark\\_handle\\_nil\\_friendly\\_name\",\"copilot\\_swe\\_agent\\_authorization\\_status\\_ui\",\"copilot\\_swe\\_agent\\_hide\\_model\\_picker\\_if\\_only\\_auto\",\"copilot\\_swe\\_agent\\_pr\\_comment\\_model\\_picker\",\"copilot\\_swe\\_agent\\_pull\\_request\\_merged\\_trigger\",\"copilot\\_swe\\_agent\\_pull\\_request\\_opened\\_trigger\",\"copilot\\_swe\\_agent\\_pull\\_request\\_synchronize\\_trigger\",\"copilot\\_swe\\_agent\\_use\\_subagents\",\"copilot\\_task\\_api\\_github\\_rest\\_style\",\"copilot\\_token\\_based\\_billing\",\"copilot\\_unconfigured\\_is\\_inherited\",\"copilot\\_user\\_can\\_upgrade\\_plan\\_field\",\"copilot\\_workbench\\_slim\\_line\\_top\\_tabs\",\"copilot\\_workbench\\_ubb\",\"create\\_ghas\\_hard\\_budgets\",\"custom\\_instructions\\_file\\_references\",\"dashboard\\_indexeddb\\_caching\",\"dashboard\\_lists\\_max\\_age\\_filter\",\"dashboard\\_universe\\_2025\\_feedback\\_dialog\",\"flex\\_cta\\_groups\\_mvp\",\"ga\\_enterprise\\_teams\\_ui\",\"global\\_nav\\_react\",\"hyperspace\\_2025\\_logged\\_out\\_batch\\_1\",\"hyperspace\\_2025\\_logged\\_out\\_batch\\_2\",\"hyperspace\\_2025\\_logged\\_out\\_batch\\_3\",\"ipm\\_budget\\_deep\\_linking\",\"ipm\\_global\\_transactional\\_message\\_agents\",\"ipm\\_global\\_transactional\\_message\\_copilot\",\"ipm\\_global\\_transactional\\_message\\_issues\",\"ipm\\_global\\_transactional\\_message\\_prs\",\"ipm\\_global\\_transactional\\_message\\_repos\",\"ipm\\_global\\_transactional\\_message\\_spaces\",\"issue\\_cca\\_modal\\_open\",\"issue\\_cca\\_multi\\_assign\\_modal\",\"issue\\_cca\\_visualization\",\"issue\\_fields\\_global\\_search\",\"issues\\_expanded\\_file\\_types\",\"issues\\_lazy\\_load\\_comment\\_box\\_suggestions\",\"issues\\_react\\_chrome\\_container\\_query\\_fix\",\"issues\\_search\\_type\\_gql\",\"landing\\_pages\\_ninetailed\",\"landing\\_pages\\_web\\_vitals\\_tracking\",\"lifecycle\\_label\\_name\\_updates\",\"low\\_quality\\_classifier\",\"marketing\\_pages\\_search\\_explore\\_provider\",\"memex\\_default\\_issue\\_create\\_repository\",\"memex\\_live\\_update\\_hovercard\",\"memex\\_mwl\\_filter\\_field\\_delimiter\",\"memex\\_remove\\_deprecated\\_type\\_issue\",\"merge\\_status\\_header\\_feedback\",\"notifications\\_menu\\_defer\\_labels\",\"oauth\\_authorize\\_clickjacking\\_protection\",\"octocaptcha\\_origin\\_optimization\",\"prs\\_conversations\\_react\",\"prs\\_css\\_anchor\\_positioning\",\"repos\\_contributors\\_limited\\_default\\_range\",\"rules\\_insights\\_filter\\_bar\\_created\",\"rules\\_required\\_reviewers\\_block\\_description\",\"sample\\_network\\_conn\\_type\",\"secret\\_scanning\\_pattern\\_alerts\\_link\",\"security\\_center\\_artifact\\_filters\\_popover\",\"session\\_logs\\_ungroup\\_reasoning\\_text\",\"site\\_copilot\\_max\\_plans\",\"site\\_features\\_copilot\\_universe\",\"site\\_github\\_app\\_ga\\_page\",\"site\\_global\\_nav\\_spark\\_models\\_removed\",\"site\\_homepage\\_collaborate\\_video\",\"spark\\_prompt\\_secret\\_scanning\",\"spark\\_server\\_connection\\_status\",\"suppress\\_automated\\_browser\\_vitals\",\"viewscreen\\_sandbox\",\"warn\\_inaccessible\\_attachments\",\"webp\\_support\",\"workbench\\_store\\_readonly\"\\],\"copilotApiOverrideUrl\":\"https://api.githubcopilot.com\"}        GitHub - zcaceres/fetch-mcp: A flexible HTTP fetching Model Context Protocol server. · GitHub                                             \n\n[Skip to content](#start-of-content)   {\"props\":{\"docsUrl\":\"https://docs.github.com/get-started/accessibility/keyboard-shortcuts\"}}\n\n/\\* Override primer focus outline color for marketing header dropdown links for better contrast \\*/ \\[data-color-mode=\"light\"\\] .HeaderMenu-dropdown-link:focus-visible, \\[data-color-mode=\"light\"\\] .HeaderMenu-trailing-link a:focus-visible { outline-color: var(--color-accent-fg); }\n\nNavigation Menu\n---------------\n\nToggle navigation\n\n[](/)\n\n[Sign in](/login?return_to=https%3A%2F%2Fgithub.com%2Fzcaceres%2Ffetch-mcp)\n\nAppearance settings\n\n  {\"props\":{\"should\\_"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 0.7,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "node_execute",
+          "description": "执行 Node.js 脚本。支持内联代码和 .js/.ts 文件两种方式。可选安装 npm 依赖。适合数据分析、文件批处理、API 调用、爬虫、文档生成等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Node.js 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .js 或 .ts 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 npm 包名列表（如 [\"axios\", \"lodash\"]），执行前自动 npm install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "fetch_html",
+          "description": "Fetch a website and return its unmodified contents as HTML",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the website to fetch"
+              },
+              "headers": {
+                "type": "object",
+                "description": "Optional headers to include in the request"
+              },
+              "max_length": {
+                "type": "number",
+                "description": "Maximum number of characters to return (default: 5000)"
+              },
+              "start_index": {
+                "type": "number",
+                "description": "Start content from this character index (default: 0)"
+              },
+              "proxy": {
+                "type": "string",
+                "description": "Optional proxy URL (e.g. 'http://proxy:8080')"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "fetch_markdown",
+          "description": "Fetch a website and return its contents converted to Markdown",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the website to fetch"
+              },
+              "headers": {
+                "type": "object",
+                "description": "Optional headers to include in the request"
+              },
+              "max_length": {
+                "type": "number",
+                "description": "Maximum number of characters to return (default: 5000)"
+              },
+              "start_index": {
+                "type": "number",
+                "description": "Start content from this character index (default: 0)"
+              },
+              "proxy": {
+                "type": "string",
+                "description": "Optional proxy URL (e.g. 'http://proxy:8080')"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "fetch_txt",
+          "description": "Fetch a website, convert the content to plain text (no HTML)",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the website to fetch"
+              },
+              "headers": {
+                "type": "object",
+                "description": "Optional headers to include in the request"
+              },
+              "max_length": {
+                "type": "number",
+                "description": "Maximum number of characters to return (default: 5000)"
+              },
+              "start_index": {
+                "type": "number",
+                "description": "Start content from this character index (default: 0)"
+              },
+              "proxy": {
+                "type": "string",
+                "description": "Optional proxy URL (e.g. 'http://proxy:8080')"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "fetch_json",
+          "description": "Fetch a JSON file from a URL",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the JSON to fetch"
+              },
+              "headers": {
+                "type": "object",
+                "description": "Optional headers to include in the request"
+              },
+              "max_length": {
+                "type": "number",
+                "description": "Maximum number of characters to return (default: 5000)"
+              },
+              "start_index": {
+                "type": "number",
+                "description": "Start content from this character index (default: 0)"
+              },
+              "proxy": {
+                "type": "string",
+                "description": "Optional proxy URL (e.g. 'http://proxy:8080')"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "fetch_readable",
+          "description": "Fetch a website and return its main content parsed by Mozilla Readability, converted to Markdown. Strips away navigation, ads, and boilerplate. Ideal for articles and blog posts.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the website to fetch"
+              },
+              "headers": {
+                "type": "object",
+                "description": "Optional headers to include in the request"
+              },
+              "max_length": {
+                "type": "number",
+                "description": "Maximum number of characters to return (default: 5000)"
+              },
+              "start_index": {
+                "type": "number",
+                "description": "Start content from this character index (default: 0)"
+              },
+              "proxy": {
+                "type": "string",
+                "description": "Optional proxy URL (e.g. 'http://proxy:8080')"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "fetch_youtube_transcript",
+          "description": "Fetch a YouTube video page and extract its captions/transcript",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL of the YouTube video"
+              },
+              "headers": {
+                "type": "object",
+                "description": "Optional headers to include in the request"
+              },
+              "max_length": {
+                "type": "number",
+                "description": "Maximum number of characters to return (default: 5000)"
+              },
+              "start_index": {
+                "type": "number",
+                "description": "Start content from this character index (default: 0)"
+              },
+              "proxy": {
+                "type": "string",
+                "description": "Optional proxy URL (e.g. 'http://proxy:8080')"
+              },
+              "lang": {
+                "type": "string",
+                "description": "Language code for captions (default: 'en')"
+              }
+            },
+            "required": [
+              "url"
+            ]
+          }
+        }
+      }
+    ],
+    "thinking": {
+      "type": "disabled"
+    }
+  }
+}

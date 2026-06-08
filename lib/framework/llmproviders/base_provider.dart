@@ -284,7 +284,6 @@ abstract class BaseLlmProvider {
 
       if (tools.isNotEmpty) {
         data['tools'] = tools;
-        // data['tool_choice'] = 'required';
       }
       if (session.deepThink) {
         data['thinking'] = {'type': 'enabled'};

@@ -197,6 +197,12 @@ abstract class BaseLlmProvider {
       'content': CommonSystemPrompts.useToolsForData,
     });
 
+    // 1c4. 反幻觉规则
+    messages.add({
+      'role': 'system',
+      'content': CommonSystemPrompts.antiHallucination,
+    });
+
     // 1d. 技能提示词（会话级 + 模型绑定技能）
     if (session?.skill != null) {
       final sp = SkillService.buildSkillPrompt(session!.skill);
@@ -229,7 +235,7 @@ abstract class BaseLlmProvider {
       });
     }
 
-    // ── 2. 历史消息（滑动窗口） ──
+    // ── 2. 历史消息（滑动窗口，仅保留 user + assistant） ──
     if (session != null && session.messages.isNotEmpty) {
       _appendHistoryMessages(messages, session, userMessage);
     }
@@ -278,7 +284,7 @@ abstract class BaseLlmProvider {
 
       if (tools.isNotEmpty) {
         data['tools'] = tools;
-        data['tool_choice'] = 'auto';
+        // data['tool_choice'] = 'required';
       }
       if (session.deepThink) {
         data['thinking'] = {'type': 'enabled'};
@@ -484,6 +490,8 @@ abstract class BaseLlmProvider {
 
     final included = historyMessages.sublist(historyStart);
     for (final msg in included) {
+      // 只保留 user 和 assistant 消息，过滤掉 tool 和 system 等
+      if (msg.role == MessageRole.tool) continue;
       if (msg.content.isEmpty && msg.attachments.isEmpty) continue;
       final apiRole = _toOpenAIRole(msg.role);
       if (apiRole == null) continue;
@@ -492,14 +500,7 @@ abstract class BaseLlmProvider {
         final msgContent = _buildUserContent(msg);
         messages.add({'role': apiRole, 'content': msgContent});
       } else {
-        final msgData = <String, dynamic>{
-          'role': apiRole,
-          'content': msg.content,
-        };
-        if (msg.role == MessageRole.tool && msg.toolName != null) {
-          msgData['tool_call_id'] = msg.toolName;
-        }
-        messages.add(msgData);
+        messages.add({'role': apiRole, 'content': msg.content});
       }
     }
   }

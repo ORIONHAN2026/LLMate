@@ -191,6 +191,12 @@ abstract class BaseLlmProvider {
       'content': CommonSystemPrompts.hideInternalTools,
     });
 
+    // 1c3. 强制使用工具获取数据，不从历史聊天获取
+    messages.add({
+      'role': 'system',
+      'content': CommonSystemPrompts.useToolsForData,
+    });
+
     // 1d. 技能提示词（会话级 + 模型绑定技能）
     if (session?.skill != null) {
       final sp = SkillService.buildSkillPrompt(session!.skill);

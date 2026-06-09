@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
@@ -6,12 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/chat/skill.dart';
 import '../services/skill_service.dart';
 import '../services/skill_storage_service.dart';
 import '../utils/snackbar_utils.dart';
-import 'skill_marketplace_page.dart';
+import '../widgets/common/confirm_delete_dialog.dart';
 
 /// 技能管理页面
 ///
@@ -29,6 +29,7 @@ class SkillManagementPage extends StatefulWidget {
 class _SkillManagementPageState extends State<SkillManagementPage> {
   List<Skill> _skills = [];
   bool _isLoading = true;
+  final GlobalKey _marketplaceButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -58,41 +59,87 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
     await _loadSkills();
   }
 
-  void _showAddSkillChoice() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+  void _showSkillMarketplaceMenu() {
+    final RenderBox? button =
+        _marketplaceButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (button == null) return;
+
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final Offset buttonPosition = button.localToGlobal(
+      Offset.zero,
+      ancestor: overlay,
+    );
+
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromLTWH(
+        buttonPosition.dx - 60,
+        buttonPosition.dy + kToolbarHeight,
+        140,
+        0,
       ),
-      builder:
-          (ctx) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(CupertinoIcons.archivebox),
-                    title: const Text('从压缩包导入'),
-                    subtitle: const Text('选择 .zip 文件，解压到 skills/ 目录'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _importSkillZip();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(CupertinoIcons.pencil),
-                    title: const Text('创建自定义技能'),
-                    subtitle: const Text('手动填写技能名称、描述和提示词'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showAddSkillDialog();
-                    },
-                  ),
-                ],
+      Offset.zero & overlay.size,
+    );
+
+    showMenu(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 8,
+      color: Theme.of(context).scaffoldBackgroundColor,
+      items: [
+        PopupMenuItem(
+          height: 48,
+          onTap: () {
+            launchUrl(Uri.parse('https://bailian.console.aliyun.com/'));
+          },
+          child: Row(
+            children: [
+              const Text('阿里云', style: TextStyle(fontSize: 12)),
+              const Spacer(),
+              Icon(
+                CupertinoIcons.arrow_up_right,
+                size: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
               ),
-            ),
+            ],
           ),
+        ),
+        PopupMenuItem(
+          height: 48,
+          onTap: () {
+            launchUrl(Uri.parse('https://console.cloud.tencent.com/'));
+          },
+          child: Row(
+            children: [
+              const Text('腾讯云', style: TextStyle(fontSize: 12)),
+              const Spacer(),
+              Icon(
+                CupertinoIcons.arrow_up_right,
+                size: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          height: 48,
+          onTap: () {
+            launchUrl(Uri.parse('https://modelscope.cn/'));
+          },
+          child: Row(
+            children: [
+              const Text('魔塔', style: TextStyle(fontSize: 12)),
+              const Spacer(),
+              Icon(
+                CupertinoIcons.arrow_up_right,
+                size: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -154,192 +201,15 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
     }
   }
 
-  void _showAddSkillDialog({Skill? existing}) {
-    final isEdit = existing != null;
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final descCtrl = TextEditingController(text: existing?.description ?? '');
-    final promptCtrl = TextEditingController(text: existing?.prompt ?? '');
-    String selectedIcon = existing?.icon ?? 'star';
-
-    showDialog(
-      context: context,
-      builder:
-          (ctx) => StatefulBuilder(
-            builder:
-                (ctx, setDialogState) => AlertDialog(
-                  title: Text(isEdit ? '编辑技能' : '创建技能'),
-                  content: SizedBox(
-                    width: 420,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          TextField(
-                            controller: nameCtrl,
-                            enabled: !isEdit,
-                            decoration: InputDecoration(
-                              labelText: '技能名称',
-                              hintText: '例如：代码审查专家',
-                              border: const OutlineInputBorder(),
-                              helperText: isEdit ? '创建后名称不可修改' : null,
-                              helperStyle: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: descCtrl,
-                            decoration: const InputDecoration(
-                              labelText: '技能描述',
-                              hintText: '简要描述这个技能的功能',
-                              border: OutlineInputBorder(),
-                            ),
-                            maxLines: 2,
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: promptCtrl,
-                            decoration: const InputDecoration(
-                              labelText: '系统提示词',
-                              hintText: '注入到AI对话中的提示内容',
-                              border: OutlineInputBorder(),
-                            ),
-                            maxLines: 4,
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            '图标',
-                            style: TextStyle(fontSize: 13, color: Colors.grey),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children:
-                                _iconOptions.map((icon) {
-                                  final isSelected =
-                                      selectedIcon == icon['key'];
-                                  return GestureDetector(
-                                    onTap:
-                                        () => setDialogState(
-                                          () =>
-                                              selectedIcon =
-                                                  icon['key'] as String,
-                                        ),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            isSelected
-                                                ? Theme.of(
-                                                  context,
-                                                ).colorScheme.primaryContainer
-                                                : Theme.of(context)
-                                                    .colorScheme
-                                                    .surfaceContainerHighest,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color:
-                                              isSelected
-                                                  ? Theme.of(
-                                                    context,
-                                                  ).colorScheme.primary
-                                                  : Colors.transparent,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        icon['emoji'] as String,
-                                        style: const TextStyle(fontSize: 20),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('取消'),
-                    ),
-                    FilledButton(
-                      onPressed: () async {
-                        if (nameCtrl.text.trim().isEmpty) {
-                          SnackBarUtils.showError(context, '请输入技能名称');
-                          return;
-                        }
-                        final skillName = nameCtrl.text.trim();
-                        Navigator.pop(ctx);
-                        try {
-                          if (isEdit) {
-                            final updated = existing.copyWith(
-                              description: descCtrl.text.trim(),
-                              prompt: promptCtrl.text.trim(),
-                              icon: selectedIcon,
-                              updatedAt: DateTime.now(),
-                            );
-                            await SkillService.updateSkill(updated);
-                          } else {
-                            await SkillService.addSkill(
-                              name: skillName,
-                              description: descCtrl.text.trim(),
-                              prompt: promptCtrl.text.trim(),
-                              icon: selectedIcon,
-                            );
-                          }
-                          await _refreshSkills();
-                          if (mounted) {
-                            SnackBarUtils.showInfo(
-                              context,
-                              isEdit
-                                  ? '已更新技能: $skillName'
-                                  : '已创建技能: $skillName',
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            SnackBarUtils.showError(
-                              context,
-                              isEdit ? '更新技能失败: $e' : '创建技能失败: $e',
-                            );
-                          }
-                        }
-                      },
-                      child: Text(isEdit ? '保存' : '创建'),
-                    ),
-                  ],
-                ),
-          ),
-    );
-  }
-
   Future<void> _confirmDeleteSkill(Skill skill) async {
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete = await ConfirmDeleteDialog.show(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('删除技能'),
-            content: Text('确定要删除 "${skill.name}" 吗？此操作将删除整个技能文件夹，不可撤销。'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                ),
-                child: const Text('删除'),
-              ),
-            ],
-          ),
+      title: '删除技能',
+      itemName: skill.name,
+      description: '确定要删除技能',
+      warningMessage: '此操作不可撤销',
+      icon: CupertinoIcons.delete,
+      iconColor: Theme.of(context).colorScheme.error,
     );
 
     if (shouldDelete == true) {
@@ -372,7 +242,6 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
               builder: (ctx, setSheetState) {
                 final tools = skill.tools;
                 final hasTools = tools != null && tools.isNotEmpty;
-                final emoji = _getSkillEmoji(skill.icon);
 
                 return ConstrainedBox(
                   constraints: BoxConstraints(
@@ -406,28 +275,6 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            emoji,
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
@@ -442,8 +289,6 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                                             .onSurface
                                             .withOpacity(0.6),
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),
@@ -519,10 +364,10 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                             const SizedBox(height: 12),
                           ],
 
-                          // 系统提示词
+                          // 技能描述
                           if (skill.prompt.isNotEmpty) ...[
                             Text(
-                              '系统提示词',
+                              '技能描述',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -534,52 +379,21 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1E1E1E),
+                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 skill.prompt,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontFamily: 'monospace',
-                                  color: Color(0xFFD4D4D4),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   height: 1.5,
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 24),
                           ],
-
-                          // JSON 配置
-                          Text(
-                            'JSON 数据',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E1E),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              const JsonEncoder.withIndent(
-                                '  ',
-                              ).convert(skill.toJson()),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontFamily: 'monospace',
-                                color: Color(0xFFD4D4D4),
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
                           // 删除按钮
                           SizedBox(
                             width: double.infinity,
@@ -628,18 +442,33 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
           icon: const Icon(CupertinoIcons.back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('技能管理(SKILL)'),
-        actions: [
-          TextButton(
-            onPressed: _showAddSkillChoice,
-            child: const Text('添加技能', style: TextStyle(fontSize: 14)),
+        title: Text(
+          '技能管理(SKILL)',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).textTheme.titleLarge?.color,
           ),
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SkillMarketplacePage()),
+        ),
+        actions: [
+          IconButton(
+            tooltip: '添加技能',
+            onPressed: () => _importSkillZip(),
+            icon: Icon(
+              CupertinoIcons.add,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
-            child: const Text('应用市场', style: TextStyle(fontSize: 14)),
+          ),
+          IconButton(
+            key: _marketplaceButtonKey,
+            tooltip: '应用市场',
+            onPressed: () => _showSkillMarketplaceMenu(),
+            icon: Icon(
+              CupertinoIcons.shopping_cart,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ),
           ),
           const SizedBox(width: 4),
         ],
@@ -675,7 +504,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
             ),
             const SizedBox(height: 6),
             Text(
-              '点击右上角 + 号创建自定义技能',
+              '点击右上角添加按钮创建自定义技能',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(
@@ -690,179 +519,178 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'skills/ 共 ${_skills.length} 个技能',
-            style: TextStyle(
-              fontSize: 13,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _skills.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final skill = _skills[index];
-              return _buildSkillCard(skill);
-            },
-          ),
-        ],
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          crossAxisSpacing: 6,
+          mainAxisSpacing: 6,
+          childAspectRatio: 3.0,
+        ),
+        itemCount: _skills.length,
+        itemBuilder: (context, index) {
+          final skill = _skills[index];
+          return _buildSkillCard(skill);
+        },
       ),
     );
   }
 
   Widget _buildSkillCard(Skill skill) {
-    final emoji = _getSkillEmoji(skill.icon);
+    return _SkillCard(
+      skill: skill,
+      onTap: () => _showSkillDetail(skill),
+      onEdit: () {
+        final filePath = p.join(
+          SkillStorageService.skillsRootDir,
+          skill.skillId,
+          'SKILL.md',
+        );
+        launchUrl(Uri.file(filePath));
+      },
+      onDelete: () => _confirmDeleteSkill(skill),
+    );
+  }
+}
+
+class _SkillCard extends StatefulWidget {
+  final Skill skill;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _SkillCard({
+    required this.skill,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  State<_SkillCard> createState() => _SkillCardState();
+}
+
+class _SkillCardState extends State<_SkillCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final skill = widget.skill;
     final description = skill.description.isNotEmpty ? skill.description : null;
     final subtitle = skill.skillId;
 
-    return GestureDetector(
-      onTap: () => _showSkillDetail(skill),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: Theme.of(context).dividerColor.withOpacity(0.5),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.06)
+                : Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: _isHovered
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.35)
+                  : Theme.of(context).dividerColor.withOpacity(0.5),
+            ),
           ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // 左侧信息
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          skill.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      skill.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
+                    ),
+                    if (description != null)
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 11,
                           color: Theme.of(
                             context,
-                          ).colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
+                          ).colorScheme.onSurface.withOpacity(0.65),
                         ),
-                        child: Text(
-                          emoji,
-                          style: const TextStyle(fontSize: 10),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    else
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
+                          fontFamily: 'monospace',
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              // 编辑 & 删除按钮（上下排列）
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: widget.onEdit,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        CupertinoIcons.pencil,
+                        size: 10,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  if (description != null)
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.65),
+                  GestureDetector(
+                    onTap: widget.onDelete,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+                        shape: BoxShape.circle,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  else
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
-                        fontFamily: 'monospace',
+                      child: Icon(
+                        CupertinoIcons.delete,
+                        size: 10,
+                        color: Theme.of(context).colorScheme.error,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(width: 4),
-            // 编辑按钮
-            GestureDetector(
-              onTap: () => _showAddSkillDialog(existing: skill),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withOpacity(0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  CupertinoIcons.pencil,
-                  size: 14,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            // 删除按钮
-            GestureDetector(
-              onTap: () => _confirmDeleteSkill(skill),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.error.withOpacity(0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  CupertinoIcons.delete,
-                  size: 14,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
-
-  String _getSkillEmoji(String icon) {
-    for (final option in _iconOptions) {
-      if (option['key'] == icon) return option['emoji']!;
-    }
-    return '⭐';
-  }
-
-  static const List<Map<String, String>> _iconOptions = [
-    {'key': 'code', 'emoji': '💻'},
-    {'key': 'globe', 'emoji': '🌐'},
-    {'key': 'pencil', 'emoji': '✏️'},
-    {'key': 'chart', 'emoji': '📊'},
-    {'key': 'lightbulb', 'emoji': '💡'},
-    {'key': 'doc', 'emoji': '📄'},
-    {'key': 'star', 'emoji': '⭐'},
-    {'key': 'search', 'emoji': '🔍'},
-    {'key': 'image', 'emoji': '🖼️'},
-    {'key': 'gear', 'emoji': '⚙️'},
-    {'key': 'wand', 'emoji': '🪄'},
-  ];
 }

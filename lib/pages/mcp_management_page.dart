@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 
 import '../models/chat/mcp_config.dart';
 import '../services/mcp_service.dart';
+import '../widgets/common/confirm_delete_dialog.dart';
 import '../controllers/session_controller.dart';
 import 'mcp_marketplace_page.dart';
 import '../controllers/mcp_controller.dart';
@@ -18,6 +19,33 @@ import '../utils/snackbar_utils.dart';
 /// MCP 服务与会话/模型解耦，全局独立管理。
 /// - 列表显示已添加服务，支持查看详情和删除
 /// - 右上角 + 号进入应用市场
+String getTypeLabel(Mcp service) {
+  if (service.url != null && service.url!.isNotEmpty) {
+    switch (service.type) {
+      case McpTransportType.sse:
+        return 'SSE';
+      case McpTransportType.http:
+      case McpTransportType.streamableHttp:
+        return 'HTTP';
+      default:
+        return 'URL';
+    }
+  }
+  return 'Stdio';
+}
+
+String buildSubtitle(Mcp service) {
+  if (service.url != null && service.url!.isNotEmpty) {
+    final typeLabel =
+        (service.type == McpTransportType.http ||
+                service.type == McpTransportType.streamableHttp)
+            ? ' [HTTP]'
+            : (service.type == McpTransportType.sse ? ' [SSE]' : '');
+    return '${service.url!}$typeLabel';
+  }
+  return '${service.command ?? ''} ${service.args?.join(' ') ?? ''}';
+}
+
 class McpManagementPage extends StatefulWidget {
   const McpManagementPage({super.key});
 
@@ -191,7 +219,13 @@ class _McpManagementPageState extends State<McpManagementPage> {
             itemCount: _services.length,
             itemBuilder: (context, index) {
               final service = _services[index];
-              return _buildAddedServiceCard(service);
+              return _McpServiceCard(
+                service: service,
+                isRefreshing: _refreshingServices.contains(service.name),
+                onTap: () => _showAddedServiceDetail(service),
+                onRefresh: () => _refreshService(service),
+                onDelete: () => _confirmRemoveService(service),
+              );
             },
           ),
         ],
@@ -199,171 +233,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
     );
   }
 
-  Widget _buildAddedServiceCard(Mcp service) {
-    final typeLabel = _getTypeLabel(service);
-    final description = service.description;
-    final subtitle = _buildSubtitle(service);
-
-    return GestureDetector(
-      onTap: () => _showAddedServiceDetail(service),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Theme.of(context).dividerColor.withOpacity(0.5),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // 左侧信息
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          service.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: Text(
-                          typeLabel,
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (description != null && description.isNotEmpty)
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.65),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  else
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
-                        fontFamily: 'monospace',
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 4),
-            // 刷新 & 删除按钮（上下排列）
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildRefreshButton(service),
-                const SizedBox(height: 6),
-                GestureDetector(
-                  onTap: () => _confirmRemoveService(service),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.error.withOpacity(0.08),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      CupertinoIcons.delete,
-                      size: 10,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getTypeLabel(Mcp service) {
-    if (service.url != null && service.url!.isNotEmpty) {
-      switch (service.type) {
-        case McpTransportType.sse:
-          return 'SSE';
-        case McpTransportType.http:
-        case McpTransportType.streamableHttp:
-          return 'HTTP';
-        default:
-          return 'URL';
-      }
-    }
-    return 'Stdio';
-  }
+  String _getTypeLabel(Mcp service) => getTypeLabel(service);
 
   final Set<String> _refreshingServices = {};
-
-  Widget _buildRefreshButton(Mcp service) {
-    final isRefreshing = _refreshingServices.contains(service.name);
-    return GestureDetector(
-      onTap: isRefreshing ? null : () => _refreshService(service),
-      child: Container(
-        width: 22,
-        height: 22,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-          shape: BoxShape.circle,
-        ),
-        child:
-            isRefreshing
-                ? const Padding(
-                  padding: EdgeInsets.all(5),
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    strokeCap: StrokeCap.round,
-                  ),
-                )
-                : Icon(
-                  CupertinoIcons.refresh,
-                  size: 10,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-      ),
-    );
-  }
 
   Future<void> _refreshService(Mcp service) async {
     if (_refreshingServices.contains(service.name)) return;
@@ -405,26 +277,15 @@ class _McpManagementPageState extends State<McpManagementPage> {
   }
 
   Future<void> _confirmRemoveService(Mcp service) async {
-    final shouldRemove = await showDialog<bool>(
+    final shouldRemove = await ConfirmDeleteDialog.show(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('移除服务'),
-            content: Text('确定要移除 "${service.name}" 吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                ),
-                child: const Text('移除'),
-              ),
-            ],
-          ),
+      title: '移除服务',
+      itemName: service.name,
+      description: '确定要移除服务',
+      warningMessage: '移除后需重新添加',
+      icon: CupertinoIcons.delete,
+      iconColor: Theme.of(context).colorScheme.error,
+      confirmText: '移除',
     );
 
     if (shouldRemove == true) {
@@ -794,17 +655,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
     );
   }
 
-  String _buildSubtitle(Mcp service) {
-    if (service.url != null && service.url!.isNotEmpty) {
-      final typeLabel =
-          (service.type == McpTransportType.http ||
-                  service.type == McpTransportType.streamableHttp)
-              ? ' [HTTP]'
-              : (service.type == McpTransportType.sse ? ' [SSE]' : '');
-      return '${service.url!}$typeLabel';
-    }
-    return '${service.command ?? ''} ${service.args?.join(' ') ?? ''}';
-  }
+  String _buildSubtitle(Mcp service) => buildSubtitle(service);
 
   String _buildConfigJson(Mcp service) {
     final map = service.toJson();
@@ -851,13 +702,13 @@ class _McpManagementPageState extends State<McpManagementPage> {
           },
           child: Row(
             children: [
-              Icon(
-                CupertinoIcons.cloud,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
               const Text('阿里云', style: TextStyle(fontSize: 12)),
+              const Spacer(),
+              Icon(
+                CupertinoIcons.arrow_up_right,
+                size: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              ),
             ],
           ),
         ),
@@ -868,13 +719,13 @@ class _McpManagementPageState extends State<McpManagementPage> {
           },
           child: Row(
             children: [
-              Icon(
-                CupertinoIcons.cloud,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
               const Text('腾讯云', style: TextStyle(fontSize: 12)),
+              const Spacer(),
+              Icon(
+                CupertinoIcons.arrow_up_right,
+                size: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              ),
             ],
           ),
         ),
@@ -885,17 +736,183 @@ class _McpManagementPageState extends State<McpManagementPage> {
           },
           child: Row(
             children: [
-              Icon(
-                CupertinoIcons.cube,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
               const Text('魔塔', style: TextStyle(fontSize: 12)),
+              const Spacer(),
+              Icon(
+                CupertinoIcons.arrow_up_right,
+                size: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _McpServiceCard extends StatefulWidget {
+  final Mcp service;
+  final bool isRefreshing;
+  final VoidCallback onTap;
+  final VoidCallback onRefresh;
+  final VoidCallback onDelete;
+
+  const _McpServiceCard({
+    required this.service,
+    required this.isRefreshing,
+    required this.onTap,
+    required this.onRefresh,
+    required this.onDelete,
+  });
+
+  @override
+  State<_McpServiceCard> createState() => _McpServiceCardState();
+}
+
+class _McpServiceCardState extends State<_McpServiceCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final service = widget.service;
+    final description = service.description;
+    final subtitle = buildSubtitle(service);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.06)
+                : Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: _isHovered
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.35)
+                  : Theme.of(context).dividerColor.withOpacity(0.5),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            service.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            getTypeLabel(service),
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (description != null && description.isNotEmpty)
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    else
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          fontFamily: 'monospace',
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: widget.isRefreshing ? null : widget.onRefresh,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: widget.isRefreshing
+                          ? const Padding(
+                              padding: EdgeInsets.all(5),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : Icon(
+                              CupertinoIcons.refresh,
+                              size: 10,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: widget.onDelete,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        CupertinoIcons.delete,
+                        size: 10,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

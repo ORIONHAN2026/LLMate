@@ -65,7 +65,6 @@ class _VendorInfo {
     this.authHint = 'API Key',
     this.authKeyName = 'Authorization',
     this.authTarget = 'header',
-    this.apiKey,
   });
 
   Future<void> loadApiKey() async {

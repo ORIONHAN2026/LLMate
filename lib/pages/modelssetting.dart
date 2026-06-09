@@ -4,12 +4,10 @@ import '../controllers/session_controller.dart';
 import '../controllers/model_controller.dart';
 // Update the import path below to the correct relative path if the file exists elsewhere, for example:
 import '../models/chat/chat_session.dart';
-// If the file does not exist, create 'lib/models/chat_session.dart' with the required class definition.
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import '../controllers/model_controller.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../dialogs/add_online_model_dialog.dart';
 import '../widgets/model_detail_page.dart';

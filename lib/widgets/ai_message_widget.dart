@@ -218,7 +218,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         // 消息内容区域 - 统一布局避免跳动
                         if (_isStreaming &&
                             widget.message.content.isEmpty &&
-                            widget.message.think.isEmpty)
+                            widget.message.think.isEmpty &&
+                            !widget.message.isToolCalling)
                           // 流式传输时显示呼吸动画，保持最小高度
                           Container(
                             constraints: const BoxConstraints(minHeight: 24),

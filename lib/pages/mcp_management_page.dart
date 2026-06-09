@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,9 +9,9 @@ import 'package:get/get.dart';
 import '../models/chat/mcp_config.dart';
 import '../services/mcp_service.dart';
 import '../controllers/session_controller.dart';
+import 'mcp_marketplace_page.dart';
 import '../controllers/mcp_controller.dart';
 import '../utils/snackbar_utils.dart';
-import 'mcp_marketplace_page.dart';
 
 /// MCP 管理页面
 ///
@@ -27,6 +28,7 @@ class McpManagementPage extends StatefulWidget {
 class _McpManagementPageState extends State<McpManagementPage> {
   List<Mcp> _services = [];
   bool _isLoading = true;
+  final GlobalKey _marketplaceButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -77,9 +79,17 @@ class _McpManagementPageState extends State<McpManagementPage> {
           icon: const Icon(CupertinoIcons.back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('接器管理(MCP)'),
+        title: Text(
+          '连接器管理(MCP)',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).textTheme.titleLarge?.color,
+          ),
+        ),
         actions: [
-          TextButton(
+          IconButton(
+            tooltip: '添加自定义连接器',
             onPressed: () {
               showCustomAddMcpDialog(
                 context,
@@ -101,14 +111,21 @@ class _McpManagementPageState extends State<McpManagementPage> {
                 },
               );
             },
-            child: const Text('添加自定义连接器', style: TextStyle(fontSize: 14)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const McpMarketplacePage()),
+            icon: Icon(
+              CupertinoIcons.add,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
-            child: const Text('应用市场', style: TextStyle(fontSize: 14)),
+          ),
+          IconButton(
+            key: _marketplaceButtonKey,
+            tooltip: '应用市场',
+            onPressed: () => _showMarketplaceDialog(),
+            icon: Icon(
+              CupertinoIcons.shopping_cart,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ),
           ),
           const SizedBox(width: 4),
         ],
@@ -162,25 +179,16 @@ class _McpManagementPageState extends State<McpManagementPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                '已添加 ${_services.length} 个服务',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.5),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ListView.separated(
+          GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 6,
+              mainAxisSpacing: 6,
+              childAspectRatio: 3.0,
+            ),
             itemCount: _services.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final service = _services[index];
               return _buildAddedServiceCard(service);
@@ -199,10 +207,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
     return GestureDetector(
       onTap: () => _showAddedServiceDetail(service),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: Theme.of(context).dividerColor.withOpacity(0.5),
           ),
@@ -214,6 +222,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
@@ -222,28 +231,28 @@ class _McpManagementPageState extends State<McpManagementPage> {
                           service.name,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                          horizontal: 5,
+                          vertical: 1,
                         ),
                         decoration: BoxDecoration(
                           color: Theme.of(
                             context,
                           ).colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(3),
                         ),
                         child: Text(
                           typeLabel,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.primary,
                           ),
@@ -251,55 +260,58 @@ class _McpManagementPageState extends State<McpManagementPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
                   if (description != null && description.isNotEmpty)
                     Text(
                       description,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.65),
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     )
                   else
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.5),
                         fontFamily: 'monospace',
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                 ],
               ),
             ),
             const SizedBox(width: 4),
-            // 刷新按钮
-            _buildRefreshButton(service),
-            const SizedBox(width: 4),
-            // 删除按钮
-            GestureDetector(
-              onTap: () => _confirmRemoveService(service),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.error.withOpacity(0.08),
-                  shape: BoxShape.circle,
+            // 刷新 & 删除按钮（上下排列）
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildRefreshButton(service),
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: () => _confirmRemoveService(service),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      CupertinoIcons.delete,
+                      size: 10,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                 ),
-                child: Icon(
-                  CupertinoIcons.delete,
-                  size: 14,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-              ),
+              ],
             ),
           ],
         ),
@@ -329,8 +341,8 @@ class _McpManagementPageState extends State<McpManagementPage> {
     return GestureDetector(
       onTap: isRefreshing ? null : () => _refreshService(service),
       child: Container(
-        width: 32,
-        height: 32,
+        width: 22,
+        height: 22,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
           shape: BoxShape.circle,
@@ -338,7 +350,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
         child:
             isRefreshing
                 ? const Padding(
-                  padding: EdgeInsets.all(7),
+                  padding: EdgeInsets.all(5),
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     strokeCap: StrokeCap.round,
@@ -346,7 +358,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                 )
                 : Icon(
                   CupertinoIcons.refresh,
-                  size: 14,
+                  size: 10,
                   color: Theme.of(context).colorScheme.primary,
                 ),
       ),
@@ -801,5 +813,89 @@ class _McpManagementPageState extends State<McpManagementPage> {
       map['workingDirectory'] = service.workingDirectory;
     }
     return const JsonEncoder.withIndent('  ').convert(map);
+  }
+
+  void _showMarketplaceDialog() {
+    final RenderBox? button =
+        _marketplaceButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (button == null) return;
+
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final Offset buttonPosition = button.localToGlobal(
+      Offset.zero,
+      ancestor: overlay,
+    );
+
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromLTWH(
+        buttonPosition.dx - 60,
+        buttonPosition.dy + kToolbarHeight,
+        140,
+        0,
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 8,
+      color: Theme.of(context).scaffoldBackgroundColor,
+      items: [
+        PopupMenuItem(
+          height: 48,
+          onTap: () {
+            launchUrl(Uri.parse('https://bailian.console.aliyun.com/'));
+          },
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.cloud,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('阿里云', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          height: 48,
+          onTap: () {
+            launchUrl(Uri.parse('https://console.cloud.tencent.com/mcp'));
+          },
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.cloud,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('腾讯云', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          height: 48,
+          onTap: () {
+            launchUrl(Uri.parse('https://modelscope.cn/mcp'));
+          },
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.cube,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('魔塔', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

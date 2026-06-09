@@ -230,12 +230,7 @@ void showCustomAddMcpDialog(
   BuildContext context, {
   required void Function(Mcp config) onConfigReady,
 }) {
-  final jsonCtrl = TextEditingController(
-    text: const JsonEncoder.withIndent('  ').convert({
-      'command': 'npx',
-      'args': ['-y', 'package-name'],
-    }),
-  );
+  final jsonCtrl = TextEditingController();
   String? parseError;
 
   showDialog(
@@ -244,34 +239,54 @@ void showCustomAddMcpDialog(
     builder:
         (ctx) => StatefulBuilder(
           builder:
-              (ctx, setDialogState) => AlertDialog(
-                title: const Text('添加 MCP 服务'),
-                content: SizedBox(
-                  width: 480,
+              (ctx, setDialogState) => Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: Theme.of(ctx).scaffoldBackgroundColor,
+                elevation: 8,
+                child: Container(
+                  width: 400,
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // 标题行
+                      Text(
+                        '添加 MCP 服务',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // JSON 编辑器
                       Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
+                          color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: TextField(
                           controller: jsonCtrl,
                           maxLines: 8,
                           minLines: 5,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontFamily: 'monospace',
-                            color: Color(0xFFD4D4D4),
+                            color: Theme.of(ctx).colorScheme.onSurface,
                             height: 1.5,
                           ),
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(
+                          decoration: InputDecoration(
+                            hintText: '请粘贴 MCP 代码',
+                            hintStyle: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.3),
+                            ),
+                            border: const OutlineInputBorder(
                               borderRadius: BorderRadius.all(Radius.circular(8)),
                               borderSide: BorderSide.none,
                             ),
-                            contentPadding: EdgeInsets.all(12),
+                            contentPadding: const EdgeInsets.all(12),
                             isDense: true,
                           ),
                           keyboardType: TextInputType.multiline,
@@ -317,40 +332,56 @@ void showCustomAddMcpDialog(
                           ),
                         ),
                       ],
+                      const SizedBox(height: 10),
+                      // 操作按钮
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: Text(
+                              '取消',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () {
+                              final jsonText = jsonCtrl.text.trim();
+                              try {
+                                jsonDecode(jsonText);
+                              } on FormatException catch (e) {
+                                setDialogState(() {
+                                  parseError = 'JSON 格式错误: ${e.message}';
+                                });
+                                return;
+                              }
+
+                              final config = _McpMarketplacePageState._parseMcpFromJson(jsonText);
+                              if (config == null) {
+                                setDialogState(() {
+                                  parseError = _McpMarketplacePageState._unsupportedTransportHint;
+                                });
+                                return;
+                              }
+
+                              Navigator.pop(ctx);
+                              onConfigReady(config);
+                            },
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              textStyle: const TextStyle(fontSize: 12),
+                            ),
+                            child: const Text('连接并添加'),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('取消'),
-                  ),
-                  FilledButton(
-                    onPressed: () {
-                      final jsonText = jsonCtrl.text.trim();
-                      try {
-                        jsonDecode(jsonText);
-                      } on FormatException catch (e) {
-                        setDialogState(() {
-                          parseError = 'JSON 格式错误: ${e.message}';
-                        });
-                        return;
-                      }
-
-                      final config = _McpMarketplacePageState._parseMcpFromJson(jsonText);
-                      if (config == null) {
-                        setDialogState(() {
-                          parseError = _McpMarketplacePageState._unsupportedTransportHint;
-                        });
-                        return;
-                      }
-
-                      Navigator.pop(ctx);
-                      onConfigReady(config);
-                    },
-                    child: const Text('连接并添加'),
-                  ),
-                ],
               ),
         ),
   );

@@ -1383,18 +1383,19 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       }
     }
 
-    // 工具块倒序：最新的在最上面
-    final reversedToolBlocks = toolBlocks.reversed.toList();
-
+    // 工具块聚合：所有工具调用内容合并为一个块显示
     final children = <Widget>[
       ...thinkWidgets,
       ...contentWidgets,
-      for (int j = 0; j < reversedToolBlocks.length; j++)
-        _buildToolBlock(
-          reversedToolBlocks[j].$1,
-          reversedToolBlocks[j].$2.text,
-        ),
       _buildFileTags(allContentText.toString()),
+      if (toolBlocks.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        _buildToolBlock(
+          0, // 固定索引，因为只有一个聚合块
+          toolBlocks.map((t) => t.$2.text).join('\n\n'),
+          isExecuting: widget.message.isToolCalling,
+        ),
+      ],
     ];
 
     return Column(
@@ -1457,54 +1458,13 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
   }
 
-  /// 从原始工具调用文本中提取可读的预览文案
-  /// 处理流式碎片字符，友好展示工具名或执行结果
-  String _formatToolPreviewText(String rawText) {
-    // 1. 寻找结果行（📥）
-    final resultMatch =
-        RegExp(r'📥\s*(.+)$', multiLine: true).firstMatch(rawText);
-    if (resultMatch != null) {
-      final result = resultMatch.group(1)!.trim();
-      if (result.isNotEmpty) return result;
-    }
-
-    // 2. 寻找已完成工具名（✅/❌）
-    final doneMatch = RegExp(r'([✅❌])\s*(\S+)').firstMatch(rawText);
-    if (doneMatch != null) {
-      return '${doneMatch.group(1)} ${doneMatch.group(2)}';
-    }
-
-    // 3. 寻找执行中工具名（🔧）
-    final toolMatch = RegExp(r'🔧\s*(\S+)').firstMatch(rawText);
-    if (toolMatch != null) {
-      return '执行工具: ${toolMatch.group(1)}';
-    }
-
-    // 4. 寻找 "正在接收工具调用参数" 这类文本
-    final pendingMatch = RegExp(r'(正在\S*工具\S*)').firstMatch(rawText);
-    if (pendingMatch != null) {
-      return pendingMatch.group(1)!;
-    }
-
-    // 5. 兜底：清理特殊字符，取纯文本
-    final clean = rawText
-        .replaceAll(RegExp(r'[{}\[\]"\\]'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    if (clean.length > 80) {
-      return '${clean.substring(0, 80)}...';
-    }
-    return clean.isNotEmpty ? clean : '正在执行...';
-  }
-
   /// 工具执行块（折叠/展开）
-  /// 折叠态：扳手图标 + 最新一行内容
+  /// 折叠态：扳手图标 + 固定文案
   /// 展开态：完整工具执行结果
-  Widget _buildToolBlock(int index, String text) {
+  Widget _buildToolBlock(int index, String text, {bool isExecuting = false}) {
     final isExpanded = _expandedToolIndices.contains(index);
 
-    // 从原始工具调用文本中提取可读的预览文案
-    final previewText = _formatToolPreviewText(text);
+    final previewText = isExecuting ? '正在调用工具' : '工具调用记录';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

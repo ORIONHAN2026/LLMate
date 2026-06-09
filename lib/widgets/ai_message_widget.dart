@@ -47,9 +47,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   late AnimationController _breathingAnimationController;
   late Animation<double> _breathingAnimation;
 
-  late AnimationController _rotationAnimationController;
-  late Animation<double> _rotationAnimation;
-
   @override
   void initState() {
     super.initState();
@@ -65,48 +62,19 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       ),
     );
     _breathingAnimationController.repeat(reverse: true);
-
-    _rotationAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _rotationAnimation = Tween<double>(begin: -15 / 360, end: 15 / 360).animate(
-      CurvedAnimation(
-        parent: _rotationAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    _updateRotationAnimation();
   }
 
   @override
   void dispose() {
     _breathingAnimationController.dispose();
-    _rotationAnimationController.dispose();
     super.dispose();
   }
 
   @override
   void didUpdateWidget(covariant AiMessageWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldLastWasTool = oldWidget.message.contentBlocks.isNotEmpty &&
-        oldWidget.message.contentBlocks.last.type == ContentBlockType.tool;
-    final newLastIsTool = widget.message.contentBlocks.isNotEmpty &&
-        widget.message.contentBlocks.last.type == ContentBlockType.tool;
-    if (oldLastWasTool != newLastIsTool) {
-      _updateRotationAnimation();
-    }
-  }
-
-  /// 根据最后一个内容块是否为 tool 类型来控制旋转动画
-  void _updateRotationAnimation() {
-    final blocks = widget.message.contentBlocks;
-    final isLastBlockTool =
-        blocks.isNotEmpty && blocks.last.type == ContentBlockType.tool;
-    if (isLastBlockTool) {
-      _rotationAnimationController.repeat(reverse: true);
-    } else {
-      _rotationAnimationController.stop();
+    if (oldWidget.message.isToolCalling != widget.message.isToolCalling) {
+      setState(() {});
     }
   }
 
@@ -1347,13 +1315,25 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     return text;
   }
 
-  /// 按 contentBlocks 顺序构建 UI（think / tool / content）
+  /// 按内容块构建 UI：
+  /// 1. 思考块（原顺序）
+  /// 2. 正文内容块（原顺序，纯内容不穿插工具）
+  /// 3. 工具执行块（倒序，统一放在消息底部）
   /// 如果 contentBlocks 为空，回退到旧版渲染方式
   Widget _buildContentBlocks() {
     final blocks = widget.message.contentBlocks;
 
     // 回退兼容：旧消息没有 contentBlocks
     if (blocks.isEmpty) {
+      if (widget.message.isToolCalling) {
+        return Icon(
+          CupertinoIcons.wrench_fill,
+          size: 14,
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withOpacity(0.5),
+        );
+      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1374,26 +1354,19 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       );
     }
 
-    // 收集所有 content 类型块的文本用于提取文件路径
     final allContentText = StringBuffer();
-    final children = <Widget>[];
-    // 只有最后一个内容块是 tool 类型时，该 tool 块才显示动画
-    final isLastBlockTool =
-        blocks.isNotEmpty && blocks.last.type == ContentBlockType.tool;
-    final lastToolIndex = isLastBlockTool ? blocks.length - 1 : -1;
+    final thinkWidgets = <Widget>[];
+    final contentWidgets = <Widget>[];
+    final toolBlocks = <(int, ContentBlock)>[];
 
     for (int i = 0; i < blocks.length; i++) {
       final block = blocks[i];
       switch (block.type) {
         case ContentBlockType.think:
-          children.add(_buildThinkBlock(block.text));
-        case ContentBlockType.tool:
-          children.add(_buildToolBlock(i, block.text,
-              isAnimating: i == lastToolIndex));
-        case ContentBlockType.toolCalling:
+          thinkWidgets.add(_buildThinkBlock(block.text));
         case ContentBlockType.content:
           allContentText.write(block.text);
-          children.add(
+          contentWidgets.add(
             MarkdownBody(
               data: _sanitizeMarkdown(block.text),
               styleSheet: _buildMarkdownStyleSheet(),
@@ -1403,10 +1376,26 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               },
             ),
           );
+        case ContentBlockType.tool:
+        case ContentBlockType.toolCalling:
+          allContentText.write(block.text);
+          toolBlocks.add((i, block));
       }
     }
 
-    children.add(_buildFileTags(allContentText.toString()));
+    // 工具块倒序：最新的在最上面
+    final reversedToolBlocks = toolBlocks.reversed.toList();
+
+    final children = <Widget>[
+      ...thinkWidgets,
+      ...contentWidgets,
+      for (int j = 0; j < reversedToolBlocks.length; j++)
+        _buildToolBlock(
+          reversedToolBlocks[j].$1,
+          reversedToolBlocks[j].$2.text,
+        ),
+      _buildFileTags(allContentText.toString()),
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1468,16 +1457,61 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
   }
 
-  /// 工具执行块（折叠/展开，默认折叠显示扳手图标+描述）
-  Widget _buildToolBlock(int index, String text, {bool isAnimating = false}) {
+  /// 从原始工具调用文本中提取可读的预览文案
+  /// 处理流式碎片字符，友好展示工具名或执行结果
+  String _formatToolPreviewText(String rawText) {
+    // 1. 寻找结果行（📥）
+    final resultMatch =
+        RegExp(r'📥\s*(.+)$', multiLine: true).firstMatch(rawText);
+    if (resultMatch != null) {
+      final result = resultMatch.group(1)!.trim();
+      if (result.isNotEmpty) return result;
+    }
+
+    // 2. 寻找已完成工具名（✅/❌）
+    final doneMatch = RegExp(r'([✅❌])\s*(\S+)').firstMatch(rawText);
+    if (doneMatch != null) {
+      return '${doneMatch.group(1)} ${doneMatch.group(2)}';
+    }
+
+    // 3. 寻找执行中工具名（🔧）
+    final toolMatch = RegExp(r'🔧\s*(\S+)').firstMatch(rawText);
+    if (toolMatch != null) {
+      return '执行工具: ${toolMatch.group(1)}';
+    }
+
+    // 4. 寻找 "正在接收工具调用参数" 这类文本
+    final pendingMatch = RegExp(r'(正在\S*工具\S*)').firstMatch(rawText);
+    if (pendingMatch != null) {
+      return pendingMatch.group(1)!;
+    }
+
+    // 5. 兜底：清理特殊字符，取纯文本
+    final clean = rawText
+        .replaceAll(RegExp(r'[{}\[\]"\\]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (clean.length > 80) {
+      return '${clean.substring(0, 80)}...';
+    }
+    return clean.isNotEmpty ? clean : '正在执行...';
+  }
+
+  /// 工具执行块（折叠/展开）
+  /// 折叠态：扳手图标 + 最新一行内容
+  /// 展开态：完整工具执行结果
+  Widget _buildToolBlock(int index, String text) {
     final isExpanded = _expandedToolIndices.contains(index);
+
+    // 从原始工具调用文本中提取可读的预览文案
+    final previewText = _formatToolPreviewText(text);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 折叠态：扳手图标 + 一句话描述 + 文件名
+          // 折叠态：圆圈刷新图标 + 最新一行内容预览
           GestureDetector(
             onTap: () {
               setState(() {
@@ -1503,43 +1537,28 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 ),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (isAnimating)
-                    RotationTransition(
-                      turns: _rotationAnimation,
-                      child: Icon(
-                        Icons.build_outlined,
-                        size: 14,
+                  // 工具执行图标
+                  Icon(
+                    CupertinoIcons.wrench_fill,
+                    size: 14,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                  const SizedBox(width: 6),
+                  // 最新一行内容预览（动态更新）
+                  Expanded(
+                    child: Text(
+                      previewText,
+                      style: TextStyle(
+                        fontSize: 11,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                        ).colorScheme.onSurface.withOpacity(0.55),
                       ),
-                    )
-                  else
-                    Icon(
-                      Icons.build_outlined,
-                      size: 14,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.5),
-                    ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 40),
-                      child: Text(
-                        "执行工具",
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.55),
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 4),

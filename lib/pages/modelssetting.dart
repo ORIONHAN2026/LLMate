@@ -358,36 +358,14 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          // 状态指示器
-                          Container(
-                            width: 4,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color:
-                                  isActive
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(
-                                        context,
-                                      ).colorScheme.outline.withOpacity(0.4),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          // 模型名称
-                          Expanded(
-                            child: Text(
-                              modelName,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        modelName,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       // 完整名称

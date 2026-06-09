@@ -104,11 +104,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
             child: const Text('添加自定义连接器', style: TextStyle(fontSize: 14)),
           ),
           TextButton(
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const McpMarketplacePage()),
-                ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const McpMarketplacePage()),
+            ),
             child: const Text('应用市场', style: TextStyle(fontSize: 14)),
           ),
           const SizedBox(width: 4),

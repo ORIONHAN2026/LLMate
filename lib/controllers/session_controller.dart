@@ -4,6 +4,7 @@ import 'package:chathub/models/chat/scheduled_task.dart';
 import 'package:chathub/models/chat/memory_turn.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:isar/isar.dart';
 
 import '../models/chat/chat_session.dart';
 import '../models/bigmodel/chat_model.dart';
@@ -36,6 +37,15 @@ class SessionController extends GetxController {
     // 使用非空局部变量，允许后续 copyWith 重新赋值
     ChatSession s = session;
     bool updated = false;
+
+    // 懒加载：如果消息为空，从 IsarChatMessage 加载
+    if (s.messages.isEmpty) {
+      final messages = await loadMessages(s.sessionId);
+      if (messages.isNotEmpty) {
+        s = s.copyWith(messages: messages);
+        updated = true;
+      }
+    }
 
     // 每次进入会话时，根据 modelId 动态重新加载 chatModel
     if (s.modelId != null && s.modelId!.isNotEmpty) {
@@ -195,10 +205,21 @@ class SessionController extends GetxController {
       }
     }
 
-    // 从 Isar 中删除
+    // 从 Isar 中删除会话及关联消息
     try {
       final isar = IsarService.instance.isar;
       await isar.writeTxn(() async {
+        // 删除关联消息
+        final sessionMessages = await isar.isarChatMessages
+            .where()
+            .sessionIdEqualTo(sessionId)
+            .sortByTimestamp()
+            .findAll();
+        if (sessionMessages.isNotEmpty) {
+          await isar.isarChatMessages
+              .deleteAll(sessionMessages.map((m) => m.id).toList());
+        }
+        // 删除会话本身
         final entity = await isar.isarChatSessions.getBySessionId(sessionId);
         if (entity != null) {
           await isar.isarChatSessions.delete(entity.id);
@@ -277,12 +298,12 @@ class SessionController extends GetxController {
     await _persistCurrentSession();
   }
 
-  /// 加载所有会话和当前会话
+  /// 加载所有会话和当前会话（消息懒加载：仅加载会话元数据）
   Future<void> loadAll() async {
     try {
       final isar = IsarService.instance.isar;
 
-      // 加载所有 Isar 会话
+      // 加载所有 Isar 会话（不含消息，消息独立存储）
       final isarSessions =
           await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
 
@@ -290,7 +311,8 @@ class SessionController extends GetxController {
       ChatSession? current;
 
       for (final entity in isarSessions) {
-        final session = _isarToChatSession(entity);
+        // 轻量加载：不含消息
+        final session = _isarToChatSession(entity, loadMessages: false);
         loaded.add(session);
         if (entity.isCurrent) {
           current = session;
@@ -301,7 +323,7 @@ class SessionController extends GetxController {
       loaded.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       sessions.value = loaded;
 
-      // 通过 setCurrentSession 解析 mcp/skill/model，而不是直接赋值
+      // 通过 setCurrentSession 解析 mcp/skill/model，并加载当前会话的消息
       if (current != null) {
         await setCurrentSession(current);
       } else {
@@ -309,6 +331,31 @@ class SessionController extends GetxController {
       }
     } catch (e) {
       debugPrint('加载会话失败: $e');
+    }
+  }
+
+  /// 为指定会话加载消息（从 IsarChatMessage 集合）
+  Future<List<ChatMessage>> loadMessages(String sessionId) async {
+    try {
+      final isar = IsarService.instance.isar;
+      final entities = await isar.isarChatMessages
+          .where()
+          .sessionIdEqualTo(sessionId)
+          .sortByTimestamp()
+          .findAll();
+
+      return entities.map((e) {
+        try {
+          return ChatMessage.fromJson(
+            jsonDecode(e.messageJson) as Map<String, dynamic>,
+          );
+        } catch (_) {
+          return null;
+        }
+      }).whereType<ChatMessage>().toList();
+    } catch (e) {
+      debugPrint('加载会话消息失败: $e');
+      return [];
     }
   }
 
@@ -331,6 +378,39 @@ class SessionController extends GetxController {
       });
     } catch (e) {
       debugPrint('保存会话失败: $e');
+    }
+  }
+
+  /// 持久化单个会话的所有消息（原子操作：先删旧再插新）
+  Future<void> _persistMessagesForSession(
+    String sessionId,
+    List<ChatMessage> messages,
+  ) async {
+    try {
+      final isar = IsarService.instance.isar;
+      await isar.writeTxn(() async {
+        // 删除该会话的旧消息
+        final oldMessages = await isar.isarChatMessages
+            .where()
+            .sessionIdEqualTo(sessionId)
+            .sortByTimestamp()
+            .findAll();
+        if (oldMessages.isNotEmpty) {
+          await isar.isarChatMessages.deleteAll(oldMessages.map((m) => m.id).toList());
+        }
+        // 写入新消息
+        if (messages.isNotEmpty) {
+          final entities = messages.map((m) => IsarChatMessage()
+            ..msgId = m.msgId
+            ..sessionId = sessionId
+            ..timestamp = m.timestamp
+            ..messageJson = jsonEncode(m.toJson()),
+          ).toList();
+          await isar.isarChatMessages.putAll(entities);
+        }
+      });
+    } catch (e) {
+      debugPrint('持久化消息失败: $e');
     }
   }
 
@@ -370,6 +450,12 @@ class SessionController extends GetxController {
           await isar.isarChatSessions.put(newEntity);
         }
       });
+
+      // 单独持久化当前会话的消息
+      await _persistMessagesForSession(
+        currentId,
+        currentSession.value!.messages,
+      );
     } catch (e) {
       debugPrint('保存当前会话失败: $e');
     }
@@ -390,9 +476,7 @@ class SessionController extends GetxController {
       ..inputContent = session.inputContent
       ..lastSelectedDirectory = session.lastSelectedDirectory
       ..workDirectory = session.workDirectory
-      ..messagesJson = jsonEncode(
-        session.messages.map((m) => m.toJson()).toList(),
-      )
+      ..messagesJson = null // 不再写入，消息已通过 _persistMessagesForSession 独立存储
       ..modelId = session.modelId
       ..mcpId = session.mcpId
       ..skillId = session.skillId
@@ -435,9 +519,7 @@ class SessionController extends GetxController {
     entity.inputContent = session.inputContent;
     entity.lastSelectedDirectory = session.lastSelectedDirectory;
     entity.workDirectory = session.workDirectory;
-    entity.messagesJson = jsonEncode(
-      session.messages.map((m) => m.toJson()).toList(),
-    );
+    entity.messagesJson = null; // 不再写入，消息已通过 _persistMessagesForSession 独立存储
     entity.modelId = session.modelId;
     entity.mcpId = session.mcpId;
     entity.skillId = session.skillId;
@@ -464,7 +546,7 @@ class SessionController extends GetxController {
     entity.compressedMemory = session.compressedMemory;
   }
 
-  /// 根据消息ID查找会话（先从内存查找，未找到则从Isar加载）
+  /// 根据消息ID查找会话（先从内存查找，未找到则从Isar搜索消息集合）
   Future<ChatSession?> findSessionByMessageId(String messageId) async {
     // 先从内存列表查找
     for (final session in sessions) {
@@ -473,25 +555,15 @@ class SessionController extends GetxController {
       }
     }
 
-    // 内存中未找到，从Isar加载所有会话搜索
+    // 内存中未找到，从 IsarChatMessage 集合搜索
     try {
       final isar = IsarService.instance.isar;
-      final allSessions =
-          await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
-      for (final entity in allSessions) {
-        if (entity.messagesJson != null && entity.messagesJson!.isNotEmpty) {
-          try {
-            final list = jsonDecode(entity.messagesJson!) as List<dynamic>;
-            final messages =
-                list
-                    .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
-                    .toList();
-            if (messages.any((msg) => msg.msgId == messageId)) {
-              return _isarToChatSession(entity);
-            }
-          } catch (_) {
-            // 解析失败，继续检查下一个
-          }
+      final msgEntity = await isar.isarChatMessages.getByMsgId(messageId);
+      if (msgEntity != null) {
+        final sessionEntity = await isar.isarChatSessions
+            .getBySessionId(msgEntity.sessionId);
+        if (sessionEntity != null) {
+          return _isarToChatSession(sessionEntity);
         }
       }
     } catch (e) {
@@ -502,10 +574,11 @@ class SessionController extends GetxController {
   }
 
   /// IsarChatSession → ChatSession
-  ChatSession _isarToChatSession(IsarChatSession entity) {
-    // 解析消息
+  /// [loadMessages] 为 true 时从旧格式 messagesJson 加载消息（兼容），默认 false 配合懒加载
+  ChatSession _isarToChatSession(IsarChatSession entity, {bool loadMessages = false}) {
+    // 解析消息（仅在 loadMessages=true 时从遗留 messagesJson 加载）
     List<ChatMessage> messages = [];
-    if (entity.messagesJson != null && entity.messagesJson!.isNotEmpty) {
+    if (loadMessages && entity.messagesJson != null && entity.messagesJson!.isNotEmpty) {
       try {
         final list = jsonDecode(entity.messagesJson!) as List<dynamic>;
         messages =

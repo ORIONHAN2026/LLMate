@@ -223,6 +223,155 @@ Future<List<Map<String, dynamic>>> _loadAllVendorData() async {
 // 页面组件
 // ────────────────────────────────────────────
 
+// ── 自定义添加 MCP 服务（顶层函数，支持跨页面调用） ──
+
+/// 显示自定义添加 MCP 弹窗
+void showCustomAddMcpDialog(
+  BuildContext context, {
+  required void Function(Mcp config) onConfigReady,
+}) {
+  final jsonCtrl = TextEditingController(
+    text: const JsonEncoder.withIndent('  ').convert({
+      'command': 'npx',
+      'args': ['-y', 'package-name'],
+    }),
+  );
+  String? parseError;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder:
+        (ctx) => StatefulBuilder(
+          builder:
+              (ctx, setDialogState) => AlertDialog(
+                title: const Text('添加 MCP 服务'),
+                content: SizedBox(
+                  width: 480,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E1E),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: TextField(
+                          controller: jsonCtrl,
+                          maxLines: 8,
+                          minLines: 5,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontFamily: 'monospace',
+                            color: Color(0xFFD4D4D4),
+                            height: 1.5,
+                          ),
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(8)),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.all(12),
+                            isDense: true,
+                          ),
+                          keyboardType: TextInputType.multiline,
+                          onChanged: (_) {
+                            if (parseError != null) {
+                              setDialogState(() => parseError = null);
+                            }
+                          },
+                        ),
+                      ),
+                      if (parseError != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.error.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                CupertinoIcons.exclamationmark_circle,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  parseError!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.error,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('取消'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      final jsonText = jsonCtrl.text.trim();
+                      try {
+                        jsonDecode(jsonText);
+                      } on FormatException catch (e) {
+                        setDialogState(() {
+                          parseError = 'JSON 格式错误: ${e.message}';
+                        });
+                        return;
+                      }
+
+                      final config = _McpMarketplacePageState._parseMcpFromJson(jsonText);
+                      if (config == null) {
+                        setDialogState(() {
+                          parseError = _McpMarketplacePageState._unsupportedTransportHint;
+                        });
+                        return;
+                      }
+
+                      Navigator.pop(ctx);
+                      onConfigReady(config);
+                    },
+                    child: const Text('连接并添加'),
+                  ),
+                ],
+              ),
+        ),
+  );
+}
+
+/// 显示自定义添加进度弹窗
+void showCustomAddProgressDialog(
+  BuildContext context,
+  Mcp config, {
+  required void Function(Mcp finalConfig, int toolCount) onSuccess,
+}) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => _CustomAddProgressDialog(
+      config: config,
+      onSuccess: onSuccess,
+    ),
+  );
+}
+
 class McpMarketplacePage extends StatefulWidget {
   const McpMarketplacePage({super.key});
 
@@ -913,7 +1062,7 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
 
   /// 从用户输入的 JSON 文本解析并构建 Mcp 配置。
   /// 返回 null 表示解析失败，需要就地显示错误提示。
-  Mcp? _parseMcpFromJson(String jsonText) {
+  static Mcp? _parseMcpFromJson(String jsonText) {
     try {
       final json = jsonDecode(jsonText) as Map<String, dynamic>;
 
@@ -969,143 +1118,25 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
     }
   }
 
+  /// 解析失败时的不支持传输类型提示
+  static const _unsupportedTransportHint = '不支持的传输类型，仅支持 sse / http / streamableHttp';
+
   void _showAddMcpDialog() {
-    final jsonCtrl = TextEditingController(
-      text: const JsonEncoder.withIndent('  ').convert({
-        'command': 'npx',
-        'args': ['-y', 'package-name'],
-      }),
-    );
-    String? parseError;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (ctx) => StatefulBuilder(
-            builder:
-                (ctx, setDialogState) => AlertDialog(
-                  title: const Text('添加 MCP 服务'),
-                  content: SizedBox(
-                    width: 480,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1E1E1E),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: TextField(
-                            controller: jsonCtrl,
-                            maxLines: 8,
-                            minLines: 5,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontFamily: 'monospace',
-                              color: Color(0xFFD4D4D4),
-                              height: 1.5,
-                            ),
-                            decoration: const InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(8)),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: EdgeInsets.all(12),
-                              isDense: true,
-                            ),
-                            keyboardType: TextInputType.multiline,
-                            onChanged: (_) {
-                              if (parseError != null) {
-                                setDialogState(() => parseError = null);
-                              }
-                            },
-                          ),
-                        ),
-                        if (parseError != null) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.error.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.error.withOpacity(0.3),
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  CupertinoIcons.exclamationmark_circle,
-                                  size: 16,
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    parseError!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(context).colorScheme.error,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('取消'),
-                    ),
-                    FilledButton(
-                      onPressed: () {
-                        final jsonText = jsonCtrl.text.trim();
-                        try {
-                          jsonDecode(jsonText);
-                        } on FormatException catch (e) {
-                          setDialogState(() {
-                            parseError = 'JSON 格式错误: ${e.message}';
-                          });
-                          return;
-                        }
-
-                        final config = _parseMcpFromJson(jsonText);
-                        if (config == null) {
-                          setDialogState(() {
-                            parseError = '不支持的传输类型，仅支持 sse / http / streamableHttp';
-                          });
-                          return;
-                        }
-
-                        Navigator.pop(ctx);
-                        _showCustomAddProgressDialog(config);
-                      },
-                      child: const Text('连接并添加'),
-                    ),
-                  ],
-                ),
-              ),
+    showCustomAddMcpDialog(
+      context,
+      onConfigReady: (config) {
+        _showCustomAddProgressDialog(config);
+      },
     );
   }
 
   void _showCustomAddProgressDialog(Mcp config) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _CustomAddProgressDialog(
-        config: config,
-        onSuccess: (finalConfig, toolCount) {
-          _addServiceWithInfo(finalConfig, toolCount: toolCount);
-        },
-      ),
+    showCustomAddProgressDialog(
+      context,
+      config,
+      onSuccess: (finalConfig, toolCount) {
+        _addServiceWithInfo(finalConfig, toolCount: toolCount);
+      },
     );
   }
 

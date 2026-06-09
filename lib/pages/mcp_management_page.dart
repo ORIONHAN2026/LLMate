@@ -79,16 +79,27 @@ class _McpManagementPageState extends State<McpManagementPage> {
         ),
         title: const Text('MCP 工具管理'),
         actions: [
-          IconButton(
-            icon: const Icon(CupertinoIcons.add_circled, size: 22),
-            tooltip: '添加 MCP 服务',
-            onPressed: () async {
-              await Navigator.push(
+          TextButton(
+            onPressed: () {
+              showCustomAddMcpDialog(
                 context,
-                MaterialPageRoute(builder: (_) => const McpMarketplacePage()),
+                onConfigReady: (config) {
+                  showCustomAddProgressDialog(
+                    context,
+                    config,
+                    onSuccess: (finalConfig, toolCount) async {
+                      final mcpc = Get.find<McpController>();
+                      await mcpc.ensureLoaded();
+                      if (!mcpc.configs.any((s) => s.name == finalConfig.name)) {
+                        await mcpc.addService(finalConfig);
+                      }
+                      _loadServices();
+                    },
+                  );
+                },
               );
-              _loadServices();
             },
+            child: const Text('添加自定义连接器', style: TextStyle(fontSize: 14)),
           ),
           const SizedBox(width: 4),
         ],

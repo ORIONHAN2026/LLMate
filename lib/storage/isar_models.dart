@@ -35,6 +35,24 @@ class IsarChatModel {
   late String? skillsJson;
 }
 
+/// Isar 集合：聊天消息（每条消息独立存储，通过 sessionId 关联）
+@collection
+class IsarChatMessage {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true)
+  late String msgId;
+
+  @Index()
+  late String sessionId;
+
+  @Index()
+  late DateTime timestamp;
+
+  /// 完整消息的 JSON 表示（含 contentBlocks、attachments 等复杂结构）
+  late String messageJson;
+}
+
 /// Isar 集合：聊天会话
 @collection
 class IsarChatSession {
@@ -56,7 +74,7 @@ class IsarChatSession {
   late String? workDirectory;
 
   // JSON blobs for complex nested data
-  late String? messagesJson;
+  late String? messagesJson; // 保留用于旧数据迁移，新存储不再写入
   @ignore late String? chatModelJson;
   @ignore late String? mcpServerJson;
   @ignore late String? skillJson;

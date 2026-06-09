@@ -45,6 +45,7 @@ class IsarService {
         [
           IsarChatModelSchema,
           IsarChatSessionSchema,
+          IsarChatMessageSchema,
           IsarMcpServiceSchema,
           IsarSettingsSchema,
           IsarVendorKeySchema,
@@ -86,6 +87,7 @@ class IsarService {
           [
             IsarChatModelSchema,
             IsarChatSessionSchema,
+            IsarChatMessageSchema,
             IsarMcpServiceSchema,
             IsarSettingsSchema,
             IsarVendorKeySchema,
@@ -114,6 +116,9 @@ class IsarService {
 
     // 迁移旧的 SharedPreferences 数据
     await _migrateFromSharedPreferences();
+
+    // 迁移消息到独立集合（messagesJson → IsarChatMessage）
+    await _migrateMessagesToCollection();
   }
 
   // ── 数据库备份与恢复 ──
@@ -177,6 +182,7 @@ class IsarService {
         [
           IsarChatModelSchema,
           IsarChatSessionSchema,
+          IsarChatMessageSchema,
           IsarMcpServiceSchema,
           IsarSettingsSchema,
           IsarVendorKeySchema,
@@ -457,6 +463,69 @@ class IsarService {
       }
     } catch (e) {
       debugPrint('❌ 数据迁移失败: $e');
+    }
+  }
+
+  // ── 消息独立存储迁移 ──
+
+  /// 将旧版本存储在 messagesJson 中的消息迁移到独立的 IsarChatMessage 集合
+  Future<void> _migrateMessagesToCollection() async {
+    try {
+      final migratedKey = 'messages_to_collection_done';
+      final existing = await isar.isarSettings.getByKey(migratedKey);
+      if (existing != null) {
+        return; // 已迁移
+      }
+
+      debugPrint('🔄 开始迁移消息到独立集合...');
+      final sessions = await isar.isarChatSessions.where().findAll();
+      int totalMessages = 0;
+
+      for (final session in sessions) {
+        final json = session.messagesJson;
+        if (json == null || json.isEmpty) continue;
+
+        try {
+          final list = jsonDecode(json) as List<dynamic>;
+          final messages = <IsarChatMessage>[];
+
+          for (final m in list) {
+            final map = m as Map<String, dynamic>;
+            final msgId = (map['id'] as String?) ?? '';
+            if (msgId.isEmpty) continue;
+
+            messages.add(IsarChatMessage()
+              ..msgId = msgId
+              ..sessionId = session.sessionId
+              ..timestamp = map['timestamp'] != null
+                  ? (DateTime.tryParse(map['timestamp'].toString()) ?? DateTime.now())
+                  : DateTime.now()
+              ..messageJson = jsonEncode(map));
+          }
+
+          if (messages.isNotEmpty) {
+            await isar.writeTxn(() async {
+              await isar.isarChatMessages.putAll(messages);
+              // 清空旧的 messagesJson 以释放空间
+              session.messagesJson = null;
+              await isar.isarChatSessions.put(session);
+            });
+            totalMessages += messages.length;
+          }
+        } catch (e) {
+          debugPrint('   ⚠️ 迁移会话 ${session.sessionId} 的消息失败: $e');
+        }
+      }
+
+      // 标记迁移完成
+      await isar.writeTxn(() async {
+        await isar.isarSettings.put(IsarSettings()
+          ..key = migratedKey
+          ..value = 'true');
+      });
+      debugPrint('✅ 消息迁移完成，共 ${totalMessages} 条');
+    } catch (e) {
+      debugPrint('⚠️ 消息迁移失败: $e');
     }
   }
 

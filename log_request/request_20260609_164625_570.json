@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-06-09T16:46:25.570195",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-pro",
+    "messages": [
+      {
+        "role": "user",
+        "content": "你是一个技术工具命名专家。请根据以下 MCP (Model Context Protocol) 服务的信息，生成一个精简的中文名称和一段简洁的中文描述。\n\n要求：\n1. 名称：简洁易读，中文优先（可以包含英文关键词），不超过15个字\n2. 描述：一句话说明这个服务能做什么，不超过50个字\n3. 仅输出JSON格式，不要包含其他文字\n\n原始服务器名称：牧狸\n\n工具列表：\n- bill_list: 获取账单列表，支持分页查询\n- bill_get: 获取账单详情，根据订单号或退款单号查询\n- query_subscriptions_by_address: 根据地址描述（如：父母家、公司、家）查询该地址的订阅商品列表\n- query_subscriptions_by_product: 根据产品名称或关键词查询订阅了该产品的地址列表\n- subscription_overview: 获取订阅总览，按地址分组显示所有订阅商品\n- coupon_list: 获取优惠券列表，支持按状态筛选\n- delivery_list: 获取配送列表，支持分页查询，包含未支付订单统计\n- delivery_get: 获取配送详情\n- delivery_prepay: 批量支付配送订单\n- delivery_refund: 申请配送退款\n- delivery_refund_cancel: 取消配送退款申请\n- notify_list: 获取通知消息列表，包含系统通知和用户通知\n- notify_check: 检查是否有新通知\n- notify_delete: 删除通知消息\n- product_list: 获取产品列表，支持分类筛选和关键词搜索\n- product_get: 获取产品详情\n- request_list: 获取用户请求列表\n- request_add: 添加用户请求或建议\n- subscription_list: 获取用户订阅列表\n- subscription_detail: 获取订阅详情\n- subscription_add: 创建订阅\n- subscription_set: 更新订阅设置\n- subscription_delete: 删除订阅\n- subscription_delay: 延迟订阅配送\n- user_set: 设置用户资料，可更新个人信息和支付设置\n- address_list: 获取用户的收货地址列表\n- address_get: 获取地址详情\n- address_add: 添加新收货地址\n- address_set: 更新收货地址信息\n- address_delete: 删除收货地址\n- address_set_default: 设置默认收货地址\n\n\n请按以下JSON格式输出：\n{\"name\": \"生成的名称\", \"description\": \"生成的描述\"}"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 0.7
+  },
+  "response": {
+    "timestamp": "2026-06-09T16:46:29.247300",
+    "isError": false,
+    "content": "{\"name\": \"牧狸订阅配送\", \"description\": \"管理订阅商品、订单配送、优惠券与地址的智能配送服务助手\"}"
+  }
+}

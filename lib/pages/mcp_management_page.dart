@@ -77,7 +77,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           icon: const Icon(CupertinoIcons.back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('MCP 工具管理'),
+        title: const Text('接器管理(MCP)'),
         actions: [
           TextButton(
             onPressed: () {
@@ -90,7 +90,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
                     onSuccess: (finalConfig, toolCount) async {
                       final mcpc = Get.find<McpController>();
                       await mcpc.ensureLoaded();
-                      if (!mcpc.configs.any((s) => s.name == finalConfig.name)) {
+                      if (!mcpc.configs.any(
+                        (s) => s.name == finalConfig.name,
+                      )) {
                         await mcpc.addService(finalConfig);
                       }
                       _loadServices();
@@ -100,6 +102,14 @@ class _McpManagementPageState extends State<McpManagementPage> {
               );
             },
             child: const Text('添加自定义连接器', style: TextStyle(fontSize: 14)),
+          ),
+          TextButton(
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const McpMarketplacePage()),
+                ),
+            child: const Text('应用市场', style: TextStyle(fontSize: 14)),
           ),
           const SizedBox(width: 4),
         ],

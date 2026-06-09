@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/pages/modelssetting.dart';
 import 'package:chathub/pages/mcp_management_page.dart';
+import 'package:chathub/pages/skill_management_page.dart';
 import 'package:chathub/widgets/model_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -529,7 +530,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('工具管理(MCP)', style: TextStyle(fontSize: 12)),
+              const Text('连接器管理(MCP)', style: TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -539,6 +540,33 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                   context,
                   MaterialPageRoute(
                     builder: (context) => const McpManagementPage(),
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        // 技能管理
+        PopupMenuItem(
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.wand_stars,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('技能管理(SKILL)', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SkillManagementPage(),
                   ),
                 );
               }
@@ -716,9 +744,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               ? CupertinoIcons.sidebar_right
               : CupertinoIcons.sidebar_right,
           size: 16,
-          color: Theme.of(
-            context,
-          ).colorScheme.onSurface.withValues(alpha: _isRightSidebarCollapsed ? 0.6 : 0.4),
+          color: Theme.of(context).colorScheme.onSurface.withValues(
+            alpha: _isRightSidebarCollapsed ? 0.6 : 0.4,
+          ),
         ),
         tooltip: _isRightSidebarCollapsed ? '展开右侧栏' : '收起右侧栏',
       ),
@@ -739,8 +767,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             400.0,
           );
           // 确保左侧和聊天区有足够空间
-          final leftWidth =
-              _isSidebarCollapsed ? 0 : _sidebarWidth;
+          final leftWidth = _isSidebarCollapsed ? 0 : _sidebarWidth;
           final remaining = screenWidth - leftWidth - proposed;
           if (remaining < _minChatAreaWidth) {
             proposed = (screenWidth - leftWidth - _minChatAreaWidth).clamp(
@@ -875,10 +902,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           // 右侧边栏
           if (!_isRightSidebarCollapsed) ...[
             _buildRightResizableHandle(),
-            SizedBox(
-              width: _rightSidebarWidth,
-              child: _buildRightSidePanel(),
-            ),
+            SizedBox(width: _rightSidebarWidth, child: _buildRightSidePanel()),
           ],
         ],
       ),
@@ -916,10 +940,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           // 右侧边栏
           if (!_isRightSidebarCollapsed) ...[
             _buildRightResizableHandle(),
-            SizedBox(
-              width: _rightSidebarWidth,
-              child: _buildRightSidePanel(),
-            ),
+            SizedBox(width: _rightSidebarWidth, child: _buildRightSidePanel()),
           ],
         ],
       ),

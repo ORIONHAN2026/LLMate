@@ -735,13 +735,34 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
   // 桌面平台复制图片到剪贴板
   Future<void> _copyImageToClipboardDesktop(Uint8List imageBytes) async {
     try {
-      final tempDir = await getTemporaryDirectory();
-      // 确保临时目录存在（macOS 桌面应用可能不会自动创建）
-      if (!await tempDir.exists()) {
-        await tempDir.create(recursive: true);
+      final now = DateTime.now();
+      final timeStr =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_'
+          '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
+      final fileName = 'screenshot_$timeStr.png';
+
+      final String? workDir = widget.chatSession.workDirectory;
+
+      String imagePath;
+      bool isPersistent = false;
+
+      if (workDir != null && workDir.trim().isNotEmpty) {
+        // 保存到工作目录下的"会话截图"文件夹，不自动删除
+        final trimmed = workDir.trim();
+        final screenshotDir = Directory('$trimmed/会话截图');
+        if (!await screenshotDir.exists()) {
+          await screenshotDir.create(recursive: true);
+        }
+        imagePath = '${screenshotDir.path}/$fileName';
+        isPersistent = true;
+      } else {
+        // 无工作目录时使用系统临时目录
+        final tempDir = await getTemporaryDirectory();
+        if (!await tempDir.exists()) {
+          await tempDir.create(recursive: true);
+        }
+        imagePath = '${tempDir.path}/$fileName';
       }
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final imagePath = '${tempDir.path}/screenshot_$timestamp.png';
 
       final imageFile = File(imagePath);
       await imageFile.writeAsBytes(imageBytes);
@@ -756,16 +777,18 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         throw UnsupportedError(AppLocalizations.of(context)!.unsupportedOS);
       }
 
-      // 延迟删除临时文件
-      Future.delayed(const Duration(seconds: 5), () {
-        try {
-          if (imageFile.existsSync()) {
-            imageFile.deleteSync();
+      // 仅临时文件延迟删除，保存到工作目录的截图保留
+      if (!isPersistent) {
+        Future.delayed(const Duration(seconds: 5), () {
+          try {
+            if (imageFile.existsSync()) {
+              imageFile.deleteSync();
+            }
+          } catch (e) {
+            // 忽略删除错误
           }
-        } catch (e) {
-          // 忽略删除错误
-        }
-      });
+        });
+      }
     } catch (e) {
       throw Exception(AppLocalizations.of(context)!.desktopCopyFailed(e.toString()));
     }

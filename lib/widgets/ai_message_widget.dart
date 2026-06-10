@@ -1440,12 +1440,13 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           },
         ),
       _buildFileTags(allContentText.toString()),
-      if (toolBlocks.isNotEmpty) ...[
+      // 仅在工具执行中展示调用状态，完成后隐藏工具调用记录
+      if (toolBlocks.isNotEmpty && widget.message.isToolCalling) ...[
         const SizedBox(height: 12),
         _buildToolBlock(
           0, // 固定索引，因为只有一个聚合块
           toolBlocks.map((t) => t.$2.text).join('\n\n'),
-          isExecuting: widget.message.isToolCalling,
+          isExecuting: true,
         ),
       ],
     ];

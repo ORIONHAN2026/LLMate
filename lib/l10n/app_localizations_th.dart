@@ -738,10 +738,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get attach => 'ภาคผนวก';
 
   @override
-  String get selectMcpTool => 'เลือกเครื่องมือ MCP';
+  String get selectMcpTool => 'เลือกตัวเชื่อมต่อ';
 
   @override
-  String get noMcpTool => 'ไม่มีเครื่องมือ MCP';
+  String get noMcpTool => 'ไม่มีตัวเชื่อมต่อ';
 
   @override
   String get viewMcpToolDetail => 'ดูรายละเอียดเครื่องมือ MCP';
@@ -760,7 +760,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get clickToDesignWorkflow =>
-      'คลิกที่คำอธิบายลอจิกการทำงานของเครื่องมือออกแบบ';
+      'ตั้งค่าตรรกะการใช้ตัวเชื่อมต่อและทักษะร่วมกัน';
 
   @override
   String get needMcpOrSkillFirst => 'คุณต้องเลือกเครื่องมือหรือทักษะ MCP ก่อน';

@@ -730,10 +730,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get attach => '附件';
 
   @override
-  String get selectMcpTool => '选MCP工具';
+  String get selectMcpTool => '选连接器';
 
   @override
-  String get noMcpTool => '无MCP工具';
+  String get noMcpTool => '无连接器';
 
   @override
   String get viewMcpToolDetail => '查看MCP工具详情';
@@ -750,7 +750,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get clickToDesignWorkflow => '点击设计工具的工作逻辑描述';
+  String get clickToDesignWorkflow => '设定连接器和技能联合使用逻辑';
 
   @override
   String get needMcpOrSkillFirst => '需要先选择MCP工具或技能';

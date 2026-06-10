@@ -1491,13 +1491,13 @@ abstract class AppLocalizations {
   /// No description provided for @selectMcpTool.
   ///
   /// In en, this message translates to:
-  /// **'Select MCP'**
+  /// **'Select Connector'**
   String get selectMcpTool;
 
   /// No description provided for @noMcpTool.
   ///
   /// In en, this message translates to:
-  /// **'No MCP'**
+  /// **'No Connector'**
   String get noMcpTool;
 
   /// No description provided for @viewMcpToolDetail.
@@ -1527,7 +1527,7 @@ abstract class AppLocalizations {
   /// No description provided for @clickToDesignWorkflow.
   ///
   /// In en, this message translates to:
-  /// **'Click to design tool workflow description'**
+  /// **'Set connector and skill joint usage logic'**
   String get clickToDesignWorkflow;
 
   /// No description provided for @needMcpOrSkillFirst.

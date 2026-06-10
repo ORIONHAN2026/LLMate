@@ -737,10 +737,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get attach => 'Attachment';
 
   @override
-  String get selectMcpTool => 'Select MCP';
+  String get selectMcpTool => 'Select Connector';
 
   @override
-  String get noMcpTool => 'No MCP';
+  String get noMcpTool => 'No Connector';
 
   @override
   String get viewMcpToolDetail => 'View MCP tool details';
@@ -758,7 +758,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clickToDesignWorkflow =>
-      'Click to design tool workflow description';
+      'Set connector and skill joint usage logic';
 
   @override
   String get needMcpOrSkillFirst => 'Need to select MCP tool or skill first';

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:chathub/l10n/app_localizations.dart';
 import 'package:chathub/models/bigmodel/chat_model.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/models/bigmodel/model_data.dart';
@@ -73,19 +74,19 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildConfigCard('基本信息', CupertinoIcons.info, [
+          _buildConfigCard(AppLocalizations.of(context)!.basicInfo, CupertinoIcons.info, [
             _buildEditableModelNameItem(),
-            _buildConfigItem('模型', _currentModel.provider ?? '未知'),
+            _buildConfigItem(AppLocalizations.of(context)!.modelLabel, _currentModel.provider ?? AppLocalizations.of(context)!.unknown),
 
             _buildEditableModelItem(),
-            _buildConfigItem('平台', _currentModel.platform ?? '未知'),
+            _buildConfigItem(AppLocalizations.of(context)!.platformLabel, _currentModel.platform ?? AppLocalizations.of(context)!.unknown),
 
-            _buildConfigItem('API地址', _currentModel.apiUrl ?? widget.apiUrl),
+            _buildConfigItem(AppLocalizations.of(context)!.apiAddress, _currentModel.apiUrl ?? widget.apiUrl),
             // _buildConfigItem('模型ID', _currentModel.modelId),
           ]),
           const SizedBox(height: 12),
           // 模型参数卡片（从 ChatSettingsTab 移入）
-          _buildConfigCard('模型参数', CupertinoIcons.slider_horizontal_3, [
+          _buildConfigCard(AppLocalizations.of(context)!.modelParams, CupertinoIcons.slider_horizontal_3, [
             _buildTemperatureSlider(),
             const SizedBox(height: 12),
             _buildSystemPromptField(),
@@ -166,7 +167,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
           SizedBox(
             width: 80,
             child: Text(
-              'API密钥:',
+              '${AppLocalizations.of(context)!.apiKeyLabel}:',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -179,8 +180,8 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                 _isEditingApiKey
                     ? TextField(
                       controller: _apiKeyController,
-                      decoration: const InputDecoration(
-                        hintText: '请输入API密钥',
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(context)!.apiKeyHint,
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 10,
@@ -233,7 +234,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                                         ? (_isApiKeyVisible
                                             ? _currentModel.apiKey!
                                             : '••••••••')
-                                        : '未设置（双击编辑）',
+                                        : AppLocalizations.of(context)!.notSetDoubleClickToEdit,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color:
@@ -313,7 +314,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
           SizedBox(
             width: 80,
             child: Text(
-              '名称:',
+              '${AppLocalizations.of(context)!.nameLabel}:',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -326,9 +327,9 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                 _isEditingModelName
                     ? TextField(
                       controller: _modelNameController,
-                      decoration: const InputDecoration(
-                        hintText: '请输入模型名称',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(context)!.modelNameHint,
+                        border: const OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
@@ -375,7 +376,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                                 child: Text(
                                   _currentModel.name.isNotEmpty
                                       ? _currentModel.name
-                                      : '未设置（双击编辑）',
+                                      : AppLocalizations.of(context)!.notSetDoubleClickToEdit,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color:
@@ -430,7 +431,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
           SizedBox(
             width: 80,
             child: Text(
-              '版本:',
+              '${AppLocalizations.of(context)!.versionLabel}:',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -487,7 +488,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     }
 
     // 如果没找到，返回原始模型ID
-    return _currentModel.model.isNotEmpty ? _currentModel.model : '未设置';
+    return _currentModel.model.isNotEmpty ? _currentModel.model : AppLocalizations.of(context)!.notSet;
   }
 
   // 显示模型选择对话框
@@ -510,9 +511,9 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text(
-            '选择模型',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          title: Text(
+            AppLocalizations.of(context)!.selectModel,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -562,7 +563,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                 Navigator.of(context).pop();
               },
               child: Text(
-                '取消',
+                AppLocalizations.of(context)!.cancel,
                 style: TextStyle(
                   color: Theme.of(
                     context,
@@ -602,7 +603,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     widget.onModelUpdated(_currentModel);
 
     // 显示保存成功提示
-    SnackBarUtils.showSuccess(context, 'API密钥已保存');
+    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.apiKeySaved);
   }
 
   void _startEditModelName() {
@@ -622,7 +623,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
   void _saveModelName() {
     final newModelName = _modelNameController.text.trim();
     if (newModelName.isEmpty) {
-      SnackBarUtils.showError(context, '模型名称不能为空');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.modelNameCannotBeEmpty);
       return;
     }
 
@@ -635,7 +636,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     widget.onModelUpdated(_currentModel);
 
     // 显示保存成功提示
-    SnackBarUtils.showSuccess(context, '模型名称已保存');
+    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.modelNameSaved);
   }
 
   void _saveModel(String newModelId) {
@@ -647,7 +648,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     widget.onModelUpdated(_currentModel);
 
     // 显示保存成功提示
-    SnackBarUtils.showSuccess(context, '模型已保存');
+    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.modelSaved);
   }
 
   // ========== 模型参数 (Temperature + System Prompt) ==========
@@ -660,7 +661,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '温度 (Temperature)',
+              AppLocalizations.of(context)!.temperatureLabel,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -719,7 +720,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '精确',
+                AppLocalizations.of(context)!.precise,
                 style: TextStyle(
                   fontSize: 10,
                   color: Theme.of(
@@ -729,7 +730,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                 ),
               ),
               Text(
-                '中性',
+                AppLocalizations.of(context)!.neutral,
                 style: TextStyle(
                   fontSize: 10,
                   color: Theme.of(
@@ -739,7 +740,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                 ),
               ),
               Text(
-                '创意',
+                AppLocalizations.of(context)!.creative,
                 style: TextStyle(
                   fontSize: 10,
                   color: Theme.of(
@@ -753,7 +754,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         ),
         const SizedBox(height: 6),
         Text(
-          '控制回复的随机性和创造性。较低值更保守，较高值更有创意。',
+          AppLocalizations.of(context)!.temperatureDescription,
           style: TextStyle(
             fontSize: 11,
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -771,7 +772,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '模型的角色设定',
+              AppLocalizations.of(context)!.modelRoleSetting,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -792,7 +793,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                     Icon(Icons.psychology, size: 14, color: Colors.white),
                     const SizedBox(width: 6),
                     Text(
-                      '预设角色',
+                      AppLocalizations.of(context)!.presetRole,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -810,7 +811,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
           controller: _systemPromptController,
           maxLines: 3,
           decoration: InputDecoration(
-            hintText: '请输入角色设定的描述，用于指导大模型的行为和响应风格...',
+            hintText: AppLocalizations.of(context)!.roleDescHint,
             hintStyle: const TextStyle(fontSize: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
@@ -847,7 +848,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         ),
         const SizedBox(height: 3),
         Text(
-          '角色设定会在每次对话开始时发送给大模型，用于设定角色和行为规范，可根据自己希望大模型扮演的角色自行调整。',
+          AppLocalizations.of(context)!.roleSettingDescription,
           style: TextStyle(
             fontSize: 11,
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -857,60 +858,63 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     );
   }
 
-  final List<Map<String, String>> _presetRoles = [
-    {
-      'name': '通用助手',
-      'description': '友善、专业的AI助手',
-      'prompt': '你是一个友善、专业且乐于助人的AI助手。请用清晰、准确的语言回答用户的问题，并在适当时提供有用的建议和解释。',
-    },
-    {
-      'name': '拼写检查',
-      'description': '拼写检查专家',
-      'prompt': '你是一个经验丰富的文字编辑工作者，可以发现并纠正文章中的错别字以及相关语法问题。',
-    },
-    {
-      'name': '代码专家',
-      'description': '精通编程开发的技术专家',
-      'prompt':
-          '你是一个经验丰富的软件开发专家，精通多种编程语言和开发框架。请为用户提供高质量的代码解决方案，包括代码示例、最佳实践和技术建议。回答时要考虑代码的可读性、性能和安全性。',
-    },
-    {
-      'name': '法律专家',
-      'description': '专业的法律顾问',
-      'prompt':
-          '你是一位经验丰富的法律专家，熟悉各种法律法规。请为用户提供专业的法律建议和解释，但请注意提醒用户这些建议仅供参考，具体法律问题应咨询专业律师。',
-    },
-    {
-      'name': '文案写手',
-      'description': '创意文案和内容创作专家',
-      'prompt':
-          '你是一位富有创意的文案写手，擅长创作各种类型的文案内容。请根据用户需求，创作引人入胜、表达清晰且符合目标受众的文案。注意语言的感染力和传播效果。',
-    },
-    {
-      'name': '数据分析师',
-      'description': '数据分析和统计专家',
-      'prompt':
-          '你是一位专业的数据分析师，精通统计学、数据挖掘和数据可视化。请为用户提供准确的数据分析、统计解释和可视化建议。用清晰的语言解释复杂的数据概念。',
-    },
-    {
-      'name': '教育导师',
-      'description': '耐心的教学专家',
-      'prompt':
-          '你是一位耐心、专业的教育导师，擅长用简单易懂的方式解释复杂概念。请根据用户的学习水平，提供循序渐进的教学内容，并鼓励用户主动思考和提问。',
-    },
-    {
-      'name': '商业顾问',
-      'description': '企业管理和商业策略专家',
-      'prompt':
-          '你是一位经验丰富的商业顾问，精通企业管理、市场营销和商业策略。请为用户提供实用的商业建议，包括市场分析、运营优化和战略规划等方面的专业见解。',
-    },
-    {
-      'name': '心理咨询师',
-      'description': '专业的心理健康顾问',
-      'prompt':
-          '你是一位专业、温暖的心理咨询师，具备丰富的心理学知识。请以同理心倾听用户的困扰，提供支持性的建议和心理健康知识。但请提醒用户，严重的心理问题需要寻求专业心理医生的帮助。',
-    },
-  ];
+  List<Map<String, String>> _getPresetRoles() {
+    final loc = AppLocalizations.of(context)!;
+    return [
+      {
+        'name': loc.generalAssistant,
+        'description': loc.friendlyAssistantDesc,
+        'prompt': '你是一个友善、专业且乐于助人的AI助手。请用清晰、准确的语言回答用户的问题，并在适当时提供有用的建议和解释。',
+      },
+      {
+        'name': loc.spellCheck,
+        'description': loc.spellCheckDesc,
+        'prompt': '你是一个经验丰富的文字编辑工作者，可以发现并纠正文章中的错别字以及相关语法问题。',
+      },
+      {
+        'name': loc.codeExpert,
+        'description': loc.codeExpertDesc,
+        'prompt':
+            '你是一个经验丰富的软件开发专家，精通多种编程语言和开发框架。请为用户提供高质量的代码解决方案，包括代码示例、最佳实践和技术建议。回答时要考虑代码的可读性、性能和安全性。',
+      },
+      {
+        'name': loc.legalExpert,
+        'description': loc.legalExpertDesc,
+        'prompt':
+            '你是一位经验丰富的法律专家，熟悉各种法律法规。请为用户提供专业的法律建议和解释，但请注意提醒用户这些建议仅供参考，具体法律问题应咨询专业律师。',
+      },
+      {
+        'name': loc.copywriter,
+        'description': loc.copywriterDesc,
+        'prompt':
+            '你是一位富有创意的文案写手，擅长创作各种类型的文案内容。请根据用户需求，创作引人入胜、表达清晰且符合目标受众的文案。注意语言的感染力和传播效果。',
+      },
+      {
+        'name': loc.dataAnalyst,
+        'description': loc.dataAnalystDesc,
+        'prompt':
+            '你是一位专业的数据分析师，精通统计学、数据挖掘和数据可视化。请为用户提供准确的数据分析、统计解释和可视化建议。用清晰的语言解释复杂的数据概念。',
+      },
+      {
+        'name': loc.educationTutor,
+        'description': loc.educationTutorDesc,
+        'prompt':
+            '你是一位耐心、专业的教育导师，擅长用简单易懂的方式解释复杂概念。请根据用户的学习水平，提供循序渐进的教学内容，并鼓励用户主动思考和提问。',
+      },
+      {
+        'name': loc.businessConsultant,
+        'description': loc.businessConsultantDesc,
+        'prompt':
+            '你是一位经验丰富的商业顾问，精通企业管理、市场营销和商业策略。请为用户提供实用的商业建议，包括市场分析、运营优化和战略规划等方面的专业见解。',
+      },
+      {
+        'name': loc.psychologist,
+        'description': loc.psychologistDesc,
+        'prompt':
+            '你是一位专业、温暖的心理咨询师，具备丰富的心理学知识。请以同理心倾听用户的困扰，提供支持性的建议和心理健康知识。但请提醒用户，严重的心理问题需要寻求专业心理医生的帮助。',
+      },
+    ];
+  }
 
   void _showPresetRolesDialog() {
     showDialog(
@@ -926,9 +930,9 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(width: 8),
-              const Text(
-                '选择预设角色',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              Text(
+                AppLocalizations.of(context)!.selectPresetRole,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -936,10 +940,10 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
             width: double.maxFinite,
             height: 400,
             child: ListView.separated(
-              itemCount: _presetRoles.length,
+              itemCount: _getPresetRoles().length,
               separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, index) {
-                final role = _presetRoles[index];
+                final role = _getPresetRoles()[index];
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(
                     vertical: 4,
@@ -995,7 +999,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                 Navigator.of(context).pop();
               },
               child: Text(
-                '取消',
+                AppLocalizations.of(context)!.cancel,
                 style: TextStyle(
                   color: Theme.of(
                     context,
@@ -1029,7 +1033,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('预设角色已应用'),
+        content: Text(AppLocalizations.of(context)!.presetRoleApplied),
         duration: const Duration(seconds: 2),
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),

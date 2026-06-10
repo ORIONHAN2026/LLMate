@@ -1,3 +1,4 @@
+import 'package:chathub/l10n/app_localizations.dart';
 import 'package:chathub/models/bigmodel/chat_model.dart';
 import 'package:chathub/models/chat/chat_setting.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
@@ -104,6 +105,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
   Widget build(BuildContext context) {
     // 如果模型已被删除，显示删除提示界面
     if (_isModelDeleted) {
+      final loc = AppLocalizations.of(context)!;
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -115,7 +117,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '模型已删除',
+              loc.modelDeleted,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -124,7 +126,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              '模型 "${_currentModel.name}" 已成功删除',
+              loc.modelDeletedSuccessfully(_currentModel.name),
               style: TextStyle(
                 fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -132,7 +134,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
             ),
             const SizedBox(height: 24),
             Text(
-              '请从左侧列表选择其他模型查看详情',
+              loc.selectOtherModelFromList,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
@@ -185,7 +187,9 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _currentModel.name.isNotEmpty ? _currentModel.name : '未命名模型',
+                  _currentModel.name.isNotEmpty ? _currentModel.name : AppLocalizations.of(context)!.unnamedModel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 18, // 从24减少到18
                     fontWeight: FontWeight.w600, // 从w700减少到w600
@@ -194,7 +198,9 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                 ),
                 const SizedBox(height: 6), // 从8减少到6
                 Text(
-                  _currentModel.description ?? '无描述',
+                  _currentModel.description ?? AppLocalizations.of(context)!.noDescription,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(
@@ -241,7 +247,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                   _showDeleteConfirmation();
                 },
                 icon: const Icon(CupertinoIcons.trash, size: 10),
-                label: const Text('删除'),
+                label: Text(AppLocalizations.of(context)!.delete),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.error,
                   side: BorderSide(
@@ -252,7 +258,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                     horizontal: 8,
                     vertical: 4,
                   ),
-                  minimumSize: const Size(60, 28),
+                  minimumSize: const Size(50, 28),
                   textStyle: const TextStyle(fontSize: 11),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
@@ -268,12 +274,13 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
 
 
   void _showDeleteConfirmation() async {
+    final loc = AppLocalizations.of(context)!;
     final bool? shouldDelete = await ConfirmDeleteDialog.show(
       context: context,
-      title: '确认删除',
+      title: loc.confirmDeleteTitle,
       itemName: _currentModel.name,
-      description: '确定要删除大模型',
-      warningMessage: '此操作不可撤销',
+      description: loc.confirmDeleteModel,
+      warningMessage: loc.irreversibleAction,
       icon: CupertinoIcons.exclamationmark_triangle,
       iconColor: Theme.of(context).colorScheme.error,
     );
@@ -288,7 +295,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
         widget.onModelDeleted!(_currentModel.modelId);
       }
       // 显示删除成功提示
-      SnackBarUtils.showSuccess(context, '模型 "${_currentModel.name}" 已删除');
+      SnackBarUtils.showSuccess(context, loc.modelDeletedToast(_currentModel.name));
     }
   }
 }

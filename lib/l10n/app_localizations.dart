@@ -6,6 +6,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_th.dart';
+import 'app_localizations_vi.dart';
 import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
@@ -95,6 +97,8 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
+    Locale('th'),
+    Locale('vi'),
     Locale('zh'),
   ];
 
@@ -2317,6 +2321,522 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} · {desc}'**
   String toolNameDesc(Object desc, Object name);
+
+  /// No description provided for @modelDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Deleted'**
+  String get modelDeleted;
+
+  /// No description provided for @modelDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Model \"{name}\" successfully deleted'**
+  String modelDeletedSuccessfully(Object name);
+
+  /// No description provided for @selectOtherModelFromList.
+  ///
+  /// In en, this message translates to:
+  /// **'Select another model from the list to view details'**
+  String get selectOtherModelFromList;
+
+  /// No description provided for @unnamedModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Model'**
+  String get unnamedModel;
+
+  /// No description provided for @noDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No description'**
+  String get noDescription;
+
+  /// No description provided for @confirmDeleteModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete the model'**
+  String get confirmDeleteModel;
+
+  /// No description provided for @modelDeletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Model \"{name}\" deleted'**
+  String modelDeletedToast(Object name);
+
+  /// No description provided for @addOnlineModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Online Model'**
+  String get addOnlineModel;
+
+  /// No description provided for @selectProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Provider'**
+  String get selectProvider;
+
+  /// No description provided for @configureParams.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure Parameters'**
+  String get configureParams;
+
+  /// No description provided for @checkConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Configuration'**
+  String get checkConfig;
+
+  /// No description provided for @setName.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Name'**
+  String get setName;
+
+  /// No description provided for @nextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get nextStep;
+
+  /// No description provided for @selectOnlineProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Online Model Provider'**
+  String get selectOnlineProvider;
+
+  /// No description provided for @configureProviderParams.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure {provider} Parameters'**
+  String configureProviderParams(Object provider);
+
+  /// No description provided for @ollamaApiKeyOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Ollama service usually doesn\'t require an API key, can leave empty'**
+  String get ollamaApiKeyOptional;
+
+  /// No description provided for @apiAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'API Address'**
+  String get apiAddress;
+
+  /// No description provided for @defaultApiUrlNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Default official API address, can be modified for local or private deployments'**
+  String get defaultApiUrlNote;
+
+  /// No description provided for @presetModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset Models'**
+  String get presetModel;
+
+  /// No description provided for @customModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Model'**
+  String get customModel;
+
+  /// No description provided for @enterFullModelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the full model name supported by the provider'**
+  String get enterFullModelName;
+
+  /// No description provided for @ollamaRunningModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Ollama Running Models'**
+  String get ollamaRunningModels;
+
+  /// No description provided for @refreshModelList.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh model list'**
+  String get refreshModelList;
+
+  /// No description provided for @ollamaStartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please start Ollama service and download models first\nthen click refresh to get the model list'**
+  String get ollamaStartHint;
+
+  /// No description provided for @modelscopeAvailableModels.
+  ///
+  /// In en, this message translates to:
+  /// **'ModelScope Available Models'**
+  String get modelscopeAvailableModels;
+
+  /// No description provided for @modelscopeApiKeyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Please ensure API key is correct\nthen click refresh to get the model list'**
+  String get modelscopeApiKeyHint;
+
+  /// No description provided for @setModelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Model Name'**
+  String get setModelName;
+
+  /// No description provided for @configSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration Summary'**
+  String get configSummary;
+
+  /// No description provided for @providerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get providerLabel;
+
+  /// No description provided for @platformLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform'**
+  String get platformLabel;
+
+  /// No description provided for @notSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get notSet;
+
+  /// No description provided for @modelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get modelLabel;
+
+  /// No description provided for @customSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'(Custom)'**
+  String get customSuffix;
+
+  /// No description provided for @notSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not selected'**
+  String get notSelected;
+
+  /// No description provided for @customModelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Model Name'**
+  String get customModelName;
+
+  /// No description provided for @enterModelNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter model name, e.g. {provider}-Chat'**
+  String enterModelNameHint(Object provider);
+
+  /// No description provided for @modelNameSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a meaningful name for easy identification'**
+  String get modelNameSuggestion;
+
+  /// No description provided for @testConnectionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Test model connection and response'**
+  String get testConnectionDesc;
+
+  /// No description provided for @waitingForResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for response...'**
+  String get waitingForResponse;
+
+  /// No description provided for @configIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration incomplete'**
+  String get configIncomplete;
+
+  /// No description provided for @receivedEmptyResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Received empty response'**
+  String get receivedEmptyResponse;
+
+  /// No description provided for @receivedNoResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'No response received'**
+  String get receivedNoResponse;
+
+  /// No description provided for @connectionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection failed: {error}'**
+  String connectionFailed(Object error);
+
+  /// No description provided for @contextCap.
+  ///
+  /// In en, this message translates to:
+  /// **'Context'**
+  String get contextCap;
+
+  /// No description provided for @thinkingCap.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking'**
+  String get thinkingCap;
+
+  /// No description provided for @builtinToolsCap.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in Tools'**
+  String get builtinToolsCap;
+
+  /// No description provided for @structuredCap.
+  ///
+  /// In en, this message translates to:
+  /// **'Structured'**
+  String get structuredCap;
+
+  /// No description provided for @batchCap.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch'**
+  String get batchCap;
+
+  /// No description provided for @basicInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic Info'**
+  String get basicInfo;
+
+  /// No description provided for @modelParams.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Parameters'**
+  String get modelParams;
+
+  /// No description provided for @unknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknown;
+
+  /// No description provided for @nameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get nameLabel;
+
+  /// No description provided for @apiKeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key'**
+  String get apiKeyLabel;
+
+  /// No description provided for @notSetDoubleClickToEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set (double-click to edit)'**
+  String get notSetDoubleClickToEdit;
+
+  /// No description provided for @apiKeySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'API key saved'**
+  String get apiKeySaved;
+
+  /// No description provided for @modelNameCannotBeEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Model name cannot be empty'**
+  String get modelNameCannotBeEmpty;
+
+  /// No description provided for @modelNameSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Model name saved'**
+  String get modelNameSaved;
+
+  /// No description provided for @modelSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Model saved'**
+  String get modelSaved;
+
+  /// No description provided for @temperatureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get temperatureLabel;
+
+  /// No description provided for @precise.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise'**
+  String get precise;
+
+  /// No description provided for @neutral.
+  ///
+  /// In en, this message translates to:
+  /// **'Neutral'**
+  String get neutral;
+
+  /// No description provided for @creative.
+  ///
+  /// In en, this message translates to:
+  /// **'Creative'**
+  String get creative;
+
+  /// No description provided for @temperatureDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Controls response randomness and creativity. Lower values are more conservative, higher values more creative.'**
+  String get temperatureDescription;
+
+  /// No description provided for @modelRoleSetting.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Role Setting'**
+  String get modelRoleSetting;
+
+  /// No description provided for @presetRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Preset Role'**
+  String get presetRole;
+
+  /// No description provided for @roleSettingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The role setting is sent to the model at the start of each conversation to define the role and behavior. Adjust according to the role you want the model to play.'**
+  String get roleSettingDescription;
+
+  /// No description provided for @selectPresetRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Preset Role'**
+  String get selectPresetRole;
+
+  /// No description provided for @generalAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'General Assistant'**
+  String get generalAssistant;
+
+  /// No description provided for @friendlyAssistantDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Friendly, professional AI assistant'**
+  String get friendlyAssistantDesc;
+
+  /// No description provided for @spellCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Spell Check'**
+  String get spellCheck;
+
+  /// No description provided for @spellCheckDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Spell check expert'**
+  String get spellCheckDesc;
+
+  /// No description provided for @codeExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Code Expert'**
+  String get codeExpert;
+
+  /// No description provided for @codeExpertDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical expert in programming and development'**
+  String get codeExpertDesc;
+
+  /// No description provided for @legalExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal Expert'**
+  String get legalExpert;
+
+  /// No description provided for @legalExpertDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Professional legal advisor'**
+  String get legalExpertDesc;
+
+  /// No description provided for @copywriter.
+  ///
+  /// In en, this message translates to:
+  /// **'Copywriter'**
+  String get copywriter;
+
+  /// No description provided for @copywriterDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Creative copywriting and content creation expert'**
+  String get copywriterDesc;
+
+  /// No description provided for @dataAnalyst.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Analyst'**
+  String get dataAnalyst;
+
+  /// No description provided for @dataAnalystDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Data analysis and statistics expert'**
+  String get dataAnalystDesc;
+
+  /// No description provided for @educationTutor.
+  ///
+  /// In en, this message translates to:
+  /// **'Education Tutor'**
+  String get educationTutor;
+
+  /// No description provided for @educationTutorDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient teaching expert'**
+  String get educationTutorDesc;
+
+  /// No description provided for @businessConsultant.
+  ///
+  /// In en, this message translates to:
+  /// **'Business Consultant'**
+  String get businessConsultant;
+
+  /// No description provided for @businessConsultantDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Business management and strategy expert'**
+  String get businessConsultantDesc;
+
+  /// No description provided for @psychologist.
+  ///
+  /// In en, this message translates to:
+  /// **'Psychologist'**
+  String get psychologist;
+
+  /// No description provided for @psychologistDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Professional mental health consultant'**
+  String get psychologistDesc;
+
+  /// No description provided for @versionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get versionLabel;
 }
 
 class _AppLocalizationsDelegate
@@ -2330,7 +2850,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en', 'zh'].contains(locale.languageCode);
+      <String>['en', 'th', 'vi', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -2341,6 +2861,10 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'th':
+      return AppLocalizationsTh();
+    case 'vi':
+      return AppLocalizationsVi();
     case 'zh':
       return AppLocalizationsZh();
   }

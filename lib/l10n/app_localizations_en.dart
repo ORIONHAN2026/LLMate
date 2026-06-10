@@ -1235,4 +1235,284 @@ class AppLocalizationsEn extends AppLocalizations {
   String toolNameDesc(Object desc, Object name) {
     return '$name · $desc';
   }
+
+  @override
+  String get modelDeleted => 'Model Deleted';
+
+  @override
+  String modelDeletedSuccessfully(Object name) {
+    return 'Model \"$name\" successfully deleted';
+  }
+
+  @override
+  String get selectOtherModelFromList =>
+      'Select another model from the list to view details';
+
+  @override
+  String get unnamedModel => 'Unnamed Model';
+
+  @override
+  String get noDescription => 'No description';
+
+  @override
+  String get confirmDeleteModel => 'Are you sure you want to delete the model';
+
+  @override
+  String modelDeletedToast(Object name) {
+    return 'Model \"$name\" deleted';
+  }
+
+  @override
+  String get addOnlineModel => 'Add Online Model';
+
+  @override
+  String get selectProvider => 'Select Provider';
+
+  @override
+  String get configureParams => 'Configure Parameters';
+
+  @override
+  String get checkConfig => 'Check Configuration';
+
+  @override
+  String get setName => 'Set Name';
+
+  @override
+  String get nextStep => 'Next';
+
+  @override
+  String get selectOnlineProvider => 'Select Online Model Provider';
+
+  @override
+  String configureProviderParams(Object provider) {
+    return 'Configure $provider Parameters';
+  }
+
+  @override
+  String get ollamaApiKeyOptional =>
+      'Local Ollama service usually doesn\'t require an API key, can leave empty';
+
+  @override
+  String get apiAddress => 'API Address';
+
+  @override
+  String get defaultApiUrlNote =>
+      'Default official API address, can be modified for local or private deployments';
+
+  @override
+  String get presetModel => 'Preset Models';
+
+  @override
+  String get customModel => 'Custom Model';
+
+  @override
+  String get enterFullModelName =>
+      'Enter the full model name supported by the provider';
+
+  @override
+  String get ollamaRunningModels => 'Ollama Running Models';
+
+  @override
+  String get refreshModelList => 'Refresh model list';
+
+  @override
+  String get ollamaStartHint =>
+      'Please start Ollama service and download models first\nthen click refresh to get the model list';
+
+  @override
+  String get modelscopeAvailableModels => 'ModelScope Available Models';
+
+  @override
+  String get modelscopeApiKeyHint =>
+      'Please ensure API key is correct\nthen click refresh to get the model list';
+
+  @override
+  String get setModelName => 'Set Model Name';
+
+  @override
+  String get configSummary => 'Configuration Summary';
+
+  @override
+  String get providerLabel => 'Provider';
+
+  @override
+  String get platformLabel => 'Platform';
+
+  @override
+  String get notSet => 'Not set';
+
+  @override
+  String get modelLabel => 'Model';
+
+  @override
+  String get customSuffix => '(Custom)';
+
+  @override
+  String get notSelected => 'Not selected';
+
+  @override
+  String get customModelName => 'Custom Model Name';
+
+  @override
+  String enterModelNameHint(Object provider) {
+    return 'Enter model name, e.g. $provider-Chat';
+  }
+
+  @override
+  String get modelNameSuggestion =>
+      'Use a meaningful name for easy identification';
+
+  @override
+  String get testConnectionDesc => 'Test model connection and response';
+
+  @override
+  String get waitingForResponse => 'Waiting for response...';
+
+  @override
+  String get configIncomplete => 'Configuration incomplete';
+
+  @override
+  String get receivedEmptyResponse => 'Received empty response';
+
+  @override
+  String get receivedNoResponse => 'No response received';
+
+  @override
+  String connectionFailed(Object error) {
+    return 'Connection failed: $error';
+  }
+
+  @override
+  String get contextCap => 'Context';
+
+  @override
+  String get thinkingCap => 'Thinking';
+
+  @override
+  String get builtinToolsCap => 'Built-in Tools';
+
+  @override
+  String get structuredCap => 'Structured';
+
+  @override
+  String get batchCap => 'Batch';
+
+  @override
+  String get basicInfo => 'Basic Info';
+
+  @override
+  String get modelParams => 'Model Parameters';
+
+  @override
+  String get unknown => 'Unknown';
+
+  @override
+  String get nameLabel => 'Name';
+
+  @override
+  String get apiKeyLabel => 'API Key';
+
+  @override
+  String get notSetDoubleClickToEdit => 'Not set (double-click to edit)';
+
+  @override
+  String get apiKeySaved => 'API key saved';
+
+  @override
+  String get modelNameCannotBeEmpty => 'Model name cannot be empty';
+
+  @override
+  String get modelNameSaved => 'Model name saved';
+
+  @override
+  String get modelSaved => 'Model saved';
+
+  @override
+  String get temperatureLabel => 'Temperature';
+
+  @override
+  String get precise => 'Precise';
+
+  @override
+  String get neutral => 'Neutral';
+
+  @override
+  String get creative => 'Creative';
+
+  @override
+  String get temperatureDescription =>
+      'Controls response randomness and creativity. Lower values are more conservative, higher values more creative.';
+
+  @override
+  String get modelRoleSetting => 'Model Role Setting';
+
+  @override
+  String get presetRole => 'Preset Role';
+
+  @override
+  String get roleSettingDescription =>
+      'The role setting is sent to the model at the start of each conversation to define the role and behavior. Adjust according to the role you want the model to play.';
+
+  @override
+  String get selectPresetRole => 'Select Preset Role';
+
+  @override
+  String get generalAssistant => 'General Assistant';
+
+  @override
+  String get friendlyAssistantDesc => 'Friendly, professional AI assistant';
+
+  @override
+  String get spellCheck => 'Spell Check';
+
+  @override
+  String get spellCheckDesc => 'Spell check expert';
+
+  @override
+  String get codeExpert => 'Code Expert';
+
+  @override
+  String get codeExpertDesc =>
+      'Technical expert in programming and development';
+
+  @override
+  String get legalExpert => 'Legal Expert';
+
+  @override
+  String get legalExpertDesc => 'Professional legal advisor';
+
+  @override
+  String get copywriter => 'Copywriter';
+
+  @override
+  String get copywriterDesc =>
+      'Creative copywriting and content creation expert';
+
+  @override
+  String get dataAnalyst => 'Data Analyst';
+
+  @override
+  String get dataAnalystDesc => 'Data analysis and statistics expert';
+
+  @override
+  String get educationTutor => 'Education Tutor';
+
+  @override
+  String get educationTutorDesc => 'Patient teaching expert';
+
+  @override
+  String get businessConsultant => 'Business Consultant';
+
+  @override
+  String get businessConsultantDesc =>
+      'Business management and strategy expert';
+
+  @override
+  String get psychologist => 'Psychologist';
+
+  @override
+  String get psychologistDesc => 'Professional mental health consultant';
+
+  @override
+  String get versionLabel => 'Version';
 }

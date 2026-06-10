@@ -4,9 +4,9 @@ import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
 
-/// The translations for Chinese (`zh`).
-class AppLocalizationsZh extends AppLocalizations {
-  AppLocalizationsZh([String locale = 'zh']) : super(locale);
+/// The translations for Vietnamese (`vi`).
+class AppLocalizationsVi extends AppLocalizations {
+  AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
   String get appTitle => 'ChatHub';
@@ -1168,52 +1168,54 @@ class AppLocalizationsZh extends AppLocalizations {
   String get removeServiceWarning => '移除后需重新添加';
 
   @override
-  String get jsonConfig => 'JSON 配置';
+  String get jsonConfig => 'cấu hình JSON';
 
   @override
-  String get cannotReadFilePath => '无法读取文件路径';
+  String get cannotReadFilePath => 'Không thể đọc đường dẫn tập tin';
 
   @override
-  String get extractingImport => '正在解压导入...';
+  String get extractingImport => 'Đang giải nén và nhập...';
 
   @override
-  String get skillImported => '已导入技能';
+  String get skillImported => 'Kỹ năng nhập khẩu';
 
   @override
   String importFailed(Object error) {
-    return '导入失败: $error';
+    return 'Nhập không thành công: $error';
   }
 
   @override
-  String get deleteSkillConfirm => '确定要删除技能';
+  String get deleteSkillConfirm =>
+      'Bạn có chắc chắn muốn xóa kỹ năng này không?';
 
   @override
-  String get irreversibleAction => '此操作不可撤销';
+  String get irreversibleAction => 'Hành động này không thể thay đổi được';
 
   @override
   String skillDeleted(Object name) {
-    return '已删除技能: $name';
+    return 'Kỹ năng đã xóa: $name';
   }
 
   @override
   String deleteSkillFailed(Object error) {
-    return '删除技能失败: $error';
+    return 'Không xóa được kỹ năng: $error';
   }
 
   @override
-  String get skillDescription => '技能描述';
+  String get skillDescription => 'Mô tả kỹ năng';
 
   @override
-  String get skillManagementTitle => '技能管理(SKILL)';
+  String get skillManagementTitle => 'Quản lý kỹ năng (KỸ NĂNG)';
 
   @override
-  String get addSkill => '添加技能';
+  String get addSkill => 'Thêm kỹ năng';
 
   @override
-  String get noSkills => '暂无技能';
+  String get noSkills => 'Chưa có kỹ năng';
 
   @override
-  String get clickAddSkillHint => '点击右上角添加按钮创建自定义技能';
+  String get clickAddSkillHint =>
+      'Bấm vào nút Thêm ở góc trên bên phải để tạo kỹ năng tùy chỉnh';
 
   @override
   String toolNameDesc(Object desc, Object name) {
@@ -1221,271 +1223,279 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get modelDeleted => '模型已删除';
+  String get modelDeleted => 'Đã xóa mô hình';
 
   @override
   String modelDeletedSuccessfully(Object name) {
-    return '模型 \"$name\" 已成功删除';
+    return 'Đã xóa thành công mô hình \"$name\"';
   }
 
   @override
-  String get selectOtherModelFromList => '请从左侧列表选择其他模型查看详情';
+  String get selectOtherModelFromList =>
+      'Vui lòng chọn mô hình khác từ danh sách bên trái để xem chi tiết';
 
   @override
-  String get unnamedModel => '未命名模型';
+  String get unnamedModel => 'Mô hình không tên';
 
   @override
-  String get noDescription => '无描述';
+  String get noDescription => 'Không có mô tả';
 
   @override
-  String get confirmDeleteModel => '确定要删除大模型';
+  String get confirmDeleteModel => 'Bạn có chắc chắn muốn xóa mô hình';
 
   @override
   String modelDeletedToast(Object name) {
-    return '模型 \"$name\" 已删除';
+    return 'Đã xóa mô hình \"$name\"';
   }
 
   @override
-  String get addOnlineModel => '添加在线模型';
+  String get addOnlineModel => 'Thêm mô hình trực tuyến';
 
   @override
-  String get selectProvider => '选择提供商';
+  String get selectProvider => 'Chọn nhà cung cấp';
 
   @override
-  String get configureParams => '配置参数';
+  String get configureParams => 'Cấu hình tham số';
 
   @override
-  String get checkConfig => '检查配置';
+  String get checkConfig => 'Kiểm tra cấu hình';
 
   @override
-  String get setName => '设置名称';
+  String get setName => 'Đặt tên';
 
   @override
-  String get nextStep => '下一步';
+  String get nextStep => 'Tiếp theo';
 
   @override
-  String get selectOnlineProvider => '选择在线模型提供商';
+  String get selectOnlineProvider => 'Chọn nhà cung cấp mô hình trực tuyến';
 
   @override
   String configureProviderParams(Object provider) {
-    return '配置 $provider 参数';
+    return 'Cấu hình tham số $provider';
   }
 
   @override
-  String get ollamaApiKeyOptional => '本地 Ollama 服务通常不需要 API 密钥，可留空';
+  String get ollamaApiKeyOptional =>
+      'Dịch vụ Ollama cục bộ thường không cần khóa API, có thể để trống';
 
   @override
-  String get apiAddress => 'API 地址';
+  String get apiAddress => 'Địa chỉ API';
 
   @override
-  String get defaultApiUrlNote => '默认为官方API地址，可根据需要修改为本地或私有部署地址';
+  String get defaultApiUrlNote =>
+      'Địa chỉ API chính thức mặc định, có thể sửa đổi cho triển khai cục bộ hoặc riêng tư';
 
   @override
-  String get presetModel => '预设模型';
+  String get presetModel => 'Mô hình cài sẵn';
 
   @override
-  String get customModel => '自定义模型';
+  String get customModel => 'Mô hình tùy chỉnh';
 
   @override
-  String get enterFullModelName => '请输入提供商支持的完整模型名称';
+  String get enterFullModelName =>
+      'Nhập tên mô hình đầy đủ được nhà cung cấp hỗ trợ';
 
   @override
-  String get ollamaRunningModels => 'Ollama 运行中的模型';
+  String get ollamaRunningModels => 'Mô hình Ollama đang chạy';
 
   @override
-  String get refreshModelList => '刷新模型列表';
+  String get refreshModelList => 'Làm mới danh sách mô hình';
 
   @override
-  String get ollamaStartHint => '请先启动 Ollama 服务并下载模型\n然后点击刷新按钮获取模型列表';
+  String get ollamaStartHint =>
+      'Vui lòng khởi động dịch vụ Ollama và tải xuống mô hình trước\nsau đó nhấp làm mới để lấy danh sách mô hình';
 
   @override
-  String get modelscopeAvailableModels => 'ModelScope 可用模型';
+  String get modelscopeAvailableModels => 'Mô hình ModelScope có sẵn';
 
   @override
-  String get modelscopeApiKeyHint => '请确保 API 密钥正确\n然后点击刷新按钮获取模型列表';
+  String get modelscopeApiKeyHint =>
+      'Vui lòng đảm bảo khóa API chính xác\nsau đó nhấp làm mới để lấy danh sách mô hình';
 
   @override
-  String get setModelName => '设置模型名称';
+  String get setModelName => 'Đặt tên mô hình';
 
   @override
-  String get configSummary => '配置摘要';
+  String get configSummary => 'Tóm tắt cấu hình';
 
   @override
-  String get providerLabel => '提供商';
+  String get providerLabel => 'Nhà cung cấp';
 
   @override
-  String get platformLabel => '平台';
+  String get platformLabel => 'Nền tảng';
 
   @override
-  String get notSet => '未设置';
+  String get notSet => 'Chưa đặt';
 
   @override
-  String get modelLabel => '模型';
+  String get modelLabel => 'Mô hình';
 
   @override
-  String get customSuffix => '(自定义)';
+  String get customSuffix => '(Tùy chỉnh)';
 
   @override
-  String get notSelected => '未选择';
+  String get notSelected => 'Chưa chọn';
 
   @override
-  String get customModelName => '自定义模型名称';
+  String get customModelName => 'Tên mô hình tùy chỉnh';
 
   @override
   String enterModelNameHint(Object provider) {
-    return '输入模型名称，如：$provider-Chat';
+    return 'Nhập tên mô hình, ví dụ: $provider-Chat';
   }
 
   @override
-  String get modelNameSuggestion => '建议使用有意义的名称，便于识别模型用途';
+  String get modelNameSuggestion => 'Sử dụng tên có ý nghĩa để dễ nhận diện';
 
   @override
-  String get testConnectionDesc => '测试模型连接和响应能力';
+  String get testConnectionDesc => 'Kiểm tra kết nối và phản hồi của mô hình';
 
   @override
-  String get waitingForResponse => '正在等待回复...';
+  String get waitingForResponse => 'Đang chờ phản hồi...';
 
   @override
-  String get configIncomplete => '配置信息不完整';
+  String get configIncomplete => 'Cấu hình không đầy đủ';
 
   @override
-  String get receivedEmptyResponse => '接收到空响应';
+  String get receivedEmptyResponse => 'Nhận được phản hồi trống';
 
   @override
-  String get receivedNoResponse => '未收到任何响应';
+  String get receivedNoResponse => 'Không nhận được phản hồi';
 
   @override
   String connectionFailed(Object error) {
-    return '连接失败：$error';
+    return 'Kết nối thất bại: $error';
   }
 
   @override
-  String get contextCap => '上下文';
+  String get contextCap => 'Ngữ cảnh';
 
   @override
-  String get thinkingCap => '思考';
+  String get thinkingCap => 'Suy nghĩ';
 
   @override
-  String get builtinToolsCap => '内置工具';
+  String get builtinToolsCap => 'Công cụ tích hợp';
 
   @override
-  String get structuredCap => '结构化';
+  String get structuredCap => 'Cấu trúc';
 
   @override
-  String get batchCap => '批量';
+  String get batchCap => 'Hàng loạt';
 
   @override
-  String get basicInfo => '基本信息';
+  String get basicInfo => 'Thông tin cơ bản';
 
   @override
-  String get modelParams => '模型参数';
+  String get modelParams => 'Tham số mô hình';
 
   @override
-  String get unknown => '未知';
+  String get unknown => 'Không xác định';
 
   @override
-  String get nameLabel => '名称';
+  String get nameLabel => 'Tên';
 
   @override
-  String get apiKeyLabel => 'API密钥';
+  String get apiKeyLabel => 'Khóa API';
 
   @override
-  String get notSetDoubleClickToEdit => '未设置（双击编辑）';
+  String get notSetDoubleClickToEdit => 'Chưa đặt (nhấp đúp để chỉnh sửa)';
 
   @override
-  String get apiKeySaved => 'API密钥已保存';
+  String get apiKeySaved => 'Đã lưu khóa API';
 
   @override
-  String get modelNameCannotBeEmpty => '模型名称不能为空';
+  String get modelNameCannotBeEmpty => 'Tên mô hình không được để trống';
 
   @override
-  String get modelNameSaved => '模型名称已保存';
+  String get modelNameSaved => 'Đã lưu tên mô hình';
 
   @override
-  String get modelSaved => '模型已保存';
+  String get modelSaved => 'Đã lưu mô hình';
 
   @override
-  String get temperatureLabel => '温度 (Temperature)';
+  String get temperatureLabel => 'Nhiệt độ (Temperature)';
 
   @override
-  String get precise => '精确';
+  String get precise => 'Chính xác';
 
   @override
-  String get neutral => '中性';
+  String get neutral => 'Trung tính';
 
   @override
-  String get creative => '创意';
+  String get creative => 'Sáng tạo';
 
   @override
-  String get temperatureDescription => '控制回复的随机性和创造性。较低值更保守，较高值更有创意。';
+  String get temperatureDescription =>
+      'Kiểm soát tính ngẫu nhiên và sáng tạo của phản hồi. Giá trị thấp hơn thì bảo thủ hơn, giá trị cao hơn thì sáng tạo hơn.';
 
   @override
-  String get modelRoleSetting => '模型的角色设定';
+  String get modelRoleSetting => 'Thiết lập vai trò mô hình';
 
   @override
-  String get presetRole => '预设角色';
+  String get presetRole => 'Vai trò cài sẵn';
 
   @override
   String get roleSettingDescription =>
-      '角色设定会在每次对话开始时发送给大模型，用于设定角色和行为规范，可根据自己希望大模型扮演的角色自行调整。';
+      'Thiết lập vai trò được gửi đến mô hình khi bắt đầu mỗi cuộc trò chuyện để xác định vai trò và hành vi. Có thể điều chỉnh theo vai trò bạn muốn mô hình đảm nhận.';
 
   @override
-  String get selectPresetRole => '选择预设角色';
+  String get selectPresetRole => 'Chọn vai trò cài sẵn';
 
   @override
-  String get generalAssistant => '通用助手';
+  String get generalAssistant => 'Trợ lý chung';
 
   @override
-  String get friendlyAssistantDesc => '友善、专业的AI助手';
+  String get friendlyAssistantDesc => 'Trợ lý AI thân thiện, chuyên nghiệp';
 
   @override
-  String get spellCheck => '拼写检查';
+  String get spellCheck => 'Kiểm tra chính tả';
 
   @override
-  String get spellCheckDesc => '拼写检查专家';
+  String get spellCheckDesc => 'Chuyên gia kiểm tra chính tả';
 
   @override
-  String get codeExpert => '代码专家';
+  String get codeExpert => 'Chuyên gia lập trình';
 
   @override
-  String get codeExpertDesc => '精通编程开发的技术专家';
+  String get codeExpertDesc => 'Chuyên gia kỹ thuật về lập trình và phát triển';
 
   @override
-  String get legalExpert => '法律专家';
+  String get legalExpert => 'Chuyên gia pháp lý';
 
   @override
-  String get legalExpertDesc => '专业的法律顾问';
+  String get legalExpertDesc => 'Cố vấn pháp lý chuyên nghiệp';
 
   @override
-  String get copywriter => '文案写手';
+  String get copywriter => 'Người viết nội dung';
 
   @override
-  String get copywriterDesc => '创意文案和内容创作专家';
+  String get copywriterDesc => 'Chuyên gia viết nội dung sáng tạo';
 
   @override
-  String get dataAnalyst => '数据分析师';
+  String get dataAnalyst => 'Nhà phân tích dữ liệu';
 
   @override
-  String get dataAnalystDesc => '数据分析和统计专家';
+  String get dataAnalystDesc => 'Chuyên gia phân tích dữ liệu và thống kê';
 
   @override
-  String get educationTutor => '教育导师';
+  String get educationTutor => 'Gia sư giáo dục';
 
   @override
-  String get educationTutorDesc => '耐心的教学专家';
+  String get educationTutorDesc => 'Chuyên gia giảng dạy kiên nhẫn';
 
   @override
-  String get businessConsultant => '商业顾问';
+  String get businessConsultant => 'Tư vấn kinh doanh';
 
   @override
-  String get businessConsultantDesc => '企业管理和商业策略专家';
+  String get businessConsultantDesc =>
+      'Chuyên gia quản lý doanh nghiệp và chiến lược';
 
   @override
-  String get psychologist => '心理咨询师';
+  String get psychologist => 'Nhà tâm lý học';
 
   @override
-  String get psychologistDesc => '专业的心理健康顾问';
+  String get psychologistDesc => 'Tư vấn sức khỏe tâm thần chuyên nghiệp';
 
   @override
-  String get versionLabel => '版本';
+  String get versionLabel => 'Phiên bản';
 }

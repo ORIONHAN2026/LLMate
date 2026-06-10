@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../l10n/app_localizations.dart';
 import '../models/bigmodel/model_data.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/chat_message.dart';
@@ -82,9 +83,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             // 标题和关闭按钮
             Row(
               children: [
-                const Text(
-                  '添加在线模型',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.addOnlineModel,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ), // 从18减少到16
@@ -100,13 +101,13 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             // 步骤指示器
             Row(
               children: [
-                _buildStepIndicator(0, '选择提供商'),
+                _buildStepIndicator(0, AppLocalizations.of(context)!.selectProvider),
                 _buildStepConnector(),
-                _buildStepIndicator(1, '配置参数'),
+                _buildStepIndicator(1, AppLocalizations.of(context)!.configureParams),
                 _buildStepConnector(),
-                _buildStepIndicator(2, '检查配置'),
+                _buildStepIndicator(2, AppLocalizations.of(context)!.checkConfig),
                 _buildStepConnector(),
-                _buildStepIndicator(3, '设置名称'),
+                _buildStepIndicator(3, AppLocalizations.of(context)!.setName),
               ],
             ),
             const SizedBox(height: 20), // 从24减少到20
@@ -135,7 +136,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
-                    child: const Text('上一步'),
+                    child: Text(AppLocalizations.of(context)!.previousStep),
                   ),
                 const SizedBox(width: 8),
                 ElevatedButton(
@@ -153,7 +154,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
-                  child: Text(_currentStep == 3 ? '完成' : '下一步'),
+                  child: Text(_currentStep == 3 ? AppLocalizations.of(context)!.done : AppLocalizations.of(context)!.nextStep),
                 ),
               ],
             ),
@@ -187,7 +188,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             color: Theme.of(context).colorScheme.onPrimary,
           ),
         ),
-        const SizedBox(width: 6), // 从8减少到6
+        const SizedBox(width: 4), // 缩小以适应英文标签
         Text(
           title,
           style: TextStyle(
@@ -205,9 +206,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
   Widget _buildStepConnector() {
     return Container(
-      width: 30, // 从40减少到30
+      width: 12, // 缩小以适应英文标签长度
       height: 1,
-      margin: const EdgeInsets.symmetric(horizontal: 6), // 从8减少到6
+      margin: const EdgeInsets.symmetric(horizontal: 3), // 缩小边距
       color: Theme.of(context).dividerColor,
     );
   }
@@ -231,9 +232,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '选择在线模型提供商',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        Text(
+          AppLocalizations.of(context)!.selectOnlineProvider,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 16),
         Expanded(
@@ -409,7 +410,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '配置 ${selectedProviderData['name']} 参数',
+            AppLocalizations.of(context)!.configureProviderParams(selectedProviderData['name']),
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -417,9 +418,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           ),
           const SizedBox(height: 16), // 从20减少到16
           // API Key 输入
-          const Text(
-            'API 密钥',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.modelApiKey,
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ), // 从14减少到12
@@ -436,8 +437,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             decoration: InputDecoration(
               hintText:
                   _selectedProvider == 'ollama'
-                      ? '本地 Ollama 服务通常不需要 API 密钥，可留空'
-                      : '输入您的 API 密钥',
+                      ? AppLocalizations.of(context)!.ollamaApiKeyOptional
+                      : AppLocalizations.of(context)!.apiKeyHint,
               hintStyle: const TextStyle(fontSize: 12), // 从14减少到12
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
@@ -475,9 +476,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           ),
           const SizedBox(height: 12), // 从16减少到12
           // API URL 配置区域
-          const Text(
-            'API 地址',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          Text(
+            AppLocalizations.of(context)!.apiAddress,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 6),
           TextField(
@@ -489,7 +490,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ), // 只允许英文、数字和URL常用字符
             ],
             decoration: InputDecoration(
-              hintText: '输入API地址',
+              hintText: AppLocalizations.of(context)!.apiUrlHint,
               hintStyle: const TextStyle(fontSize: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
@@ -562,7 +563,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           ),
           const SizedBox(height: 6),
           Text(
-            '默认为官方API地址，可根据需要修改为本地或私有部署地址',
+            AppLocalizations.of(context)!.defaultApiUrlNote,
             style: TextStyle(
               fontSize: 11,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -570,9 +571,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           ),
           const SizedBox(height: 12), // 从16减少到12
           // 模型选择
-          const Text(
-            '选择模型',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.selectModel,
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ), // 从14减少到12
@@ -616,7 +617,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '预设模型',
+                      AppLocalizations.of(context)!.presetModel,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
@@ -667,7 +668,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '自定义模型',
+                      AppLocalizations.of(context)!.customModel,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12,
@@ -922,7 +923,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               controller: _customModelController,
               style: const TextStyle(fontSize: 12),
               decoration: InputDecoration(
-                hintText: '输入模型名称，如：gpt-4o-mini, claude-3-haiku 等',
+                hintText: AppLocalizations.of(context)!.modelSearchHint,
                 hintStyle: const TextStyle(fontSize: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
@@ -951,7 +952,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             ),
             const SizedBox(height: 6),
             Text(
-              '请输入提供商支持的完整模型名称',
+              AppLocalizations.of(context)!.enterFullModelName,
               style: TextStyle(fontSize: 11, color: Colors.grey[600]),
             ),
           ],
@@ -976,7 +977,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           child: Row(
             children: [
               Text(
-                'Ollama 运行中的模型',
+                AppLocalizations.of(context)!.ollamaRunningModels,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -998,7 +999,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     minimumSize: const Size(24, 24),
                     padding: EdgeInsets.zero,
                   ),
-                  tooltip: '刷新模型列表',
+                  tooltip: AppLocalizations.of(context)!.refreshModelList,
                 ),
             ],
           ),
@@ -1020,7 +1021,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _fetchOllamaModels,
-                  child: const Text('重试', style: TextStyle(fontSize: 11)),
+                  child: Text(AppLocalizations.of(context)!.retry, style: const TextStyle(fontSize: 11)),
                 ),
               ],
             ),
@@ -1033,14 +1034,14 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 Icon(Icons.info_outline, color: Colors.grey[400], size: 32),
                 const SizedBox(height: 8),
                 Text(
-                  '请先启动 Ollama 服务并下载模型\n然后点击刷新按钮获取模型列表',
+                  AppLocalizations.of(context)!.ollamaStartHint,
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _fetchOllamaModels,
-                  child: const Text('获取模型列表', style: TextStyle(fontSize: 11)),
+                  child: Text(AppLocalizations.of(context)!.fetchModels, style: const TextStyle(fontSize: 11)),
                 ),
               ],
             ),
@@ -1118,7 +1119,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                           if (model['size'] != null && model['size'] > 0) ...[
                             const SizedBox(height: 2),
                             Text(
-                              '大小: ${_formatFileSize(model['size'])}',
+                              '${AppLocalizations.of(context)!.fileSizeLabel}: ${_formatFileSize(model['size'])}',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.grey[600],
@@ -1163,7 +1164,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           child: Row(
             children: [
               Text(
-                'ModelScope 可用模型',
+                AppLocalizations.of(context)!.modelscopeAvailableModels,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -1185,7 +1186,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     minimumSize: const Size(24, 24),
                     padding: EdgeInsets.zero,
                   ),
-                  tooltip: '刷新模型列表',
+                  tooltip: AppLocalizations.of(context)!.refreshModelList,
                 ),
             ],
           ),
@@ -1207,7 +1208,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _fetchModelScopeModels,
-                  child: const Text('重试', style: TextStyle(fontSize: 11)),
+                  child: Text(AppLocalizations.of(context)!.retry, style: const TextStyle(fontSize: 11)),
                 ),
               ],
             ),
@@ -1220,14 +1221,14 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 Icon(Icons.info_outline, color: Colors.grey[400], size: 32),
                 const SizedBox(height: 8),
                 Text(
-                  '请确保 API 密钥正确\n然后点击刷新按钮获取模型列表',
+                  AppLocalizations.of(context)!.modelscopeApiKeyHint,
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _fetchModelScopeModels,
-                  child: const Text('获取模型列表', style: TextStyle(fontSize: 11)),
+                  child: Text(AppLocalizations.of(context)!.fetchModels, style: const TextStyle(fontSize: 11)),
                 ),
               ],
             ),
@@ -1305,7 +1306,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                           if (model['object'] != null) ...[
                             const SizedBox(height: 2),
                             Text(
-                              '类型: ${model['object']}',
+                              '${AppLocalizations.of(context)!.fileTypeLabel}: ${model['object']}',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.grey[600],
@@ -1333,9 +1334,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '设置模型名称',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.setModelName,
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ), // 从16减少到14
@@ -1360,9 +1361,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       color: Color(0xFF10B981),
                     ),
                     const SizedBox(width: 6), // 从8减少到6
-                    const Text(
-                      '配置摘要',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context)!.configSummary,
+                      style: const TextStyle(
                         fontSize: 12, // 从16减少到12
                         fontWeight: FontWeight.w500, // 从w600减少到w500
                         color: Color(0xFF10B981),
@@ -1372,30 +1373,30 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 ),
                 const SizedBox(height: 12), // 从16减少到12
                 _buildSummaryItem(
-                  '提供商',
+                  AppLocalizations.of(context)!.providerLabel,
                   selectedProviderData['name'],
                   CupertinoIcons.device_desktop,
                 ),
                 const SizedBox(height: 8),
                 _buildSummaryItem(
-                  '平台',
+                  AppLocalizations.of(context)!.platformLabel,
                   _resolveProviderPlatformName(_selectedProvider),
                   CupertinoIcons.cloud,
                 ),
                 const SizedBox(height: 8), // 从12减少到8
                 _buildSummaryItem(
-                  'API 地址',
+                  AppLocalizations.of(context)!.apiAddress,
                   _apiUrlController.text.trim().isNotEmpty
                       ? _apiUrlController.text.trim()
-                      : '未设置',
+                      : AppLocalizations.of(context)!.notSet,
                   CupertinoIcons.link,
                 ),
                 const SizedBox(height: 8), // 从12减少到8
                 _buildSummaryItem(
-                  '模型',
+                  AppLocalizations.of(context)!.modelLabel,
                   _selectedOnlineModel.isNotEmpty
                       ? _isCustomModel
-                          ? '$_selectedOnlineModel (自定义)'
+                          ? '$_selectedOnlineModel ${AppLocalizations.of(context)!.customSuffix}'
                           : selectedProviderData['models'].firstWhere(
                             (m) => m['id'] == _selectedOnlineModel,
                             orElse:
@@ -1403,7 +1404,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                   'name': _selectedOnlineModel,
                                 }, // 如果找不到，显示原始名称
                           )['name']
-                      : '未选择',
+                      : AppLocalizations.of(context)!.notSelected,
                   CupertinoIcons.device_desktop,
                 ),
                 const SizedBox(height: 8), // 从12减少到8
@@ -1413,9 +1414,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
           const SizedBox(height: 16), // 从24减少到16
           // 自定义名称输入
-          const Text(
-            '自定义模型名称',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.customModelName,
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ), // 从14减少到12
@@ -1425,7 +1426,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             controller: _modelNameController,
             style: const TextStyle(fontSize: 12), // 从14减少到12
             decoration: InputDecoration(
-              hintText: '输入模型名称，如：${selectedProviderData['name']}-Chat',
+              hintText: AppLocalizations.of(context)!.enterModelNameHint(selectedProviderData['name']),
               hintStyle: const TextStyle(fontSize: 12), // 从14减少到12
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
@@ -1448,7 +1449,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           ),
           const SizedBox(height: 6), // 从8减少到6
           Text(
-            '建议使用有意义的名称，便于识别模型用途',
+            AppLocalizations.of(context)!.modelNameSuggestion,
             style: TextStyle(fontSize: 11, color: Colors.grey[600]), // 从12减少到11
           ),
         ],
@@ -1616,13 +1617,14 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             : Theme.of(context).dividerColor.withOpacity(0.5);
 
     // 能力列表：[标签名, 字段key, 显示名]
+    final loc = AppLocalizations.of(context)!;
     final capabilities = [
-      ['context', '上下文'],
-      ['thinking', '思考'],
+      ['context', loc.contextCap],
+      ['thinking', loc.thinkingCap],
       ['fc', 'FC'],
-      ['tools', '内置工具'],
-      ['structuredOutput', '结构化'],
-      ['batchCalling', '批量'],
+      ['tools', loc.builtinToolsCap],
+      ['structuredOutput', loc.structuredCap],
+      ['batchCalling', loc.batchCap],
     ];
 
     return Wrap(
@@ -1761,7 +1763,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '测试模型连接和响应能力',
+          AppLocalizations.of(context)!.testConnectionDesc,
           style: TextStyle(fontSize: 11, color: Colors.grey[600]),
         ),
         const SizedBox(height: 16),
@@ -1788,7 +1790,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       // AI回复
                       if (_isTesting && _testResponse.isEmpty)
                         _buildTestMessage(
-                          '正在等待回复...',
+                          AppLocalizations.of(context)!.waitingForResponse,
                           isUser: false,
                           isLoading: true,
                         )
@@ -1960,9 +1962,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         size: 12,
                         color: Colors.red,
                       ),
-                      label: const Text(
-                        '重试',
-                        style: TextStyle(fontSize: 11, color: Colors.red),
+                      label: Text(
+                        AppLocalizations.of(context)!.retry,
+                        style: const TextStyle(fontSize: 11, color: Colors.red),
                       ),
                     ),
                   ),
@@ -1998,7 +2000,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           _isTesting = false;
           _testCompleted = true;
           _testPassed = false;
-          _testResponse = '配置信息不完整';
+          _testResponse = AppLocalizations.of(context)!.configIncomplete;
         });
         return;
       }
@@ -2135,7 +2137,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               accumulatedResponse.isNotEmpty &&
               !accumulatedResponse.startsWith('错误:');
           if (accumulatedResponse.isEmpty) {
-            _testResponse = '接收到空响应';
+            _testResponse = AppLocalizations.of(context)!.receivedEmptyResponse;
             _testPassed = false;
           }
         });
@@ -2144,7 +2146,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           _isTesting = false;
           _testCompleted = true;
           _testPassed = false;
-          _testResponse = '未收到任何响应';
+          _testResponse = AppLocalizations.of(context)!.receivedNoResponse;
         });
       }
 
@@ -2154,7 +2156,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         _isTesting = false;
         _testCompleted = true;
         _testPassed = false;
-        _testResponse = '连接失败：${e.toString()}';
+        _testResponse = AppLocalizations.of(context)!.connectionFailed(e.toString());
       });
     }
   }
@@ -2220,7 +2222,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       }
     } catch (e) {
       setState(() {
-        _ollamaModelsError = '连接失败: ${e.toString()}';
+        _ollamaModelsError = AppLocalizations.of(context)!.connectionFailed(e.toString());
         _isLoadingOllamaModels = false;
       });
     }
@@ -2286,7 +2288,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       }
     } catch (e) {
       setState(() {
-        _modelScopeModelsError = '连接失败: ${e.toString()}';
+        _modelScopeModelsError = AppLocalizations.of(context)!.connectionFailed(e.toString());
         _isLoadingModelScopeModels = false;
       });
     }

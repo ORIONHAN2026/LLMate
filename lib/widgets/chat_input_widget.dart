@@ -23,6 +23,7 @@ import '../services/pdf_tool_service.dart';
 import '../services/ppt_tool_service.dart';
 import '../services/image_tool_service.dart';
 import '../services/file_tool_service.dart';
+import '../services/feature_toggle_service.dart';
 import '../utils/snackbar_utils.dart';
 import '../l10n/app_localizations.dart';
 import 'attachment_list_widget.dart';
@@ -116,6 +117,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     McpService.ensureGlobalConfigsLoaded().then((_) {
       if (mounted) setState(() {});
     });
+    // 加载功能开关配置
+    FeatureToggleService().init();
 
     _inputController = TextEditingController();
     _inputFocusNode = FocusNode();
@@ -1117,10 +1120,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
                       _buildSkillToggle(),
                       const SizedBox(width: 8),
-                      _buildMemoryToggle(),
-                      const SizedBox(width: 8),
-                      _buildScheduledTaskToggle(),
-                      const SizedBox(width: 8),
+                      if (FeatureToggleService().isMemoryConfigEnabled) ...[
+                        _buildMemoryToggle(),
+                        const SizedBox(width: 8),
+                      ],
+                      if (FeatureToggleService().isScheduledTaskEnabled) ...[
+                        _buildScheduledTaskToggle(),
+                        const SizedBox(width: 8),
+                      ],
                       _buildWorkDirectoryToggle(),
                       const SizedBox(width: 8),
                       _buildCleanHistoryToggle(),

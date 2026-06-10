@@ -24,6 +24,7 @@ import '../services/ppt_tool_service.dart';
 import '../services/image_tool_service.dart';
 import '../services/file_tool_service.dart';
 import '../utils/snackbar_utils.dart';
+import '../l10n/app_localizations.dart';
 import 'attachment_list_widget.dart';
 import 'scheduled_task_dialog.dart';
 
@@ -63,7 +64,7 @@ class ChatInputWidget extends StatefulWidget {
     required this.currentSession,
     required this.scrollController,
     required this.messageKeys,
-    this.hintText = '在这里输入消息，↵ 发送，Shift+↵ 换行',
+    this.hintText = '',
     this.maxLines = 1,
     this.onAutoScrollChanged,
     this.onStreamingChanged,
@@ -304,7 +305,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     final newSession = ChatSession(
       sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: '新对话',
+      name: AppLocalizations.of(context)!.newSession,
       createdAt: DateTime.now(),
       messages: [],
       chatModel: selectedModelObject,
@@ -1023,6 +1024,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: Container(
@@ -1071,7 +1073,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 style: const TextStyle(fontSize: 14),
                 cursorHeight: 16, // 设置光标高度与文字大小匹配
                 decoration: InputDecoration(
-                  hintText: widget.hintText,
+                  hintText: widget.hintText.isNotEmpty ? widget.hintText : l10n.inputHint,
                   hintStyle: TextStyle(
                     color: Theme.of(
                       context,
@@ -1157,7 +1159,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (_isSending) {
       // 正在发送时显示停止按钮
       return Tooltip(
-        message: '停止回答',
+        message: AppLocalizations.of(context)!.stopAnswer,
         child: InkWell(
           onTap: _stopMessage,
           borderRadius: BorderRadius.circular(8),
@@ -1179,7 +1181,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     } else if (processingAttachments.isNotEmpty) {
       // 有附件正在处理时显示处理中状态
       return Tooltip(
-        message: '等待 ${processingAttachments.length} 个附件处理完成',
+        message: AppLocalizations.of(context)!.waitingAttachments(processingAttachments.length),
         child: Container(
           width: 16,
           height: 16,
@@ -1202,7 +1204,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     } else if (_hasText || _currentAttachments.isNotEmpty) {
       // 有文字输入或有附件时显示发送按钮
       return Tooltip(
-        message: '发送消息',
+        message: AppLocalizations.of(context)!.sendMessageAction,
         child: InkWell(
           onTap: _sendMessage,
           borderRadius: BorderRadius.circular(8),
@@ -1230,7 +1232,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 删除历史记录
   Widget _buildCleanHistoryToggle() {
     return Tooltip(
-      message: "清除历史记录",
+      message: AppLocalizations.of(context)!.clearConversation,
       child: InkWell(
         onTap: _isSending ? null : _clearHistory,
         borderRadius: BorderRadius.circular(4),
@@ -1255,7 +1257,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final isDeepThink = currentSession?.deepThink ?? false;
 
     return Tooltip(
-      message: isDeepThink ? '深度思考: 已开启' : '深度思考: 已关闭',
+      message: isDeepThink ? AppLocalizations.of(context)!.deepThinkEnabled : AppLocalizations.of(context)!.deepThinkDisabled,
       child: GestureDetector(
         onTap:
             _isSending
@@ -1288,7 +1290,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               ),
               const SizedBox(width: 4),
               Text(
-                '深度思考',
+                AppLocalizations.of(context)!.deepThink,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1318,10 +1320,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     final workDir = currentSession?.workDirectory;
     final hasWorkDir = workDir != null && workDir.isNotEmpty;
-    final displayText = hasWorkDir ? p.basename(workDir) : '工作目录';
+    final displayText = hasWorkDir ? p.basename(workDir) : AppLocalizations.of(context)!.workingDirectoryLabel;
 
     return Tooltip(
-      message: hasWorkDir ? '工作目录: $workDir' : '设置工作目录（文件默认保存位置）',
+      message: hasWorkDir ? AppLocalizations.of(context)!.workingDirectoryPath(workDir) : AppLocalizations.of(context)!.setWorkingDirHint,
       child: GestureDetector(
         onTap: _isSending ? null : _showWorkDirectoryPicker,
         onLongPress: hasWorkDir && !_isSending ? _clearWorkDirectory : null,
@@ -1384,7 +1386,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (currentSession == null) return;
 
     final result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: '选择工作目录',
+      dialogTitle: AppLocalizations.of(context)!.selectWorkingDir,
       initialDirectory: currentSession.workDirectory,
     );
 
@@ -1392,7 +1394,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       sessionController.updateSession(
         currentSession.copyWith(workDirectory: result),
       );
-      SnackBarUtils.showSuccess(context, '工作目录已设置');
+      SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.workingDirSet);
     }
   }
 
@@ -1404,17 +1406,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     sessionController.updateSession(
       currentSession.copyWith(clearWorkDirectory: true),
     );
-    SnackBarUtils.showSuccess(context, '工作目录已清除');
+    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.workingDirCleared);
   }
 
   /// 构建记忆轮数配置按钮
   Widget _buildMemoryToggle() {
     final currentSession = sessionController.currentSession.value;
     final rounds = currentSession?.memoryRounds ?? 20;
-    final label = rounds == 0 ? '无记忆' : '${rounds}轮';
+    final label = rounds == 0 ? AppLocalizations.of(context)!.noMemory : AppLocalizations.of(context)!.nRounds(rounds);
 
     return Tooltip(
-      message: '记忆配置: 保留最近 $label 对话',
+      message: AppLocalizations.of(context)!.memoryConfigTooltip(label),
       child: GestureDetector(
         onTap: _isSending ? null : _showMemoryConfigDialog,
         child: Container(
@@ -1459,10 +1461,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     final task = currentSession?.scheduledTask;
     final hasTask = task != null;
-    final label = hasTask ? task.humanReadable : '定时任务';
+    final label = hasTask ? task.humanReadable : AppLocalizations.of(context)!.scheduledTaskLabel;
 
     return Tooltip(
-      message: hasTask ? '定时: ${task.humanReadable}' : '设置定时消息',
+      message: hasTask ? '${AppLocalizations.of(context)!.scheduledLabelColon}: ${task.humanReadable}' : AppLocalizations.of(context)!.setScheduledMessage,
       child: GestureDetector(
         onTap: _isSending ? null : () => ScheduledTaskDialog.show(context),
         child: Container(
@@ -1512,14 +1514,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentRounds = currentSession?.memoryRounds ?? 20;
 
     final options = <({int rounds, String label, String tag})>[
-      (rounds: 0, label: '关闭记忆', tag: '无上下文'),
-      (rounds: 1, label: '保留 1 轮', tag: '最近1轮'),
-      (rounds: 3, label: '保留 3 轮', tag: '最近3轮'),
-      (rounds: 5, label: '保留 5 轮', tag: '最近5轮'),
-      (rounds: 10, label: '保留 10 轮', tag: '最近10轮'),
-      (rounds: 20, label: '保留 20 轮', tag: '默认'),
-      (rounds: 50, label: '保留 50 轮', tag: '长对话'),
-      (rounds: 100, label: '保留 100 轮', tag: '超长对话'),
+      (rounds: 0, label: AppLocalizations.of(context)!.closeMemory, tag: AppLocalizations.of(context)!.noContext),
+      (rounds: 1, label: AppLocalizations.of(context)!.keepXRounds(1), tag: AppLocalizations.of(context)!.lastXRounds(1)),
+      (rounds: 3, label: AppLocalizations.of(context)!.keepXRounds(3), tag: AppLocalizations.of(context)!.lastXRounds(3)),
+      (rounds: 5, label: AppLocalizations.of(context)!.keepXRounds(5), tag: AppLocalizations.of(context)!.lastXRounds(5)),
+      (rounds: 10, label: AppLocalizations.of(context)!.keepXRounds(10), tag: AppLocalizations.of(context)!.lastXRounds(10)),
+      (rounds: 20, label: AppLocalizations.of(context)!.keepXRounds(20), tag: AppLocalizations.of(context)!.defaultMemory),
+      (rounds: 50, label: AppLocalizations.of(context)!.keepXRounds(50), tag: AppLocalizations.of(context)!.longConversation),
+      (rounds: 100, label: AppLocalizations.of(context)!.keepXRounds(100), tag: AppLocalizations.of(context)!.veryLongConversation),
     ];
 
     final searchController = TextEditingController();
@@ -1555,7 +1557,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   children: [
                     _buildCommandPaletteSearchBar(
                       controller: searchController,
-                      title: '记忆配置',
+                      title: AppLocalizations.of(context)!.memoryConfig,
                       onChanged: () => setDialogState(() {}),
                     ),
                     Flexible(
@@ -1565,7 +1567,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(24),
                                   child: Text(
-                                    '无匹配结果',
+                                    AppLocalizations.of(context)!.noMatchingResults,
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Theme.of(
@@ -1622,7 +1624,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     sessionController.updateSession(updated);
 
     if (mounted) {
-      final label = rounds == 0 ? '已关闭记忆' : '记忆配置: ${rounds}轮';
+      final label = rounds == 0 ? AppLocalizations.of(context)!.memoryClosed : AppLocalizations.of(context)!.memoryConfigSet(rounds);
       SnackBarUtils.showInfo(context, label);
     }
   }
@@ -1630,7 +1632,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 构建输入框功能按钮
   Widget _buildInputAttachToggle() {
     return Tooltip(
-      message: "附件",
+      message: AppLocalizations.of(context)!.attach,
       child: InkWell(
         onTap: _isSending ? null : _pickFile,
         borderRadius: BorderRadius.circular(4),
@@ -1660,10 +1662,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
     final displayText =
-        hasSelectedService ? mcp.name : (hasMcpServices ? '选MCP工具' : '无MCP工具');
+        hasSelectedService ? mcp.name : (hasMcpServices ? AppLocalizations.of(context)!.selectMcpTool : AppLocalizations.of(context)!.noMcpTool);
 
     return Tooltip(
-      message: hasSelectedService ? '查看MCP工具详情' : (hasMcpServices ? '点击选择MCP工具' : '当前模型未配置MCP工具'),
+      message: hasSelectedService ? AppLocalizations.of(context)!.viewMcpToolDetail : (hasMcpServices ? AppLocalizations.of(context)!.clickToSelectMcpTool : AppLocalizations.of(context)!.noMcpToolConfigured),
       child: GestureDetector(
         onTap:
             hasMcpServices && !_isSending
@@ -1726,8 +1728,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return Tooltip(
       message:
           hasConnectPrompt
-              ? '工具工作逻辑描述: ${currentSession.connectPrompt!.length > 20 ? '${currentSession.connectPrompt!.substring(0, 20)}...' : currentSession.connectPrompt}'
-              : (hasMcpOrSkill ? '点击设计工具的工作逻辑描述' : '需要先选择MCP工具或技能'),
+              ? AppLocalizations.of(context)!.toolWorkflowDescLabel(currentSession.connectPrompt!.length > 20 ? '${currentSession.connectPrompt!.substring(0, 20)}...' : currentSession.connectPrompt!)
+              : (hasMcpOrSkill ? AppLocalizations.of(context)!.clickToDesignWorkflow : AppLocalizations.of(context)!.needMcpOrSkillFirst),
       child: GestureDetector(
         onTap:
             hasMcpOrSkill && !_isSending
@@ -1755,7 +1757,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 80),
                   child: Text(
-                    '已设置',
+                    AppLocalizations.of(context)!.alreadySet,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -1831,7 +1833,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '工具的工作逻辑描述',
+                              AppLocalizations.of(context)!.toolWorkflowDescTitle,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -1859,7 +1861,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   setDialogState(() {});
                                 },
                                 child: Text(
-                                  '清空',
+                                  AppLocalizations.of(context)!.clear,
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Theme.of(
@@ -1886,7 +1888,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                           decoration: InputDecoration(
-                            hintText: '请输入工具的工作逻辑描述...',
+                            hintText: AppLocalizations.of(context)!.enterToolWorkflowDesc,
                             hintStyle: TextStyle(
                               fontSize: 14,
                               color: Theme.of(
@@ -1942,7 +1944,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               Navigator.of(dialogContext).pop(null);
                             },
                             child: Text(
-                              '取消',
+                              AppLocalizations.of(context)!.cancel,
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Theme.of(
@@ -1965,9 +1967,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 controller.text.trim(),
                               );
                             },
-                            child: const Text(
-                              '确定',
-                              style: TextStyle(
+                            child: Text(
+                              AppLocalizations.of(context)!.confirm,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 color: CupertinoColors.white,
                               ),
@@ -2007,7 +2009,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
-        prompt.isEmpty ? '已清空关系描述' : '已保存关系描述',
+        prompt.isEmpty ? AppLocalizations.of(context)!.relationDescCleared : AppLocalizations.of(context)!.relationDescSaved,
       );
     }
   }
@@ -2020,7 +2022,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：技能名）
     final displayText =
-        activeSkill != null ? activeSkill.name : (hasSkills ? '选技能' : '无可用技能');
+        activeSkill != null ? activeSkill.name : (hasSkills ? AppLocalizations.of(context)!.selectSkill : AppLocalizations.of(context)!.noAvailableSkill);
 
     final iconWidget = Icon(
       CupertinoIcons.wand_stars,
@@ -2034,8 +2036,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return Tooltip(
       message:
           activeSkill != null
-              ? '当前技能: ${activeSkill.name}'
-              : (hasSkills ? '点击选择技能' : '暂无可选技能'),
+              ? AppLocalizations.of(context)!.currentSkill(activeSkill.name)
+              : (hasSkills ? AppLocalizations.of(context)!.clickToSelectSkill : AppLocalizations.of(context)!.noSelectableSkill),
       child: GestureDetector(
         onTap:
             hasSkills && !_isSending
@@ -2084,7 +2086,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final mcpServices = mcpc.configs.toList();
 
     if (mcpServices.isEmpty) {
-      SnackBarUtils.showInfo(context, '当前未配置MCP服务');
+      SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.noMcpServiceConfigured);
       return;
     }
 
@@ -2156,7 +2158,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'MCP服务列表 (${mcpServices.length})',
+                              AppLocalizations.of(context)!.mcpServiceList(mcpServices.length),
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -2168,7 +2170,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             ),
                             const Spacer(),
                             Text(
-                              currentSession?.mcp != null ? '已启用' : '已禁用',
+                              currentSession?.mcp != null ? AppLocalizations.of(context)!.enabledStatus : AppLocalizations.of(context)!.disabledStatus,
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -2258,7 +2260,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     )
                                   else
                                     Text(
-                                      '命令: ${service.command}',
+                                      AppLocalizations.of(context)!.commandLabel(service.command ?? ''),
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Theme.of(
@@ -2270,7 +2272,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   if (service.args?.isNotEmpty == true) ...[
                                     const SizedBox(height: 4),
                                     Text(
-                                      '参数: ${service.args!.join(' ')}',
+                                      AppLocalizations.of(context)!.argsLabel(service.args!.join(' ')),
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Theme.of(context)
@@ -2285,7 +2287,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                       true) ...[
                                     const SizedBox(height: 4),
                                     Text(
-                                      '工作目录: ${service.workingDirectory}',
+                                      AppLocalizations.of(context)!.workingDirLabel(service.workingDirectory ?? ''),
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Theme.of(context)
@@ -2299,7 +2301,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   if (service.timeout != null) ...[
                                     const SizedBox(height: 4),
                                     Text(
-                                      '超时: ${service.timeout}秒',
+                                      AppLocalizations.of(context)!.timeoutSec(service.timeout!),
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Theme.of(context)
@@ -2332,7 +2334,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           children: [
                             Expanded(
                               child: Text(
-                                '提示：双击MCP按钮查看此列表，单击切换开关状态',
+                                AppLocalizations.of(context)!.mcpListHint,
                                 style: TextStyle(
                                   fontSize: 11,
                                   color:
@@ -2356,7 +2358,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               child: Text(
-                                currentSession?.mcp != null ? '禁用' : '启用',
+                                currentSession?.mcp != null ? AppLocalizations.of(context)!.cancel : AppLocalizations.of(context)!.confirm,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color:
@@ -2397,7 +2399,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
-        isEnabled ? '已开启MCP工具，发送消息时可自动调用相关工具' : '已关闭MCP工具',
+        isEnabled ? AppLocalizations.of(context)!.mcpEnabledMsg : AppLocalizations.of(context)!.mcpDisabledMsg,
       );
     }
 
@@ -2443,7 +2445,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 color: Theme.of(context).colorScheme.onSurface,
               ),
               decoration: InputDecoration(
-                hintText: '键入命令或搜索...',
+                hintText: AppLocalizations.of(context)!.typeCommandOrSearch,
                 hintStyle: TextStyle(
                   fontSize: 14,
                   color: Theme.of(
@@ -2562,7 +2564,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final mcpServices = mcpc.configs.toList();
 
     if (mcpServices.isEmpty) {
-      SnackBarUtils.showInfo(context, '当前未配置MCP服务');
+      SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.noMcpServiceConfigured);
       return;
     }
 
@@ -2612,7 +2614,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   children: [
                     _buildCommandPaletteSearchBar(
                       controller: searchController,
-                      title: 'MCP服务',
+                      title: AppLocalizations.of(context)!.mcpServiceTitle,
                       onChanged: () => setDialogState(() {}),
                     ),
                     Flexible(
@@ -2622,7 +2624,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(24),
                                   child: Text(
-                                    '无匹配结果',
+                                    AppLocalizations.of(context)!.noMatchingResults,
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Theme.of(
@@ -2641,8 +2643,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 itemBuilder: (context, index) {
                                   if (clearCount > 0 && index == 0) {
                                     return _buildCommandItem(
-                                      title: '清空MCP服务',
-                                      tag: '取消绑定',
+                                      title: AppLocalizations.of(context)!.clearMcpService,
+                                      tag: AppLocalizations.of(context)!.unbindAction,
                                       isClearAction: true,
                                       onTap: () {
                                         Navigator.of(dialogContext).pop();
@@ -2663,7 +2665,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                             : service.url?.isNotEmpty == true
                                                 ? service.url
                                                 : '${service.command ?? ''} ${service.args?.join(' ') ?? ''}',
-                                    tag: toolCount > 0 ? '$toolCount个工具' : null,
+                                    tag: toolCount > 0 ? AppLocalizations.of(context)!.xTools(toolCount) : null,
                                     isSelected: isSelected,
                                     onTap: () {
                                       Navigator.of(dialogContext).pop();
@@ -2702,7 +2704,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     // 如果会话名是默认的"新对话"，自动改为 MCP 服务名
-    if (service != null && updatedSession.name == '新对话') {
+    if (service != null && updatedSession.name == AppLocalizations.of(context)!.newSession) {
       updatedSession = updatedSession.copyWith(title: service.name);
     }
 
@@ -2710,7 +2712,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     if (mounted) {
       if (service != null) {
-        SnackBarUtils.showInfo(context, '已选择 MCP 服务: ${service.name}');
+        SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.mcpServiceSelected(service.name));
         // MCP 懒连接：不在选择时预初始化，等 LLM 返回工具调用时再按需连接
       } else {
         // 关闭 MCP 时清理客户端
@@ -2718,7 +2720,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         if (oldServiceName != null) {
           McpService.closeClient(oldServiceName);
         }
-        SnackBarUtils.showInfo(context, '已关闭MCP工具');
+        SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.mcpToolsDisabled);
       }
     }
   }
@@ -2806,7 +2808,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                               decoration: InputDecoration(
-                                hintText: '搜索技能...',
+                                hintText: AppLocalizations.of(context)!.searchSkills,
                                 border: InputBorder.none,
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(
@@ -2852,21 +2854,21 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     if (mounted) {
                                       SnackBarUtils.showSuccess(
                                         context,
-                                        '已创建技能「$skillName」并选中',
+                                        AppLocalizations.of(context)!.skillCreatedSelected(skillName),
                                       );
                                     }
                                   } catch (e) {
                                     if (mounted) {
                                       SnackBarUtils.showError(
                                         context,
-                                        '创建技能失败: $e',
+                                        AppLocalizations.of(context)!.createSkillFailed(e.toString()),
                                       );
                                     }
                                   }
                                 },
-                                child: const Text(
-                                  '创建',
-                                  style: TextStyle(
+                                child: Text(
+                                  AppLocalizations.of(context)!.createAction,
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     color: CupertinoColors.white,
                                   ),
@@ -2883,7 +2885,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(24),
                                   child: Text(
-                                    '无匹配结果',
+                                    AppLocalizations.of(context)!.noMatchingResults,
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Theme.of(
@@ -2902,7 +2904,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 itemBuilder: (context, index) {
                                   if (clearCount > 0 && index == 0) {
                                     return _buildCommandItem(
-                                      title: '清空技能选择',
+                                      title: AppLocalizations.of(context)!.clearSkillSelection,
                                       isClearAction: true,
                                       onTap: () {
                                         Navigator.of(dialogContext).pop();
@@ -2960,7 +2962,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     // 如果会话名是默认的"新对话"，自动改为技能名
-    if (selectedSkill != null && updatedSession.name == '新对话') {
+    if (selectedSkill != null && updatedSession.name == AppLocalizations.of(context)!.newSession) {
       updatedSession = updatedSession.copyWith(title: selectedSkill.name);
     }
 
@@ -2969,7 +2971,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
-        selectedSkill != null ? '已选择技能: ${selectedSkill.name}' : '已清空技能选择',
+        selectedSkill != null ? AppLocalizations.of(context)!.skillSelected(selectedSkill.name) : AppLocalizations.of(context)!.skillCleared,
       );
     }
   }
@@ -3102,7 +3104,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     try {
       final modelId = updatedSession.chatModel?.modelId ?? "";
       if (modelId.isEmpty) {
-        throw ('还未绑定模型');
+        throw (AppLocalizations.of(context)!.noModelBound);
       }
 
       await _generateAIResponse(updatedSession, userMessage);
@@ -3161,12 +3163,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 直接使用LLM Hub框架
       final model = updateSession.chatModel;
       if (model == null) {
-        throw Exception('未找到模型配置');
+        throw Exception(AppLocalizations.of(context)!.modelConfigNotFound);
       }
 
       final provider = model.provider;
       if (provider == null || provider.isEmpty) {
-        throw Exception('模型提供商未配置');
+        throw Exception(AppLocalizations.of(context)!.modelProviderNotConfigured);
       }
 
       // 创建 LLM 客户端
@@ -3175,7 +3177,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // // 验证配置
       // final isValid = await client.validateConfiguration();
       // if (!isValid) {
-      //   throw Exception('模型配置验证失败，请检查 API Key 和 URL 设置');
+      //   throw Exception('Model config validation failed, please check API Key and URL settings');
       // }
 
       // 发送消息并获取流式响应
@@ -3411,7 +3413,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final errorMessage = ChatMessage(
         msgId: timestamp.toString(),
         role: MessageRole.bot,
-        content: '抱歉，服务暂时不可用，$error',
+        content: AppLocalizations.of(context)!.serviceUnavailable(error.toString()),
         timestamp: DateTime.now(),
         sessionId: currentSession.sessionId,
         isError: true,
@@ -3454,7 +3456,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               ),
               const SizedBox(width: 8),
               Text(
-                '确认清除',
+                AppLocalizations.of(context)!.confirmClear,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -3464,7 +3466,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             ],
           ),
           content: Text(
-            '确定要清除当前对话的所有历史记录吗？此操作不可撤销。',
+            AppLocalizations.of(context)!.clearHistoryConfirmMsg,
             style: TextStyle(
               fontSize: 14,
               color: Theme.of(context).colorScheme.onSurface,
@@ -3483,7 +3485,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 ),
               ),
               child: Text(
-                '取消',
+                AppLocalizations.of(context)!.cancel,
                 style: TextStyle(
                   color: Theme.of(
                     context,
@@ -3508,7 +3510,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('清除', style: TextStyle(fontSize: 14)),
+              child: Text(AppLocalizations.of(context)!.clear, style: const TextStyle(fontSize: 14)),
             ),
           ],
         );
@@ -3543,7 +3545,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 显示成功提示
     if (mounted) {
-      SnackBarUtils.showSuccess(context, '历史记录已清除');
+      SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.historyCleared);
     }
 
     // 强制滚动到底部
@@ -3559,7 +3561,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: '技能详情',
+      barrierLabel: AppLocalizations.of(context)!.skillDetail,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (ctx, anim1, anim2) {
@@ -3628,7 +3630,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     Text(
                                       skill.description.isNotEmpty
                                           ? skill.description
-                                          : '文件夹: ${skill.skillId}',
+                                          : AppLocalizations.of(context)!.folderPath(skill.skillId),
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Theme.of(context)
@@ -3649,7 +3651,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           // 工具列表
                           if (hasTools) ...[
                             Text(
-                              '工具列表 (${tools.length})',
+                              AppLocalizations.of(context)!.toolList(tools.length),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -3699,7 +3701,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  '... 还有 ${tools.length - 50} 个工具',
+                                  AppLocalizations.of(context)!.moreXTools(tools.length - 50),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey[500],
@@ -3714,7 +3716,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           // 系统提示词
                           if (skill.prompt.isNotEmpty) ...[
                             Text(
-                              '系统提示词',
+                              AppLocalizations.of(context)!.systemPrompt,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -3785,9 +3787,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                                 .convert(skill.toJson()),
                                           ));
                                           ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('JSON 已复制'),
-                                              duration: Duration(seconds: 1),
+                                            SnackBar(
+                                              content: Text(AppLocalizations.of(context)!.jsonCopied),
+                                              duration: const Duration(seconds: 1),
                                             ),
                                           );
                                         },
@@ -3865,7 +3867,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: 'MCP 详情',
+      barrierLabel: AppLocalizations.of(context)!.mcpDetail,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (ctx, anim1, anim2) {
@@ -3962,7 +3964,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             Row(
                               children: [
                                 Text(
-                                  '工具列表 (${tools.length})',
+                                  AppLocalizations.of(context)!.toolList(tools.length),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -3996,13 +3998,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                       setSheetState(() {});
                                       SnackBarUtils.showSuccess(
                                         ctx,
-                                        '已刷新 ${newTools.length} 个工具',
+                                        AppLocalizations.of(context)!.toolsRefreshed(newTools.length),
                                       );
                                     } catch (e) {
                                       if (ctx.mounted) {
                                         SnackBarUtils.showError(
                                           ctx,
-                                          '刷新失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
+                                          AppLocalizations.of(context)!.refreshFailed(e.toString().substring(0, e.toString().length.clamp(0, 80))),
                                         );
                                       }
                                     }
@@ -4017,7 +4019,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '刷新',
+                                        AppLocalizations.of(context)!.refreshAction,
                                         style: TextStyle(
                                           fontSize: 11,
                                           color: Theme.of(context).colorScheme.primary,
@@ -4071,7 +4073,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  '... 还有 ${tools.length - 50} 个工具',
+                                  AppLocalizations.of(context)!.moreXTools(tools.length - 50),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey[500],
@@ -4113,13 +4115,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     setSheetState(() {});
                                     SnackBarUtils.showSuccess(
                                       ctx,
-                                      '已获取 ${newTools.length} 个工具',
+                                      AppLocalizations.of(context)!.toolsFetched(newTools.length),
                                     );
                                   } catch (e) {
                                     if (ctx.mounted) {
                                       SnackBarUtils.showError(
                                         ctx,
-                                        '获取失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
+                                        AppLocalizations.of(context)!.fetchFailed(e.toString().substring(0, e.toString().length.clamp(0, 80))),
                                       );
                                     }
                                   }
@@ -4128,7 +4130,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   CupertinoIcons.arrow_down_to_line_alt,
                                   size: 15,
                                 ),
-                                label: const Text('获取工具列表'),
+                                label: Text(AppLocalizations.of(context)!.fetchTools),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                 ),
@@ -4179,9 +4181,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                                 .convert(mutableService.toJson()),
                                           ));
                                           ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('JSON 已复制'),
-                                              duration: Duration(seconds: 1),
+                                            SnackBar(
+                                              content: Text(AppLocalizations.of(context)!.jsonCopied),
+                                              duration: const Duration(seconds: 1),
                                             ),
                                           );
                                         },

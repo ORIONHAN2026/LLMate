@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/session_controller.dart';
 import '../models/chat/scheduled_task.dart';
+import '../l10n/app_localizations.dart';
 
 /// 定时任务设置对话框（每个会话仅允许一条定时任务）
 class ScheduledTaskDialog extends StatefulWidget {
@@ -55,9 +56,9 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
     return Obx(() {
       final session = _controller.currentSession.value;
       if (session == null) {
-        return const Dialog(child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('当前没有活动会话'),
+        return Dialog(child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(AppLocalizations.of(context)!.noActiveSession),
         ));
       }
 
@@ -99,7 +100,7 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        _isEdit ? '编辑定时任务' : '设置定时任务',
+                        _isEdit ? AppLocalizations.of(context)!.editScheduledTask : AppLocalizations.of(context)!.setScheduledTaskDialog,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -122,7 +123,7 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
                     children: [
                       // Cron 表达式
                       Text(
-                        'Cron 表达式',
+                        AppLocalizations.of(context)!.cronExpression,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -135,7 +136,7 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
                           fontSize: 14,
                         ),
                         decoration: InputDecoration(
-                          hintText: '例: 0 9 * * * (每天9:00)',
+                          hintText: AppLocalizations.of(context)!.cronExample,
                           hintStyle: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 13,
@@ -165,7 +166,7 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '格式: 分 时 日 月 周 (5个字段)',
+                        AppLocalizations.of(context)!.cronFormat,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.4),
                         ),
@@ -181,7 +182,7 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
 
                       // 消息内容
                       Text(
-                        '消息内容',
+                        AppLocalizations.of(context)!.messageContentLabel,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -196,7 +197,7 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
                           color: theme.colorScheme.onSurface,
                         ),
                         decoration: InputDecoration(
-                          hintText: '定时发送的消息内容...',
+                          hintText: AppLocalizations.of(context)!.scheduledMessageHint,
                           hintStyle: TextStyle(
                             fontSize: 14,
                             color: theme.colorScheme.onSurface.withOpacity(0.3),
@@ -224,7 +225,7 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
                       Row(
                         children: [
                           Text(
-                            '启用任务',
+                            AppLocalizations.of(context)!.enableTask,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -258,16 +259,16 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
     if (v) {
       // 开启：需要校验 cron 和消息内容
       if (cron.isEmpty) {
-        setState(() => _cronError = '请输入 cron 表达式');
+        setState(() => _cronError = AppLocalizations.of(context)!.pleaseEnterCron);
         return; // 校验失败，switch 状态不变
       }
       if (!_isValidCron(cron)) {
-        setState(() => _cronError = 'cron 格式错误（需要5个字段）');
+        setState(() => _cronError = AppLocalizations.of(context)!.cronFormatError);
         return;
       }
       if (message.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请输入消息内容')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.enterMessageContent)),
         );
         return;
       }
@@ -311,13 +312,13 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
     ThemeData theme,
     void Function(String cron) onSelect,
   ) {
-    final presets = const [
-      ('0 9 * * *', '每天 09:00'),
-      ('0 12 * * *', '每天 12:00'),
-      ('0 18 * * *', '每天 18:00'),
-      ('0 9 * * 1-5', '工作日 09:00'),
-      ('*/30 * * * *', '每 30 分钟'),
-      ('0 */2 * * *', '每 2 小时'),
+    final presets = [
+      ('0 9 * * *', AppLocalizations.of(context)!.daily0900),
+      ('0 12 * * *', AppLocalizations.of(context)!.daily1200),
+      ('0 18 * * *', AppLocalizations.of(context)!.daily1800),
+      ('0 9 * * 1-5', AppLocalizations.of(context)!.workday0900),
+      ('*/30 * * * *', AppLocalizations.of(context)!.every30min),
+      ('0 */2 * * *', AppLocalizations.of(context)!.every2h),
     ];
 
     return Wrap(

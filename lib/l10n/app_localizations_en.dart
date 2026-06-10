@@ -1,0 +1,1238 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get appTitle => 'ChatHub';
+
+  @override
+  String get appSlogan => 'Smart Chat Assistant';
+
+  @override
+  String get feedback => 'Feedback';
+
+  @override
+  String get modelManagement => 'Model Management';
+
+  @override
+  String get connectorManagement => 'Connector (MCP)';
+
+  @override
+  String get skillManagement => 'Skill (SKILL)';
+
+  @override
+  String get otherSettings => 'Other Settings';
+
+  @override
+  String get languageSettings => 'Language';
+
+  @override
+  String get skinSettings => 'Skin';
+
+  @override
+  String get followSystem => 'Follow System';
+
+  @override
+  String get followSystemDesc => 'Auto switch light/dark mode';
+
+  @override
+  String get lightMode => 'Light';
+
+  @override
+  String get lightModeDesc => 'Always use light theme';
+
+  @override
+  String get darkMode => 'Dark';
+
+  @override
+  String get darkModeDesc => 'Always use dark theme';
+
+  @override
+  String get chinese => '中文';
+
+  @override
+  String get chineseDesc => 'Simplified Chinese';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get englishDesc => 'English';
+
+  @override
+  String get login => 'Login';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get search => 'Search';
+
+  @override
+  String get noData => 'No data';
+
+  @override
+  String get loading => 'Loading...';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get copy => 'Copy';
+
+  @override
+  String get copied => 'Copied';
+
+  @override
+  String get copyContent => 'Copy Content';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get previousStep => 'Previous';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get systemPrompt => 'System Prompt';
+
+  @override
+  String get temperature => 'Temperature';
+
+  @override
+  String get replyLanguage => 'Reply Language';
+
+  @override
+  String get newSession => 'New Session';
+
+  @override
+  String get sessionList => 'Session List';
+
+  @override
+  String get rename => 'Rename';
+
+  @override
+  String get shareConversation => 'Share Conversation';
+
+  @override
+  String get exportData => 'Export Data';
+
+  @override
+  String get importData => 'Import Data';
+
+  @override
+  String get clearConversation => 'Clear Conversation';
+
+  @override
+  String get deleteConversation => 'Delete Conversation';
+
+  @override
+  String get deleteConfirm => 'Delete Confirmation';
+
+  @override
+  String get deleteConfirmMsg => 'Are you sure you want to delete?';
+
+  @override
+  String removeConfirmMsg(Object name) {
+    return 'Are you sure you want to remove \"$name\"?';
+  }
+
+  @override
+  String get addModel => 'Add Model';
+
+  @override
+  String get copyModel => 'Copy Model';
+
+  @override
+  String get modelName => 'Model Name';
+
+  @override
+  String get modelProvider => 'Provider';
+
+  @override
+  String get modelApiKey => 'API Key';
+
+  @override
+  String get modelBaseUrl => 'Base URL';
+
+  @override
+  String get modelMaxTokens => 'Max Tokens';
+
+  @override
+  String get thinkTag => 'Think Tag';
+
+  @override
+  String get thinkTagDesc => 'Thought process tag for the model';
+
+  @override
+  String get addService => 'Add Service';
+
+  @override
+  String get removeService => 'Remove Service';
+
+  @override
+  String get testConnection => 'Test Connection';
+
+  @override
+  String get fullTest => 'Full Test';
+
+  @override
+  String get connectAndAdd => 'Connect & Add';
+
+  @override
+  String get addCustomConnector => 'Add Custom Connector';
+
+  @override
+  String get clearKey => 'Clear Key';
+
+  @override
+  String get installSkill => 'Install Skill';
+
+  @override
+  String get uninstallSkill => 'Uninstall Skill';
+
+  @override
+  String get deleteSkill => 'Delete Skill';
+
+  @override
+  String get fetchTools => 'Fetch Tools';
+
+  @override
+  String get fetchModels => 'Fetch Models';
+
+  @override
+  String get copyMessage => 'Copy Message';
+
+  @override
+  String get regenerate => 'Regenerate';
+
+  @override
+  String get regenerateFromHere => 'Regenerate From Here';
+
+  @override
+  String get regenerateLastReply => 'Regenerate Last Reply';
+
+  @override
+  String get regenerateThisReply => 'Regenerate This Reply';
+
+  @override
+  String get createNewChatFromHere => 'New Chat From Here';
+
+  @override
+  String get deleteMessage => 'Delete Message';
+
+  @override
+  String get deleteReply => 'Delete Reply';
+
+  @override
+  String get screenshot => 'Screenshot';
+
+  @override
+  String get entireConversation => 'Entire Conversation';
+
+  @override
+  String get currentRound => 'Current Round';
+
+  @override
+  String get currentMessage => 'Current Message';
+
+  @override
+  String get memoryConfig => 'Memory Config';
+
+  @override
+  String get clearMcpServices => 'Clear MCP Services';
+
+  @override
+  String get clearSkillSelection => 'Clear Skill Selection';
+
+  @override
+  String get selectFile => 'Select File';
+
+  @override
+  String get selectWorkingDir => 'Select Working Directory';
+
+  @override
+  String get skillMarketplace => 'Skill Marketplace';
+
+  @override
+  String get confirmDeleteTitle => 'Confirm Delete';
+
+  @override
+  String get deleteSessionTitle => 'Delete Session';
+
+  @override
+  String get favorites => 'Favorites';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
+  String get earlier => 'Earlier';
+
+  @override
+  String get removeServiceTitle => 'Remove Service';
+
+  @override
+  String get deleteSkillTitle => 'Delete Skill';
+
+  @override
+  String get removeMcpServiceTitle => 'Remove MCP Service';
+
+  @override
+  String get noActiveSession => 'No active session';
+
+  @override
+  String get presetRoleApplied => 'Preset role applied';
+
+  @override
+  String get fileNotFound => 'File not found';
+
+  @override
+  String get fileOpenFailed => 'Failed to open file';
+
+  @override
+  String get enterMessageContent => 'Please enter message content';
+
+  @override
+  String get copyMessageContent => 'Copy Message Content';
+
+  @override
+  String get apiKeyHint => 'Enter API Key';
+
+  @override
+  String get modelNameHint => 'Enter model name';
+
+  @override
+  String get messageHint => 'Enter message content...';
+
+  @override
+  String get apiUrlHint => 'Enter API URL';
+
+  @override
+  String get commandHint => 'Enter command content';
+
+  @override
+  String get enterCommandContent => 'Please enter command content';
+
+  @override
+  String get modelSearchHint =>
+      'Enter model name, e.g. gpt-4o-mini, claude-3-haiku';
+
+  @override
+  String get roleDescHint =>
+      'Enter role description to guide the model\'s behavior and response style...';
+
+  @override
+  String get toolLogicHint => 'Enter the tool logic description...';
+
+  @override
+  String get typeCommandOrSearch => 'Type command or search...';
+
+  @override
+  String get searchSkills => 'Search skills...';
+
+  @override
+  String get searchMcp => 'Search MCP services...';
+
+  @override
+  String get scheduledMessageHint => 'Scheduled message content...';
+
+  @override
+  String get cronExample => 'e.g. 0 9 * * * (daily at 9:00)';
+
+  @override
+  String get config => 'Config';
+
+  @override
+  String get pasteMcpCode => 'Paste MCP code';
+
+  @override
+  String get fileNameLabel => 'Filename';
+
+  @override
+  String get fileSizeLabel => 'Size';
+
+  @override
+  String get fileTypeLabel => 'Type';
+
+  @override
+  String get filePathLabel => 'Path';
+
+  @override
+  String get aliyun => 'Alibaba Cloud';
+
+  @override
+  String get tencentCloud => 'Tencent Cloud';
+
+  @override
+  String get modelscope => 'ModelScope';
+
+  @override
+  String get goToAliyun => 'Go to Alibaba Cloud';
+
+  @override
+  String pleaseEnter(Object field) {
+    return 'Please enter $field';
+  }
+
+  @override
+  String get more => 'More';
+
+  @override
+  String get copyFailed => 'Copy failed';
+
+  @override
+  String get invalidLinkFormat => 'Invalid link format';
+
+  @override
+  String get cannotOpenLink => 'Cannot open link';
+
+  @override
+  String get linkOpenedInBrowser => 'Link opened in browser';
+
+  @override
+  String get cannotOpenThisLinkType => 'Cannot open this link type';
+
+  @override
+  String get openLinkFailed => 'Open link failed';
+
+  @override
+  String get fileOpened => 'File opened';
+
+  @override
+  String get cannotOpenFile => 'Cannot open file';
+
+  @override
+  String get openFileFailed => 'Open file failed';
+
+  @override
+  String get sessionNotFoundForMessage => 'Session not found for this message';
+
+  @override
+  String get messageNotFound => 'Message not found';
+
+  @override
+  String get regenerateFailed => 'Regeneration failed';
+
+  @override
+  String get cannotFindQuestion => 'Cannot find the corresponding question';
+
+  @override
+  String get noAiReplyFound => 'No AI reply found';
+
+  @override
+  String get cannotRegenerateInvalidIndex =>
+      'Cannot regenerate: invalid message index';
+
+  @override
+  String get editMessageTitle => 'Edit Message';
+
+  @override
+  String get messageContentCannotBeEmpty => 'Message content cannot be empty';
+
+  @override
+  String get newChatFromHistory => 'New chat from history';
+
+  @override
+  String get newChatCreatedFromHere => 'New chat created from here';
+
+  @override
+  String get createNewChatFailed => 'Failed to create new chat';
+
+  @override
+  String get thinking => 'Thinking...';
+
+  @override
+  String get callingTool => 'Calling tool';
+
+  @override
+  String get toolCallRecord => 'Tool call record';
+
+  @override
+  String get messageDeleted => 'Message deleted';
+
+  @override
+  String get deleteMessageFailed => 'Failed to delete message';
+
+  @override
+  String get duration => 'Duration';
+
+  @override
+  String get calculating => 'Calculating...';
+
+  @override
+  String get speed => 'Speed';
+
+  @override
+  String get outputTokensLabel => 'Output tokens';
+
+  @override
+  String get fullscreen => 'Fullscreen';
+
+  @override
+  String get collapseSidebar => 'Collapse Sidebar';
+
+  @override
+  String get expandSidebar => 'Expand Sidebar';
+
+  @override
+  String get collapseRightSidebar => 'Collapse Right Sidebar';
+
+  @override
+  String get expandRightSidebar => 'Expand Right Sidebar';
+
+  @override
+  String get unfavorite => 'Remove from favorites';
+
+  @override
+  String get favoriteSession => 'Add to favorites';
+
+  @override
+  String get user => 'User';
+
+  @override
+  String get assistant => 'Assistant';
+
+  @override
+  String get noMemory => 'No memory';
+
+  @override
+  String get noFiles => 'No files';
+
+  @override
+  String get fileInfo => 'File Info';
+
+  @override
+  String get fileContent => 'File Content';
+
+  @override
+  String get noContentPreview => 'No content preview';
+
+  @override
+  String get fileContentCopied => 'File content copied to clipboard';
+
+  @override
+  String get selectOrCreateSession => 'Please select or create a session';
+
+  @override
+  String get invalidSessionIndex => 'Invalid session index';
+
+  @override
+  String get cannotOpenEmailApp => 'Cannot open email app';
+
+  @override
+  String get sendEmailFailed => 'Failed to send email';
+
+  @override
+  String get memorySummary => 'Memory Summary';
+
+  @override
+  String get recentConversations => 'Recent Conversations';
+
+  @override
+  String get sessionFiles => 'Session Files';
+
+  @override
+  String get files => 'Files';
+
+  @override
+  String get memory => 'Memory';
+
+  @override
+  String get processed => 'Processed';
+
+  @override
+  String todayTime(Object time) {
+    return 'Today $time';
+  }
+
+  @override
+  String monthDayTime(Object day, Object month, Object time) {
+    return '$month/$day $time';
+  }
+
+  @override
+  String messageCount(Object count) {
+    return '$count messages';
+  }
+
+  @override
+  String xFailed(Object action, Object error) {
+    return '$action failed: $error';
+  }
+
+  @override
+  String xDone(Object action) {
+    return '$action completed';
+  }
+
+  @override
+  String get copiedToClipboard => 'Copied to clipboard';
+
+  @override
+  String get replyDeleted => 'Replies deleted';
+
+  @override
+  String get deleteReplyFailed => 'Failed to delete replies';
+
+  @override
+  String get asConversationContinues =>
+      'As the conversation continues, AI will\nautomatically record and compress memory';
+
+  @override
+  String get whenAiCreatesFiles =>
+      'When AI tools create or modify\nfiles in conversation, they will appear here';
+
+  @override
+  String get deleteSessionTitle_warning => 'This action cannot be undone';
+
+  @override
+  String get pleaseSetupModel => 'Please set up a model';
+
+  @override
+  String get clickToSelectModel => 'Click above to select a chat model';
+
+  @override
+  String get selectModel => 'Select Model';
+
+  @override
+  String get noAvailableModels => 'No available models';
+
+  @override
+  String get sessionNotFoundCannotSelectModel =>
+      'Session not found, cannot select model';
+
+  @override
+  String get inputHint => 'Type message here, ↵ to send, Shift+↵ for new line';
+
+  @override
+  String get stopAnswer => 'Stop answering';
+
+  @override
+  String waitingAttachments(Object count) {
+    return 'Waiting for $count attachments to process';
+  }
+
+  @override
+  String get sendMessageAction => 'Send message';
+
+  @override
+  String get deepThinkEnabled => 'Deep Think: On';
+
+  @override
+  String get deepThinkDisabled => 'Deep Think: Off';
+
+  @override
+  String get deepThink => 'Deep Think';
+
+  @override
+  String get workingDirectoryLabel => 'Working Directory';
+
+  @override
+  String workingDirectoryPath(Object path) {
+    return 'Working Directory: $path';
+  }
+
+  @override
+  String get setWorkingDirHint =>
+      'Set working directory (default save location)';
+
+  @override
+  String get workingDirSet => 'Working directory set';
+
+  @override
+  String get workingDirCleared => 'Working directory cleared';
+
+  @override
+  String nRounds(Object n) {
+    return '$n rounds';
+  }
+
+  @override
+  String memoryConfigTooltip(Object label) {
+    return 'Memory config: Keep last $label conversations';
+  }
+
+  @override
+  String get closeMemory => 'Close Memory';
+
+  @override
+  String get noContext => 'No context';
+
+  @override
+  String keepXRounds(Object n) {
+    return 'Keep $n rounds';
+  }
+
+  @override
+  String lastXRounds(Object n) {
+    return 'Last $n rounds';
+  }
+
+  @override
+  String get defaultMemory => 'Default';
+
+  @override
+  String get longConversation => 'Long conversation';
+
+  @override
+  String get veryLongConversation => 'Very long conversation';
+
+  @override
+  String get noMatchingResults => 'No matching results';
+
+  @override
+  String get memoryClosed => 'Memory closed';
+
+  @override
+  String memoryConfigSet(Object n) {
+    return 'Memory config: $n rounds';
+  }
+
+  @override
+  String get attach => 'Attachment';
+
+  @override
+  String get selectMcpTool => 'Select MCP';
+
+  @override
+  String get noMcpTool => 'No MCP';
+
+  @override
+  String get viewMcpToolDetail => 'View MCP tool details';
+
+  @override
+  String get clickToSelectMcpTool => 'Click to select MCP tool';
+
+  @override
+  String get noMcpToolConfigured => 'No MCP tools configured';
+
+  @override
+  String toolWorkflowDescLabel(Object desc) {
+    return 'Tool workflow: $desc';
+  }
+
+  @override
+  String get clickToDesignWorkflow =>
+      'Click to design tool workflow description';
+
+  @override
+  String get needMcpOrSkillFirst => 'Need to select MCP tool or skill first';
+
+  @override
+  String get alreadySet => 'Set';
+
+  @override
+  String get toolWorkflowDescTitle => 'Tool Workflow Description';
+
+  @override
+  String get enterToolWorkflowDesc => 'Enter tool workflow description...';
+
+  @override
+  String get relationDescCleared => 'Relation description cleared';
+
+  @override
+  String get relationDescSaved => 'Relation description saved';
+
+  @override
+  String get noMcpServiceConfigured => 'No MCP service configured';
+
+  @override
+  String mcpServiceList(Object n) {
+    return 'MCP Service List ($n)';
+  }
+
+  @override
+  String get mcpServiceTitle => 'MCP Service';
+
+  @override
+  String get enabledStatus => 'Enabled';
+
+  @override
+  String get disabledStatus => 'Disabled';
+
+  @override
+  String commandLabel(Object cmd) {
+    return 'Command: $cmd';
+  }
+
+  @override
+  String argsLabel(Object args) {
+    return 'Args: $args';
+  }
+
+  @override
+  String workingDirLabel(Object dir) {
+    return 'Directory: $dir';
+  }
+
+  @override
+  String timeoutSec(Object n) {
+    return 'Timeout: ${n}s';
+  }
+
+  @override
+  String get mcpListHint =>
+      'Tip: Double-click MCP button for list, single-click to toggle';
+
+  @override
+  String get mcpEnabledMsg => 'MCP tools enabled, will auto-invoke on send';
+
+  @override
+  String get mcpDisabledMsg => 'MCP tools disabled';
+
+  @override
+  String get clearMcpService => 'Clear MCP Service';
+
+  @override
+  String get unbindAction => 'Unbind';
+
+  @override
+  String xTools(Object n) {
+    return '$n tools';
+  }
+
+  @override
+  String mcpServiceSelected(Object name) {
+    return 'MCP service selected: $name';
+  }
+
+  @override
+  String get mcpToolsDisabled => 'MCP tools disabled';
+
+  @override
+  String get selectSkill => 'Select Skill';
+
+  @override
+  String get noAvailableSkill => 'No available skills';
+
+  @override
+  String currentSkill(Object name) {
+    return 'Current Skill: $name';
+  }
+
+  @override
+  String get clickToSelectSkill => 'Click to select skill';
+
+  @override
+  String get noSelectableSkill => 'No selectable skills';
+
+  @override
+  String get createAction => 'Create';
+
+  @override
+  String skillCreatedSelected(Object name) {
+    return 'Skill \"$name\" created and selected';
+  }
+
+  @override
+  String createSkillFailed(Object error) {
+    return 'Create skill failed: $error';
+  }
+
+  @override
+  String skillSelected(Object name) {
+    return 'Skill selected: $name';
+  }
+
+  @override
+  String get skillCleared => 'Skill selection cleared';
+
+  @override
+  String get noModelBound => 'No model bound';
+
+  @override
+  String serviceUnavailable(Object error) {
+    return 'Sorry, service temporarily unavailable, $error';
+  }
+
+  @override
+  String get confirmClear => 'Confirm Clear';
+
+  @override
+  String get clearHistoryConfirmMsg =>
+      'Are you sure you want to clear all conversation history? This action cannot be undone.';
+
+  @override
+  String get historyCleared => 'History cleared';
+
+  @override
+  String get skillDetail => 'Skill Detail';
+
+  @override
+  String folderPath(Object path) {
+    return 'Folder: $path';
+  }
+
+  @override
+  String toolList(Object n) {
+    return 'Tool List ($n)';
+  }
+
+  @override
+  String moreXTools(Object n) {
+    return '... $n more tools';
+  }
+
+  @override
+  String get jsonCopied => 'JSON copied';
+
+  @override
+  String get mcpDetail => 'MCP Detail';
+
+  @override
+  String toolsRefreshed(Object n) {
+    return '$n tools refreshed';
+  }
+
+  @override
+  String refreshFailed(Object error) {
+    return 'Refresh failed: $error';
+  }
+
+  @override
+  String get refreshAction => 'Refresh';
+
+  @override
+  String toolsFetched(Object n) {
+    return '$n tools fetched';
+  }
+
+  @override
+  String fetchFailed(Object error) {
+    return 'Fetch failed: $error';
+  }
+
+  @override
+  String get scheduledTaskLabel => 'Scheduled Task';
+
+  @override
+  String get setScheduledMessage => 'Set scheduled message';
+
+  @override
+  String get scheduledLabelColon => 'Scheduled';
+
+  @override
+  String get modelConfigNotFound => 'Model configuration not found';
+
+  @override
+  String get modelProviderNotConfigured => 'Model provider not configured';
+
+  @override
+  String get screenshotFailed => 'Screenshot failed: render object not found';
+
+  @override
+  String get generateImageFailed => 'Failed to generate image';
+
+  @override
+  String get messageScreenshotCopied =>
+      'Message screenshot copied to clipboard';
+
+  @override
+  String get currentRoundScreenshotCopied =>
+      'Round screenshot copied to clipboard';
+
+  @override
+  String get fullConversationScreenshotCopied =>
+      'Full conversation screenshot copied to clipboard';
+
+  @override
+  String get noMessagesInConversation => 'No messages in conversation';
+
+  @override
+  String get cannotFindMessage => 'Cannot find the message';
+
+  @override
+  String get cannotFindCompleteRound =>
+      'Cannot find complete conversation round';
+
+  @override
+  String partialScreenshot(Object n, Object total) {
+    return 'Some messages could not be captured, $n/$total messages captured';
+  }
+
+  @override
+  String get renderObjectStillDrawing =>
+      'Screenshot failed: render object still drawing';
+
+  @override
+  String screenshotCopied(Object type) {
+    return '$type screenshot copied to clipboard';
+  }
+
+  @override
+  String screenshotTypeFailed(Object error, Object type) {
+    return '$type screenshot failed: $error';
+  }
+
+  @override
+  String mergeScreenshotFailed(Object error) {
+    return 'Merge screenshot failed: $error';
+  }
+
+  @override
+  String copyImageFailed(Object error) {
+    return 'Copy image failed: $error';
+  }
+
+  @override
+  String get unsupportedOS => 'Unsupported OS';
+
+  @override
+  String desktopCopyFailed(Object error) {
+    return 'Desktop copy image failed: $error';
+  }
+
+  @override
+  String get noClipboardTool =>
+      'No clipboard tool available (xclip or wl-copy)';
+
+  @override
+  String get cannotFindRenderObject => 'Cannot find message render object';
+
+  @override
+  String get editScheduledTask => 'Edit Scheduled Task';
+
+  @override
+  String get setScheduledTaskDialog => 'Set Scheduled Task';
+
+  @override
+  String get cronExpression => 'Cron Expression';
+
+  @override
+  String get cronFormat => 'Format: minute hour day month weekday (5 fields)';
+
+  @override
+  String get messageContentLabel => 'Message Content';
+
+  @override
+  String get enableTask => 'Enable Task';
+
+  @override
+  String get pleaseEnterCron => 'Please enter cron expression';
+
+  @override
+  String get cronFormatError => 'Cron format error (5 fields required)';
+
+  @override
+  String get daily0900 => 'Daily 09:00';
+
+  @override
+  String get daily1200 => 'Daily 12:00';
+
+  @override
+  String get daily1800 => 'Daily 18:00';
+
+  @override
+  String get workday0900 => 'Weekdays 09:00';
+
+  @override
+  String get every30min => 'Every 30 min';
+
+  @override
+  String get every2h => 'Every 2 hours';
+
+  @override
+  String get processFailedStatus => 'Process failed';
+
+  @override
+  String get processingStatus => 'Processing';
+
+  @override
+  String contentPreviewTitle(Object name) {
+    return '$name - Content Preview';
+  }
+
+  @override
+  String get contentCopiedToClipboard => 'Content copied to clipboard';
+
+  @override
+  String get fileProcessFailed => 'File processing failed';
+
+  @override
+  String get pleaseReupload => 'Please re-upload the file or contact support';
+
+  @override
+  String get processingFileStatus => 'Processing file...';
+
+  @override
+  String get imageFile => 'Image file';
+
+  @override
+  String get documentFile => 'Document file';
+
+  @override
+  String get textFile => 'Text file';
+
+  @override
+  String get codeFile => 'Code file';
+
+  @override
+  String get officeDocument => 'Office document';
+
+  @override
+  String get webLink => 'Web link';
+
+  @override
+  String get folderType => 'Folder';
+
+  @override
+  String get otherFile => 'Other file';
+
+  @override
+  String get defaultConversation => 'General Conversation';
+
+  @override
+  String modelCopied(Object name) {
+    return 'Model \"$name\" copied successfully';
+  }
+
+  @override
+  String copyOf(Object name) {
+    return '$name copy';
+  }
+
+  @override
+  String copyOfN(Object n, Object name) {
+    return '$name copy ($n)';
+  }
+
+  @override
+  String get noModels => 'No models';
+
+  @override
+  String get clickAddModelHint => 'Click \"Add Model\" button to start';
+
+  @override
+  String modelUpdatedNotify(Object name) {
+    return 'Model \"$name\" updated, related session settings synchronized';
+  }
+
+  @override
+  String serviceRemoved(Object name) {
+    return 'Service removed: $name';
+  }
+
+  @override
+  String get connectorManagementTitle => 'Connector Management (MCP)';
+
+  @override
+  String get marketplace => 'Marketplace';
+
+  @override
+  String get noMcpServices => 'No MCP services';
+
+  @override
+  String get clickToEnterMarketplace => 'Click + button to enter marketplace';
+
+  @override
+  String fetchToolsFailed(Object error) {
+    return 'Fetch tools failed: $error';
+  }
+
+  @override
+  String get removeServiceLabel => 'Remove Service';
+
+  @override
+  String get removeServiceConfirm => 'Are you sure you want to remove service';
+
+  @override
+  String get removeServiceWarning => 'Need to re-add after removal';
+
+  @override
+  String get jsonConfig => 'JSON Config';
+
+  @override
+  String get cannotReadFilePath => 'Cannot read file path';
+
+  @override
+  String get extractingImport => 'Extracting import...';
+
+  @override
+  String get skillImported => 'Skill imported';
+
+  @override
+  String importFailed(Object error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String get deleteSkillConfirm => 'Are you sure you want to delete skill';
+
+  @override
+  String get irreversibleAction => 'This action is irreversible';
+
+  @override
+  String skillDeleted(Object name) {
+    return 'Skill deleted: $name';
+  }
+
+  @override
+  String deleteSkillFailed(Object error) {
+    return 'Delete skill failed: $error';
+  }
+
+  @override
+  String get skillDescription => 'Skill Description';
+
+  @override
+  String get skillManagementTitle => 'Skill Management (SKILL)';
+
+  @override
+  String get addSkill => 'Add Skill';
+
+  @override
+  String get noSkills => 'No skills';
+
+  @override
+  String get clickAddSkillHint => 'Click add button to create custom skill';
+
+  @override
+  String toolNameDesc(Object desc, Object name) {
+    return '$name · $desc';
+  }
+}

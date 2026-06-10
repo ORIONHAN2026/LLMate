@@ -82,6 +82,33 @@ class CommonSystemPrompts {
 
 **一句话总结：没调用工具就不准呈现数据，没执行操作就不准说已完成，不确定就说不确定。**''';
 
+  /// 根据应用语言设置，指导大模型使用对应语言回复
+  static String responseLanguage(String languageCode) {
+    if (languageCode == 'zh') {
+      return '## 🌐 回复语言（最高优先级）\n'
+          '\n'
+          '当前应用语言设置为**中文**。你必须严格遵循以下规则：\n'
+          '\n'
+          '1. ✅ **所有回复必须使用中文**：无论用户用什么语言提问，你的每一次回复都必须用中文输出。\n'
+          '2. ❌ **禁止使用其他语言**：不得使用英文、日文、韩文等其他语言回复。\n'
+          '3. ❌ **禁止双语混用**：不要在中文回复中夹杂大段其他语言的内容。\n'
+          '4. ✅ **代码和术语除外**：代码块、变量名、函数名、技术术语、URL 等可以保留原文。\n'
+          '\n'
+          '**再次强调：你的所有回复必须使用中文，这是硬性要求，优先级高于其他任何规则。**';
+    } else {
+      return '## 🌐 Response Language (Highest Priority)\n'
+          '\n'
+          'The app language is set to **English**. You MUST strictly follow these rules:\n'
+          '\n'
+          '1. ✅ **All replies MUST be in English**: Regardless of the language the user writes in, every response must be in English.\n'
+          '2. ❌ **Do NOT use other languages**: Do not reply in Chinese, Japanese, Korean, or any other language.\n'
+          '3. ❌ **No mixed languages**: Do not mix large blocks of other languages within English responses.\n'
+          '4. ✅ **Code and terminology excluded**: Code blocks, variable names, function names, technical terms, and URLs may remain in their original form.\n'
+          '\n'
+          '**One more time: ALL of your responses MUST be in English. This is a hard requirement that overrides all other rules.**';
+    }
+  }
+
   /// 工作目录提示（动态拼接路径）
   static String workDirectory(String dir) {
     return '## 📁 工作目录\n'

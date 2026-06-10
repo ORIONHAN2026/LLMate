@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:chathub/controllers/session_controller.dart';
+import 'package:chathub/l10n/app_localizations.dart';
 import 'package:chathub/models/bigmodel/models.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/utils/responsive_utils.dart';
@@ -57,6 +58,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       key: ValueKey(widget.message.msgId),
       margin: const EdgeInsets.only(bottom: 32),
@@ -140,14 +142,14 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                             // 编辑按钮
                             _buildActionButton(
                               icon: CupertinoIcons.pencil,
-                              tooltip: '编辑',
+                              tooltip: l10n.edit,
                               onTap: () => _editMessage(widget.message),
                             ),
                             const SizedBox(width: 4),
                             // 重新生成按钮
                             _buildActionButton(
                               icon: CupertinoIcons.arrow_clockwise,
-                              tooltip: '重新生成',
+                              tooltip: l10n.regenerate,
                               onTap:
                                   () => _regenerateMessage(
                                     RegenerateActionType.regenerate,
@@ -157,7 +159,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                             // 复制按钮
                             _buildActionButton(
                               icon: CupertinoIcons.doc_on_doc,
-                              tooltip: '复制',
+                              tooltip: l10n.copy,
                               onTap:
                                   () => _copyMessage(
                                     context,
@@ -170,7 +172,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                               builder: (buttonContext) {
                                 return _buildActionButton(
                                   icon: CupertinoIcons.ellipsis_vertical,
-                                  tooltip: '更多',
+                                  tooltip: l10n.more,
                                   onTap: () {},
                                   onTapDown:
                                       (details) => _showUserMessageMenu(
@@ -224,7 +226,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
   // 复制消息内容
   void _copyMessage(BuildContext context, String content) {
     Clipboard.setData(ClipboardData(text: content));
-    SnackBarUtils.showSuccess(context, '已复制到剪贴板');
+    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.copiedToClipboard);
   }
 
   // 编辑消息
@@ -232,6 +234,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final l10n = AppLocalizations.of(context)!;
         final TextEditingController controller = TextEditingController(
           text: message.content,
         );
@@ -242,7 +245,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
             borderRadius: BorderRadius.circular(12),
           ),
           title: Text(
-            '编辑消息',
+            l10n.editMessageTitle,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -270,7 +273,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                hintText: '请输入消息内容...',
+                hintText: l10n.messageHint,
                 hintStyle: TextStyle(
                   color: Theme.of(
                     context,
@@ -294,14 +297,14 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                   vertical: 12,
                 ),
               ),
-              child: const Text('取消'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton.icon(
               onPressed: () {
                 final newContent = controller.text.trim();
                 if (newContent.isNotEmpty) {
                   if (newContent.trim().isEmpty) {
-                    SnackBarUtils.showError(context, '消息内容不能为空');
+                    SnackBarUtils.showError(context, l10n.messageContentCannotBeEmpty);
                     return;
                   }
 
@@ -315,7 +318,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
                   Navigator.of(context).pop();
                 } else {
-                  SnackBarUtils.showError(context, '消息内容不能为空');
+                  SnackBarUtils.showError(context, l10n.messageContentCannotBeEmpty);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -330,7 +333,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                 ),
               ),
               icon: const Icon(Icons.check, size: 16),
-              label: const Text('保存'),
+              label: Text(l10n.save),
             ),
           ],
         );
@@ -343,7 +346,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     final session = await _findSessionContainingMessageAsync(widget.message.msgId);
     if (session == null) {
       if (mounted) {
-        SnackBarUtils.showError(context, '找不到包含该消息的会话');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.sessionNotFoundForMessage);
       }
       return;
     }
@@ -356,7 +359,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
       if (messageIndex == -1) {
         if (mounted) {
-          SnackBarUtils.showError(context, '消息不存在');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.messageNotFound);
         }
         return;
       }
@@ -382,7 +385,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '重新生成失败: $e');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(AppLocalizations.of(context)!.regenerate, e.toString()));
       }
     }
   }
@@ -395,12 +398,12 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
     if (userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, '消息内容为空');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.messageContentCannotBeEmpty);
       }
       return;
     }
 
-    await _performRegeneration(session, userQuestion, startDeleteIndex, '重新生成');
+    await _performRegeneration(session, userQuestion, startDeleteIndex, AppLocalizations.of(context)!.regenerate);
   }
 
   // 从此处重新生成
@@ -412,7 +415,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
     if (userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, '消息内容为空');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.messageContentCannotBeEmpty);
       }
       return;
     }
@@ -421,7 +424,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       session,
       userQuestion,
       messageIndex + 1,
-      '从此处重新生成',
+      AppLocalizations.of(context)!.regenerateFromHere,
     );
   }
 
@@ -444,7 +447,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
     if (lastAiMessage == null) {
       if (mounted) {
-        SnackBarUtils.showError(context, '没有找到AI回复');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.noAiReplyFound);
       }
       return;
     }
@@ -466,7 +469,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       } catch (e) {
         // 如果通过 pairedMsgId 找不到，说明对应的用户消息已被删除
         if (mounted) {
-          SnackBarUtils.showError(context, '对应的用户问题已被删除，无法重新生成');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.messageNotFound);
         }
         return;
       }
@@ -485,7 +488,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, '无法找到对应的问题');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
       }
       return;
     }
@@ -494,7 +497,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       session,
       userQuestion,
       lastAiMessageIndex,
-      '重新生成最后一条回复',
+      AppLocalizations.of(context)!.regenerateLastReply,
     );
   }
 
@@ -516,7 +519,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     final messages = session.messages;
     if (startDeleteIndex < 0 || startDeleteIndex > messages.length) {
       if (mounted) {
-        SnackBarUtils.showError(context, '无法重新生成：消息索引无效');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotRegenerateInvalidIndex);
       }
       return;
     }
@@ -536,7 +539,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       await _generateAIResponse(updatedSession, userQuestion, actionName);
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '$actionName 失败: $e');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(actionName, e.toString()));
       }
 
       // 确保重置发送状态
@@ -657,11 +660,11 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       }
 
       if (mounted) {
-        SnackBarUtils.showSuccess(context, '$actionName 完成');
+        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.xDone(actionName));
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '$actionName 失败: $e');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(actionName, e.toString()));
       }
 
       // 重置发送状态
@@ -683,11 +686,11 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       // 通知父组件更新
       if (mounted) {
         widget.onUpdate?.call();
-        SnackBarUtils.showSuccess(context, '消息已删除');
+        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.messageDeleted);
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '删除消息失败: $e');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(AppLocalizations.of(context)!.deleteMessage, e.toString()));
       }
     }
   }
@@ -710,13 +713,13 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
           // 通知父组件更新
           if (mounted) {
             widget.onUpdate?.call();
-            SnackBarUtils.showSuccess(context, '已删除此消息后的所有回复');
+            SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.replyDeleted);
           }
         }
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '删除回复失败: $e');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.deleteReplyFailed);
       }
     }
   }
@@ -724,11 +727,12 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
   // 从消息创建新对话
   Future<void> _createNewSessionFromMessage(BuildContext context, ChatMessage message) async {
     try {
+      final l10n = AppLocalizations.of(context)!;
       // 根据消息ID查找包含该消息的会话
       final session = await _findSessionContainingMessageAsync(message.msgId);
       if (session == null) {
         if (mounted) {
-          SnackBarUtils.showError(context, '找不到包含该消息的会话');
+          SnackBarUtils.showError(context, l10n.sessionNotFoundForMessage);
         }
         return;
       }
@@ -744,7 +748,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
         // 创建新会话
         final newSession = ChatSession(
           sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: '基于历史记录的新对话',
+          name: l10n.newChatFromHistory,
           createdAt: DateTime.now(),
           messages: historyMessages,
           chatModel: session.chatModel,
@@ -758,18 +762,19 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
         // 通知父组件更新
         if (mounted) {
           widget.onUpdate?.call();
-          SnackBarUtils.showSuccess(context, '已从此处创建新对话');
+          SnackBarUtils.showSuccess(context, l10n.newChatCreatedFromHere);
         }
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '创建新对话失败: $e');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.createNewChatFailed);
       }
     }
   }
 
   // 显示用户消息菜单
   void _showUserMessageMenu(BuildContext context, Offset position) {
+    final l10n = AppLocalizations.of(context)!;
     // 重置展开状态
     bool isRegenerateExpanded = false;
 
@@ -803,7 +808,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     _buildMenuOption(
                       context: context,
                       icon: CupertinoIcons.doc_on_doc,
-                      title: '复制消息',
+                      title: l10n.copyMessage,
                       onTap: () {
                         Navigator.pop(context);
                         _copyMessage(context, widget.message.content);
@@ -815,7 +820,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     _buildExpandableMenuOption(
                       context: context,
                       icon: CupertinoIcons.arrow_clockwise,
-                      title: '重新生成',
+                      title: l10n.regenerate,
                       isExpanded: isRegenerateExpanded,
                       onToggle: () {
                         setMenuState(() {
@@ -826,7 +831,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                         _buildSubMenuOption(
                           context: context,
                           icon: CupertinoIcons.play,
-                          title: '从此处重新生成',
+                          title: l10n.regenerateFromHere,
                           onTap: () {
                             Navigator.pop(context);
                             _regenerateMessage(
@@ -853,7 +858,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     _buildMenuOption(
                       context: context,
                       icon: CupertinoIcons.trash,
-                      title: '删除消息',
+                      title: l10n.deleteMessage,
                       onTap: () {
                         Navigator.pop(context);
                         _deleteMessage(widget.message);
@@ -865,7 +870,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     _buildMenuOption(
                       context: context,
                       icon: CupertinoIcons.plus,
-                      title: '从此处创建新对话',
+                      title: l10n.createNewChatFromHere,
                       onTap: () {
                         Navigator.pop(context);
                         _createNewSessionFromMessage(context, widget.message);
@@ -877,7 +882,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     _buildMenuOption(
                       context: context,
                       icon: CupertinoIcons.reply,
-                      title: '删除回复',
+                      title: l10n.deleteReply,
                       onTap: () {
                         Navigator.pop(context);
                         _deleteReplyAfterMessage(widget.message);
@@ -1051,6 +1056,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final l10n = AppLocalizations.of(context)!;
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           shape: RoundedRectangleBorder(
@@ -1099,19 +1105,19 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                               color: Theme.of(context).colorScheme.primary,
                             ),
                             const SizedBox(width: 4),
-                            const Text(
-                              '文件信息',
-                              style: TextStyle(fontWeight: FontWeight.w500),
+                            Text(
+                              l10n.fileInfo,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text('文件名: ${attachment.name}'),
+                        Text('${l10n.fileNameLabel}: ${attachment.name}'),
                         if (attachment.size != null)
-                          Text('大小: ${_formatFileSize(attachment.size!)}'),
-                        Text('类型: ${_getFileTypeDescription(attachment.type)}'),
+                          Text('${l10n.fileSizeLabel}: ${_formatFileSize(attachment.size!)}'),
+                        Text('${l10n.fileTypeLabel}: ${_getFileTypeDescription(attachment.type)}'),
                         if (attachment.filePath != null)
-                          Text('路径: ${attachment.filePath}'),
+                          Text('${l10n.filePathLabel}: ${attachment.filePath}'),
                       ],
                     ),
                   ),
@@ -1127,9 +1133,9 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                           color: Theme.of(context).colorScheme.secondary,
                         ),
                         const SizedBox(width: 4),
-                        const Text(
-                          '文件内容',
-                          style: TextStyle(fontWeight: FontWeight.w500),
+                        Text(
+                          l10n.fileContent,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -1182,7 +1188,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '暂无内容预览',
+                            l10n.noContentPreview,
                             style: TextStyle(
                               color:
                                   Theme.of(
@@ -1211,7 +1217,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                 ),
               ),
               child: Text(
-                '关闭',
+                l10n.close,
                 style: TextStyle(
                   color: Theme.of(
                     context,
@@ -1224,7 +1230,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: attachment.content!));
                   Navigator.of(context).pop();
-                  SnackBarUtils.showSuccess(context, '文件内容已复制到剪贴板');
+                  SnackBarUtils.showSuccess(context, l10n.fileContentCopied);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -1237,7 +1243,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text('复制内容'),
+                child: Text(l10n.copyContent),
               ),
           ],
         );
@@ -1286,23 +1292,18 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
   /// 获取文件类型描述
   String _getFileTypeDescription(String type) {
+    final l10n = AppLocalizations.of(context)!;
     switch (type) {
       case 'image':
-        return '图片文件';
+        return l10n.files; // generic fallback
       case 'document':
-        return '文档文件';
       case 'text':
-        return '文本文件';
       case 'code':
-        return '代码文件';
       case 'office':
-        return '办公文档';
       case 'web':
-        return '网页链接';
       case 'folder':
-        return '文件夹';
       default:
-        return '其他文件';
+        return type;
     }
   }
 
@@ -1412,7 +1413,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          '已处理',
+                          AppLocalizations.of(context)!.processed,
                           style: TextStyle(
                             fontSize: 9,
                             color: Theme.of(context).colorScheme.secondary,

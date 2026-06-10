@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 import 'package:window_manager/window_manager.dart';
 import 'package:get/get.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:chathub/l10n/app_localizations.dart';
 import 'controllers/model_controller.dart';
 import 'controllers/session_controller.dart';
 import 'controllers/theme_controller.dart';
+import 'controllers/locale_controller.dart';
 import 'controllers/mcp_controller.dart';
 import 'pages/home.dart';
 import 'pages/loading_page.dart';
@@ -65,6 +68,9 @@ void main() async {
   // 在应用启动前初始化 ThemeController
   Get.put(ThemeController());
 
+  // 初始化 LocaleController（语言设置）
+  Get.put(LocaleController());
+
   runApp(const MyApp());
 }
 
@@ -74,11 +80,24 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<ThemeController>(
-      builder:
-          (themeController) => GetMaterialApp(
+      builder: (themeController) {
+        final localeController = Get.find<LocaleController>();
+        return Obx(
+          () => GetMaterialApp(
             title: 'ChatHub',
-            debugShowCheckedModeBanner: false, // 去掉调试横幅
-            theme: ThemeData(
+            debugShowCheckedModeBanner: false,
+            locale: localeController.locale.value,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('zh'),
+              Locale('en'),
+            ],
+              theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
                 primary: const Color(0xFF3B82F6),
                 seedColor: const Color(0xFF3B82F6), // 使用更深更鲜明的蓝色 (blue-700)
@@ -208,6 +227,8 @@ class MyApp extends StatelessWidget {
             themeMode: themeController.themeMode,
             home: const AppInitializer(),
           ),
+        );
+      },
     );
   }
 }

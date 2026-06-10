@@ -3,7 +3,9 @@ import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/pages/modelssetting.dart';
 import 'package:chathub/pages/mcp_management_page.dart';
 import 'package:chathub/pages/skill_management_page.dart';
+import 'package:chathub/pages/other_settings_page.dart';
 import 'package:chathub/widgets/model_selector.dart';
+import 'package:chathub/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
@@ -191,7 +193,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
 
     final newSession = ChatSession(
       sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: '新对话',
+      name: AppLocalizations.of(context)!.newSession,
       createdAt: DateTime.now(),
       messages: [],
       chatModel: selectedModelObject, // 存储完整的模型对象，没有可用模型时为null
@@ -313,7 +315,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         ),
         child: Center(
           child: Text(
-            '请选择或创建一个会话',
+            AppLocalizations.of(context)!.selectOrCreateSession,
             style: TextStyle(
               fontSize: 16,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -457,6 +459,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       ancestor: overlay,
     );
 
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
     // 计算菜单显示位置 - 在按钮上方显示
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromLTWH(
@@ -473,7 +478,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       position: position,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 8,
-      color: Theme.of(context).scaffoldBackgroundColor, // 使用主题色
+      color: theme.scaffoldBackgroundColor, // 使用主题色
       items: [
         PopupMenuItem(
           height: 48,
@@ -483,14 +488,14 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 CupertinoIcons.mail,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('反馈意见', style: TextStyle(fontSize: 12)),
+              Text(l10n.feedback, style: const TextStyle(fontSize: 12)),
             ],
           ),
         ),
-        // 设置
+        // 模型管理
         PopupMenuItem(
           height: 48,
           child: Row(
@@ -498,10 +503,10 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 CupertinoIcons.wand_stars,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('模型管理', style: TextStyle(fontSize: 12)),
+              Text(l10n.modelManagement, style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -527,10 +532,11 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 CupertinoIcons.gear,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('连接器管理(MCP)', style: TextStyle(fontSize: 12)),
+              Text(l10n.connectorManagement,
+                  style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -554,10 +560,11 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 CupertinoIcons.wand_stars,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('技能管理(SKILL)', style: TextStyle(fontSize: 12)),
+              Text(l10n.skillManagement,
+                  style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -573,28 +580,33 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             });
           },
         ),
-        // PopupMenuItem(
-        //   height: 48,
-        //   child: Row(
-        //     children: [
-        //       Icon(CupertinoIcons.gear, size: 16, color: Colors.grey[700]),
-        //       const SizedBox(width: 12),
-        //       const Text('其他设置', style: TextStyle(fontSize: 12)),
-        //     ],
-        //   ),
-        //   onTap: () {
-        //     Future.delayed(Duration.zero, () async {
-        //       if (mounted) {
-        //         await Navigator.push(
-        //           context,
-        //           MaterialPageRoute(
-        //             builder: (context) => const SystemSettingsPage(),
-        //           ),
-        //         );
-        //       }
-        //     });
-        //   },
-        // ),
+        // 其他设置
+        PopupMenuItem(
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.slider_horizontal_3,
+                size: 16,
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              Text(l10n.otherSettings, style: const TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OtherSettingsPage(),
+                  ),
+                );
+              }
+            });
+          },
+        ),
         // 登录
         // PopupMenuItem(
         //   height: 48,
@@ -625,14 +637,15 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
 
   // 发送反馈邮件
   Future<void> _sendFeedbackEmail() async {
+    final l10n = AppLocalizations.of(context)!;
     const String feedbackEmail = 'hanxinyc@gmail.com';
-    const String subject = 'ChatHub应用反馈';
-    final String body = '''
+    const String subject = 'ChatHub App Feedback';
+    const String body = '''
 
 -----------------------------
-非常感谢您对ChatHub应用的反馈，每一条反馈信息我们都将认真对待。
+Thank you for your feedback on ChatHub. We take every feedback seriously.
 
-谢谢！
+Thanks!
 ''';
 
     final Uri emailUri = Uri(
@@ -647,13 +660,13 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       } else {
         // 如果无法启动邮箱应用，显示错误提示
         if (mounted) {
-          SnackBarUtils.showError(context, '无法打开邮箱应用，请手动发送邮件至：$feedbackEmail');
+          SnackBarUtils.showError(context, l10n.cannotOpenEmailApp);
         }
       }
     } catch (e) {
       // 发生错误时显示提示
       if (mounted) {
-        SnackBarUtils.showError(context, '发送邮件失败：${e.toString()}');
+        SnackBarUtils.showError(context, l10n.xFailed(l10n.send, e.toString()));
       }
     }
   }
@@ -669,7 +682,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   // 切换会话收藏状态
   void _toggleFavoriteSession(int index) {
     if (index < 0 || index >= chatSessions.length) {
-      _showErrorSnackBar('无效的会话索引');
+      _showErrorSnackBar(AppLocalizations.of(context)!.invalidSessionIndex);
       return;
     }
 
@@ -748,7 +761,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             alpha: _isRightSidebarCollapsed ? 0.6 : 0.4,
           ),
         ),
-        tooltip: _isRightSidebarCollapsed ? '展开右侧栏' : '收起右侧栏',
+        tooltip: _isRightSidebarCollapsed ? AppLocalizations.of(context)!.expandRightSidebar : AppLocalizations.of(context)!.collapseRightSidebar,
       ),
     );
   }
@@ -828,7 +841,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('ChatHub'),
+        title: Text(AppLocalizations.of(context)!.appTitle),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -978,7 +991,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                     context,
                   ).colorScheme.onSurface.withOpacity(0.6),
                 ),
-                tooltip: '展开边栏',
+                tooltip: AppLocalizations.of(context)!.expandSidebar,
               ),
             ),
           // 模型选择器组件化，选择逻辑交由组件内部处理

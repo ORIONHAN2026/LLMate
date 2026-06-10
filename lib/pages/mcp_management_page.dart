@@ -13,6 +13,7 @@ import '../controllers/session_controller.dart';
 import 'mcp_marketplace_page.dart';
 import '../controllers/mcp_controller.dart';
 import '../utils/snackbar_utils.dart';
+import '../l10n/app_localizations.dart';
 
 /// MCP 管理页面
 ///
@@ -91,7 +92,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
     await _loadServices();
     if (mounted) {
-      SnackBarUtils.showInfo(context, '已移除服务: $displayName');
+      SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.serviceRemoved(displayName));
     }
   }
 
@@ -108,7 +109,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '连接器管理(MCP)',
+          AppLocalizations.of(context)!.connectorManagementTitle,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -117,7 +118,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
         ),
         actions: [
           IconButton(
-            tooltip: '添加自定义连接器',
+            tooltip: AppLocalizations.of(context)!.addCustomConnector,
             onPressed: () {
               showCustomAddMcpDialog(
                 context,
@@ -147,7 +148,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           ),
           IconButton(
             key: _marketplaceButtonKey,
-            tooltip: '应用市场',
+            tooltip: AppLocalizations.of(context)!.marketplace,
             onPressed: () => _showMarketplaceDialog(),
             icon: Icon(
               CupertinoIcons.shopping_cart,
@@ -178,7 +179,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无 MCP 服务',
+              AppLocalizations.of(context)!.noMcpServices,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
@@ -189,7 +190,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
             ),
             const SizedBox(height: 6),
             Text(
-              '点击右上角 + 号进入应用市场',
+              AppLocalizations.of(context)!.clickToEnterMarketplace,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(
@@ -260,13 +261,13 @@ class _McpManagementPageState extends State<McpManagementPage> {
       await _loadServices();
 
       if (mounted) {
-        SnackBarUtils.showSuccess(context, '已获取 ${tools.length} 个工具');
+        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.toolsFetched(tools.length));
       }
     } catch (e) {
       if (mounted) {
         SnackBarUtils.showError(
           context,
-          '获取工具失败: ${e.toString().length > 80 ? '${e.toString().substring(0, 80)}...' : e}',
+          AppLocalizations.of(context)!.fetchToolsFailed(e.toString().length > 80 ? '${e.toString().substring(0, 80)}...' : e.toString()),
         );
       }
     } finally {
@@ -279,13 +280,13 @@ class _McpManagementPageState extends State<McpManagementPage> {
   Future<void> _confirmRemoveService(Mcp service) async {
     final shouldRemove = await ConfirmDeleteDialog.show(
       context: context,
-      title: '移除服务',
+      title: AppLocalizations.of(context)!.removeServiceLabel,
       itemName: service.name,
-      description: '确定要移除服务',
-      warningMessage: '移除后需重新添加',
+      description: AppLocalizations.of(context)!.removeServiceConfirm,
+      warningMessage: AppLocalizations.of(context)!.removeServiceWarning,
       icon: CupertinoIcons.delete,
       iconColor: Theme.of(context).colorScheme.error,
-      confirmText: '移除',
+      confirmText: AppLocalizations.of(context)!.remove,
     );
 
     if (shouldRemove == true) {
@@ -297,7 +298,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: 'MCP 详情',
+      barrierLabel: AppLocalizations.of(context)!.mcpDetail,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (ctx, anim1, anim2) {
@@ -397,7 +398,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                             Row(
                               children: [
                                 Text(
-                                  '工具列表 (${tools.length})',
+                                  AppLocalizations.of(context)!.toolList(tools.length),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -436,13 +437,13 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                       }
                                       SnackBarUtils.showSuccess(
                                         ctx,
-                                        '已刷新 ${newTools.length} 个工具',
+                                        AppLocalizations.of(context)!.toolsRefreshed(newTools.length),
                                       );
                                     } catch (e) {
                                       if (ctx.mounted) {
                                         SnackBarUtils.showError(
                                           ctx,
-                                          '刷新失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
+                                          AppLocalizations.of(context)!.refreshFailed(e.toString().substring(0, e.toString().length.clamp(0, 80))),
                                         );
                                       }
                                     }
@@ -460,7 +461,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '刷新',
+                                        AppLocalizations.of(context)!.refreshAction,
                                         style: TextStyle(
                                           fontSize: 11,
                                           color:
@@ -482,7 +483,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   tools.take(50).map((t) {
                                     final label =
                                         t.description.isNotEmpty
-                                            ? '${t.name} · ${t.description}'
+                                            ? AppLocalizations.of(context)!.toolNameDesc(t.name, t.description)
                                             : t.name;
                                     return Container(
                                       padding: const EdgeInsets.symmetric(
@@ -519,7 +520,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  '... 还有 ${tools.length - 50} 个工具',
+                                  AppLocalizations.of(context)!.moreXTools(tools.length - 50),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey[500],
@@ -580,7 +581,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   CupertinoIcons.arrow_down_to_line_alt,
                                   size: 15,
                                 ),
-                                label: const Text('获取工具列表'),
+                                label: Text(AppLocalizations.of(context)!.fetchTools),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 10,
@@ -593,7 +594,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
                           // JSON 配置
                           Text(
-                            'JSON 配置',
+                            AppLocalizations.of(context)!.jsonConfig,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -628,7 +629,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                 _confirmRemoveService(service);
                               },
                               icon: const Icon(CupertinoIcons.delete, size: 16),
-                              label: const Text('移除服务'),
+                              label: Text(AppLocalizations.of(context)!.removeServiceLabel),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor:
                                     Theme.of(context).colorScheme.error,
@@ -702,7 +703,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           },
           child: Row(
             children: [
-              const Text('阿里云', style: TextStyle(fontSize: 12)),
+              Text(AppLocalizations.of(context)!.aliyun, style: const TextStyle(fontSize: 12)),
               const Spacer(),
               Icon(
                 CupertinoIcons.arrow_up_right,
@@ -719,7 +720,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           },
           child: Row(
             children: [
-              const Text('腾讯云', style: TextStyle(fontSize: 12)),
+              Text(AppLocalizations.of(context)!.tencentCloud, style: const TextStyle(fontSize: 12)),
               const Spacer(),
               Icon(
                 CupertinoIcons.arrow_up_right,
@@ -736,7 +737,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           },
           child: Row(
             children: [
-              const Text('魔塔', style: TextStyle(fontSize: 12)),
+              Text(AppLocalizations.of(context)!.modelscope, style: const TextStyle(fontSize: 12)),
               const Spacer(),
               Icon(
                 CupertinoIcons.arrow_up_right,

@@ -4,6 +4,7 @@ import 'package:chathub/widgets/ai_message_widget.dart';
 import 'package:chathub/widgets/user_message_widget.dart';
 import 'package:chathub/widgets/tool_message_widget.dart';
 import 'package:chathub/utils/responsive_utils.dart';
+import '../l10n/app_localizations.dart';
 import '../models/bigmodel/models.dart';
 import 'dart:ui' as ui;
 import 'dart:io';
@@ -37,7 +38,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       await WidgetsBinding.instance.endOfFrame;
       await _generateMessageImage(context, message);
     } catch (e) {
-      SnackBarUtils.showError(context, '生成消息截图失败: $e');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotTypeFailed('消息', e.toString()));
     }
   }
 
@@ -47,7 +48,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       await WidgetsBinding.instance.endOfFrame;
       await _generateRoundImage(context, message);
     } catch (e) {
-      SnackBarUtils.showError(context, '生成回合截图失败: $e');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotTypeFailed('当前回合', e.toString()));
     }
   }
 
@@ -57,9 +58,9 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       await WidgetsBinding.instance.endOfFrame;
       await _generateConversationImage(context);
     } catch (e) {
-      print('生成对话截图失败: $e'); // 打印错误信息以便调试
+      print(AppLocalizations.of(context)!.screenshotTypeFailed('整个对话', e.toString())); // 打印错误信息以便调试
 
-      SnackBarUtils.showError(context, '生成对话截图失败: $e');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotTypeFailed('整个对话', e.toString()));
     }
   }
 
@@ -133,7 +134,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
                 as RenderRepaintBoundary?;
 
         if (boundary == null) {
-          SnackBarUtils.showError(context, '截图失败：未找到渲染对象');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotFailed);
           return;
         }
 
@@ -148,13 +149,13 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
         if (byteData == null) {
-          SnackBarUtils.showError(context, '生成图片失败');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.generateImageFailed);
           return;
         }
 
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         await _copyImageToClipboard(pngBytes);
-        SnackBarUtils.showSuccess(context, '消息截图已复制到剪贴板');
+        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.messageScreenshotCopied);
 
         print('成功完成优化的单条消息截图');
       } finally {
@@ -163,7 +164,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       }
     } catch (e) {
       print('优化的单条消息截图失败: $e');
-      SnackBarUtils.showError(context, '生成消息截图失败: $e');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotTypeFailed('消息', e.toString()));
     }
   }
 
@@ -176,7 +177,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       final messages = widget.chatSession.messages;
       final messageIndex = messages.indexWhere((m) => m.msgId == message.msgId);
       if (messageIndex == -1) {
-        SnackBarUtils.showError(context, '找不到当前消息');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindMessage);
         return;
       }
 
@@ -199,7 +200,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       }
 
       if (roundMessages.isEmpty) {
-        SnackBarUtils.showError(context, '找不到完整的对话回合');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindCompleteRound);
         return;
       }
 
@@ -278,7 +279,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
                 as RenderRepaintBoundary?;
 
         if (boundary == null) {
-          SnackBarUtils.showError(context, '截图失败：未找到渲染对象');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotFailed);
           return;
         }
 
@@ -293,13 +294,13 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
         if (byteData == null) {
-          SnackBarUtils.showError(context, '生成图片失败');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.generateImageFailed);
           return;
         }
 
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         await _copyImageToClipboard(pngBytes);
-        SnackBarUtils.showSuccess(context, '当前回合截图已复制到剪贴板');
+        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.currentRoundScreenshotCopied);
 
         print('成功完成优化的回合截图');
       } finally {
@@ -308,7 +309,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       }
     } catch (e) {
       print('优化的回合截图失败: $e');
-      SnackBarUtils.showError(context, '生成回合截图失败: $e');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotTypeFailed('当前回合', e.toString()));
     }
   }
 
@@ -316,14 +317,14 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
   Future<void> _generateConversationImage(BuildContext context) async {
     try {
       if (widget.chatSession.messages.isEmpty) {
-        SnackBarUtils.showError(context, '对话中没有消息');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.noMessagesInConversation);
         return;
       }
 
       // 使用优化的渲染方式，避免滚动
       await _generateConversationImageOptimized(context);
     } catch (e) {
-      SnackBarUtils.showError(context, '生成对话截图失败: $e');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotTypeFailed('整个对话', e.toString()));
     }
   }
 
@@ -405,7 +406,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
                 as RenderRepaintBoundary?;
 
         if (boundary == null) {
-          SnackBarUtils.showError(context, '截图失败：未找到渲染对象');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotFailed);
           return;
         }
 
@@ -420,13 +421,13 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
         if (byteData == null) {
-          SnackBarUtils.showError(context, '生成图片失败');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.generateImageFailed);
           return;
         }
 
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         await _copyImageToClipboard(pngBytes);
-        SnackBarUtils.showSuccess(context, '整个对话截图已复制到剪贴板');
+        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.fullConversationScreenshotCopied);
 
         print('成功完成优化的对话截图');
       } finally {
@@ -454,7 +455,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         '整个对话',
       );
     } catch (e) {
-      SnackBarUtils.showError(context, '生成对话截图失败: $e');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotTypeFailed('整个对话', e.toString()));
     }
   }
 
@@ -534,7 +535,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       }
 
       if (boundaries.isEmpty) {
-        SnackBarUtils.showError(context, '无法找到消息的渲染对象');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindRenderObject);
         return;
       }
 
@@ -542,7 +543,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       if (boundaries.length < messages.length) {
         SnackBarUtils.showWarning(
           context,
-          '部分消息未能截图，已截图 ${boundaries.length}/${messages.length} 条消息',
+          AppLocalizations.of(context)!.partialScreenshot(boundaries.length, messages.length),
         );
       }
 
@@ -558,7 +559,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
         // 再次检查是否需要绘制
         if (boundary.debugNeedsPaint) {
-          SnackBarUtils.showError(context, '截图失败：渲染对象还在绘制中');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.renderObjectStillDrawing);
           return;
         }
 
@@ -566,13 +567,13 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
         if (byteData == null) {
-          SnackBarUtils.showError(context, '生成图片失败');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.generateImageFailed);
           return;
         }
 
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         await _copyImageToClipboard(pngBytes);
-        SnackBarUtils.showSuccess(context, '$screenshotType截图已复制到剪贴板');
+        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.screenshotCopied(screenshotType));
         return;
       }
 
@@ -583,7 +584,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         screenshotType,
       );
     } catch (e) {
-      SnackBarUtils.showError(context, '生成$screenshotType截图失败: $e');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.screenshotTypeFailed(screenshotType, e.toString()));
     }
   }
 
@@ -702,16 +703,16 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       );
 
       if (byteData == null) {
-        SnackBarUtils.showError(context, '生成图片失败');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.generateImageFailed);
         return;
       }
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
       await _copyImageToClipboard(pngBytes);
-      SnackBarUtils.showSuccess(context, '$screenshotType截图已复制到剪贴板');
+      SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.screenshotCopied(screenshotType));
     } catch (e) {
-      SnackBarUtils.showError(context, '合并截图失败: $e');
-      print('合并截图失败: $e'); // 打印错误信息以便调试
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.mergeScreenshotFailed(e.toString()));
+      print(AppLocalizations.of(context)!.mergeScreenshotFailed(e.toString())); // 打印错误信息以便调试
     }
   }
 
@@ -727,7 +728,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         await _copyImageToClipboardDesktop(imageBytes);
       }
     } catch (e) {
-      throw Exception('复制图片失败: $e');
+      throw Exception(AppLocalizations.of(context)!.copyImageFailed(e.toString()));
     }
   }
 
@@ -748,7 +749,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       } else if (Platform.isLinux) {
         await _copyImageToClipboardLinux(imagePath);
       } else {
-        throw UnsupportedError('不支持的操作系统');
+        throw UnsupportedError(AppLocalizations.of(context)!.unsupportedOS);
       }
 
       // 延迟删除临时文件
@@ -762,7 +763,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         }
       });
     } catch (e) {
-      throw Exception('桌面端复制图片失败: $e');
+      throw Exception(AppLocalizations.of(context)!.desktopCopyFailed(e.toString()));
     }
   }
 
@@ -814,7 +815,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       // wl-copy 也不可用
     }
 
-    throw Exception('无法找到可用的剪贴板工具（xclip 或 wl-copy）');
+    throw Exception(AppLocalizations.of(context)!.noClipboardTool);
   }
 
   @override

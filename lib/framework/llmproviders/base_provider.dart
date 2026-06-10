@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:get/get.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
@@ -178,6 +179,12 @@ abstract class BaseLlmProvider {
     if (providerPrompt.isNotEmpty) {
       messages.add({'role': 'system', 'content': providerPrompt});
     }
+
+    // 1b2. 根据应用语言设置回复语言
+    messages.add({
+      'role': 'system',
+      'content': CommonSystemPrompts.responseLanguage(Get.locale?.languageCode ?? 'zh'),
+    });
 
     // 1c. 公共规则：禁止 Web 搜索
     // messages.add({

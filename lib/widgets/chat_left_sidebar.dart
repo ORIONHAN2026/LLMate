@@ -1,5 +1,6 @@
 import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/controllers/theme_controller.dart';
+import 'package:chathub/l10n/app_localizations.dart';
 import 'package:chathub/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -228,7 +229,7 @@ class _SessionItemState extends State<_SessionItem>
                                 ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       padding: EdgeInsets.zero,
-                      tooltip: widget.session.isFavorite ? '取消收藏' : '收藏会话',
+                      tooltip: widget.session.isFavorite ? AppLocalizations.of(context)!.unfavorite : AppLocalizations.of(context)!.favoriteSession,
                     ),
                   ),
                 ),
@@ -257,7 +258,7 @@ class _SessionItemState extends State<_SessionItem>
                         ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       padding: EdgeInsets.zero,
-                      tooltip: '删除会话',
+                      tooltip: AppLocalizations.of(context)!.deleteConversation,
                     ),
                   ),
                 ),
@@ -271,14 +272,15 @@ class _SessionItemState extends State<_SessionItem>
 
   // 显示删除确认对话框
   void _showDeleteConfirmation(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final sessionName = widget.session.name;
 
     final bool? shouldDelete = await ConfirmDeleteDialog.show(
       context: context,
-      title: '删除会话',
+      title: l10n.deleteConversation,
       itemName: sessionName,
-      description: '确定要删除会话',
-      warningMessage: '此操作无法撤销',
+      description: l10n.deleteConfirmMsg,
+      warningMessage: l10n.deleteSessionTitle_warning,
       icon: CupertinoIcons.chat_bubble,
       iconColor: Theme.of(context).colorScheme.error,
     );
@@ -397,9 +399,9 @@ class _SessionItemState extends State<_SessionItem>
     final trimmedName = newName.trim();
     if (trimmedName.isEmpty) {
       // 如果名字为空，设置为默认名称"新会话"
-      final updatedSession = widget.session.copyWith(title: '新会话');
+      final updatedSession = widget.session.copyWith(title: AppLocalizations.of(context)!.newSession);
       sessionController.updateSession(updatedSession);
-      _nameController.text = '新会话'; // 同步更新控制器文本
+      _nameController.text = AppLocalizations.of(context)!.newSession; // 同步更新控制器文本
     } else if (trimmedName != widget.session.name) {
       // 更新会话名称
       final updatedSession = widget.session.copyWith(title: trimmedName);
@@ -518,7 +520,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                             context,
                           ).colorScheme.onSurface.withOpacity(0.6),
                         ),
-                        tooltip: '全屏',
+                        tooltip: AppLocalizations.of(context)!.fullscreen,
                         padding: const EdgeInsets.all(4),
                         constraints: const BoxConstraints(
                           minWidth: 32,
@@ -536,7 +538,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                           context,
                         ).colorScheme.onSurface.withOpacity(0.6),
                       ),
-                      tooltip: '新建对话',
+                      tooltip: AppLocalizations.of(context)!.newSession,
                       padding: const EdgeInsets.all(4),
                       constraints: const BoxConstraints(
                         minWidth: 32,
@@ -554,7 +556,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                           context,
                         ).colorScheme.onSurface.withOpacity(0.6),
                       ),
-                      tooltip: '收起边栏',
+                      tooltip: AppLocalizations.of(context)!.collapseSidebar,
                       padding: const EdgeInsets.all(4),
                       constraints: const BoxConstraints(
                         minWidth: 32,
@@ -641,7 +643,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
         // 收藏分类
         if (favoriteSessions.isNotEmpty) ...[
           _buildCollapsibleGroupHeader(
-            title: '收藏',
+            title: AppLocalizations.of(context)!.favorites,
             isCollapsed: _isFavoriteCollapsed,
             onToggle:
                 () => setState(
@@ -672,7 +674,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
         // 今日分类
         if (todaySessions.isNotEmpty) ...[
           _buildCollapsibleGroupHeader(
-            title: '今日',
+            title: AppLocalizations.of(context)!.today,
             isCollapsed: _isTodayCollapsed,
             onToggle:
                 () => setState(() => _isTodayCollapsed = !_isTodayCollapsed),
@@ -698,7 +700,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
         // 昨日分类
         if (yesterdaySessions.isNotEmpty) ...[
           _buildCollapsibleGroupHeader(
-            title: '昨日',
+            title: AppLocalizations.of(context)!.yesterday,
             isCollapsed: _isYesterdayCollapsed,
             onToggle:
                 () => setState(
@@ -726,7 +728,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
         // 更早分类
         if (earlierSessions.isNotEmpty) ...[
           _buildCollapsibleGroupHeader(
-            title: '更早',
+            title: AppLocalizations.of(context)!.earlier,
             isCollapsed: _isEarlierCollapsed,
             onToggle:
                 () =>

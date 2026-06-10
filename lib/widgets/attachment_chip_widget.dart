@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/chat/chat_attachment.dart';
 import '../utils/snackbar_utils.dart';
+import '../l10n/app_localizations.dart';
 
 class AttachmentChipWidget extends StatelessWidget {
   final ChatAttachment attachment;
@@ -77,7 +78,7 @@ class AttachmentChipWidget extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    _buildStatusRow(),
+                    _buildStatusRow(context),
                   ],
                 ),
               ),
@@ -103,7 +104,7 @@ class AttachmentChipWidget extends StatelessWidget {
   }
 
   /// 构建状态行（文件大小和处理状态）
-  Widget _buildStatusRow() {
+  Widget _buildStatusRow(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -125,7 +126,7 @@ class AttachmentChipWidget extends StatelessWidget {
             Icon(Icons.error_outline, size: 11, color: Colors.red[600]),
             const SizedBox(width: 2),
             Text(
-              '处理失败',
+              AppLocalizations.of(context)!.processFailedStatus,
               style: TextStyle(fontSize: 10, color: Colors.red[600]),
             ),
           ] else if (attachment.content!.isNotEmpty) ...[
@@ -133,7 +134,7 @@ class AttachmentChipWidget extends StatelessWidget {
             Icon(Icons.check_circle, size: 11, color: Colors.green[600]),
             const SizedBox(width: 2),
             Text(
-              '已处理',
+              AppLocalizations.of(context)!.processed,
               style: TextStyle(fontSize: 10, color: Colors.green[600]),
             ),
           ],
@@ -154,7 +155,7 @@ class AttachmentChipWidget extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            '正在处理',
+            AppLocalizations.of(context)!.processingStatus,
             style: TextStyle(fontSize: 10, color: Colors.orange[600]),
           ),
         ],
@@ -234,7 +235,7 @@ class AttachmentChipWidget extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${attachment.name} - 内容预览',
+                  AppLocalizations.of(context)!.contentPreviewTitle(attachment.name),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -246,10 +247,10 @@ class AttachmentChipWidget extends StatelessWidget {
                 icon: const Icon(Icons.copy, size: 16),
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: attachment.content ?? ''));
-                  SnackBarUtils.showSuccess(context, '已复制内容到剪贴板');
+                  SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.contentCopiedToClipboard);
                   Navigator.of(context).pop();
                 },
-                tooltip: '复制内容',
+                tooltip: AppLocalizations.of(context)!.copyContent,
               ),
             ],
           ),
@@ -269,7 +270,7 @@ class AttachmentChipWidget extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('关闭'),
+              child: Text(AppLocalizations.of(context)!.close),
             ),
           ],
         );
@@ -325,27 +326,27 @@ class AttachmentChipWidget extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.info_outline,
                               size: 16,
                               color: Colors.blue,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
-                              '文件信息',
-                              style: TextStyle(fontWeight: FontWeight.w500),
+                              AppLocalizations.of(context)!.fileInfo,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text('文件名: ${attachment.name}'),
+                        Text(AppLocalizations.of(context)!.fileNameLabel),
                         if (attachment.size != null)
-                          Text('大小: ${_formatFileSize(attachment.size!)}'),
-                        Text('类型: ${_getFileTypeDescription(attachment.type)}'),
+                          Text(AppLocalizations.of(context)!.fileSizeLabel),
+                        Text(AppLocalizations.of(context)!.fileTypeLabel),
                         if (attachment.filePath != null)
-                          Text('路径: ${attachment.filePath}'),
+                          Text(AppLocalizations.of(context)!.filePathLabel),
                       ],
                     ),
                   ),
@@ -354,17 +355,17 @@ class AttachmentChipWidget extends StatelessWidget {
                   if (attachment.content != null &&
                       attachment.content!.isNotEmpty &&
                       attachment.content != 'ERROR_PROCESSING') ...[
-                    const Row(
+                    Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.description_outlined,
                           size: 16,
                           color: Colors.green,
                         ),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
-                          '文件内容',
-                          style: TextStyle(fontWeight: FontWeight.w500),
+                          AppLocalizations.of(context)!.fileContent,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -396,17 +397,17 @@ class AttachmentChipWidget extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.red[200]!),
                       ),
-                      child: const Column(
+                      child: Column(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.error_outline,
                             size: 48,
                             color: Colors.red,
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Text(
-                            '文件处理失败',
-                            style: TextStyle(
+                            AppLocalizations.of(context)!.fileProcessFailed,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                               color: Colors.red,
@@ -414,8 +415,8 @@ class AttachmentChipWidget extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            '请重新上传文件或联系技术支持',
-                            style: TextStyle(color: Colors.red),
+                            AppLocalizations.of(context)!.pleaseReupload,
+                            style: const TextStyle(color: Colors.red),
                           ),
                         ],
                       ),
@@ -434,7 +435,7 @@ class AttachmentChipWidget extends StatelessWidget {
                           const CircularProgressIndicator(),
                           const SizedBox(height: 12),
                           Text(
-                            '正在处理文件...',
+                            AppLocalizations.of(context)!.processingFileStatus,
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -460,7 +461,7 @@ class AttachmentChipWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('关闭', style: TextStyle(color: Colors.grey)),
+              child: Text(AppLocalizations.of(context)!.close, style: const TextStyle(color: Colors.grey)),
             ),
             if (attachment.content != null &&
                 attachment.content!.isNotEmpty &&
@@ -469,7 +470,7 @@ class AttachmentChipWidget extends StatelessWidget {
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: attachment.content!));
                   Navigator.of(context).pop();
-                  SnackBarUtils.showSuccess(context, '文件内容已复制到剪贴板');
+                  SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.fileContentCopied);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
@@ -482,7 +483,7 @@ class AttachmentChipWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text('复制内容'),
+                child: Text(AppLocalizations.of(context)!.copyContent),
               ),
           ],
         );
@@ -491,24 +492,24 @@ class AttachmentChipWidget extends StatelessWidget {
   }
 
   /// 获取文件类型描述
-  String _getFileTypeDescription(String type) {
+  String _getFileTypeDescription(BuildContext context, String type) {
     switch (type) {
       case 'image':
-        return '图片文件';
+        return AppLocalizations.of(context)!.imageFile;
       case 'document':
-        return '文档文件';
+        return AppLocalizations.of(context)!.documentFile;
       case 'text':
-        return '文本文件';
+        return AppLocalizations.of(context)!.textFile;
       case 'code':
-        return '代码文件';
+        return AppLocalizations.of(context)!.codeFile;
       case 'office':
-        return '办公文档';
+        return AppLocalizations.of(context)!.officeDocument;
       case 'web':
-        return '网页链接';
+        return AppLocalizations.of(context)!.webLink;
       case 'folder':
-        return '文件夹';
+        return AppLocalizations.of(context)!.folderType;
       default:
-        return '其他文件';
+        return AppLocalizations.of(context)!.otherFile;
     }
   }
 }

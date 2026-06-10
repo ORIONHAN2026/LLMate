@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:chathub/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -101,7 +102,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         unselectedLabelColor: Theme.of(
           context,
         ).colorScheme.onSurface.withValues(alpha: 0.35),
-        tabs: const [Tab(text: '文件'), Tab(text: '记忆')],
+        tabs: [Tab(text: AppLocalizations.of(context)!.files), Tab(text: AppLocalizations.of(context)!.memory)],
       ),
     );
   }
@@ -123,7 +124,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
             ),
             const SizedBox(height: 12),
             Text(
-              '暂无记忆',
+              AppLocalizations.of(context)!.noMemory,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(
@@ -133,7 +134,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
             ),
             const SizedBox(height: 4),
             Text(
-              '随着对话进行，AI 会自动\n记录和压缩对话记忆',
+              AppLocalizations.of(context)!.asConversationContinues,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 11,
@@ -163,14 +164,14 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
           // 压缩记忆摘要
           if (compressedMemory != null &&
               compressedMemory.trim().isNotEmpty) ...[
-            _buildSectionTitle(context, '记忆摘要'),
+            _buildSectionTitle(context, AppLocalizations.of(context)!.memorySummary),
             const SizedBox(height: 6),
             _buildCompressedMemoryCard(context, compressedMemory),
             const SizedBox(height: 16),
           ],
           // 最近记忆轮次
           if (memory.isNotEmpty) ...[
-            _buildSectionTitle(context, '最近对话 (${memory.length} 条)'),
+            _buildSectionTitle(context, '${AppLocalizations.of(context)!.recentConversations} (${AppLocalizations.of(context)!.messageCount(memory.length.toString())})'),
             const SizedBox(height: 6),
             ...memory.map((turn) => _buildMemoryTurnItem(context, turn)),
           ],
@@ -261,7 +262,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isUser ? '用户' : '助手',
+                  isUser ? AppLocalizations.of(context)!.user : AppLocalizations.of(context)!.assistant,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -314,7 +315,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
               ),
               const SizedBox(height: 12),
               Text(
-                '暂无文件',
+                AppLocalizations.of(context)!.noFiles,
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(
@@ -324,7 +325,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
               ),
               const SizedBox(height: 4),
               Text(
-                '当 AI 工具在对话中创建或\n修改文件后，会在此显示',
+                AppLocalizations.of(context)!.whenAiCreatesFiles,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
@@ -345,7 +346,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle(context, '会话文件 (${_totalFileCount(artifacts)} 个)'),
+          _buildSectionTitle(context, '${AppLocalizations.of(context)!.sessionFiles} (${_totalFileCount(artifacts)})'),
           const SizedBox(height: 8),
           ...artifacts.map((a) => _buildArtifactItem(context, a)),
         ],
@@ -720,7 +721,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('文件不存在')));
+          ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.fileNotFound)));
         }
         return;
       }
@@ -736,7 +737,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('打开文件失败')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.openFileFailed)));
       }
     }
   }

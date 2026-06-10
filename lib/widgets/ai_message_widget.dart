@@ -5,6 +5,7 @@ import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/models/bigmodel/models.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/framework/llm_hub.dart';
+import 'package:chathub/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -110,6 +111,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
   // 格式化时间显示（24小时制）
   String _formatTime(DateTime timestamp) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final messageDate = DateTime(
@@ -122,14 +124,15 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
 
     if (messageDate == today) {
-      return '今天 $timeString';
+      return l10n.todayTime(timeString);
     } else {
-      return '${timestamp.month}月${timestamp.day}日 $timeString';
+      return l10n.monthDayTime(timestamp.month.toString(), timestamp.day.toString(), timeString);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // 调试信息：打印think内容状态
 
     return Container(
@@ -281,7 +284,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                     // 复制按钮
                                     _buildActionButton(
                                       icon: CupertinoIcons.doc_on_doc,
-                                      tooltip: '复制',
+                                      tooltip: l10n.copy,
                                       onTap:
                                           () => _copyMessage(
                                             context,
@@ -292,7 +295,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                     // 重新生成按钮
                                     _buildActionButton(
                                       icon: CupertinoIcons.arrow_clockwise,
-                                      tooltip: '重新生成',
+                                      tooltip: l10n.regenerate,
                                       onTap:
                                           () => _regenerateMessage(
                                             RegenerateActionType.regenerate,
@@ -302,7 +305,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                     // 编辑按钮
                                     _buildActionButton(
                                       icon: CupertinoIcons.pencil,
-                                      tooltip: '编辑',
+                                      tooltip: l10n.edit,
                                       onTap:
                                           () => _editMessage(
                                             context,
@@ -316,7 +319,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                         return _buildActionButton(
                                           icon:
                                               CupertinoIcons.ellipsis_vertical,
-                                          tooltip: '更多',
+                                          tooltip: l10n.more,
                                           onTap: () {},
                                           onTapDown:
                                               (details) => _showAiMessageMenu(
@@ -356,14 +359,15 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
   // 复制消息内容
   void _copyMessage(BuildContext context, String content) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       await Clipboard.setData(ClipboardData(text: content));
       if (context.mounted) {
-        SnackBarUtils.showSuccess(context, '已复制到剪贴板');
+        SnackBarUtils.showSuccess(context, l10n.copiedToClipboard);
       }
     } catch (e) {
       if (context.mounted) {
-        SnackBarUtils.showError(context, '复制失败');
+        SnackBarUtils.showError(context, l10n.copyFailed);
       }
     }
   }
@@ -371,6 +375,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   // 打开链接
   Future<void> _openLink(String url) async {
     try {
+      final l10n = AppLocalizations.of(context)!;
       debugPrint('尝试打开链接: $url');
 
       // 处理 file:// 协议 - 打开本地文件
@@ -391,7 +396,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       } catch (e) {
         debugPrint('URL格式错误: $e');
         if (mounted) {
-          SnackBarUtils.showError(context, '链接格式不正确');
+          SnackBarUtils.showError(context, l10n.invalidLinkFormat);
         }
         return;
       }
@@ -406,24 +411,24 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         if (!success) {
           debugPrint('启动URL失败');
           if (mounted) {
-            SnackBarUtils.showError(context, '无法打开链接');
+            SnackBarUtils.showError(context, l10n.cannotOpenLink);
           }
         } else {
           debugPrint('成功打开链接: $url');
           if (mounted) {
-            SnackBarUtils.showInfo(context, '已在浏览器中打开链接');
+            SnackBarUtils.showInfo(context, l10n.linkOpenedInBrowser);
           }
         }
       } else {
         debugPrint('无法启动URL: $url');
         if (mounted) {
-          SnackBarUtils.showError(context, '无法打开此类型的链接');
+          SnackBarUtils.showError(context, l10n.cannotOpenThisLinkType);
         }
       }
     } catch (e) {
       debugPrint('打开链接时发生错误: $e');
       if (mounted) {
-        SnackBarUtils.showError(context, '打开链接失败: ${e.toString()}');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.openLinkFailed);
       }
     }
   }
@@ -431,10 +436,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   // 打开本地文件
   Future<void> _openFile(String filePath) async {
     try {
+      final l10n = AppLocalizations.of(context)!;
       final file = File(filePath);
       if (!await file.exists()) {
         if (mounted) {
-          SnackBarUtils.showError(context, '文件不存在: $filePath');
+          SnackBarUtils.showError(context, '${l10n.fileNotFound}: $filePath');
         }
         return;
       }
@@ -450,30 +456,31 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       if (result.exitCode == 0) {
         debugPrint('成功打开文件: $filePath');
         if (mounted) {
-          SnackBarUtils.showInfo(context, '已打开文件');
+          SnackBarUtils.showInfo(context, l10n.fileOpened);
         }
       } else {
         debugPrint('打开文件失败: ${result.stderr}');
         if (mounted) {
-          SnackBarUtils.showError(context, '无法打开文件: ${result.stderr}');
+          SnackBarUtils.showError(context, '${l10n.cannotOpenFile}: ${result.stderr}');
         }
       }
     } catch (e) {
       debugPrint('打开文件时发生错误: $e');
       if (mounted) {
-        SnackBarUtils.showError(context, '打开文件失败: $e');
+        SnackBarUtils.showError(context, '${AppLocalizations.of(context)!.openFileFailed}: $e');
       }
     }
   }
 
   // 统一的重新生成方法
   void _regenerateMessage(RegenerateActionType actionType) async {
+    final l10n = AppLocalizations.of(context)!;
     final session = await _findSessionContainingMessageAsync(
       widget.message.msgId,
     );
     if (session == null) {
       if (mounted) {
-        SnackBarUtils.showError(context, '找不到包含该消息的会话');
+        SnackBarUtils.showError(context, l10n.sessionNotFoundForMessage);
       }
       return;
     }
@@ -486,7 +493,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
       if (messageIndex == -1) {
         if (mounted) {
-          SnackBarUtils.showError(context, '消息不存在');
+          SnackBarUtils.showError(context, l10n.messageNotFound);
         }
         return;
       }
@@ -510,7 +517,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       widget.onUpdate?.call();
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '重新生成失败: $e');
+        SnackBarUtils.showError(context, l10n.xFailed(l10n.regenerate, e.toString()));
       }
     }
   }
@@ -543,7 +550,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, '无法找到对应的问题');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
       }
       return;
     }
@@ -553,7 +560,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       userQuestion,
       userMessage, // 传递完整的用户消息对象
       startDeleteIndex,
-      '重新生成',
+      AppLocalizations.of(context)!.regenerate,
       RegenerateActionType.regenerate,
     );
   }
@@ -578,7 +585,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, '无法找到对应的问题');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
       }
       return;
     }
@@ -588,7 +595,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       userQuestion,
       userMessage, // 传递完整的用户消息对象
       messageIndex,
-      '从此处重新生成',
+      AppLocalizations.of(context)!.regenerateFromHere,
       RegenerateActionType.regenerateFromHere,
     );
   }
@@ -613,7 +620,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, '无法找到对应的问题');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
       }
       return;
     }
@@ -623,7 +630,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       userQuestion,
       userMessage, // 传递完整的用户消息对象
       messageIndex,
-      '重新生成此回复',
+      AppLocalizations.of(context)!.regenerateThisReply,
       RegenerateActionType.regenerateThisReply,
     );
   }
@@ -647,7 +654,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (lastAiMessage == null) {
       if (mounted) {
-        SnackBarUtils.showError(context, '没有找到AI回复');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.noAiReplyFound);
       }
       return;
     }
@@ -665,7 +672,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, '无法找到对应的问题');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
       }
       return;
     }
@@ -675,7 +682,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       userQuestion,
       userMessage, // 传递完整的用户消息对象
       lastAiMessageIndex,
-      '重新生成最后一条回复',
+      AppLocalizations.of(context)!.regenerateLastReply,
       RegenerateActionType.regenerateLastReply,
     );
   }
@@ -699,7 +706,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           // 重新生成此回复：只替换当前消息内容，保留前后所有消息
           if (targetIndex < 0 || targetIndex >= messages.length) {
             if (mounted) {
-              SnackBarUtils.showError(context, '无法重新生成：消息索引无效');
+              SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotRegenerateInvalidIndex);
             }
             return;
           }
@@ -727,7 +734,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           // 其他情况：删除从目标索引开始的所有消息
           if (targetIndex < 0 || targetIndex > messages.length) {
             if (mounted) {
-              SnackBarUtils.showError(context, '无法重新生成：消息索引无效');
+              SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotRegenerateInvalidIndex);
             }
             return;
           }
@@ -752,7 +759,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       );
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '$actionName 失败: $e');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(actionName, e.toString()));
       }
 
       // 确保重置发送状态
@@ -997,11 +1004,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       }
 
       if (mounted) {
-        SnackBarUtils.showSuccess(context, '$actionName 完成');
+        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.xDone(actionName));
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '$actionName 失败: $e');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(actionName, e.toString()));
       }
 
       // 重置发送状态
@@ -1055,6 +1062,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final l10n = AppLocalizations.of(context)!;
         final TextEditingController controller = TextEditingController(
           text: message.content,
         );
@@ -1065,7 +1073,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             borderRadius: BorderRadius.circular(12),
           ),
           title: Text(
-            '编辑消息',
+            l10n.editMessageTitle,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -1093,7 +1101,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                hintText: '请输入消息内容...',
+                hintText: l10n.messageHint,
                 hintStyle: TextStyle(
                   color: Theme.of(
                     context,
@@ -1117,7 +1125,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                   vertical: 12,
                 ),
               ),
-              child: const Text('取消'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton.icon(
               onPressed: () {
@@ -1125,7 +1133,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 if (newContent.isNotEmpty) {
                   // 使用专用的编辑回调
                   if (newContent.trim().isEmpty) {
-                    SnackBarUtils.showError(context, '消息内容不能为空');
+                    SnackBarUtils.showError(context, l10n.messageContentCannotBeEmpty);
                     return;
                   }
 
@@ -1139,7 +1147,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
                   Navigator.of(context).pop();
                 } else {
-                  SnackBarUtils.showError(context, '消息内容不能为空');
+                  SnackBarUtils.showError(context, l10n.messageContentCannotBeEmpty);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -1154,7 +1162,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 ),
               ),
               icon: const Icon(Icons.check, size: 16),
-              label: const Text('保存'),
+              label: Text(l10n.save),
             ),
           ],
         );
@@ -1168,10 +1176,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     ChatMessage message,
   ) async {
     try {
+      final l10n = AppLocalizations.of(context)!;
       // 根据消息ID查找包含该消息的会话
       final session = await _findSessionContainingMessageAsync(message.msgId);
       if (session == null) {
-        SnackBarUtils.showError(context, '找不到包含该消息的会话');
+        SnackBarUtils.showError(context, l10n.sessionNotFoundForMessage);
         return;
       }
 
@@ -1186,7 +1195,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         // 创建新会话
         final newSession = ChatSession(
           sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: '基于历史记录的新对话',
+          name: l10n.newChatFromHistory,
           createdAt: DateTime.now(),
           messages: historyMessages,
           chatModel: session.chatModel,
@@ -1200,10 +1209,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         // 通知父组件更新
         widget.onUpdate?.call();
 
-        SnackBarUtils.showSuccess(context, '已从此处创建新对话');
+        SnackBarUtils.showSuccess(context, l10n.newChatCreatedFromHere);
       }
     } catch (e) {
-      SnackBarUtils.showError(context, '创建新对话失败: $e');
+      SnackBarUtils.showError(context, AppLocalizations.of(context)!.createNewChatFailed);
     }
   }
 
@@ -1432,7 +1441,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               ),
               const SizedBox(width: 4),
               Text(
-                '思考中...',
+                AppLocalizations.of(context)!.thinking,
                 style: TextStyle(
                   fontSize: 10,
                   color: Theme.of(
@@ -1464,7 +1473,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   Widget _buildToolBlock(int index, String text, {bool isExecuting = false}) {
     final isExpanded = _expandedToolIndices.contains(index);
 
-    final previewText = isExecuting ? '正在调用工具' : '工具调用记录';
+    final previewText = isExecuting ? AppLocalizations.of(context)!.callingTool : AppLocalizations.of(context)!.toolCallRecord;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1734,6 +1743,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
   // 显示AI消息菜单
   void _showAiMessageMenu(BuildContext context, Offset position) {
+    final l10n = AppLocalizations.of(context)!;
     // 重置展开状态
     bool isRegenerateExpanded = false;
     bool isScreenshotExpanded = false;
@@ -1768,7 +1778,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     _buildMenuOption(
                       context: context,
                       icon: CupertinoIcons.doc_on_doc,
-                      title: '复制消息',
+                      title: l10n.copyMessage,
                       onTap: () {
                         Navigator.pop(context);
                         _copyMessage(context, widget.message.content);
@@ -1776,24 +1786,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     ),
                     const SizedBox(height: 4),
 
-                    // OpenAI TTS
-                    // _buildMenuOption(
-                    //   context: context,
-                    //   icon: CupertinoIcons.volume_up,
-                    //   title: 'OpenAI TTS',
-                    //   subtitle: '朗读消息',
-                    //   onTap: () {
-                    //     Navigator.pop(context);
-                    // （朗读功能已移除）
-                    //   },
-                    // ),
-                    // const SizedBox(height: 4),
-
                     // 重新生成
                     _buildExpandableMenuOption(
                       context: context,
                       icon: CupertinoIcons.arrow_clockwise,
-                      title: '重新生成',
+                      title: l10n.regenerate,
                       isExpanded: isRegenerateExpanded,
                       onToggle: () {
                         setMenuState(() {
@@ -1806,7 +1803,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         _buildSubMenuOption(
                           context: context,
                           icon: CupertinoIcons.play,
-                          title: '从此处重新生成',
+                          title: l10n.regenerateFromHere,
                           onTap: () {
                             Navigator.pop(context);
                             _regenerateMessage(
@@ -1817,7 +1814,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         _buildSubMenuOption(
                           context: context,
                           icon: CupertinoIcons.reply,
-                          title: '重新生成这条回复',
+                          title: l10n.regenerateThisReply,
                           onTap: () {
                             Navigator.pop(context);
                             _regenerateMessage(
@@ -1828,7 +1825,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         _buildSubMenuOption(
                           context: context,
                           icon: CupertinoIcons.arrow_left,
-                          title: '重新生成最后一条回复',
+                          title: l10n.regenerateLastReply,
                           onTap: () {
                             Navigator.pop(context);
                             _regenerateMessage(
@@ -1844,7 +1841,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     _buildMenuOption(
                       context: context,
                       icon: CupertinoIcons.plus,
-                      title: '从此处创建新对话',
+                      title: l10n.createNewChatFromHere,
                       onTap: () {
                         Navigator.pop(context);
                         _createNewSessionFromMessage(context, widget.message);
@@ -1856,7 +1853,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     _buildExpandableMenuOption(
                       context: context,
                       icon: CupertinoIcons.camera,
-                      title: '截图',
+                      title: l10n.screenshot,
                       isExpanded: isScreenshotExpanded,
                       onToggle: () {
                         setMenuState(() {
@@ -1869,7 +1866,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         _buildSubMenuOption(
                           context: context,
                           icon: CupertinoIcons.crop,
-                          title: '整个对话',
+                          title: l10n.entireConversation,
                           onTap: () {
                             Navigator.pop(context);
                             widget.onCaptureConversation?.call();
@@ -1878,7 +1875,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         _buildSubMenuOption(
                           context: context,
                           icon: CupertinoIcons.arrow_down,
-                          title: '当前回合',
+                          title: l10n.currentRound,
                           onTap: () {
                             Navigator.pop(context);
                             widget.onCaptureRound?.call(widget.message);
@@ -1887,7 +1884,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         _buildSubMenuOption(
                           context: context,
                           icon: CupertinoIcons.square_on_square,
-                          title: '当前消息',
+                          title: l10n.currentMessage,
                           onTap: () {
                             Navigator.pop(context);
                             widget.onCaptureMessage?.call(widget.message);
@@ -1901,16 +1898,16 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     _buildMenuOption(
                       context: context,
                       icon: CupertinoIcons.trash,
-                      title: '删除消息',
+                      title: l10n.deleteMessage,
                       onTap: () {
                         Navigator.pop(context);
                         try {
                           sessionController.deleteMessage(widget.message);
                           // 通知父组件更新
                           widget.onUpdate?.call();
-                          SnackBarUtils.showSuccess(context, '消息已删除');
+                          SnackBarUtils.showSuccess(context, l10n.messageDeleted);
                         } catch (e) {
-                          SnackBarUtils.showError(context, '删除消息失败: $e');
+                          SnackBarUtils.showError(context, l10n.xFailed(l10n.deleteMessage, e.toString()));
                         }
                       },
                     ),
@@ -1932,7 +1929,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                           // 显示真实的性能数据
                           if (widget.message.formattedDuration != null)
                             Text(
-                              '耗时: ${widget.message.formattedDuration}',
+                              '${l10n.duration}: ${widget.message.formattedDuration}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -1943,7 +1940,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                             )
                           else
                             Text(
-                              '耗时: 计算中...',
+                              '${l10n.duration}: ${l10n.calculating}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -1955,7 +1952,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                           const SizedBox(height: 2),
                           if (widget.message.formattedTokensPerSecond != null)
                             Text(
-                              '速度: ${widget.message.formattedTokensPerSecond}',
+                              '${l10n.speed}: ${widget.message.formattedTokensPerSecond}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -1966,7 +1963,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                             )
                           else
                             Text(
-                              '速度: 计算中...',
+                              '${l10n.speed}: ${l10n.calculating}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -1978,7 +1975,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                           const SizedBox(height: 2),
                           if (widget.message.outputTokens != null)
                             Text(
-                              '生成 token 数: ${widget.message.outputTokens}',
+                              '${l10n.outputTokensLabel}: ${widget.message.outputTokens}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -1989,7 +1986,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                             )
                           else
                             Text(
-                              '生成 token 数: 计算中...',
+                              '${l10n.outputTokensLabel}: ${l10n.calculating}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:

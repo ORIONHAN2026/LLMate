@@ -11,6 +11,7 @@ import '../models/chat/skill.dart';
 import '../services/skill_service.dart';
 import '../services/skill_storage_service.dart';
 import '../utils/snackbar_utils.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/common/confirm_delete_dialog.dart';
 
 /// 技能管理页面
@@ -155,12 +156,12 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
 
       final file = result.files.first;
       if (file.path == null) {
-        if (mounted) SnackBarUtils.showError(context, '无法读取文件路径');
+        if (mounted) SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotReadFilePath);
         return;
       }
 
       if (mounted) {
-        SnackBarUtils.showInfo(context, '正在解压导入...');
+        SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.extractingImport);
       }
 
       final zipFile = File(file.path!);
@@ -192,11 +193,11 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
       await _refreshSkills();
 
       if (mounted) {
-        SnackBarUtils.showSuccess(context, '已导入技能');
+        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.skillImported);
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, '导入失败: $e');
+        SnackBarUtils.showError(context, AppLocalizations.of(context)!.importFailed(e.toString()));
       }
     }
   }
@@ -204,10 +205,10 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
   Future<void> _confirmDeleteSkill(Skill skill) async {
     final shouldDelete = await ConfirmDeleteDialog.show(
       context: context,
-      title: '删除技能',
+      title: AppLocalizations.of(context)!.deleteSkillTitle,
       itemName: skill.name,
-      description: '确定要删除技能',
-      warningMessage: '此操作不可撤销',
+      description: AppLocalizations.of(context)!.deleteSkillConfirm,
+      warningMessage: AppLocalizations.of(context)!.irreversibleAction,
       icon: CupertinoIcons.delete,
       iconColor: Theme.of(context).colorScheme.error,
     );
@@ -217,11 +218,11 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
         await SkillService.deleteSkill(skill.skillId);
         await _refreshSkills();
         if (mounted) {
-          SnackBarUtils.showInfo(context, '已删除技能: ${skill.name}');
+          SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.skillDeleted(skill.name));
         }
       } catch (e) {
         if (mounted) {
-          SnackBarUtils.showError(context, '删除技能失败: $e');
+          SnackBarUtils.showError(context, AppLocalizations.of(context)!.deleteSkillFailed(e.toString()));
         }
       }
     }
@@ -231,7 +232,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: '技能详情',
+      barrierLabel: AppLocalizations.of(context)!.skillDetail,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (ctx, anim1, anim2) {
@@ -281,7 +282,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                                     Text(
                                       skill.description.isNotEmpty
                                           ? skill.description
-                                          : '文件夹: ${skill.skillId}',
+                                          : AppLocalizations.of(context)!.folderPath(skill.skillId),
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Theme.of(context)
@@ -300,7 +301,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                           // 工具列表
                           if (hasTools) ...[
                             Text(
-                              '工具列表 (${tools.length})',
+                              AppLocalizations.of(context)!.toolList(tools.length),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -315,7 +316,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                                   tools.take(50).map((t) {
                                     final label =
                                         t.description.isNotEmpty
-                                            ? '${t.name} · ${t.description}'
+                                            ? AppLocalizations.of(context)!.toolNameDesc(t.name, t.description)
                                             : t.name;
                                     return Container(
                                       padding: const EdgeInsets.symmetric(
@@ -352,7 +353,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  '... 还有 ${tools.length - 50} 个工具',
+                                  AppLocalizations.of(context)!.moreXTools(tools.length - 50),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey[500],
@@ -367,7 +368,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                           // 技能描述
                           if (skill.prompt.isNotEmpty) ...[
                             Text(
-                              '技能描述',
+                              AppLocalizations.of(context)!.skillDescription,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -403,7 +404,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
                                 _confirmDeleteSkill(skill);
                               },
                               icon: const Icon(CupertinoIcons.delete, size: 16),
-                              label: const Text('删除技能'),
+                              label: Text(AppLocalizations.of(context)!.deleteSkillTitle),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor:
                                     Theme.of(context).colorScheme.error,
@@ -443,7 +444,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '技能管理(SKILL)',
+          AppLocalizations.of(context)!.skillManagementTitle,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -452,7 +453,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
         ),
         actions: [
           IconButton(
-            tooltip: '添加技能',
+            tooltip: AppLocalizations.of(context)!.addSkill,
             onPressed: () => _importSkillZip(),
             icon: Icon(
               CupertinoIcons.add,
@@ -493,7 +494,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无技能',
+              AppLocalizations.of(context)!.noSkills,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
@@ -504,7 +505,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
             ),
             const SizedBox(height: 6),
             Text(
-              '点击右上角添加按钮创建自定义技能',
+              AppLocalizations.of(context)!.clickAddSkillHint,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(

@@ -1,4 +1,5 @@
 import 'package:chathub/utils/snackbar_utils.dart';
+import '../l10n/app_localizations.dart';
 
 import '../controllers/session_controller.dart';
 import '../controllers/model_controller.dart';
@@ -100,7 +101,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
           // 确保businessType有值
           if (modelData['businessType'] == null) {
-            modelData['businessType'] = '通用对话';
+            modelData['businessType'] = AppLocalizations.of(context)!.defaultConversation;
           }
 
           return ChatModel.fromMap(modelData);
@@ -221,7 +222,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
           },
         ),
         title: Text(
-          '模型管理',
+          AppLocalizations.of(context)!.modelManagement,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -286,7 +287,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
               child: ElevatedButton.icon(
                 onPressed: _showOnlineModelDialog,
                 icon: const FaIcon(CupertinoIcons.plus, size: 10),
-                label: const Text('添加模型', style: TextStyle(fontSize: 11)),
+                label: Text(AppLocalizations.of(context)!.addModel, style: const TextStyle(fontSize: 11)),
                 style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
@@ -413,7 +414,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('复制模型', style: TextStyle(fontSize: 12)),
+              Text(AppLocalizations.of(context)!.copyModel, style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () => _copyModel(model),
@@ -458,7 +459,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     await _saveModels();
 
     // 显示成功提示
-    SnackBarUtils.showSuccess(context, '模型 "$newName" 复制成功');
+    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.modelCopied(newName));
   }
 
   String _generateCopyName(String originalName) {
@@ -479,9 +480,9 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     String newName;
     do {
       if (copyNumber == 1) {
-        newName = '$baseName的副本';
+        newName = AppLocalizations.of(context)!.copyOf(baseName);
       } else {
-        newName = '$baseName的副本($copyNumber)';
+        newName = AppLocalizations.of(context)!.copyOfN(baseName, copyNumber);
       }
       copyNumber++;
     } while (_availableModels.any((model) => model.name == newName));
@@ -507,7 +508,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '暂无模型',
+            AppLocalizations.of(context)!.noModels,
             style: TextStyle(
               fontSize: 14,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -516,7 +517,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            '点击左下角"添加模型"按钮开始添加',
+            AppLocalizations.of(context)!.clickAddModelHint,
             style: TextStyle(
               fontSize: 12,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
@@ -552,14 +553,14 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         if (mounted) {
           // ScaffoldMessenger.of(context).showSnackBar(
           //   SnackBar(
-          //     content: Text('模型 "${updatedModel.name}" 已更新，相关会话设置已同步'),
+          //     content: Text(AppLocalizations.of(context)!.modelUpdatedNotify(updatedModel.name)),
           //     duration: const Duration(seconds: 2),
           //     backgroundColor: const Color(0xFF10B981),
           //   ),
           // );
           SnackBarUtils.showSuccess(
             context,
-            '模型 "${updatedModel.name}" 已更新，相关会话设置已同步',
+            AppLocalizations.of(context)!.modelUpdatedNotify(updatedModel.name),
           );
         }
       },

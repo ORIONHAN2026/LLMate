@@ -1,3 +1,4 @@
+import 'package:chathub/l10n/app_localizations.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/utils/responsive_utils.dart';
 import 'package:flutter/cupertino.dart';
@@ -38,7 +39,7 @@ class _ModelSelectorState extends State<ModelSelector> {
         widget.currentSession!.chatModel!.name.isNotEmpty) {
       return widget.currentSession!.chatModel!.name;
     }
-    return '请设置大模型';
+    return AppLocalizations.of(context)!.pleaseSetupModel;
   }
 
   // 获取显示的模型详情
@@ -54,7 +55,7 @@ class _ModelSelectorState extends State<ModelSelector> {
 
       return "$provider/${chatModel.model}";
     }
-    return '点击上方选择对话模型';
+    return AppLocalizations.of(context)!.clickToSelectModel;
   }
 
   void _showModelSelectorPopup(BuildContext context) {
@@ -88,7 +89,7 @@ class _ModelSelectorState extends State<ModelSelector> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  '选择对话模型',
+                  AppLocalizations.of(context)!.selectModel,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -102,7 +103,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                 child: widget.availableModels.isEmpty
                     ? Center(
                         child: Text(
-                          '暂无可用模型',
+                          AppLocalizations.of(context)!.noAvailableModels,
                           style: TextStyle(
                             fontSize: 16,
                             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -229,7 +230,7 @@ class _ModelSelectorState extends State<ModelSelector> {
               child: Column(
                 children: [
                   Text(
-                    '暂无可用模型',
+                    AppLocalizations.of(context)!.noAvailableModels,
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(
@@ -325,7 +326,7 @@ class _ModelSelectorState extends State<ModelSelector> {
     // 检查当前会话是否为空
     if (widget.currentSession == null) {
       // 如果当前会话为空，不执行任何操作或显示提示
-      SnackBarUtils.showWarning(context, '当前会话不存在，无法选择模型');
+      SnackBarUtils.showWarning(context, AppLocalizations.of(context)!.sessionNotFoundCannotSelectModel);
       return;
     }
 

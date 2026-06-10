@@ -2081,35 +2081,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 切换MCP工具状态
-  void _toggleMcpTools() {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    // toggle: 如果已有 MCP 服务则清空，否则保持当前状态（需先选择服务）
-    final updatedSession = currentSession.copyWith(
-      clearMcp: currentSession.mcp != null,
-    );
-    sessionController.updateSession(updatedSession);
-
-    final isEnabled = updatedSession.mcp != null;
-    if (mounted) {
-      SnackBarUtils.showInfo(
-        context,
-        isEnabled ? AppLocalizations.of(context)!.mcpEnabledMsg : AppLocalizations.of(context)!.mcpDisabledMsg,
-      );
-    }
-
-    // MCP 懒连接：不在 toggle 时预初始化，等 LLM 返回工具调用时再按需连接
-    if (!isEnabled) {
-      // 关闭 MCP 时清理客户端
-      final serviceName = currentSession.mcp?.mcpId;
-      if (serviceName != null) {
-        McpService.closeClient(serviceName);
-      }
-    }
-  }
-
   /// 命令面板通用搜索栏
   Widget _buildCommandPaletteSearchBar({
     required TextEditingController controller,

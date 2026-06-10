@@ -141,7 +141,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       child: RepaintBoundary(
         key: _messageKey,
         child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+          behavior: HitTestBehavior.translucent,
           onTap: () {
             // final session = _findSessionContainingMessage(widget.message.msgId);
             // if (session != null) {
@@ -1364,8 +1364,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     }
 
     final allContentText = StringBuffer();
+    final contentTextBuffer = StringBuffer();
     final thinkWidgets = <Widget>[];
-    final contentWidgets = <Widget>[];
     final toolBlocks = <(int, ContentBlock)>[];
 
     for (int i = 0; i < blocks.length; i++) {
@@ -1375,16 +1375,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           thinkWidgets.add(_buildThinkBlock(block.text));
         case ContentBlockType.content:
           allContentText.write(block.text);
-          contentWidgets.add(
-            MarkdownBody(
-              data: _sanitizeMarkdown(block.text),
-              styleSheet: _buildMarkdownStyleSheet(),
-              selectable: true,
-              onTapLink: (text, href, title) {
-                if (href != null) _openLink(href);
-              },
-            ),
-          );
+          contentTextBuffer.write(block.text);
         case ContentBlockType.tool:
         case ContentBlockType.toolCalling:
           allContentText.write(block.text);
@@ -1395,7 +1386,16 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     // 工具块聚合：所有工具调用内容合并为一个块显示
     final children = <Widget>[
       ...thinkWidgets,
-      ...contentWidgets,
+      // 所有 content 块合并为一个 MarkdownBody，保证跨段落文本可选
+      if (contentTextBuffer.isNotEmpty)
+        MarkdownBody(
+          data: _sanitizeMarkdown(contentTextBuffer.toString()),
+          styleSheet: _buildMarkdownStyleSheet(),
+          selectable: true,
+          onTapLink: (text, href, title) {
+            if (href != null) _openLink(href);
+          },
+        ),
       _buildFileTags(allContentText.toString()),
       if (toolBlocks.isNotEmpty) ...[
         const SizedBox(height: 12),

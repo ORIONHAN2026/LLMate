@@ -74,7 +74,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                 onSecondaryTapDown: (details) {
                   _showUserMessageMenu(context, details.globalPosition);
                 },
-                behavior: HitTestBehavior.opaque, // 确保空白区域也能响应点击
+                behavior: HitTestBehavior.translucent,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -118,12 +118,14 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                             const SizedBox(height: 8),
                           ],
                           // 消息文本内容
-                          Text(
-                            widget.message.content,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface,
-                              height: 1.6,
+                          SelectionArea(
+                            child: Text(
+                              widget.message.content,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                height: 1.6,
+                              ),
                             ),
                           ),
                         ],

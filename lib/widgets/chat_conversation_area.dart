@@ -736,6 +736,10 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
   Future<void> _copyImageToClipboardDesktop(Uint8List imageBytes) async {
     try {
       final tempDir = await getTemporaryDirectory();
+      // 确保临时目录存在（macOS 桌面应用可能不会自动创建）
+      if (!await tempDir.exists()) {
+        await tempDir.create(recursive: true);
+      }
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final imagePath = '${tempDir.path}/screenshot_$timestamp.png';
 

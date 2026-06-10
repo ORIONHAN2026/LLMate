@@ -1272,6 +1272,12 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         fontWeight: FontWeight.bold,
         color: Color(0xFF1F2937),
       ),
+      tableHeadAlign: TextAlign.center,
+      tableBody: TextStyle(
+        fontSize: 14,
+        color: Theme.of(context).colorScheme.onSurface,
+        height: 1.6,
+      ),
       // 添加链接样式
       a: const TextStyle(
         color: Colors.blue,
@@ -1321,7 +1327,44 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     // 8. 连续空行压缩为单个空行
     text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
 
+    // 9. 表格文字居中：给分隔行添加 :---: 标记
+    text = _centerTableAlign(text);
+
     return text;
+  }
+
+  /// 给 markdown 表格分隔行添加居中对齐标记
+  /// 将 |------|------| 转换为 |:------:|:------:|
+  /// 这样 flutter_markdown 会为 <td> 设置 align="center"
+  static String _centerTableAlign(String text) {
+    final lines = text.split('\n');
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      // 判断是否为表格分隔行：以 | 开头，包含 --- 序列，只含 |-:空格字符
+      if (_isTableSeparator(line)) {
+        buffer.writeln(
+          line.replaceAllMapped(
+            RegExp(r'(?<!:)(-{3,})(?!:)'),
+            (m) => ':${m.group(0)}:',
+          ),
+        );
+      } else {
+        buffer.writeln(line);
+      }
+    }
+
+    return buffer.toString().trimRight();
+  }
+
+  /// 判断一行是否为 markdown 表格分隔行
+  static bool _isTableSeparator(String line) {
+    final trimmed = line.trim();
+    return trimmed.isNotEmpty &&
+        trimmed.startsWith('|') &&
+        trimmed.contains(RegExp(r'-{3,}')) &&
+        RegExp(r'^[\s\|\-:]+$').hasMatch(trimmed);
   }
 
   /// 按内容块构建 UI：

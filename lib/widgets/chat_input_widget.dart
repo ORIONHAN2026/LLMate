@@ -1680,8 +1680,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     ? () => _showMcpDetail(mcp)
                     : _showMcpServiceSelection)
                 : null,
-        onDoubleTap:
-            hasMcpServices && !_isSending ? _showMcpServicesList : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
@@ -3579,7 +3577,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               builder: (ctx, setSheetState) {
                 final tools = skill.tools;
                 final hasTools = tools != null && tools.isNotEmpty;
-                final emoji = _getSkillEmoji(skill.icon);
 
                 return ConstrainedBox(
                   constraints: BoxConstraints(
@@ -3611,24 +3608,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                               fontSize: 18,
                                               fontWeight: FontWeight.w600,
                                             ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            emoji,
-                                            style: const TextStyle(fontSize: 10),
                                           ),
                                         ),
                                       ],
@@ -3844,28 +3823,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       },
     );
   }
-
-  /// 技能图标 -> emoji 映射
-  String _getSkillEmoji(String icon) {
-    for (final option in _iconOptions) {
-      if (option['key'] == icon) return option['emoji']!;
-    }
-    return '⭐';
-  }
-
-  static const List<Map<String, String>> _iconOptions = [
-    {'key': 'code', 'emoji': '💻'},
-    {'key': 'globe', 'emoji': '🌐'},
-    {'key': 'pencil', 'emoji': '✏️'},
-    {'key': 'chart', 'emoji': '📊'},
-    {'key': 'lightbulb', 'emoji': '💡'},
-    {'key': 'doc', 'emoji': '📄'},
-    {'key': 'star', 'emoji': '⭐'},
-    {'key': 'search', 'emoji': '🔍'},
-    {'key': 'image', 'emoji': '🖼️'},
-    {'key': 'gear', 'emoji': '⚙️'},
-    {'key': 'wand', 'emoji': '🪄'},
-  ];
 
   /// 显示 MCP 服务详情弹窗（与 MCP 管理页面保持一致）
   void _showMcpDetail(Mcp service) {

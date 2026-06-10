@@ -74,7 +74,7 @@ class ChatModel {
       settings = ChatSettings(
         conversationName: '模型默认设置',
         systemPrompt: map['systemPrompt'] ?? '',
-        temperature: map['temperature']?.toDouble() ?? 0.0,
+        temperature: map['temperature']?.toDouble() ?? 1.0,
 
         replyLanguage: map['replyLanguage'] ?? '助手设置（默认）',
       );

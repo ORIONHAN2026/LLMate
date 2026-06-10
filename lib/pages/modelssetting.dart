@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import '../models/bigmodel/chat_model.dart';
+import '../models/bigmodel/model_data.dart';
 import '../dialogs/add_online_model_dialog.dart';
 import '../widgets/model_detail_page.dart';
 
@@ -145,6 +146,21 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     return 'ollama';
   }
 
+  /// 根据模型ID和provider查找显示名称（保留原始大小写）
+  String _resolveModelDisplayName(String modelId, String? provider) {
+    for (var p in onlineProviders) {
+      if (provider != null && p['id'] != provider) continue;
+      if (p['models'] != null) {
+        for (var model in p['models']) {
+          if (model['id'] == modelId) {
+            return model['name'] ?? modelId;
+          }
+        }
+      }
+    }
+    return modelId;
+  }
+
   // 保存模型列表
   Future<void> _saveModels() async {
     final modelsData = _availableModels.map((model) => model.toMap()).toList();
@@ -271,7 +287,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                 final isSelected = _selectedTab == index;
                 return _buildModelNavItem(
                   model.name,
-                  model.model,
+                  _resolveModelDisplayName(model.model, model.provider),
                   model.status == 'active',
                   index,
                   isSelected,

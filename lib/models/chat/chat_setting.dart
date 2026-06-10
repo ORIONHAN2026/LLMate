@@ -57,7 +57,7 @@ class ChatSettings {
     return ChatSettings(
       conversationName: '新对话',
       systemPrompt: '',
-      temperature: 0.0,
+      temperature: 1.0,
 
       replyLanguage: '助手设置（默认）',
     );

@@ -466,7 +466,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
             tooltip: '应用市场',
             onPressed: () => _showSkillMarketplaceMenu(),
             icon: Icon(
-              CupertinoIcons.shopping_cart,
+              CupertinoIcons.bag,
               size: 16,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),

@@ -669,9 +669,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
               ),
             ),
             Text(
-              (_currentModel.chatSettings?.temperature ?? 0.7).toStringAsFixed(
-                1,
-              ),
+              '${(_currentModel.chatSettings?.temperature ?? 1.0).toStringAsFixed(1)} (${_getTemperatureLabel(_currentModel.chatSettings?.temperature ?? 1.0)})',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -692,7 +690,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
             trackHeight: 3,
           ),
           child: Slider(
-            value: _currentModel.chatSettings?.temperature ?? 0.7,
+            value: _currentModel.chatSettings?.temperature ?? 1.0,
             min: 0.0,
             max: 2.0,
             divisions: 20,
@@ -702,7 +700,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                         ChatSettings(
                           conversationName: '新对话',
                           systemPrompt: '',
-                          temperature: 0.7,
+                          temperature: 1.0,
                           replyLanguage: '',
                         ))
                     .copyWith(temperature: value);
@@ -762,6 +760,15 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         ),
       ],
     );
+  }
+
+  /// 根据温度值返回对应标签
+  String _getTemperatureLabel(double temperature) {
+    if (temperature <= 0.1) return '精准';
+    if (temperature <= 0.5) return '保守';
+    if (temperature <= 1.1) return '中性';
+    if (temperature <= 1.5) return '创造';
+    return '随机';
   }
 
   Widget _buildSystemPromptField() {
@@ -833,7 +840,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                       ChatSettings(
                         conversationName: '新对话',
                         systemPrompt: '',
-                        temperature: 0.7,
+                        temperature: 1.0,
                         replyLanguage: '',
                       ))
                   .copyWith(systemPrompt: value);
@@ -1020,7 +1027,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
             ChatSettings(
               conversationName: '新对话',
               systemPrompt: '',
-              temperature: 0.7,
+              temperature: 1.0,
               replyLanguage: '',
             ))
         .copyWith(systemPrompt: prompt);

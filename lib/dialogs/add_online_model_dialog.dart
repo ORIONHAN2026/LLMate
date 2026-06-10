@@ -1592,6 +1592,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         'platform': _resolveProviderPlatformName(_selectedProvider),
         'apiKey': inputApiKey, // 使用控制器中的最新值
         'apiUrl': finalApiUrl, // 使用完整的API端点
+        'chatSettings': {
+          'conversationName': '新对话',
+          'systemPrompt': '',
+          'temperature': 1.0,
+          'replyLanguage': '',
+        },
       };
       Navigator.pop(context, newModel);
     }

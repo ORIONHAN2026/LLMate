@@ -151,7 +151,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
             tooltip: AppLocalizations.of(context)!.marketplace,
             onPressed: () => _showMarketplaceDialog(),
             icon: Icon(
-              CupertinoIcons.shopping_cart,
+              CupertinoIcons.bag,
               size: 16,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),

@@ -683,9 +683,9 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
   }
 
   // 删除消息
-  void _deleteMessage(ChatMessage message) {
+  Future<void> _deleteMessage(ChatMessage message) async {
     try {
-      sessionController.deleteMessage(message);
+      await sessionController.deleteMessage(message);
       // 通知父组件更新
       if (mounted) {
         widget.onUpdate?.call();

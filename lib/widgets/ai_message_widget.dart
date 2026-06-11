@@ -1943,10 +1943,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                       context: context,
                       icon: CupertinoIcons.trash,
                       title: l10n.deleteMessage,
-                      onTap: () {
+                      onTap: () async {
                         Navigator.pop(context);
                         try {
-                          sessionController.deleteMessage(widget.message);
+                          await sessionController.deleteMessage(widget.message);
                           // 通知父组件更新
                           widget.onUpdate?.call();
                           SnackBarUtils.showSuccess(context, l10n.messageDeleted);

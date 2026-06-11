@@ -1081,7 +1081,7 @@ Thanks!
                   ),
                 ),
               ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 2),
             // 模型选择器 - 贴着窗口控制按钮右边
             ModelSelector(
               currentSession: currentSession,

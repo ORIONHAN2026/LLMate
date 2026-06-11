@@ -425,6 +425,7 @@ class ChatLeftSidebar extends StatefulWidget {
   final Function(int)? onDeleteSession;
   final Function(int)? onToggleFavoriteSession;
   final VoidCallback? onToggleFullscreen; // 全屏切换回调
+  final bool hideHeaderRow; // macOS 自定义标题栏时隐藏内部顶部按钮栏
 
   const ChatLeftSidebar({
     super.key,
@@ -438,7 +439,8 @@ class ChatLeftSidebar extends StatefulWidget {
     required this.settingsButtonKey,
     this.onDeleteSession,
     this.onToggleFavoriteSession,
-    this.onToggleFullscreen, // 添加全屏回调参数
+    this.onToggleFullscreen,
+    this.hideHeaderRow = false,
   });
 
   @override
@@ -499,75 +501,76 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
       ), // 适应主题的背景色
       child: Column(
         children: [
-          // 顶部按钮栏
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // 标题或呼吸条
-                _buildGreeting(),
-                Row(
-                  children: [
-                    // 全屏按钮
-                    if (widget.onToggleFullscreen != null)
+          // 顶部按钮栏（macOS 自定义标题栏时由外部控制，这里隐藏）
+          if (!widget.hideHeaderRow)
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // 标题或呼吸条
+                  _buildGreeting(),
+                  Row(
+                    children: [
+                      // 全屏按钮
+                      if (widget.onToggleFullscreen != null)
+                        IconButton(
+                          onPressed: widget.onToggleFullscreen,
+                          icon: Icon(
+                            CupertinoIcons.fullscreen,
+                            size: 14,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          tooltip: AppLocalizations.of(context)!.fullscreen,
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                        ),
+
+                      // 新建对话按钮
                       IconButton(
-                        onPressed: widget.onToggleFullscreen,
+                        onPressed: widget.onNewSession,
                         icon: Icon(
-                          CupertinoIcons.fullscreen,
-                          size: 14,
+                          CupertinoIcons.square_pencil,
+                          size: 16,
                           color: Theme.of(
                             context,
                           ).colorScheme.onSurface.withOpacity(0.6),
                         ),
-                        tooltip: AppLocalizations.of(context)!.fullscreen,
+                        tooltip: AppLocalizations.of(context)!.newSession,
                         padding: const EdgeInsets.all(4),
                         constraints: const BoxConstraints(
                           minWidth: 32,
                           minHeight: 32,
                         ),
                       ),
-
-                    // 新建对话按钮
-                    IconButton(
-                      onPressed: widget.onNewSession,
-                      icon: Icon(
-                        CupertinoIcons.square_pencil,
-                        size: 16,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
+                      const SizedBox(width: 8),
+                      // 收起边栏按钮
+                      IconButton(
+                        onPressed: widget.onToggleCollapse,
+                        icon: Icon(
+                          CupertinoIcons.sidebar_right,
+                          size: 16,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                        tooltip: AppLocalizations.of(context)!.collapseSidebar,
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
                       ),
-                      tooltip: AppLocalizations.of(context)!.newSession,
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // 收起边栏按钮
-                    IconButton(
-                      onPressed: widget.onToggleCollapse,
-                      icon: Icon(
-                        CupertinoIcons.sidebar_right,
-                        size: 16,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                      tooltip: AppLocalizations.of(context)!.collapseSidebar,
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
           // 对话历史列表
           Expanded(
             child: Obx(() {
@@ -581,13 +584,14 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
               );
             }),
           ),
-          // 底部设置
+          // 底部设置 + 主题切换
           Container(
             padding: const EdgeInsets.all(5),
-            child: _buildBottomMenuItem(
-              key: widget.settingsButtonKey,
-              icon: CupertinoIcons.gear,
-              onTap: widget.onShowSettings,
+            child: Row(
+              children: [
+                _buildSettingsButton(),
+                _buildThemeToggle(),
+              ],
             ),
           ),
         ],
@@ -792,46 +796,40 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
     );
   }
 
-  // 构建底部菜单项
-  Widget _buildBottomMenuItem({
-    Key? key,
-    required IconData icon,
-    String? title,
-    required VoidCallback onTap,
-  }) {
+  // 底部设置按钮
+  Widget _buildSettingsButton() {
     return InkWell(
-      key: key,
-      onTap: onTap,
+      key: widget.settingsButtonKey,
+      onTap: widget.onShowSettings,
       borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-            ),
-            if (title != null) ...[
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ],
+      child: const Padding(
+        padding: EdgeInsets.all(8),
+        child: Icon(
+          CupertinoIcons.gear,
+          size: 15,
         ),
       ),
     );
+  }
+
+  // 底部主题切换按钮
+  Widget _buildThemeToggle() {
+    final themeController = Get.find<ThemeController>();
+    return Obx(() {
+      final isDark = themeController.isDarkMode.value;
+      return InkWell(
+        onTap: () => themeController.toggleTheme(),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Icon(
+            isDark ? CupertinoIcons.moon_fill : CupertinoIcons.sun_max_fill,
+            size: 15,
+            color: isDark ? Colors.indigo[300] : Colors.amber[600],
+          ),
+        ),
+      );
+    });
   }
 
   // 构建主题切换按钮组件

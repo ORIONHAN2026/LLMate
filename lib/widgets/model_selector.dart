@@ -354,7 +354,7 @@ class _ModelSelectorState extends State<ModelSelector> {
         onTap: () => _showModelSelectorPopup(context),
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(6),
@@ -376,7 +376,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                             child: Text(
                               _getDisplayModelName(),
                               style: TextStyle(
-                                fontSize: isMobile ? 16 : 14,
+                                fontSize: isMobile ? 16 : 13,
                                 fontWeight: FontWeight.w500,
                                 color:
                                     _hasValidModel()
@@ -399,7 +399,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                         ],
                       ),
                       if (!isMobile || _hasValidModel()) ...[
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 1),
                         Text(
                           _getDisplayModelDetail(),
                           style: TextStyle(

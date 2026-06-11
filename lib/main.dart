@@ -50,7 +50,7 @@ void main() async {
       size: Size(1200, 800),
       center: true,
       backgroundColor: Colors.transparent,
-      titleBarStyle: TitleBarStyle.normal,
+      titleBarStyle: TitleBarStyle.hidden,
     );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       // 保险：部分平台在 waitUntilReadyToShow 里再显式设置一次最小尺寸

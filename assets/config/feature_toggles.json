@@ -1,4 +1,4 @@
 {
-  "memory_config": true,
-  "scheduled_task": true
+  "memory_config": false,
+  "scheduled_task": false
 }

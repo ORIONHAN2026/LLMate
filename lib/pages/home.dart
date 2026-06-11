@@ -9,6 +9,8 @@ import 'package:chathub/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:window_manager/window_manager.dart';
 import '../models/bigmodel/models.dart';
 import '../controllers/model_controller.dart';
 import '../services/skill_service.dart';
@@ -288,7 +290,8 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             )
             : -1;
 
-    return ChatLeftSidebar(
+    final bool hideHeader = Platform.isMacOS;
+    final sidebar = ChatLeftSidebar(
       chatSessions: chatSessions,
       currentSessionIndex: currentSessionIndex,
       isCollapsed: _isSidebarCollapsed,
@@ -303,7 +306,68 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       settingsButtonKey: _settingsButtonKey,
       onDeleteSession: _handleDeleteSession,
       onToggleFavoriteSession: _toggleFavoriteSession,
+      hideHeaderRow: hideHeader,
     );
+
+    // macOS: 把侧边栏顶部按钮和系统红绿灯放在同一行
+    if (Platform.isMacOS) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(64, 3, 8, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox.shrink(),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: _createNewSession,
+                      icon: Icon(
+                        CupertinoIcons.square_pencil,
+                        size: 15,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                      tooltip: AppLocalizations.of(context)!.newSession,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        setState(
+                          () => _isSidebarCollapsed = !_isSidebarCollapsed,
+                        );
+                      },
+                      icon: Icon(
+                        CupertinoIcons.sidebar_right,
+                        size: 15,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                      tooltip: AppLocalizations.of(context)!.collapseSidebar,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 24,
+                        minHeight: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: sidebar),
+        ],
+      );
+    }
+    return sidebar;
   }
 
   Widget _buildChatArea() {
@@ -535,8 +599,10 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              Text(l10n.connectorManagement,
-                  style: const TextStyle(fontSize: 12)),
+              Text(
+                l10n.connectorManagement,
+                style: const TextStyle(fontSize: 12),
+              ),
             ],
           ),
           onTap: () {
@@ -563,8 +629,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              Text(l10n.skillManagement,
-                  style: const TextStyle(fontSize: 12)),
+              Text(l10n.skillManagement, style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -744,8 +809,8 @@ Thanks!
 
   // 右侧边栏折叠按钮（顶部栏右侧）
   Widget _buildRightSidebarToggle() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
       child: IconButton(
         onPressed: () {
           setState(() {
@@ -756,12 +821,16 @@ Thanks!
           _isRightSidebarCollapsed
               ? CupertinoIcons.sidebar_right
               : CupertinoIcons.sidebar_right,
-          size: 16,
+          size: 14,
           color: Theme.of(context).colorScheme.onSurface.withValues(
             alpha: _isRightSidebarCollapsed ? 0.6 : 0.4,
           ),
         ),
-        tooltip: _isRightSidebarCollapsed ? AppLocalizations.of(context)!.expandRightSidebar : AppLocalizations.of(context)!.collapseRightSidebar,
+        visualDensity: VisualDensity.compact,
+        tooltip:
+            _isRightSidebarCollapsed
+                ? AppLocalizations.of(context)!.expandRightSidebar
+                : AppLocalizations.of(context)!.collapseRightSidebar,
       ),
     );
   }
@@ -922,7 +991,7 @@ Thanks!
     );
   }
 
-  // 桌面布局 - 原有布局
+  // 桌面布局
   Widget _buildDesktopLayout(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -931,14 +1000,13 @@ Thanks!
           // 左侧边栏 - 可调整宽度
           if (!_isSidebarCollapsed) ...[
             SizedBox(width: _sidebarWidth, child: _buildSidePanel()),
-            // 可拖动的分隔条
             _buildResizableHandle(),
           ],
           // 主内容区域
           Expanded(
             child: Column(
               children: [
-                // 顶部横跨整个界面的模型选择栏
+                // 顶部栏
                 _buildTopBar(context),
                 Expanded(
                   child: GetX<SessionController>(
@@ -964,48 +1032,67 @@ Thanks!
   Widget _buildTopBar(BuildContext context) {
     final topBarHeight = ResponsiveUtils.getTopBarHeight(context);
 
-    return Container(
-      height: topBarHeight,
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(
-          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onPanStart: (_) => windowManager.startDragging(),
+      onDoubleTap: () async {
+        if (Platform.isMacOS) {
+          if (await windowManager.isMaximized()) {
+            await windowManager.unmaximize();
+          } else {
+            await windowManager.maximize();
+          }
+        }
+      },
+      child: Container(
+        height: topBarHeight,
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          border: Border(
+            bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          // 左侧展开按钮（当侧边栏折叠时显示）
-          if (_isSidebarCollapsed)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: IconButton(
-                onPressed: () {
-                  setState(() {
-                    _isSidebarCollapsed = false;
-                  });
-                },
-                icon: Icon(
-                  CupertinoIcons.sidebar_left,
-                  size: ResponsiveUtils.isMobile(context) ? 20 : 16,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+        child: Row(
+          children: [
+            // 左侧展开按钮（当侧边栏折叠时显示）
+            if (_isSidebarCollapsed)
+              Transform.translate(
+                offset: Offset(0, Platform.isMacOS ? -6 : 0),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: Platform.isMacOS ? 64 : 8,
+                    top: 3,
+                  ),
+                  child: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _isSidebarCollapsed = false;
+                      });
+                    },
+                    icon: Icon(
+                      CupertinoIcons.sidebar_left,
+                      size: 14,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: AppLocalizations.of(context)!.expandSidebar,
+                  ),
                 ),
-                tooltip: AppLocalizations.of(context)!.expandSidebar,
               ),
-            ),
-          // 模型选择器组件化，选择逻辑交由组件内部处理
-          Expanded(
-            child: ModelSelector(
+            const SizedBox(width: 8),
+            // 模型选择器 - 贴着窗口控制按钮右边
+            ModelSelector(
               currentSession: currentSession,
               availableModels: _availableModels,
               selectorKey: _modelSelectorKey,
             ),
-          ),
-          const SizedBox(width: 8),
-          // 右侧边栏折叠按钮
-          _buildRightSidebarToggle(),
-        ],
+            const Spacer(),
+            // 右侧边栏折叠按钮
+            _buildRightSidebarToggle(),
+          ],
+        ),
       ),
     );
   }

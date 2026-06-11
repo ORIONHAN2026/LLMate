@@ -65,9 +65,9 @@ class ResponsiveUtils {
   static double getTopBarHeight(BuildContext context) {
     return responsive(
       context,
-      mobile: 56.0, // 移动端稍矮一些
-      tablet: 60.0,
-      desktop: 60.0,
+      mobile: 44.0,
+      tablet: 44.0,
+      desktop: 44.0,
     );
   }
 

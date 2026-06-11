@@ -501,7 +501,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           child: Row(
             children: [
               Icon(
-                CupertinoIcons.wand_stars,
+                CupertinoIcons.sparkles,
                 size: 16,
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
@@ -530,7 +530,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           child: Row(
             children: [
               Icon(
-                CupertinoIcons.gear,
+                CupertinoIcons.link,
                 size: 16,
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),

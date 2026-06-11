@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:chathub/controllers/session_controller.dart';
 import 'package:chathub/l10n/app_localizations.dart';
@@ -1053,6 +1054,57 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     );
   }
 
+  /// 点击附件：优先用系统默认应用打开，无本地路径时展示详情
+  void _openAttachment(ChatAttachment attachment) {
+    final path = attachment.filePath;
+    if (path != null && path.isNotEmpty) {
+      _openFile(path);
+    } else {
+      _showAttachmentDetails(attachment);
+    }
+  }
+
+  /// 调用操作系统默认应用打开本地文件
+  Future<void> _openFile(String filePath) async {
+    try {
+      final l10n = AppLocalizations.of(context)!;
+      final file = File(filePath);
+      if (!await file.exists()) {
+        if (mounted) {
+          SnackBarUtils.showError(context, '${l10n.fileNotFound}: $filePath');
+        }
+        return;
+      }
+
+      final command = Platform.isWindows
+          ? 'start'
+          : Platform.isMacOS
+              ? 'open'
+              : 'xdg-open';
+      final args = Platform.isWindows ? ['', filePath] : [filePath];
+      final result = await Process.run(command, args, runInShell: true);
+      if (result.exitCode == 0) {
+        debugPrint('成功打开文件: $filePath');
+      } else {
+        debugPrint('打开文件失败: ${result.stderr}');
+        if (mounted) {
+          SnackBarUtils.showError(
+            context,
+            '${l10n.cannotOpenFile}: ${result.stderr}',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('打开文件时发生错误: $e');
+      if (mounted) {
+        SnackBarUtils.showError(
+          context,
+          '${AppLocalizations.of(context)!.openFileFailed}: $e',
+        );
+      }
+    }
+  }
+
   /// 显示附件详情对话框
   void _showAttachmentDetails(ChatAttachment attachment) {
     showDialog(
@@ -1207,6 +1259,26 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
             ),
           ),
           actions: [
+            if (attachment.filePath != null &&
+                attachment.filePath!.isNotEmpty)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _openFile(attachment.filePath!);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('打开文件'),
+              ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               style: TextButton.styleFrom(
@@ -1347,7 +1419,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     }
 
     return GestureDetector(
-      onTap: () => _showAttachmentDetails(attachment),
+      onTap: () => _openAttachment(attachment),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 220, minWidth: 60),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

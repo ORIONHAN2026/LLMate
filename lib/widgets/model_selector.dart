@@ -60,120 +60,155 @@ class _ModelSelectorState extends State<ModelSelector> {
 
   void _showModelSelectorPopup(BuildContext context) {
     final isMobile = ResponsiveUtils.isMobile(context);
-    
+
     if (isMobile) {
       // 移动端使用底部弹出框
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (context) => Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // 拖拽指示器
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.circular(2),
+        builder:
+            (context) => Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
                 ),
               ),
-              // 标题
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  AppLocalizations.of(context)!.selectModel,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
+              child: Column(
+                children: [
+                  // 拖拽指示器
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-              ),
-              const Divider(height: 1),
-              // 模型列表
-              Expanded(
-                child: widget.availableModels.isEmpty
-                    ? Center(
-                        child: Text(
-                          AppLocalizations.of(context)!.noAvailableModels,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: widget.availableModels.length,
-                        itemBuilder: (context, index) {
-                          final model = widget.availableModels[index];
-                          final isSelected = model.modelId == widget.currentSession?.chatModel?.modelId;
-                          
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                            leading: SizedBox(
-                              width: 32,
-                              height: 32,
-                              child: model.buildIconWidget(isSelected),
-                            ),
-                            title: Text(
-                              model.name,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                color: isSelected
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "${model.provider ?? 'Unknown'}/${model.model}",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                  ),
-                                ),
-                                if (model.chatSettings?.systemPrompt != null &&
-                                    model.chatSettings!.systemPrompt!.isNotEmpty)
-                                  Text(
-                                    model.chatSettings!.systemPrompt!,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                              ],
-                            ),
-                            trailing: isSelected
-                                ? Icon(
-                                    CupertinoIcons.checkmark_circle_fill,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  )
-                                : null,
-                            onTap: () {
-                              Navigator.pop(context);
-                              _selectModel(model);
-                            },
-                          );
-                        },
+                  // 标题
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      AppLocalizations.of(context)!.selectModel,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  // 模型列表
+                  Expanded(
+                    child:
+                        widget.availableModels.isEmpty
+                            ? Center(
+                              child: Text(
+                                AppLocalizations.of(context)!.noAvailableModels,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                            )
+                            : ListView.builder(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              itemCount: widget.availableModels.length,
+                              itemBuilder: (context, index) {
+                                final model = widget.availableModels[index];
+                                final isSelected =
+                                    model.modelId ==
+                                    widget.currentSession?.chatModel?.modelId;
+
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 4,
+                                  ),
+                                  leading: SizedBox(
+                                    width: 32,
+                                    height: 32,
+                                    child: model.buildIconWidget(isSelected),
+                                  ),
+                                  title: Text(
+                                    model.name,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight:
+                                          isSelected
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                      color:
+                                          isSelected
+                                              ? Theme.of(
+                                                context,
+                                              ).colorScheme.primary
+                                              : Theme.of(
+                                                context,
+                                              ).colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "${model.provider ?? 'Unknown'}/${model.model}",
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
+                                        ),
+                                      ),
+                                      if (model.chatSettings?.systemPrompt !=
+                                              null &&
+                                          model
+                                              .chatSettings!
+                                              .systemPrompt!
+                                              .isNotEmpty)
+                                        Text(
+                                          model.chatSettings!.systemPrompt!,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.5),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
+                                  trailing:
+                                      isSelected
+                                          ? Icon(
+                                            CupertinoIcons
+                                                .checkmark_circle_fill,
+                                            color:
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
+                                          )
+                                          : null,
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _selectModel(model);
+                                  },
+                                );
+                              },
+                            ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
       );
       return;
     }
@@ -290,7 +325,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                               ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
-                   
+
                           model.chatSettings?.systemPrompt != null &&
                                   model.chatSettings!.systemPrompt!.isNotEmpty
                               ? Text(
@@ -326,13 +361,14 @@ class _ModelSelectorState extends State<ModelSelector> {
     // 检查当前会话是否为空
     if (widget.currentSession == null) {
       // 如果当前会话为空，不执行任何操作或显示提示
-      SnackBarUtils.showWarning(context, AppLocalizations.of(context)!.sessionNotFoundCannotSelectModel);
+      SnackBarUtils.showWarning(
+        context,
+        AppLocalizations.of(context)!.sessionNotFoundCannotSelectModel,
+      );
       return;
     }
 
-    final updatedSession = widget.currentSession!.copyWith(
-      chatModel: model,
-    );
+    final updatedSession = widget.currentSession!.copyWith(chatModel: model);
     sessionController.updateSession(updatedSession);
     // 使用setState确保UI更新
     setState(() {
@@ -343,10 +379,9 @@ class _ModelSelectorState extends State<ModelSelector> {
   @override
   Widget build(BuildContext context) {
     final isMobile = ResponsiveUtils.isMobile(context);
-    final maxWidth = isMobile 
-        ? MediaQuery.of(context).size.width * 0.7 
-        : double.infinity;
-    
+    final maxWidth =
+        isMobile ? MediaQuery.of(context).size.width * 0.7 : double.infinity;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 1),
       child: InkWell(
@@ -380,10 +415,13 @@ class _ModelSelectorState extends State<ModelSelector> {
                                 fontWeight: FontWeight.w500,
                                 color:
                                     _hasValidModel()
-                                        ? Theme.of(context).colorScheme.onSurface
-                                        : Theme.of(
+                                        ? Theme.of(
                                           context,
-                                        ).colorScheme.onSurface.withOpacity(0.6),
+                                        ).colorScheme.onSurface
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.6),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),

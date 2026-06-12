@@ -183,8 +183,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 在切换会话前先保存当前输入内容
       _textChangeTimer?.cancel();
       if (oldWidget.currentSession != null) {
-        _saveInputContentToSession();
+        // 延迟到 build 完成后执行，避免在 build 期间触发 Obx 的 setState
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _saveInputContentToSession();
+        });
       }
+
+      // 切换会话时重置本地发送锁，确保新会话可以正常发送
+      _sendingInProgress = false;
 
       // 延迟加载新会话输入，避免在build期间调用setState
       WidgetsBinding.instance.addPostFrameCallback((_) {

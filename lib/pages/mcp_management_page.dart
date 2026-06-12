@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/cupertino.dart';
@@ -104,16 +105,30 @@ class _McpManagementPageState extends State<McpManagementPage> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(CupertinoIcons.back),
-          onPressed: () => Navigator.pop(context),
+        toolbarHeight: 44,
+        leadingWidth: Platform.isMacOS ? 70 + 20 + 15 : 44,
+        leading: Padding(
+          padding: EdgeInsets.only(left: Platform.isMacOS ? 70 : 0),
+          child: Transform.translate(
+            offset: const Offset(0, -5),
+            child: IconButton(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+              icon: const Icon(CupertinoIcons.back, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
         ),
-        title: Text(
-          AppLocalizations.of(context)!.connectorManagementTitle,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).textTheme.titleLarge?.color,
+        title: Transform.translate(
+          offset: const Offset(0, -5),
+          child: Text(
+            AppLocalizations.of(context)!.connectorManagementTitle,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).textTheme.titleLarge?.color,
+            ),
           ),
         ),
         actions: [

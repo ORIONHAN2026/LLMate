@@ -108,69 +108,67 @@ class SessionController extends GetxController {
 
   /// 更新会话并持久化
   Future<void> updateSession(ChatSession updatedSession) async {
-    return Future.microtask(() async {
-      final idx = sessions.indexWhere(
-        (s) => s.sessionId == updatedSession.sessionId,
-      );
-      if (idx != -1) {
-        sessions[idx] = updatedSession;
-        await _persistSessions();
-      }
-      if (currentSession.value?.sessionId == updatedSession.sessionId) {
-        currentSession.value = updatedSession;
-        await _persistCurrentSession();
-      }
-    });
+    final idx = sessions.indexWhere(
+      (s) => s.sessionId == updatedSession.sessionId,
+    );
+    if (idx != -1) {
+      sessions[idx] = updatedSession;
+      await _persistSessions();
+    }
+    if (currentSession.value?.sessionId == updatedSession.sessionId) {
+      currentSession.value = updatedSession;
+      await _persistCurrentSession();
+    }
   }
 
   /// 更新消息并持久化
   Future<void> updateMessage(ChatMessage updateMessage) async {
-    return Future.microtask(() async {
-      final sessionIndex = sessions.indexWhere(
-        (s) => s.sessionId == updateMessage.sessionId,
-      );
-      if (sessionIndex == -1) return;
+    final sessionIndex = sessions.indexWhere(
+      (s) => s.sessionId == updateMessage.sessionId,
+    );
+    if (sessionIndex == -1) return;
 
-      final session = sessions[sessionIndex];
-      final messageIndex = session.messages.indexWhere(
-        (m) => m.msgId == updateMessage.msgId,
-      );
-      if (messageIndex == -1) return;
+    final session = sessions[sessionIndex];
+    final messageIndex = session.messages.indexWhere(
+      (m) => m.msgId == updateMessage.msgId,
+    );
+    if (messageIndex == -1) return;
 
-      session.messages[messageIndex] = updateMessage;
-      sessions[sessionIndex] = session;
+    // 创建新的 messages 列表，确保 RxList 能检测到变化
+    final newMessages = List<ChatMessage>.from(session.messages);
+    newMessages[messageIndex] = updateMessage;
+    sessions[sessionIndex] = session.copyWith(messages: newMessages);
 
-      if (currentSession.value?.sessionId == session.sessionId) {
-        currentSession.value = session;
-        await _persistCurrentSession();
-      }
-      await _persistSessions();
-    });
+    if (currentSession.value?.sessionId == session.sessionId) {
+      currentSession.value = sessions[sessionIndex];
+      await _persistCurrentSession();
+    }
+    await _persistSessions();
   }
 
   /// 删除消息
   Future<void> deleteMessage(ChatMessage message) async {
-    return Future.microtask(() async {
-      final sessionIndex = sessions.indexWhere(
-        (s) => s.sessionId == message.sessionId,
-      );
-      if (sessionIndex == -1) return;
+    final sessionIndex = sessions.indexWhere(
+      (s) => s.sessionId == message.sessionId,
+    );
+    if (sessionIndex == -1) return;
 
-      final session = sessions[sessionIndex];
-      final messageIndex = session.messages.indexWhere(
-        (m) => m.msgId == message.msgId,
-      );
-      if (messageIndex == -1) return;
+    final session = sessions[sessionIndex];
+    final messageIndex = session.messages.indexWhere(
+      (m) => m.msgId == message.msgId,
+    );
+    if (messageIndex == -1) return;
 
-      session.messages.removeAt(messageIndex);
-      sessions[sessionIndex] = session;
+    // 创建新的 messages 列表（不含被删除的消息），确保 RxList 能检测到变化
+    final newMessages = List<ChatMessage>.from(session.messages);
+    newMessages.removeAt(messageIndex);
+    sessions[sessionIndex] = session.copyWith(messages: newMessages);
 
-      if (currentSession.value?.sessionId == session.sessionId) {
-        currentSession.value = session;
-        await _persistCurrentSession();
-      }
-      await _persistSessions();
-    });
+    if (currentSession.value?.sessionId == session.sessionId) {
+      currentSession.value = sessions[sessionIndex];
+      await _persistCurrentSession();
+    }
+    await _persistSessions();
   }
 
   /// 切换到指定会话并持久化（不阻塞 UI）
@@ -365,15 +363,30 @@ class SessionController extends GetxController {
     try {
       final isar = IsarService.instance.isar;
       await isar.writeTxn(() async {
-        // 清除所有旧数据
-        await isar.isarChatSessions.clear();
-        // 写入所有会话
+        final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
         for (final session in sessions) {
-          final entity = _chatSessionToIsar(session);
-          // 标记当前会话
-          entity.isCurrent =
-              currentSession.value?.sessionId == session.sessionId;
-          await isar.isarChatSessions.put(entity);
+          // 查找已有实体，存在则更新，不存在则新建（避免唯一索引冲突）
+          final existing =
+              await isar.isarChatSessions.getBySessionId(session.sessionId);
+          if (existing != null) {
+            _updateIsarSessionFromChatSession(existing, session);
+            existing.isCurrent =
+                currentSession.value?.sessionId == session.sessionId;
+            await isar.isarChatSessions.put(existing);
+          } else {
+            final entity = _chatSessionToIsar(session);
+            entity.isCurrent =
+                currentSession.value?.sessionId == session.sessionId;
+            await isar.isarChatSessions.put(entity);
+          }
+        }
+        // 再删除不在当前会话列表中的旧数据（避免先删后写导致崩溃丢数据）
+        final allEntities =
+            await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
+        for (final entity in allEntities) {
+          if (!currentSessionIds.contains(entity.sessionId)) {
+            await isar.isarChatSessions.delete(entity.id);
+          }
         }
       });
     } catch (e) {
@@ -381,7 +394,7 @@ class SessionController extends GetxController {
     }
   }
 
-  /// 持久化单个会话的所有消息（原子操作：先删旧再插新）
+  /// 持久化单个会话的所有消息（先写后删，避免崩溃丢数据）
   Future<void> _persistMessagesForSession(
     String sessionId,
     List<ChatMessage> messages,
@@ -389,24 +402,37 @@ class SessionController extends GetxController {
     try {
       final isar = IsarService.instance.isar;
       await isar.writeTxn(() async {
-        // 删除该会话的旧消息
+        // 先写入新消息（查找已有实体，存在则更新，不存在则新建，避免唯一索引冲突）
+        if (messages.isNotEmpty) {
+          for (final m in messages) {
+            final existing =
+                await isar.isarChatMessages.getByMsgId(m.msgId);
+            if (existing != null) {
+              existing.sessionId = sessionId;
+              existing.timestamp = m.timestamp;
+              existing.messageJson = jsonEncode(m.toJson());
+              await isar.isarChatMessages.put(existing);
+            } else {
+              final entity = IsarChatMessage()
+                ..msgId = m.msgId
+                ..sessionId = sessionId
+                ..timestamp = m.timestamp
+                ..messageJson = jsonEncode(m.toJson());
+              await isar.isarChatMessages.put(entity);
+            }
+          }
+        }
+        // 再删除不在新消息列表中的旧消息
+        final currentMsgIds = messages.map((m) => m.msgId).toSet();
         final oldMessages = await isar.isarChatMessages
             .where()
             .sessionIdEqualTo(sessionId)
             .sortByTimestamp()
             .findAll();
-        if (oldMessages.isNotEmpty) {
-          await isar.isarChatMessages.deleteAll(oldMessages.map((m) => m.id).toList());
-        }
-        // 写入新消息
-        if (messages.isNotEmpty) {
-          final entities = messages.map((m) => IsarChatMessage()
-            ..msgId = m.msgId
-            ..sessionId = sessionId
-            ..timestamp = m.timestamp
-            ..messageJson = jsonEncode(m.toJson()),
-          ).toList();
-          await isar.isarChatMessages.putAll(entities);
+        for (final oldMsg in oldMessages) {
+          if (!currentMsgIds.contains(oldMsg.msgId)) {
+            await isar.isarChatMessages.delete(oldMsg.id);
+          }
         }
       });
     } catch (e) {

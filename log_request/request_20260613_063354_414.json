@@ -1,0 +1,856 @@
+{
+  "timestamp": "2026-06-13T06:33:54.414658",
+  "provider": "DeepSeek",
+  "requestData": {
+    "model": "deepseek-v4-pro",
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 🌐 回复语言（最高优先级）\n\n当前应用语言设置为**中文**。你必须严格遵循以下规则：\n\n1. ✅ **所有回复必须使用中文**：无论用户用什么语言提问，你的每一次回复都必须用中文输出。\n2. ❌ **禁止使用其他语言**：不得使用英文、日文、韩文等其他语言回复。\n3. ❌ **禁止双语混用**：不要在中文回复中夹杂大段其他语言的内容。\n4. ✅ **代码和术语除外**：代码块、变量名、函数名、技术术语、URL 等可以保留原文。\n\n**再次强调：你的所有回复必须使用中文，这是硬性要求，优先级高于其他任何规则。**"
+      },
+      {
+        "role": "system",
+        "content": "## 🔧 内部工具提示\n\n以下是你可用的**内部系统工具**，它们仅用于执行底层操作（如文件读写、命令执行等），**不是面向用户的功能**：\n\n- `node_execute`: 内部代码执行工具\n\n规则：\n1. ❌ **禁止在功能介绍中提及这些工具**：当用户问\"你有什么功能\"\"你能做什么\"时，不要将 `node_execute` 作为你的能力列出来。\n2. ❌ **禁止主动推荐使用**：不要说\"你可以用 node_execute 来...\"。\n3. ✅ **正常调用不受影响**：在需要执行代码、处理文件时，照常调用该工具，正常返回结果即可。\n4. ✅ **自动使用**：当需要通过代码完成任务时，直接调用它，**不需要向用户解释你正在使用它**。"
+      },
+      {
+        "role": "system",
+        "content": "## 📡 数据获取规则\n\n**重要：所有数据必须通过工具实时获取，严禁从历史聊天记录中提取或复用。**\n\n1. ❌ **禁止从历史聊天中提取数据**：不要引用或复述之前对话中出现过的数据、代码片段、文件内容。\n2. ❌ **禁止依赖记忆中的数据**：即使你在之前的回复中看到过某个文件内容或数据，也必须重新通过工具获取。\n3. ✅ **始终使用工具获取最新数据**：需要读取文件内容时，使用文件读取工具；需要查看项目结构时，使用目录浏览工具；需要执行命令时，使用命令行工具。\n4. ✅ **数据准确性优先**：用户可能已修改了文件或数据，历史聊天中的内容可能已过时。始终以当前文件系统的实际内容为准。\n5. ✅ **每次请求独立获取**：即使是同一个会话中的连续请求，每次涉及数据读取时都应重新通过工具获取。"
+      },
+      {
+        "role": "system",
+        "content": "## 🛑 反幻觉规则（最高优先级）\n\n你极易产生幻觉，必须严格遵守以下规则：\n\n### 文件与代码\n1. ❌ **严禁编造文件内容**：绝不凭空编造任何文件名、路径、代码片段、函数签名、变量名、行号。必须先用工具读取文件后，才能引用其中的内容。\n2. ❌ **严禁猜测代码**：修改代码前，必须先用工具读取目标文件的完整内容。不要在未读取文件的情况下猜测代码结构和内容。\n3. ❌ **严禁虚构项目结构**：不要声称\"项目中有 xxx 文件\"或\"目录结构是 xxx\"，必须先用目录浏览工具查看实际结构。\n\n### 数据与事实\n4. ❌ **严禁编造数据**：不要虚构任何数字、统计、配置值、API 返回值。需要数据时，必须通过工具获取。\n5. ❌ **严禁伪造工具调用结果**：不要虚构工具返回的内容。只使用工具实际返回的数据。\n6. ❌ **严禁假装执行了操作**：不要说\"我已经修改了 xxx\"如果实际没有通过工具执行。所有修改必须通过工具完成。\n7. ❌ **严禁用自然语言模拟工具行为**：禁止回复中包含\"让我查一下…\"、\"找到了…\"、\"已更新！\"、\"当前数据是…\"等表述，除非你确实调用了工具并收到了返回结果。你没有工具调用就没有数据，没有数据就不能呈现任何具体信息。\n\n### 承认不确定\n8. ✅ **诚实第一**：如果数据不足或工具无法获取需要的信息，直接说\"我无法确定\"，不要猜测或编造。\n9. ✅ **区分事实与推测**：基于工具返回的数据给出的事实，与你的推测/建议要明确区分。\n\n### 代码生成\n10. ❌ **禁止凭空写代码**：在写任何代码之前，必须先读取相关文件了解上下文（变量名、函数签名、导入等）。\n11. ❌ **禁止虚构不存在的 API**：不要调用项目中不存在的函数或类。如不确定是否存在，先用工具搜索确认。\n\n### 回答依据\n12. ✅ **最终回答必须以工具返回的结果为准**：你的回复内容必须是工具实际返回数据的直接体现。\n13. ❌ **禁止用你的训练知识替代工具结果**：即使你认为\"应该是\"某个值，如果工具返回了不同的结果，必须以工具结果为准。\n14. ❌ **禁止在工具返回前给出最终结论**：需要数据支撑的回答，必须先调用工具获取数据，再基于工具结果作答。\n15. ✅ **工具结果不够时，可以结合推理补充**：在工具返回数据的基础上，可以进行合理推理，但要明确标注\"基于工具结果推理如下：...”。\n\n**一句话总结：没调用工具就不准呈现数据，没执行操作就不准说已完成，不确定就说不确定。**"
+      },
+      {
+        "role": "system",
+        "content": "## 💬 最近对话记录\n👤 用户: 查询下都订阅了啥\n🤖 助手: 好的，我来查一下你的订阅总览信息。以下是你的订阅总览：\n\n### 📍 地址「12」\n- **订阅商品**：便携饮用水\n- **每日消耗**：1 个\n- **状态**：🟢 正常\n\n目前你只有这一个订阅，绑定在地址「12」上。如果你想查看该地址的详细信息或订阅详情，可以告诉我，我进一步帮你查询！\n👤 用户: 具体详情\n🤖 助手: 好的，以下是你的订阅详情：\n\n---\n\n### 📦 订阅详情\n\n| 项目 | 内容 |\n|------|------|\n| **订阅ID** | `sub_mq2js2cbwoime` |\n| **商品** | 便携饮用水 |\n| **每日消耗** | 1 瓶 |\n| **每次配送** | 2 箱 |\n| **子单位库存** | 5 瓶 |\n| **可用天数** | 5 天 |\n| **下次配送** | 2026年6月17日 |\n| **状态** | 🟢 开启 |\n\n---\n\n### 📊 解读\n\n- 你每天消耗 **1 瓶** 便携饮用水，当前库存还剩 **5 瓶**，还能撑 **5 天**。\n- 每次配送会送 **2 箱**，下次配送日期是 **2026年6月17日**。\n\n需要我帮你修改订阅设置（如调整每日消耗、配送量、暂停/开启等）吗？\n👤 用户: 介绍下北京\n🤖 助手: 北京是中国的首都，也是一座有着三千多年历史的古都。以下是一些关键信息：\n\n---\n\n### 🏛️ 城市概览\n\n| 项目 | 内容 |\n|------|------|\n| **名称** | 北京市 |\n| **地位** | 中华人民共和国首都、直辖市 |\n| **人口** | 约 2,200 万 |\n| **面积** | 约 16,410 平方公里 |\n| **行政区划** | 16 个区 |\n\n---\n\n### 🏯 历史文化\n\n- **古都**：北京有 3,000 多年建城史和 800 多年建都史，曾是辽、金、元、明、清五朝都城。\n- **世界遗产**：拥有故宫、长城、颐和园、天坛、明十三陵、周口店北京人遗址、京杭大运河（北京段）等 7 处世界文化遗产，是全球拥有世界遗产最多的城市。\n\n---\n\n### 🎯 标志性景点\n\n- **故宫**（紫禁城）—— 明清两代皇宫，世界最大宫殿建筑群\n- **长城**（八达岭、慕田峪等）—— 世界七大奇迹之一\n- **天安门广场** —— 世界最大城市广场\n- **颐和园** —— 清代皇家园林\n- **天坛** —— 明清皇帝祭天场所\n- **鸟巢 / 水立方** —— 2008 年奥运会场馆\n\n---\n\n### 🍜 美食\n\n- **北京烤鸭**（全聚德、便宜坊）\n- **炸酱面**\n- **涮羊肉**（东来顺）\n- **豆汁儿、焦圈**\n- **卤煮火烧、炒肝**\n\n---\n\n### 🚇 交通\n\n- 北京地铁线路总长全球前列，覆盖城区及郊区\n- 拥有北京首都国际机场和北京大兴国际机场两大国际枢纽\n\n---\n\n如果你想了解北京的某个具体方面（比如旅游攻略、某个景点、或者想把地址设在北京），可以告诉我！\n👤 用户: 介绍下北京\n🤖 助手: 北京是中国的首都，也是一座有着三千多年历史的古都。以下是一些关键信息：\n\n---\n\n### 🏛️ 城市概览\n\n| 项目 | 内容 |\n|------|------|\n| **名称** | 北京市 |\n| **地位** | 中华人民共和国首都、直辖市 |\n| **人口** | 约 2,200 万 |\n| **面积** | 约 16,410 平方公里 |\n| **行政区划** | 16 个区 |\n\n---\n\n### 🏯 历史文化\n\n- **古都**：北京有 3,000 多年建城史和 800 多年建都史，曾是辽、金、元、明、清五朝都城。\n- **世界遗产**：拥有故宫、长城、颐和园、天坛、明十三陵、周口店北京人遗址、京杭大运河（北京段）等 7 处世界文化遗产，是全球拥有世界遗产最多的城市。\n\n---\n\n### 🎯 标志性景点\n\n- **故宫**（紫禁城）—— 明清两代皇宫，世界最大宫殿建筑群\n- **长城**（八达岭、慕田峪等）—— 世界七大奇迹之一\n- **天安门广场** —— 世界最大城市广场\n- **颐和园** —— 清代皇家园林\n- **天坛** —— 明清皇帝祭天场所\n- **鸟巢 / 水立方** —— 2008 年奥运会场馆\n\n---\n\n### 🍜 美食\n\n- **北京烤鸭**（全聚德、便宜坊）\n- **炸酱面**\n- **涮羊肉**（东来顺）\n- **豆汁儿、焦圈**\n- **卤煮火烧、炒肝**\n\n---\n\n### 🚇 交通\n\n- 北京地铁线路总长全球前列，覆盖城区及郊区\n- 拥有北京首都国际机场和北京大兴国际机场两大国际枢纽\n\n---\n\n如果你想了解北京的某个具体方面（比如旅游攻略、某个景点、或者想把地址设在北京），可以告诉我！\n👤 用户: 你好\n🤖 助手: 你好！有什么可以帮你的吗？😊\n👤 用户: 介绍下美国的历史i\n🤖 助手: 美国的历史可以追溯到数千年前，以下是简要概述：\n\n---\n\n### 🏞️ 早期历史（前殖民时期）\n\n- 在歐洲人到来之前，北美大陆已有大量原住民（印第安人）居住，发展出多样的文化和文明，如密西西比文化、普韦布洛文明等。\n\n---\n\n### ⛵ 殖民时期（1492–1776）\n\n- **1492年**：哥伦布抵达美洲，欧洲列强开始探索和殖民。\n- **1607年**：英国在弗吉尼亚建立第一个永久殖民地——詹姆斯敦。\n- **1620年**：\"五月花号\"抵达，清教徒建立普利茅斯殖民地。\n- 18世纪中叶，英国在北美东海岸建立了**13个殖民地**。\n\n---\n\n### 🔥 独立战争与建国（1775–1789）\n\n- **1775年**：独立战争爆发，殖民地反抗英国统治。\n- **1776年7月4日**：《独立宣言》通过，正式宣布脱离英国，建国。\n- **1783年**：英国承认美国独立，战争结束。\n- **1787年**：制定宪法，建立联邦制共和国。\n- **1789年**：乔治·华盛顿就任第一任总统。\n\n---\n\n### 📈 西进运动与扩张（19世纪）\n\n- **1803年**：路易斯安那购地，领土扩大近一倍。\n- **1861–1865年**：南北战争爆发，北方胜利，废除奴隶制，国家统一得以维护。\n- 战后工业化迅速发展，铁路贯通全境，大量移民涌入。\n\n---\n\n### 🌎 20世纪至今\n\n- **1917–1918年**：参加第一次世界大战。\n- **1929年**：经济大萧条开始。\n- **1941–1945年**：珍珠港事件后参加第二次世界大战，战后成为超级大国。\n- **1947–1991年**：冷战时期，与苏联对抗，太空竞赛，民权运动兴起。\n- **1969年**：阿波罗11号登月。\n- **21世纪**：经历\"9·11\"事件、反恐战争、金融危机等挑战，至今仍是全球最具影响力的国家之一。\n\n---\n\n如果你想深入了解某个特定时期（如独立战争、南北战争、冷战等），可以告诉我！\n"
+      },
+      {
+        "role": "user",
+        "content": "查询下都订阅了啥"
+      },
+      {
+        "role": "assistant",
+        "content": "好的，我来查一下你的订阅总览信息。以下是你的订阅总览：\n\n### 📍 地址「12」\n- **订阅商品**：便携饮用水\n- **每日消耗**：1 个\n- **状态**：🟢 正常\n\n目前你只有这一个订阅，绑定在地址「12」上。如果你想查看该地址的详细信息或订阅详情，可以告诉我，我进一步帮你查询！"
+      },
+      {
+        "role": "user",
+        "content": "具体详情"
+      },
+      {
+        "role": "assistant",
+        "content": "好的，以下是你的订阅详情：\n\n---\n\n### 📦 订阅详情\n\n| 项目 | 内容 |\n|------|------|\n| **订阅ID** | `sub_mq2js2cbwoime` |\n| **商品** | 便携饮用水 |\n| **每日消耗** | 1 瓶 |\n| **每次配送** | 2 箱 |\n| **子单位库存** | 5 瓶 |\n| **可用天数** | 5 天 |\n| **下次配送** | 2026年6月17日 |\n| **状态** | 🟢 开启 |\n\n---\n\n### 📊 解读\n\n- 你每天消耗 **1 瓶** 便携饮用水，当前库存还剩 **5 瓶**，还能撑 **5 天**。\n- 每次配送会送 **2 箱**，下次配送日期是 **2026年6月17日**。\n\n需要我帮你修改订阅设置（如调整每日消耗、配送量、暂停/开启等）吗？"
+      },
+      {
+        "role": "user",
+        "content": "介绍下北京"
+      },
+      {
+        "role": "assistant",
+        "content": "北京是中国的首都，也是一座有着三千多年历史的古都。以下是一些关键信息：\n\n---\n\n### 🏛️ 城市概览\n\n| 项目 | 内容 |\n|------|------|\n| **名称** | 北京市 |\n| **地位** | 中华人民共和国首都、直辖市 |\n| **人口** | 约 2,200 万 |\n| **面积** | 约 16,410 平方公里 |\n| **行政区划** | 16 个区 |\n\n---\n\n### 🏯 历史文化\n\n- **古都**：北京有 3,000 多年建城史和 800 多年建都史，曾是辽、金、元、明、清五朝都城。\n- **世界遗产**：拥有故宫、长城、颐和园、天坛、明十三陵、周口店北京人遗址、京杭大运河（北京段）等 7 处世界文化遗产，是全球拥有世界遗产最多的城市。\n\n---\n\n### 🎯 标志性景点\n\n- **故宫**（紫禁城）—— 明清两代皇宫，世界最大宫殿建筑群\n- **长城**（八达岭、慕田峪等）—— 世界七大奇迹之一\n- **天安门广场** —— 世界最大城市广场\n- **颐和园** —— 清代皇家园林\n- **天坛** —— 明清皇帝祭天场所\n- **鸟巢 / 水立方** —— 2008 年奥运会场馆\n\n---\n\n### 🍜 美食\n\n- **北京烤鸭**（全聚德、便宜坊）\n- **炸酱面**\n- **涮羊肉**（东来顺）\n- **豆汁儿、焦圈**\n- **卤煮火烧、炒肝**\n\n---\n\n### 🚇 交通"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好！有什么可以帮你的吗？😊"
+      },
+      {
+        "role": "user",
+        "content": "介绍下美国的历史i"
+      },
+      {
+        "role": "assistant",
+        "content": "美国的历史可以追溯到数千年前，以下是简要概述：\n\n---\n\n### 🏞️ 早期历史（前殖民时期）\n\n- 在歐洲人到来之前，北美大陆已有大量原住民（印第安人）居住，发展出多样的文化和文明，如密西西比文化、普韦布洛文明等。\n\n---\n\n### ⛵ 殖民时期（1492–1776）\n\n- **1492年**：哥伦布抵达美洲，欧洲列强开始探索和殖民。\n- **1607年**：英国在弗吉尼亚建立第一个永久殖民地——詹姆斯敦。\n- **1620年**：\"五月花号\"抵达，清教徒建立普利茅斯殖民地。\n- 18世纪中叶，英国在北美东海岸建立了**13个殖民地**。\n\n---\n\n### 🔥 独立战争与建国（1775–1789）\n\n- **1775年**：独立战争爆发，殖民地反抗英国统治。\n- **1776年7月4日**：《独立宣言》通过，正式宣布脱离英国，建国。\n- **1783年**：英国承认美国独立，战争结束。\n- **1787年**：制定宪法，建立联邦制共和国。\n- **1789年**：乔治·华盛顿就任第一任总统。\n\n---\n\n### 📈 西进运动与扩张（19世纪）\n\n- **1803年**：路易斯安那购地，领土扩大近一倍。\n- **1861–1865年**：南北战争爆发，北方胜利，废除奴隶制，国家统一得以维护。\n- 战后工业化迅速发展，铁路贯通全境，大量移民涌入。\n\n---\n\n### 🌎 20世纪至今\n\n- **1917–1918年**：参加第一次世界大战。\n- **1929年**：经济大萧条开始。\n- **1941–1945年**：珍珠港事件后参加第二次世界大战，战后成为超级大国。\n- **1947–1991年**：冷战时期，与苏联对抗，太空竞赛，民权运动兴起。\n- **1969年**：阿波罗11号登月。\n- **21世纪**：经历\"9·11\"事件、反恐战争、金融危机等挑战，至今仍是全球最具影响力的国家之一。\n\n---\n\n如果你想深入了解某个特定时期（如独立战争、南北战争、冷战等），可以告诉我！"
+      },
+      {
+        "role": "user",
+        "content": "我都订阅了啥呢"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 1.0,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "node_execute",
+          "description": "执行 Node.js 脚本。支持内联代码和 .js/.ts 文件两种方式。可选安装 npm 依赖。适合数据分析、文件批处理、API 调用、爬虫、文档生成等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Node.js 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .js 或 .ts 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 npm 包名列表（如 [\"axios\", \"lodash\"]），执行前自动 npm install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "python_execute",
+          "description": "执行 Python 脚本。支持内联代码和 .py 文件两种方式。可选 pip install 安装依赖。适合数据分析、文件处理、API 调用、爬虫、图像处理、自动化脚本等任何场景。返回 stdout/stderr 输出。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "Python 脚本内容（内联代码）。与 filePath 二选一，优先使用 script。"
+              },
+              "filePath": {
+                "type": "string",
+                "description": "要执行的 .py 文件完整路径。与 script 二选一。"
+              },
+              "args": {
+                "type": "array",
+                "description": "传递给脚本的命令行参数列表。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "requirements": {
+                "type": "array",
+                "description": "需要安装的 pip 包名列表（如 [\"requests\", \"beautifulsoup4\"]），执行前自动 pip install。",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "bill_list",
+          "description": "获取账单列表，支持分页查询",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "number",
+                "description": "页码（可选，默认1）"
+              },
+              "pageSize": {
+                "type": "number",
+                "description": "每页数量（可选，默认10）"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "bill_get",
+          "description": "获取账单详情，根据订单号或退款单号查询",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "refundNo": {
+                "type": "string",
+                "description": "退款单号（可选）"
+              },
+              "tradeNo": {
+                "type": "string",
+                "description": "订单号（可选）"
+              },
+              "type": {
+                "type": "string",
+                "description": "类型：payment(支付) 或 refund(退款)（可选）"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "query_subscriptions_by_address",
+          "description": "根据地址描述（如：父母家、公司、家）查询该地址的订阅商品列表",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressHint": {
+                "type": "string",
+                "description": "地址描述或关键词（如：父母家、公司、家、张三）"
+              }
+            },
+            "required": [
+              "addressHint"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "query_subscriptions_by_product",
+          "description": "根据产品名称或关键词查询订阅了该产品的地址列表",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "productHint": {
+                "type": "string",
+                "description": "产品名称或关键词（如：牛奶、酸奶）"
+              }
+            },
+            "required": [
+              "productHint"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_overview",
+          "description": "获取订阅总览，按地址分组显示所有订阅商品",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "coupon_list",
+          "description": "获取优惠券列表，支持按状态筛选",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "number",
+                "description": "页码（可选，默认1）"
+              },
+              "pageSize": {
+                "type": "number",
+                "description": "每页数量（可选，默认50）"
+              },
+              "status": {
+                "type": "string",
+                "description": "状态筛选：available(可用) | used(已使用) | expired(已过期)（可选）"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "delivery_list",
+          "description": "获取配送列表，支持分页查询，包含未支付订单统计",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "number",
+                "description": "页码（可选，默认1）"
+              },
+              "pageSize": {
+                "type": "number",
+                "description": "每页数量（可选，默认20）"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "delivery_get",
+          "description": "获取配送详情",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "deliveryId": {
+                "type": "string",
+                "description": "配送ID"
+              }
+            },
+            "required": [
+              "deliveryId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "delivery_prepay",
+          "description": "批量支付配送订单",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "deliveryIds": {
+                "type": "array",
+                "description": "配送ID列表",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "deliveryIds"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "delivery_refund",
+          "description": "申请配送退款",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "deliveryId": {
+                "type": "string",
+                "description": "配送ID"
+              },
+              "refundReason": {
+                "type": "string",
+                "description": "退款原因"
+              }
+            },
+            "required": [
+              "deliveryId",
+              "refundReason"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "delivery_refund_cancel",
+          "description": "取消配送退款申请",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "deliveryId": {
+                "type": "string",
+                "description": "配送ID"
+              }
+            },
+            "required": [
+              "deliveryId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "notify_list",
+          "description": "获取通知消息列表，包含系统通知和用户通知",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "notify_check",
+          "description": "检查是否有新通知",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "notify_delete",
+          "description": "删除通知消息",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "notifyId": {
+                "type": "string",
+                "description": "通知ID"
+              }
+            },
+            "required": [
+              "notifyId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "product_list",
+          "description": "获取产品列表，支持分类筛选和关键词搜索",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "description": "分类筛选（如：乳制品）"
+              },
+              "keyword": {
+                "type": "string",
+                "description": "关键词搜索"
+              },
+              "page": {
+                "type": "number",
+                "description": "页码"
+              },
+              "pageSize": {
+                "type": "number",
+                "description": "每页数量"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "product_get",
+          "description": "获取产品详情",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "productId": {
+                "type": "string",
+                "description": "产品 ID"
+              }
+            },
+            "required": [
+              "productId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "request_list",
+          "description": "获取用户请求列表",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "request_add",
+          "description": "添加用户请求或建议",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "请求或建议内容"
+              }
+            },
+            "required": [
+              "content"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_list",
+          "description": "获取用户订阅列表",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_detail",
+          "description": "获取订阅详情",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "subscriptionId": {
+                "type": "string",
+                "description": "订阅 ID"
+              }
+            },
+            "required": [
+              "subscriptionId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_add",
+          "description": "创建订阅",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "配送地址 ID"
+              },
+              "dailyUseSubUnitCount": {
+                "type": "number",
+                "description": "每日消耗子单位数量"
+              },
+              "deliveryUnitCount": {
+                "type": "number",
+                "description": "每次配送单位数"
+              },
+              "productId": {
+                "type": "string",
+                "description": "产品 ID"
+              }
+            },
+            "required": [
+              "productId",
+              "addressId",
+              "dailyUseSubUnitCount",
+              "deliveryUnitCount"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_set",
+          "description": "更新订阅设置",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "dailyUseSubUnitCount": {
+                "type": "number",
+                "description": "每日消耗子单位数量（可选）"
+              },
+              "deliveryUnitCount": {
+                "type": "number",
+                "description": "每次配送单位数（可选）"
+              },
+              "status": {
+                "type": "string",
+                "description": "状态 on/off（可选）"
+              },
+              "subUnitStock": {
+                "type": "number",
+                "description": "子单位库存（可选）"
+              },
+              "subscriptionId": {
+                "type": "string",
+                "description": "订阅 ID"
+              }
+            },
+            "required": [
+              "subscriptionId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_delete",
+          "description": "删除订阅",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "subscriptionId": {
+                "type": "string",
+                "description": "订阅 ID"
+              }
+            },
+            "required": [
+              "subscriptionId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "subscription_delay",
+          "description": "延迟订阅配送",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "subscriptionId": {
+                "type": "string",
+                "description": "订阅 ID"
+              }
+            },
+            "required": [
+              "subscriptionId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "user_set",
+          "description": "设置用户资料，可更新个人信息和支付设置",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "autopay": {
+                "type": "boolean",
+                "description": "自动支付（可选）"
+              },
+              "avatar": {
+                "type": "string",
+                "description": "头像 URL（可选）"
+              },
+              "bankAccount": {
+                "type": "string",
+                "description": "银行账号（可选）"
+              },
+              "bankName": {
+                "type": "string",
+                "description": "银行名称（可选）"
+              },
+              "checkNotifyTime": {
+                "type": "string",
+                "description": "检查通知时间（可选）"
+              },
+              "company": {
+                "type": "string",
+                "description": "公司名称（可选）"
+              },
+              "deliverySubscribeTemplateId": {
+                "type": "string",
+                "description": "配送订阅模板 ID（可选）"
+              },
+              "email": {
+                "type": "string",
+                "description": "邮箱（可选）"
+              },
+              "gender": {
+                "type": "string",
+                "description": "性别（可选）"
+              },
+              "name": {
+                "type": "string",
+                "description": "用户名称（可选）"
+              },
+              "taxNumber": {
+                "type": "string",
+                "description": "税号（可选）"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_list",
+          "description": "获取用户的收货地址列表",
+          "parameters": {
+            "type": "object",
+            "properties": {}
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_get",
+          "description": "获取地址详情",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "地址 ID"
+              }
+            },
+            "required": [
+              "addressId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_add",
+          "description": "添加新收货地址",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "deliveryShelfImage": {
+                "type": "string",
+                "description": "货架图片 URL（可选）"
+              },
+              "deliveryTimeWindow": {
+                "type": "string",
+                "description": "配送时段（morning/afternoon/evening）"
+              },
+              "detail": {
+                "type": "string",
+                "description": "详细地址"
+              },
+              "name": {
+                "type": "string",
+                "description": "收货人姓名"
+              },
+              "phone": {
+                "type": "string",
+                "description": "收货人电话"
+              },
+              "region": {
+                "type": "array",
+                "description": "地区数组（如：[\"上海市\", \"上海市\", \"松江区\"]）",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tag": {
+                "type": "string",
+                "description": "地址标签（如：家、公司）"
+              }
+            },
+            "required": [
+              "name",
+              "phone",
+              "region",
+              "detail"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_set",
+          "description": "更新收货地址信息",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "地址 ID"
+              },
+              "deliveryShelfImage": {
+                "type": "string",
+                "description": "货架图片 URL（可选）"
+              },
+              "deliveryTimeWindow": {
+                "type": "string",
+                "description": "配送时段（可选）"
+              },
+              "detail": {
+                "type": "string",
+                "description": "详细地址（可选）"
+              },
+              "name": {
+                "type": "string",
+                "description": "收货人姓名（可选）"
+              },
+              "phone": {
+                "type": "string",
+                "description": "收货人电话（可选）"
+              },
+              "region": {
+                "type": "array",
+                "description": "地区数组（可选，如：[\"上海市\", \"上海市\", \"松江区\"]）",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tag": {
+                "type": "string",
+                "description": "地址标签（可选）"
+              }
+            },
+            "required": [
+              "addressId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_delete",
+          "description": "删除收货地址",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "地址 ID"
+              }
+            },
+            "required": [
+              "addressId"
+            ]
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "address_set_default",
+          "description": "设置默认收货地址",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "addressId": {
+                "type": "string",
+                "description": "地址 ID"
+              }
+            },
+            "required": [
+              "addressId"
+            ]
+          }
+        }
+      }
+    ],
+    "thinking": {
+      "type": "disabled"
+    }
+  },
+  "response": {
+    "timestamp": "2026-06-13T06:33:55.596991",
+    "isError": false,
+    "toolCalls": [
+      "[{\"index\":0,\"id\":\"call_00_K1c9WKPcMUBXyrWgcv9X6209\",\"type\":\"function\",\"function\":{\"name\":\"subscription_overview\",\"arguments\":\"\"}}]",
+      "[{\"index\":0,\"function\":{\"arguments\":\"{}\"}}]"
+    ]
+  }
+}

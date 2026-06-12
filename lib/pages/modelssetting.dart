@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:chathub/utils/snackbar_utils.dart';
 import '../l10n/app_localizations.dart';
 
@@ -102,7 +103,8 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
           // 确保businessType有值
           if (modelData['businessType'] == null) {
-            modelData['businessType'] = AppLocalizations.of(context)!.defaultConversation;
+            modelData['businessType'] =
+                AppLocalizations.of(context)!.defaultConversation;
           }
 
           return ChatModel.fromMap(modelData);
@@ -224,25 +226,39 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: FaIcon(
-            CupertinoIcons.back,
-            color: Theme.of(context).iconTheme.color,
-            size: 20,
+        toolbarHeight: 44,
+        leadingWidth: Platform.isMacOS ? 70 + 20 + 15 : 44,
+        leading: Padding(
+          padding: EdgeInsets.only(left: Platform.isMacOS ? 70 : 0),
+          child: Transform.translate(
+            offset: const Offset(0, -5),
+            child: IconButton(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+              icon: FaIcon(
+                CupertinoIcons.back,
+                color: Theme.of(context).iconTheme.color,
+                size: 20,
+              ),
+              onPressed: () {
+                // 检查是否在对话框中
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
           ),
-          onPressed: () {
-            // 检查是否在对话框中
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-          },
         ),
-        title: Text(
-          AppLocalizations.of(context)!.modelManagement,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).textTheme.titleLarge?.color,
+        title: Transform.translate(
+          offset: const Offset(0, -5),
+          child: Text(
+            AppLocalizations.of(context)!.modelManagement,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).textTheme.titleLarge?.color,
+            ),
           ),
         ),
         centerTitle: false,
@@ -303,7 +319,10 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
               child: ElevatedButton.icon(
                 onPressed: _showOnlineModelDialog,
                 icon: const FaIcon(CupertinoIcons.plus, size: 10),
-                label: Text(AppLocalizations.of(context)!.addModel, style: const TextStyle(fontSize: 11)),
+                label: Text(
+                  AppLocalizations.of(context)!.addModel,
+                  style: const TextStyle(fontSize: 11),
+                ),
                 style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
@@ -430,7 +449,10 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              Text(AppLocalizations.of(context)!.copyModel, style: const TextStyle(fontSize: 12)),
+              Text(
+                AppLocalizations.of(context)!.copyModel,
+                style: const TextStyle(fontSize: 12),
+              ),
             ],
           ),
           onTap: () => _copyModel(model),
@@ -475,7 +497,10 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     await _saveModels();
 
     // 显示成功提示
-    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.modelCopied(newName));
+    SnackBarUtils.showSuccess(
+      context,
+      AppLocalizations.of(context)!.modelCopied(newName),
+    );
   }
 
   String _generateCopyName(String originalName) {

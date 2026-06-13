@@ -231,7 +231,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         leading: Padding(
           padding: EdgeInsets.only(left: Platform.isMacOS ? 70 : 0),
           child: Transform.translate(
-            offset: const Offset(0, -5),
+            offset: const Offset(0, 0),
             child: IconButton(
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,

@@ -93,7 +93,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
     await _loadServices();
     if (mounted) {
-      SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.serviceRemoved(displayName));
+      SnackBarUtils.showInfo(
+        context,
+        AppLocalizations.of(context)!.serviceRemoved(displayName),
+      );
     }
   }
 
@@ -276,13 +279,20 @@ class _McpManagementPageState extends State<McpManagementPage> {
       await _loadServices();
 
       if (mounted) {
-        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.toolsFetched(tools.length));
+        SnackBarUtils.showSuccess(
+          context,
+          AppLocalizations.of(context)!.toolsFetched(tools.length),
+        );
       }
     } catch (e) {
       if (mounted) {
         SnackBarUtils.showError(
           context,
-          AppLocalizations.of(context)!.fetchToolsFailed(e.toString().length > 80 ? '${e.toString().substring(0, 80)}...' : e.toString()),
+          AppLocalizations.of(context)!.fetchToolsFailed(
+            e.toString().length > 80
+                ? '${e.toString().substring(0, 80)}...'
+                : e.toString(),
+          ),
         );
       }
     } finally {
@@ -413,7 +423,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
                             Row(
                               children: [
                                 Text(
-                                  AppLocalizations.of(context)!.toolList(tools.length),
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.toolList(tools.length),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -452,13 +464,22 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                       }
                                       SnackBarUtils.showSuccess(
                                         ctx,
-                                        AppLocalizations.of(context)!.toolsRefreshed(newTools.length),
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.toolsRefreshed(newTools.length),
                                       );
                                     } catch (e) {
                                       if (ctx.mounted) {
                                         SnackBarUtils.showError(
                                           ctx,
-                                          AppLocalizations.of(context)!.refreshFailed(e.toString().substring(0, e.toString().length.clamp(0, 80))),
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.refreshFailed(
+                                            e.toString().substring(
+                                              0,
+                                              e.toString().length.clamp(0, 80),
+                                            ),
+                                          ),
                                         );
                                       }
                                     }
@@ -476,7 +497,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        AppLocalizations.of(context)!.refreshAction,
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.refreshAction,
                                         style: TextStyle(
                                           fontSize: 11,
                                           color:
@@ -498,7 +521,12 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   tools.take(50).map((t) {
                                     final label =
                                         t.description.isNotEmpty
-                                            ? AppLocalizations.of(context)!.toolNameDesc(t.name, t.description)
+                                            ? AppLocalizations.of(
+                                              context,
+                                            )!.toolNameDesc(
+                                              t.name,
+                                              t.description,
+                                            )
                                             : t.name;
                                     return Container(
                                       padding: const EdgeInsets.symmetric(
@@ -535,7 +563,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  AppLocalizations.of(context)!.moreXTools(tools.length - 50),
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.moreXTools(tools.length - 50),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey[500],
@@ -596,7 +626,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   CupertinoIcons.arrow_down_to_line_alt,
                                   size: 15,
                                 ),
-                                label: Text(AppLocalizations.of(context)!.fetchTools),
+                                label: Text(
+                                  AppLocalizations.of(context)!.fetchTools,
+                                ),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 10,
@@ -644,7 +676,11 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                 _confirmRemoveService(service);
                               },
                               icon: const Icon(CupertinoIcons.delete, size: 16),
-                              label: Text(AppLocalizations.of(context)!.removeServiceLabel),
+                              label: Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.removeServiceLabel,
+                              ),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor:
                                     Theme.of(context).colorScheme.error,
@@ -711,6 +747,20 @@ class _McpManagementPageState extends State<McpManagementPage> {
       elevation: 8,
       color: Theme.of(context).scaffoldBackgroundColor,
       items: [
+        // PopupMenuItem(
+        //   height: 48,
+        //   onTap: () {
+        //     Navigator.push(
+        //       context,
+        //       MaterialPageRoute(builder: (_) => const McpMarketplacePage()),
+        //     ).then((_) => _loadServices());
+        //   },
+        //   child: Row(
+        //     children: [
+        //       const Text('内置市场', style: TextStyle(fontSize: 12)),
+        //     ],
+        //   ),
+        // ),
         PopupMenuItem(
           height: 48,
           onTap: () {
@@ -718,7 +768,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
           },
           child: Row(
             children: [
-              Text(AppLocalizations.of(context)!.aliyun, style: const TextStyle(fontSize: 12)),
+              Text(
+                AppLocalizations.of(context)!.aliyun,
+                style: const TextStyle(fontSize: 12),
+              ),
               const Spacer(),
               Icon(
                 CupertinoIcons.arrow_up_right,
@@ -735,7 +788,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
           },
           child: Row(
             children: [
-              Text(AppLocalizations.of(context)!.tencentCloud, style: const TextStyle(fontSize: 12)),
+              Text(
+                AppLocalizations.of(context)!.tencentCloud,
+                style: const TextStyle(fontSize: 12),
+              ),
               const Spacer(),
               Icon(
                 CupertinoIcons.arrow_up_right,
@@ -752,7 +808,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
           },
           child: Row(
             children: [
-              Text(AppLocalizations.of(context)!.modelscope, style: const TextStyle(fontSize: 12)),
+              Text(
+                AppLocalizations.of(context)!.modelscope,
+                style: const TextStyle(fontSize: 12),
+              ),
               const Spacer(),
               Icon(
                 CupertinoIcons.arrow_up_right,
@@ -805,14 +864,16 @@ class _McpServiceCardState extends State<_McpServiceCard> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
-            color: _isHovered
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.06)
-                : Theme.of(context).colorScheme.surface,
+            color:
+                _isHovered
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.06)
+                    : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: _isHovered
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.35)
-                  : Theme.of(context).dividerColor.withOpacity(0.5),
+              color:
+                  _isHovered
+                      ? Theme.of(context).colorScheme.primary.withOpacity(0.35)
+                      : Theme.of(context).dividerColor.withOpacity(0.5),
             ),
           ),
           child: Row(
@@ -838,9 +899,14 @@ class _McpServiceCardState extends State<_McpServiceCard> {
                         ),
                         const SizedBox(width: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: Text(
@@ -859,7 +925,9 @@ class _McpServiceCardState extends State<_McpServiceCard> {
                         description,
                         style: TextStyle(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.65),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -869,7 +937,9 @@ class _McpServiceCardState extends State<_McpServiceCard> {
                         subtitle,
                         style: TextStyle(
                           fontSize: 10,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
                           fontFamily: 'monospace',
                         ),
                         maxLines: 2,
@@ -888,22 +958,25 @@ class _McpServiceCardState extends State<_McpServiceCard> {
                       width: 22,
                       height: 22,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.08),
                         shape: BoxShape.circle,
                       ),
-                      child: widget.isRefreshing
-                          ? const Padding(
-                              padding: EdgeInsets.all(5),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                strokeCap: StrokeCap.round,
+                      child:
+                          widget.isRefreshing
+                              ? const Padding(
+                                padding: EdgeInsets.all(5),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  strokeCap: StrokeCap.round,
+                                ),
+                              )
+                              : Icon(
+                                CupertinoIcons.refresh,
+                                size: 10,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
-                            )
-                          : Icon(
-                              CupertinoIcons.refresh,
-                              size: 10,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -913,7 +986,9 @@ class _McpServiceCardState extends State<_McpServiceCard> {
                       width: 22,
                       height: 22,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.error.withOpacity(0.08),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(

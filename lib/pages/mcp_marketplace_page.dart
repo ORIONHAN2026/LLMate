@@ -777,13 +777,6 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('MCP 应用市场'),
-        actions: [
-          TextButton(
-            onPressed: _showAddMcpDialog,
-            child: const Text('添加自定义连接器', style: TextStyle(fontSize: 14)),
-          ),
-          const SizedBox(width: 4),
-        ],
       ),
       body:
           _loading
@@ -1150,43 +1143,6 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
 
   /// 解析失败时的不支持传输类型提示
   static const _unsupportedTransportHint = '不支持的传输类型，仅支持 sse / http / streamableHttp';
-
-  void _showAddMcpDialog() {
-    showCustomAddMcpDialog(
-      context,
-      onConfigReady: (config) {
-        _showCustomAddProgressDialog(config);
-      },
-    );
-  }
-
-  void _showCustomAddProgressDialog(Mcp config) {
-    showCustomAddProgressDialog(
-      context,
-      config,
-      onSuccess: (finalConfig, toolCount) {
-        _addServiceWithInfo(finalConfig, toolCount: toolCount);
-      },
-    );
-  }
-
-  Future<void> _addServiceWithInfo(Mcp config, {required int toolCount}) async {
-    final mcpc = Get.find<McpController>();
-    await mcpc.ensureLoaded();
-    if (mcpc.configs.any((s) => s.name == config.name)) {
-      SnackBarUtils.showInfo(context, '服务 "${config.name}" 已存在');
-      return;
-    }
-    await mcpc.addService(config);
-    final model = _currentModel;
-    if (model != null) {
-      await _saveModel(model.addMcpService(config));
-    }
-    if (mounted) {
-      setState(() {});
-      SnackBarUtils.showSuccess(context, '已添加: ${config.name} (${toolCount} 个工具)');
-    }
-  }
 }
 
 // ── 应用市场添加进度弹窗 ──

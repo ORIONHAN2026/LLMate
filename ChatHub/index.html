@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ChatHub - 智能对话助手，支持多模型、MCP协议、文件操作、技能系统的AI工作台">
+  <meta name="keywords" content="AI助手,ChatHub,LLM,MCP,智能对话,多模型,AI工作台">
+  <meta property="og:title" content="ChatHub - 智能对话助手">
+  <meta property="og:description" content="一个平台，连接所有AI模型。支持OpenAI、Claude、Gemini等8+主流模型，内置MCP协议、文件操作、技能系统。">
+  <meta property="og:type" content="website">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="ChatHub">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <title>ChatHub - 智能对话助手 | 多模型 AI 工作台</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+      background:#0a0a0f;color:#e4e4e7;line-height:1.7;overflow-x:hidden
+    }
+    a{color:inherit;text-decoration:none}
+    img{max-width:100%;display:block}
+
+    .bg-glow{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+    .bg-glow::before{
+      content:'';position:absolute;top:-50%;left:-20%;width:80%;height:100%;
+      background:radial-gradient(ellipse at center,rgba(33,150,243,0.08) 0%,transparent 70%)
+    }
+    .bg-glow::after{
+      content:'';position:absolute;top:10%;right:-20%;width:70%;height:80%;
+      background:radial-gradient(ellipse at center,rgba(139,92,246,0.06) 0%,transparent 70%)
+    }
+
+    .nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(20px);background:rgba(10,10,15,0.75);border-bottom:1px solid rgba(255,255,255,0.06)}
+    .nav-inner{max-width:1200px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:700;color:#fff}
+    .nav-logo img{width:32px;height:32px;border-radius:8px}
+    .nav-links{display:flex;gap:32px;align-items:center}
+    .nav-links a{font-size:14px;color:#a1a1aa;transition:color .2s}
+    .nav-links a:hover{color:#fff}
+    .nav-cta{background:linear-gradient(135deg,#2196F3,#7c3aed);color:#fff!important;padding:8px 20px;border-radius:8px;font-weight:600!important;transition:opacity .2s,transform .2s}
+    .nav-cta:hover{opacity:.9;transform:translateY(-1px)}
+
+    .hero{position:relative;z-index:1;padding:160px 24px 100px;text-align:center;max-width:900px;margin:0 auto}
+    .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(33,150,243,0.1);border:1px solid rgba(33,150,243,0.25);border-radius:100px;padding:6px 16px;font-size:13px;color:#60a5fa;margin-bottom:32px}
+    .hero-badge .dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:pulse-dot 2s infinite}
+    @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+    .hero h1{font-size:clamp(36px,6vw,60px);font-weight:800;line-height:1.15;margin-bottom:24px;letter-spacing:-0.02em}
+    .hero h1 .gradient-text{background:linear-gradient(135deg,#2196F3 0%,#7c3aed 50%,#ec4899 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero-desc{font-size:18px;color:#a1a1aa;max-width:600px;margin:0 auto 40px;line-height:1.8}
+    .hero-actions{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+    .btn-primary{background:linear-gradient(135deg,#2196F3,#7c3aed);color:#fff;box-shadow:0 4px 24px rgba(33,150,243,0.3)}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(33,150,243,0.4)}
+    .btn-secondary{background:rgba(255,255,255,0.06);color:#e4e4e7;border:1px solid rgba(255,255,255,0.1)}
+    .btn-secondary:hover{background:rgba(255,255,255,0.1)}
+    .btn svg{width:20px;height:20px}
+    .platform-badges{display:flex;gap:12px;justify-content:center;margin-top:32px;flex-wrap:wrap}
+    .platform-badge{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);font-size:13px;color:#71717a}
+    .platform-badge svg{width:16px;height:16px;opacity:.6}
+
+    .section{position:relative;z-index:1;padding:100px 24px}
+    .section-inner{max-width:1200px;margin:0 auto}
+    .section-label{font-size:13px;font-weight:600;color:#2196F3;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+    .section-title{font-size:clamp(28px,4vw,40px);font-weight:700;margin-bottom:16px;letter-spacing:-0.02em}
+    .section-desc{font-size:16px;color:#71717a;max-width:600px;margin-bottom:48px}
+
+    .feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:24px}
+    .feature-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:32px;transition:border-color .3s,transform .3s}
+    .feature-card:hover{border-color:rgba(33,150,243,0.3);transform:translateY(-4px)}
+    .feature-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;font-size:24px}
+    .feature-icon.blue{background:rgba(33,150,243,0.15);color:#60a5fa}
+    .feature-icon.purple{background:rgba(139,92,246,0.15);color:#a78bfa}
+    .feature-icon.green{background:rgba(34,197,94,0.15);color:#4ade80}
+    .feature-icon.amber{background:rgba(251,191,36,0.15);color:#fbbf24}
+    .feature-icon.rose{background:rgba(244,63,94,0.15);color:#fb7185}
+    .feature-icon.cyan{background:rgba(6,182,212,0.15);color:#22d3ee}
+    .feature-card h3{font-size:18px;font-weight:600;margin-bottom:8px}
+    .feature-card p{font-size:14px;color:#71717a;line-height:1.7}
+
+    .model-showcase{display:flex;flex-wrap:wrap;gap:12px;margin-top:48px;justify-content:center}
+    .model-chip{display:flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;font-size:14px;font-weight:500;transition:border-color .2s}
+    .model-chip:hover{border-color:rgba(33,150,243,0.4)}
+    .model-chip .dot{width:8px;height:8px;border-radius:50%}
+    .model-chip .dot.openai{background:#10a37f}
+    .model-chip .dot.anthropic{background:#d97706}
+    .model-chip .dot.google{background:#4285f4}
+    .model-chip .dot.deepseek{background:#4f46e5}
+    .model-chip .dot.qwen{background:#6152f2}
+    .model-chip .dot.zhipu{background:#3859ff}
+    .model-chip .dot.ollama{background:#fafafa}
+    .model-chip .dot.modelscope{background:#1d4ed8}
+
+    .changelog{background:rgba(255,255,255,0.015)}
+    .timeline{position:relative;max-width:700px}
+    .timeline::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,rgba(33,150,243,0.3),transparent)}
+    .timeline-item{position:relative;padding-left:32px;padding-bottom:40px}
+    .timeline-item:last-child{padding-bottom:0}
+    .timeline-item::before{content:'';position:absolute;left:-4px;top:6px;width:9px;height:9px;background:#2196F3;border-radius:50%;box-shadow:0 0 12px rgba(33,150,243,0.4)}
+    .version-tag{display:inline-block;padding:2px 10px;border-radius:6px;font-size:12px;font-weight:600;background:rgba(33,150,243,0.15);color:#60a5fa;margin-bottom:8px}
+    .version-date{font-size:13px;color:#52525b;margin-left:8px}
+    .timeline-item h4{font-size:18px;font-weight:600;margin-bottom:8px}
+    .timeline-item ul{list-style:none;padding:0}
+    .timeline-item li{font-size:14px;color:#a1a1aa;padding:4px 0 4px 16px;position:relative}
+    .timeline-item li::before{content:'';position:absolute;left:0;top:12px;width:6px;height:6px;background:rgba(255,255,255,0.15);border-radius:50%}
+    .timeline-item li.feature::before{background:#22c55e}
+    .timeline-item li.fix::before{background:#f59e0b}
+    .timeline-item li.improve::before{background:#3b82f6}
+
+    .download-section{text-align:center}
+    .download-cards{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:48px}
+    .download-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:40px 32px;width:280px;text-align:center;transition:border-color .3s,transform .3s}
+    .download-card:hover{border-color:rgba(33,150,243,0.4);transform:translateY(-4px)}
+    .download-card.featured{border-color:rgba(33,150,243,0.3);background:rgba(33,150,243,0.05)}
+    .download-card .os-icon{width:56px;height:56px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:32px}
+    .download-card h3{font-size:20px;margin-bottom:4px}
+    .download-card .arch{font-size:13px;color:#52525b;margin-bottom:16px}
+    .download-card .version{font-size:13px;color:#60a5fa;margin-bottom:20px}
+    .download-card .btn-download{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;background:linear-gradient(135deg,#2196F3,#7c3aed);color:#fff;border:none;cursor:pointer;transition:all .2s;width:100%;justify-content:center}
+    .download-card .btn-download:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(33,150,243,0.3)}
+    .download-card .file-size{font-size:12px;color:#52525b;margin-top:12px}
+
+    .footer{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,0.06);padding:40px 24px;text-align:center}
+    .footer-inner{max-width:1200px;margin:0 auto}
+    .footer p{font-size:13px;color:#52525b}
+    .footer-links{display:flex;gap:24px;justify-content:center;margin-bottom:16px}
+    .footer-links a{font-size:13px;color:#71717a;transition:color .2s}
+    .footer-links a:hover{color:#e4e4e7}
+
+    @media(max-width:768px){
+      .nav-links a:not(.nav-cta){display:none}
+      .hero{padding:120px 20px 60px}
+      .hero h1{font-size:32px}
+      .hero-desc{font-size:15px}
+      .section{padding:60px 20px}
+      .feature-grid{grid-template-columns:1fr}
+      .download-cards{flex-direction:column;align-items:center}
+      .download-card{width:100%;max-width:340px}
+    }
+  </style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <img src="favicon.png" alt="ChatHub">
+      ChatHub
+    </a>
+    <div class="nav-links">
+      <a href="#features">功能特性</a>
+      <a href="#changelog">更新日志</a>
+      <a href="#download" class="nav-cta">立即下载</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    最新版本 v1.0.0 已发布
+  </div>
+  <h1>
+    一个平台，连接<br>
+    <span class="gradient-text">所有 AI 模型</span>
+  </h1>
+  <p class="hero-desc">
+    ChatHub 是你的全能 AI 工作台。统一管理 OpenAI、Claude、Gemini、DeepSeek 等 8+ 主流模型，
+    内置 MCP 协议支持、文件操作引擎、技能系统，让 AI 真正成为你的生产力伙伴。
+  </p>
+  <div class="hero-actions">
+    <a href="#download" class="btn btn-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      免费下载
+    </a>
+    <a href="#features" class="btn btn-secondary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      了解更多
+    </a>
+  </div>
+  <div class="platform-badges">
+    <span class="platform-badge">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18.5c-4.694 0-8.5-3.806-8.5-8.5S7.306 3.5 12 3.5s8.5 3.806 8.5 8.5-3.806 8.5-8.5 8.5z"/></svg>
+      macOS
+    </span>
+    <span class="platform-badge">
+      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="1" width="10" height="10"/><rect x="13" y="1" width="10" height="10"/><rect x="1" y="13" width="10" height="10"/><rect x="13" y="13" width="10" height="10"/></svg>
+      Windows
+    </span>
+    <span class="platform-badge">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/></svg>
+      Linux
+    </span>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="section-inner">
+    <div class="section-label">核心功能</div>
+    <h2 class="section-title">为什么选择 ChatHub？</h2>
+    <p class="section-desc">不只是聊天客户端，更是你的 AI 生产力工作台。从多模型管理到文件操作，从 MCP 扩展到技能系统，一站式满足所有 AI 工作需求。</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon blue">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3>多模型统一管理</h3>
+        <p>一个界面管理 OpenAI、Claude、Gemini、DeepSeek、通义千问、智谱、Ollama 等 8+ 主流 AI 模型。独立配置 API Key、Temperature、System Prompt，自由切换。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h3>MCP 协议原生支持</h3>
+        <p>完整支持 Model Context Protocol，内置 MCP 市场一键安装。支持 SSE、HTTP、Streamable HTTP 传输，Stdio 和 URL 双连接方式，无限扩展 AI 能力边界。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon green">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h3>AI 文件操作引擎</h3>
+        <p>让 AI 直接创建和编辑 Word、Excel、PDF、PPT 文档，处理图片、执行代码。内置 Python、Node.js、Shell 运行环境，AI 帮你完成实际工作。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon amber">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <h3>技能系统 & 市场</h3>
+        <p>创建自定义 AI 技能角色，内置技能市场提供代码审查、内容创作、数据分析等预置模板。一键绑定到模型和会话，让 AI 成为领域专家。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon rose">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3>智能记忆压缩</h3>
+        <p>长对话自动记忆压缩，突破上下文长度限制。可视化展示压缩记忆和对话轮次，让 AI 在超长对话中始终保持连贯理解。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon cyan">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 7v5l3 3"/></svg>
+        </div>
+        <h3>定时任务 & 快捷指令</h3>
+        <p>支持 Cron 定时任务，到时间自动发送预设消息。模型级和会话级快捷指令，一键发送常用提示词，大幅提升工作效率。</p>
+      </div>
+    </div>
+    <div class="model-showcase">
+      <div class="model-chip"><span class="dot openai"></span> OpenAI</div>
+      <div class="model-chip"><span class="dot anthropic"></span> Anthropic Claude</div>
+      <div class="model-chip"><span class="dot google"></span> Google Gemini</div>
+      <div class="model-chip"><span class="dot deepseek"></span> DeepSeek</div>
+      <div class="model-chip"><span class="dot qwen"></span> 通义千问</div>
+      <div class="model-chip"><span class="dot zhipu"></span> 智谱 GLM</div>
+      <div class="model-chip"><span class="dot ollama"></span> Ollama 本地模型</div>
+      <div class="model-chip"><span class="dot modelscope"></span> ModelScope</div>
+    </div>
+  </div>
+</section>
+
+<section class="section changelog" id="changelog">
+  <div class="section-inner">
+    <div class="section-label">更新日志</div>
+    <h2 class="section-title">版本更新记录</h2>
+    <p class="section-desc">持续迭代，不断进化。每一次更新都让 ChatHub 更强大。</p>
+    <div class="timeline">
+      <div class="timeline-item">
+        <span class="version-tag">v1.0.0</span>
+        <span class="version-date">2025-06-14</span>
+        <h4>🎉 首个正式版本发布</h4>
+        <ul>
+          <li class="feature">支持 8+ 主流 AI 模型提供商统一管理</li>
+          <li class="feature">完整 MCP 协议支持，内置 MCP 市场</li>
+          <li class="feature">AI 文件操作引擎：Word、Excel、PDF、PPT、图片处理</li>
+          <li class="feature">技能系统与技能市场</li>
+          <li class="feature">智能对话记忆压缩</li>
+          <li class="feature">Cron 定时任务 & 快捷指令</li>
+          <li class="feature">流式响应与 Token 消耗统计</li>
+          <li class="feature">深色/浅色主题，中英文国际化</li>
+          <li class="feature">macOS / Windows / Linux 全平台支持</li>
+        </ul>
+      </div>
+      <div class="timeline-item">
+        <span class="version-tag">v0.9.0-beta</span>
+        <span class="version-date">2025-05-20</span>
+        <h4>Beta 测试版</h4>
+        <ul>
+          <li class="feature">多模型管理与对话功能完善</li>
+          <li class="improve">MCP 协议集成与工具调用优化</li>
+          <li class="improve">文件操作工具链完善</li>
+          <li class="fix">多项 UI/UX 体验修复</li>
+        </ul>
+      </div>
+      <div class="timeline-item">
+        <span class="version-tag">v0.5.0-alpha</span>
+        <span class="version-date">2025-04-01</span>
+        <h4>Alpha 内测版</h4>
+        <ul>
+          <li class="feature">核心对话引擎搭建</li>
+          <li class="feature">基础多模型支持</li>
+          <li class="feature">Isar 本地数据库集成</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section download-section" id="download">
+  <div class="section-inner">
+    <div class="section-label">下载</div>
+    <h2 class="section-title">获取 ChatHub</h2>
+    <p class="section-desc" style="margin:0 auto 0">选择你的平台，开始 AI 生产力之旅。完全免费，持续更新。</p>
+    <div class="download-cards">
+      <div class="download-card">
+        <div class="os-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        </div>
+        <h3>macOS</h3>
+        <div class="arch">Apple Silicon · Intel</div>
+        <div class="version">v1.0.0</div>
+        <a href="#" class="btn-download" onclick="alert('macOS 版本即将上线，敬请期待！')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载 DMG
+        </a>
+        <div class="file-size">~120 MB</div>
+      </div>
+      <div class="download-card featured">
+        <div class="os-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="1" width="10" height="10"/><rect x="13" y="1" width="10" height="10"/><rect x="1" y="13" width="10" height="10"/><rect x="13" y="13" width="10" height="10"/></svg>
+        </div>
+        <h3>Windows</h3>
+        <div class="arch">x64 · ARM64</div>
+        <div class="version">v1.0.0</div>
+        <a href="#" class="btn-download" onclick="alert('Windows 版本即将上线，敬请期待！')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载 EXE
+        </a>
+        <div class="file-size">~130 MB</div>
+      </div>
+      <div class="download-card">
+        <div class="os-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/></svg>
+        </div>
+        <h3>Linux</h3>
+        <div class="arch">AppImage · deb · rpm</div>
+        <div class="version">v1.0.0</div>
+        <a href="#" class="btn-download" onclick="alert('Linux 版本即将上线，敬请期待！')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载 AppImage
+        </a>
+        <div class="file-size">~125 MB</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="#features">功能特性</a>
+      <a href="#changelog">更新日志</a>
+      <a href="#download">下载</a>
+    </div>
+    <p>&copy; 2025 ChatHub. All rights reserved.</p>
+  </div>
+</footer>
+
+</body>
+</html>

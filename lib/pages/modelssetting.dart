@@ -16,7 +16,9 @@ import '../dialogs/add_online_model_dialog.dart';
 import '../widgets/model_detail_page.dart';
 
 class ModelSettingPage extends StatefulWidget {
-  const ModelSettingPage({super.key});
+  final bool embedded;
+
+  const ModelSettingPage({super.key, this.embedded = false});
 
   @override
   State<ModelSettingPage> createState() => _ModelSettingPageState();
@@ -220,6 +222,21 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final body = Row(
+      children: [
+        // 左侧导航菜单
+        _buildLeftNavigation(),
+        // 分割线
+        Container(width: 1, color: Theme.of(context).dividerColor),
+        // 右侧内容区域
+        Expanded(child: _buildRightContent()),
+      ],
+    );
+
+    if (widget.embedded) {
+      return body;
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -267,16 +284,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
           child: Container(height: 1, color: Theme.of(context).dividerColor),
         ),
       ),
-      body: Row(
-        children: [
-          // 左侧导航菜单
-          _buildLeftNavigation(),
-          // 分割线
-          Container(width: 1, color: Theme.of(context).dividerColor),
-          // 右侧内容区域
-          Expanded(child: _buildRightContent()),
-        ],
-      ),
+      body: body,
     );
   }
 

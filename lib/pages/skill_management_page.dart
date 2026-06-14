@@ -21,7 +21,14 @@ import '../widgets/common/confirm_delete_dialog.dart';
 /// - 右上角 + 号创建自定义技能
 /// - 编辑/删除技能
 class SkillManagementPage extends StatefulWidget {
-  const SkillManagementPage({super.key});
+  final bool embedded;
+  final void Function(List<Widget>)? onActionsChanged;
+
+  const SkillManagementPage({
+    super.key,
+    this.embedded = false,
+    this.onActionsChanged,
+  });
 
   @override
   State<SkillManagementPage> createState() => _SkillManagementPageState();
@@ -433,6 +440,18 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final content = _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _buildBody();
+
+    if (widget.embedded) {
+      // 通知父页面 AppBar actions
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onActionsChanged?.call(_buildActions());
+      });
+      return content;
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -488,11 +507,40 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
           const SizedBox(width: 4),
         ],
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _buildBody(),
+      body: content,
     );
+  }
+
+  List<Widget> _buildActions() {
+    return [
+      Transform.translate(
+        offset: const Offset(0, -5),
+        child: IconButton(
+          visualDensity: VisualDensity.compact,
+          tooltip: AppLocalizations.of(context)!.addSkill,
+          onPressed: () => _importSkillZip(),
+          icon: Icon(
+            CupertinoIcons.add,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+      ),
+      Transform.translate(
+        offset: const Offset(0, -5),
+        child: IconButton(
+          visualDensity: VisualDensity.compact,
+          key: _marketplaceButtonKey,
+          tooltip: '应用市场',
+          onPressed: () => _showSkillMarketplaceMenu(),
+          icon: Icon(
+            CupertinoIcons.bag,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _buildBody() {

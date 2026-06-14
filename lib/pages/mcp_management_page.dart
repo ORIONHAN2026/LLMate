@@ -49,7 +49,14 @@ String buildSubtitle(Mcp service) {
 }
 
 class McpManagementPage extends StatefulWidget {
-  const McpManagementPage({super.key});
+  final bool embedded;
+  final void Function(List<Widget>)? onActionsChanged;
+
+  const McpManagementPage({
+    super.key,
+    this.embedded = false,
+    this.onActionsChanged,
+  });
 
   @override
   State<McpManagementPage> createState() => _McpManagementPageState();
@@ -102,6 +109,18 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final content = _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _buildServiceGrid();
+
+    if (widget.embedded) {
+      // 通知父页面 AppBar actions
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onActionsChanged?.call(_buildActions());
+      });
+      return content;
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -177,11 +196,60 @@ class _McpManagementPageState extends State<McpManagementPage> {
           const SizedBox(width: 4),
         ],
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _buildServiceGrid(),
+      body: content,
     );
+  }
+
+  List<Widget> _buildActions() {
+    return [
+      Transform.translate(
+        offset: const Offset(0, -5),
+        child: IconButton(
+          visualDensity: VisualDensity.compact,
+          tooltip: AppLocalizations.of(context)!.addCustomConnector,
+          onPressed: () {
+            showCustomAddMcpDialog(
+              context,
+              onConfigReady: (config) {
+                showCustomAddProgressDialog(
+                  context,
+                  config,
+                  onSuccess: (finalConfig, toolCount) async {
+                    final mcpc = Get.find<McpController>();
+                    await mcpc.ensureLoaded();
+                    if (!mcpc.configs.any(
+                      (s) => s.name == finalConfig.name,
+                    )) {
+                      await mcpc.addService(finalConfig);
+                    }
+                    _loadServices();
+                  },
+                );
+              },
+            );
+          },
+          icon: Icon(
+            CupertinoIcons.add,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+      ),
+      Transform.translate(
+        offset: const Offset(0, -5),
+        child: IconButton(
+          visualDensity: VisualDensity.compact,
+          key: _marketplaceButtonKey,
+          tooltip: AppLocalizations.of(context)!.marketplace,
+          onPressed: () => _showMarketplaceDialog(),
+          icon: Icon(
+            CupertinoIcons.bag,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _buildServiceGrid() {

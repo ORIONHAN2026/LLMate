@@ -1,9 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:chathub/controllers/session_controller.dart';
-import 'package:chathub/pages/modelssetting.dart';
-import 'package:chathub/pages/mcp_management_page.dart';
-import 'package:chathub/pages/skill_management_page.dart';
-import 'package:chathub/pages/other_settings_page.dart';
+import 'package:chathub/pages/settings_page.dart';
 import 'package:chathub/widgets/model_selector.dart';
 import 'package:chathub/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +17,7 @@ import '../widgets/chat_input_widget.dart';
 import 'package:chathub/utils/snackbar_utils.dart';
 import 'package:chathub/utils/responsive_utils.dart';
 import '../widgets/chat_conversation_area.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});
@@ -509,235 +506,23 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     );
   }
 
-  // 显示设置菜单
+  // 导航到设置页面
   void _showSettingsMenu() {
-    // 获取设置按钮的渲染位置
-    final RenderBox? button =
-        _settingsButtonKey.currentContext?.findRenderObject() as RenderBox?;
-    if (button == null) return;
-
-    final RenderBox overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
-    final Offset buttonPosition = button.localToGlobal(
-      Offset.zero,
-      ancestor: overlay,
-    );
-
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    // 计算菜单显示位置 - 在按钮上方显示
-    final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromLTWH(
-        buttonPosition.dx - 20, // 稍微向左偏移
-        buttonPosition.dy - 180, // 在按钮上方显示菜单
-        150, // 菜单宽度
-        200, // 菜单高度
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SettingsPage(),
       ),
-      Offset.zero & overlay.size,
-    );
-
-    showMenu(
-      context: context,
-      position: position,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 8,
-      color: theme.scaffoldBackgroundColor, // 使用主题色
-      items: [
-        PopupMenuItem(
-          height: 48,
-          onTap: _sendFeedbackEmail,
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.mail,
-                size: 16,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
-              Text(l10n.feedback, style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-        ),
-        // 模型管理
-        PopupMenuItem(
-          height: 48,
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.sparkles,
-                size: 16,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
-              Text(l10n.modelManagement, style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () async {
-              if (mounted) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ModelSettingPage(),
-                  ),
-                );
-                // 从设置页面返回时重新加载模型列表
-                _loadModels();
-              }
-            });
-          },
-        ),
-        // MCP 工具管理
-        PopupMenuItem(
-          height: 48,
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.link,
-                size: 16,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                l10n.connectorManagement,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () async {
-              if (mounted) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const McpManagementPage(),
-                  ),
-                );
-              }
-            });
-          },
-        ),
-        // 技能管理
-        PopupMenuItem(
-          height: 48,
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.wand_stars,
-                size: 16,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
-              Text(l10n.skillManagement, style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () async {
-              if (mounted) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SkillManagementPage(),
-                  ),
-                );
-              }
-            });
-          },
-        ),
-        // 其他设置
-        PopupMenuItem(
-          height: 48,
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.slider_horizontal_3,
-                size: 16,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
-              Text(l10n.otherSettings, style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () async {
-              if (mounted) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const OtherSettingsPage(),
-                  ),
-                );
-              }
-            });
-          },
-        ),
-        // 登录
-        // PopupMenuItem(
-        //   height: 48,
-        //   child: Row(
-        //     children: [
-        //       Icon(
-        //         CupertinoIcons.arrow_right_square,
-        //         size: 16,
-        //         color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-        //       ),
-        //       const SizedBox(width: 12),
-        //       const Text('登录', style: TextStyle(fontSize: 12)),
-        //     ],
-        //   ),
-        //   onTap: () {
-        //     // TODO: 实现登录功能
-        //     // TODO: 实现登录功能
-        //   },
-        // ),
-      ],
-    );
+    ).then((_) {
+      // 从设置页面返回时重新加载模型列表
+      _loadModels();
+    });
   }
 
   // 显示错误提示
   void _showErrorSnackBar(String message) {
     SnackBarUtils.showError(context, message);
   }
-
-  // 发送反馈邮件
-  Future<void> _sendFeedbackEmail() async {
-    final l10n = AppLocalizations.of(context)!;
-    const String feedbackEmail = 'hanxinyc@gmail.com';
-    const String subject = 'ChatHub App Feedback';
-    const String body = '''
-
------------------------------
-Thank you for your feedback on ChatHub. We take every feedback seriously.
-
-Thanks!
-''';
-
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: feedbackEmail,
-      queryParameters: {'subject': subject, 'body': body},
-    );
-
-    try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
-      } else {
-        // 如果无法启动邮箱应用，显示错误提示
-        if (mounted) {
-          SnackBarUtils.showError(context, l10n.cannotOpenEmailApp);
-        }
-      }
-    } catch (e) {
-      // 发生错误时显示提示
-      if (mounted) {
-        SnackBarUtils.showError(context, l10n.xFailed(l10n.send, e.toString()));
-      }
-    }
-  }
-
-  // 发送升级高级版申请邮件
-  // _sendUpgradeEmail 方法已删除（不再使用）
 
   // 处理删除会话的回调
   void _handleDeleteSession(dynamic value) {

@@ -463,6 +463,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         return 'assets/icons/qwen-color.webp';
       case 'tencent':
         return 'assets/icons/yuanbao-color.webp';
+      case 'xiaomi':
+        return 'assets/icons/yuanbao-color.webp';
       default:
         return null;
     }

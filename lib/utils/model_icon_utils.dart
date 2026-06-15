@@ -39,6 +39,9 @@ class ModelIconUtils {
       if (p.contains('minimax')) {
         return 'assets/icons/yuanbao-color.webp';
       }
+      if (p.contains('xiaomi') || p.contains('小米') || p.contains('milm')) {
+        return 'assets/icons/yuanbao-color.webp';
+      }
     }
 
     // 2. 用 protocol 字段匹配
@@ -80,6 +83,9 @@ class ModelIconUtils {
         return 'assets/icons/yuanbao-color.webp';
       }
       if (name.contains('minimax')) {
+        return 'assets/icons/yuanbao-color.webp';
+      }
+      if (name.contains('milm') || name.contains('mi-llm')) {
         return 'assets/icons/yuanbao-color.webp';
       }
     }

@@ -7,16 +7,11 @@ lib/framework/
 ├── llm_hub.dart                    # 核心框架类
 ├── llm_framework.dart              # 框架导出文件
 ├── llm_migration_service.dart      # 迁移服务
-├── providers/                      # 提供商实现
+├── providers/                      # 提供商实现（按协议标准）
 │   ├── base_provider.dart          # 基础抽象类
-│   ├── openai_provider.dart        # OpenAI 提供商
-│   ├── deepseek_provider.dart      # DeepSeek 提供商
-│   ├── anthropic_provider.dart     # Anthropic 提供商
-│   ├── modelscope_provider.dart    # ModelScope 提供商
-│   ├── gemini_provider.dart        # Gemini 提供商
-│   ├── qwen_provider.dart          # 通义千问提供商
-│   ├── zhipu_provider.dart         # 智谱AI 提供商
-│   └── ollama_provider.dart        # Ollama 提供商
+│   ├── openai_provider.dart        # OpenAI 兼容协议（OpenAI/DeepSeek/阿里云百炼/智谱AI/ModelScope/Ollama）
+│   ├── anthropic_provider.dart     # Anthropic 协议
+│   └── gemini_provider.dart        # Gemini 协议
 ├── examples/                       # 示例代码
 │   └── llm_hub_examples.dart       # 完整示例
 └── README.md                       # 详细文档

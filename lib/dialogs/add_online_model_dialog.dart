@@ -1517,25 +1517,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       final inputApiKey = _apiKeyController.text.trim();
       String finalApiUrl = inputApiUrl;
 
-      // 根据提供商自动补全API端点路径，与测试逻辑保持一致
-      switch (_selectedProvider) {
-        case 'openai':
-        case 'deepseek':
-          if (!finalApiUrl.endsWith('/chat/completions')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}chat/completions'
-                    : '$finalApiUrl/chat/completions';
-          }
-          break;
-        case 'modelscope': // 魔塔兼容OpenAI API格式
-          if (!finalApiUrl.endsWith('/chat/completions')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}chat/completions'
-                    : '$finalApiUrl/chat/completions';
-          }
-          break;
+      // 根据协议自动补全API端点路径
+      final protocol = selectedProviderData['protocol'];
+      switch (protocol) {
         case 'anthropic':
           if (!finalApiUrl.endsWith('/messages')) {
             finalApiUrl =
@@ -1544,7 +1528,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     : '$finalApiUrl/messages';
           }
           break;
-        case 'google':
+        case 'gemini':
           if (!finalApiUrl.contains('/models/')) {
             finalApiUrl =
                 finalApiUrl.endsWith('/')
@@ -1552,16 +1536,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     : '$finalApiUrl/models/$_selectedOnlineModel:generateContent?key=$inputApiKey';
           }
           break;
-        case 'ollama':
-          // Ollama 需要自动添加 /chat 路径
-          if (!finalApiUrl.endsWith('/chat')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}chat'
-                    : '$finalApiUrl/chat';
-          }
-          break;
-        // 其他提供商使用通用格式
+        // OpenAI 兼容协议（openai / deepseek / qwen / zhipu / modelscope / ollama 等）
         default:
           if (!finalApiUrl.endsWith('/chat/completions')) {
             finalApiUrl =
@@ -1589,6 +1564,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         'description': '${selectedProviderData['name']} 在线模型服务',
         'type': 'online', // 标记为在线模型
         'provider': _selectedProvider,
+        'protocol': selectedProviderData['protocol'],
         'platform': _resolveProviderPlatformName(_selectedProvider),
         'apiKey': inputApiKey, // 使用控制器中的最新值
         'apiUrl': finalApiUrl, // 使用完整的API端点
@@ -1996,6 +1972,11 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       final testApiUrl = _apiUrlController.text.trim();
       final testApiKey = _apiKeyController.text.trim();
 
+      // 获取当前选中的提供商数据
+      final selectedProviderData = onlineProviders.firstWhere(
+        (provider) => provider['id'] == _selectedProvider,
+      );
+
       // Ollama 可能不需要 API Key，其他提供商需要
       final apiKeyRequired = _selectedProvider != 'ollama';
 
@@ -2022,25 +2003,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
       }
 
-      // 根据提供商自动补全API端点路径
-      switch (_selectedProvider) {
-        case 'openai':
-        case 'deepseek':
-          if (!finalApiUrl.endsWith('/chat/completions')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}chat/completions'
-                    : '$finalApiUrl/chat/completions';
-          }
-          break;
-        case 'modelscope': // 魔塔兼容OpenAI API格式
-          if (!finalApiUrl.endsWith('/chat/completions')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}chat/completions'
-                    : '$finalApiUrl/chat/completions';
-          }
-          break;
+      // 根据协议自动补全API端点路径
+      final testProtocol = selectedProviderData['protocol'];
+      switch (testProtocol) {
         case 'anthropic':
           if (!finalApiUrl.endsWith('/messages')) {
             finalApiUrl =
@@ -2049,7 +2014,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     : '$finalApiUrl/messages';
           }
           break;
-        case 'google':
+        case 'gemini':
           if (!finalApiUrl.contains('/models/')) {
             finalApiUrl =
                 finalApiUrl.endsWith('/')
@@ -2057,16 +2022,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     : '$finalApiUrl/models/$_selectedOnlineModel:generateContent?key=$testApiKey';
           }
           break;
-        case 'ollama':
-          // Ollama 需要自动添加 /chat 路径
-          if (!finalApiUrl.endsWith('/chat')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}chat'
-                    : '$finalApiUrl/chat';
-          }
-          break;
-        // 其他提供商使用通用格式
+        // OpenAI 兼容协议（openai / deepseek / qwen / zhipu / modelscope / ollama 等）
         default:
           if (!finalApiUrl.endsWith('/chat/completions')) {
             finalApiUrl =
@@ -2083,6 +2039,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         model: testModelId, // 使用包含规格的模型标识符
         status: 'active',
         provider: _selectedProvider,
+        protocol: selectedProviderData['protocol'],
         apiKey: testApiKey,
         apiUrl: finalApiUrl,
         createdAt: DateTime.now(),

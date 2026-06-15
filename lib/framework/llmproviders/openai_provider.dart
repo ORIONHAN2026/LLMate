@@ -8,10 +8,30 @@ import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import 'base_provider.dart';
 
-/// OpenAI API 提供商
+/// OpenAI 兼容协议提供商
+///
+/// 适用于所有遵循 OpenAI Chat Completion API 格式的提供商：
+/// - OpenAI
+/// - DeepSeek
+/// - 阿里云百炼 (Qwen)
+/// - 智谱AI (Zhipu/GLM)
+/// - ModelScope (魔塔)
+/// - Ollama
+///
+/// 这些提供商的 API 格式完全一致（SSE 流式 + `data: ` 前缀 + `[DONE]` 结束标记）。
 class OpenAiProvider extends BaseLlmProvider {
+  /// 显示名称
+  final String _displayName;
+
+  /// 推理模型判断关键词（用于 getModelInfo 中的 supports_reasoning 判断）
+  static const _reasoningKeywords = ['o1', 'o3', 'o4', 'r1', 'qwq', 'glm', 'deepseek-r1', 'thinking'];
+
+  OpenAiProvider({
+    String? displayName,
+  }) : _displayName = displayName ?? 'OpenAI Compatible';
+
   @override
-  String get providerName => 'OpenAI';
+  String get providerName => _displayName;
 
   @override
   List<String> getSupportedFeatures() {
@@ -97,6 +117,11 @@ class OpenAiProvider extends BaseLlmProvider {
   }) async* {
     if (model == null) throw StateError('$providerName 提供商未配置');
 
+    // 用于累积完整响应的缓冲区
+    final responseContentBuf = StringBuffer();
+    final responseThinkBuf = StringBuffer();
+    final responseToolCalls = <String>[];
+
     try {
       final requestData = buildRequestData(
         userMessage: userMessage,
@@ -121,9 +146,20 @@ class OpenAiProvider extends BaseLlmProvider {
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        yield* _transformStreamResponse(response.data!.stream);
+        await for (final chunk in _transformStreamResponse(response.data!.stream)) {
+          // 累积响应内容
+          if (chunk['content'] != null) responseContentBuf.write(chunk['content']);
+          if (chunk['think'] != null) responseThinkBuf.write(chunk['think']);
+          if (chunk['toolcall'] != null) responseToolCalls.add(chunk['toolcall']!);
+
+          yield chunk;
+        }
+
       } else {
-        yield {'content': 'API 请求失败：${response.statusCode}', 'think': null};
+        yield {
+          'content': 'API 请求失败：${response.statusCode}${response.statusMessage}',
+          'think': null,
+        };
       }
     } catch (e) {
       if (kDebugMode) print('$providerName 流式响应错误: $e');
@@ -161,7 +197,7 @@ class OpenAiProvider extends BaseLlmProvider {
     }
   }
 
-  // ── OpenAI 流处理 ──
+  // ── OpenAI 兼容 SSE 流处理 ──
 
   Stream<Map<String, String?>> _transformStreamResponse(
     Stream<List<int>> stream,
@@ -208,7 +244,7 @@ class OpenAiProvider extends BaseLlmProvider {
               'toolcall': jsonEncode(toolCalls.map((t) => t.toJson()).toList()),
             };
           }
-          } catch (e) {
+        } catch (e) {
           if (kDebugMode) print('$providerName JSON 解析错误: $e');
         }
       }
@@ -285,15 +321,21 @@ class OpenAiProvider extends BaseLlmProvider {
   @override
   Future<Map<String, dynamic>?> getModelInfo() async {
     if (model == null) return null;
+
+    // 判断是否支持推理
+    final modelName = model!.model.toLowerCase();
+    final supportsReasoning = _reasoningKeywords.any(
+      (kw) => modelName.contains(kw.toLowerCase()),
+    );
+
     return {
-      'provider': 'openai',
+      'provider': _displayName,
       'model': model!.model,
       'name': model!.name,
       'features': getSupportedFeatures(),
       'configured': true,
-      'supports_reasoning': model!.model.contains('o1') ||
-          model!.model.contains('o3') ||
-          model!.model.contains('o4'),
+      'supports_reasoning': supportsReasoning,
     };
   }
+
 }

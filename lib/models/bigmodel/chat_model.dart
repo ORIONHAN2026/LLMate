@@ -15,8 +15,9 @@ class ChatModel {
   final String status; // 'active', 'inactive'
   final String? description;
   final String? type; // 'local', 'online'
-  final String? provider; // 提供商：deepseek, openai, anthropic等
+  final String? provider; // 提供商：deepseek, openai, anthropic, qwen, zhipu, modelscope, ollama, google 等
   final String? platform; // 平台展示名称，如：阿里云百炼、DeepSeek、OpenAI等
+  final String? protocol; // 协议类型：openai, anthropic, gemini
   final String? apiKey;
   final String? apiUrl;
   final DateTime? createdAt;
@@ -43,6 +44,7 @@ class ChatModel {
     this.type,
     this.provider,
     this.platform,
+    this.protocol,
     this.apiKey,
     this.apiUrl,
     this.createdAt,
@@ -89,6 +91,7 @@ class ChatModel {
       type: map['type'],
       provider: map['provider'],
       platform: map['platform'] ?? _resolvePlatformName(map['provider']),
+      protocol: map['protocol'] ?? _resolveProtocol(map['provider']),
       apiKey: map['apiKey'],
       apiUrl: map['apiUrl'],
       createdAt:
@@ -188,6 +191,7 @@ class ChatModel {
       'type': type,
       'provider': provider,
       'platform': platform,
+      'protocol': protocol,
       'apiKey': apiKey,
       'apiUrl': apiUrl,
       'createdAt': createdAt?.toIso8601String(),
@@ -246,6 +250,7 @@ class ChatModel {
     String? type,
     String? provider,
     String? platform,
+    String? protocol,
     String? apiKey,
     String? apiUrl,
     ChatSettings? chatSettings,
@@ -259,6 +264,7 @@ class ChatModel {
       type: type,
       provider: provider,
       platform: platform ?? _resolvePlatformName(provider),
+      protocol: protocol ?? _resolveProtocol(provider),
       apiKey: apiKey,
       apiUrl: apiUrl,
       createdAt: DateTime.now(),
@@ -281,6 +287,7 @@ class ChatModel {
     String? type,
     String? provider,
     String? platform,
+    String? protocol,
     String? apiKey,
     String? apiUrl,
     DateTime? createdAt,
@@ -299,6 +306,7 @@ class ChatModel {
       type: type ?? this.type,
       provider: provider ?? this.provider,
       platform: platform ?? this.platform,
+      protocol: protocol ?? this.protocol,
       apiKey: apiKey ?? this.apiKey,
       apiUrl: apiUrl ?? this.apiUrl,
       createdAt: createdAt ?? this.createdAt,
@@ -390,6 +398,19 @@ class ChatModel {
     if (providerId == null) return null;
     final p = ModelProvider.fromString(providerId);
     return p?.displayName ?? providerId;
+  }
+
+  /// 根据 provider ID 解析出协议类型
+  /// openai / deepseek / qwen / zhipu / modelscope / ollama → 'openai'
+  /// anthropic → 'anthropic'
+  /// google → 'gemini'
+  static String? _resolveProtocol(String? providerId) {
+    if (providerId == null) return null;
+    final p = providerId.toLowerCase();
+    if (p == 'anthropic') return 'anthropic';
+    if (p == 'google') return 'gemini';
+    // OpenAI 兼容协议（openai, deepseek, qwen, zhipu, modelscope, ollama 等）
+    return 'openai';
   }
 
   @override

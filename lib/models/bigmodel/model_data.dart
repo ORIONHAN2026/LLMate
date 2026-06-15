@@ -140,10 +140,11 @@ final List<Map<String, dynamic>> onlineProviders = [
   {
     'name': 'Ollama',
     'id': 'ollama',
+    'protocol': 'openai',
     'icon': CupertinoIcons.device_laptop,
     'description': '本地运行的开源大语言模型',
     'color': const Color(0xFF22C55E),
-    'defaultUrl': 'http://localhost:11434/api',
+    'defaultUrl': 'http://localhost:11434/v1',
     'models': [
        {'id': 'qwen3', 'name': 'qwen3', 'specs': '8B • 中英双语 • 代码推理', 'size': ['8b']},
 
@@ -166,6 +167,7 @@ final List<Map<String, dynamic>> onlineProviders = [
   {
     'name': 'DeepSeek',
     'id': 'deepseek',
+    'protocol': 'openai',
     'icon': CupertinoIcons.cube_box,
     'description': '高性能AI助手，支持多种任务',
     'color': const Color(0xFF3B82F6),
@@ -178,6 +180,7 @@ final List<Map<String, dynamic>> onlineProviders = [
   {
     'name': 'ChatGPT',
     'id': 'openai',
+    'protocol': 'openai',
     'icon': CupertinoIcons.command,
     'description': 'OpenAI GPT系列模型',
     'color': const Color(0xFF10B981),
@@ -191,6 +194,7 @@ final List<Map<String, dynamic>> onlineProviders = [
   {
     'name': 'Claude',
     'id': 'anthropic',
+    'protocol': 'anthropic',
     'icon': CupertinoIcons.device_desktop,
     'description': 'Anthropic Claude系列模型',
     'color': const Color(0xFFF59E0B),
@@ -204,6 +208,7 @@ final List<Map<String, dynamic>> onlineProviders = [
   {
     'name': 'Gemini',
     'id': 'google',
+    'protocol': 'gemini',
     'icon': CupertinoIcons.person,
     'description': 'Google Gemini系列模型',
     'color': const Color(0xFFEF4444),
@@ -216,6 +221,7 @@ final List<Map<String, dynamic>> onlineProviders = [
   {
     'name': '阿里云百炼',
     'id': 'qwen',
+    'protocol': 'openai',
     'icon': CupertinoIcons.chat_bubble_2,
     'description': '阿里云百炼平台模型服务',
     'color': const Color(0xFF8B5CF6),
@@ -317,6 +323,7 @@ final List<Map<String, dynamic>> onlineProviders = [
   {
     'name': '智谱AI',
     'id': 'zhipu',
+    'protocol': 'openai',
     'icon': CupertinoIcons.lightbulb,
     'description': '智谱AI GLM系列模型',
     'color': const Color(0xFF06B6D4),
@@ -330,6 +337,7 @@ final List<Map<String, dynamic>> onlineProviders = [
   {
     'name': '魔塔社区',
     'id': 'modelscope',
+    'protocol': 'openai',
     'icon': CupertinoIcons.device_desktop,
     'description': 'ModelScope社区模型，兼容OpenAI API',
     'color': const Color(0xFF9333EA),

@@ -11,15 +11,15 @@ import '../services/memory_compressor.dart';
 import '../controllers/session_controller.dart';
 import 'llmproviders/base_provider.dart';
 import 'llmproviders/openai_provider.dart';
-import 'llmproviders/deepseek_provider.dart';
 import 'llmproviders/anthropic_provider.dart';
-import 'llmproviders/modelscope_provider.dart';
 import 'llmproviders/gemini_provider.dart';
-import 'llmproviders/qwen_provider.dart';
-import 'llmproviders/zhipu_provider.dart';
-import 'llmproviders/ollama_provider.dart';
 
 /// LLM Hub - provider 注册中心
+///
+/// 按协议标准注册 provider，而非按厂商：
+/// - OpenAI 兼容协议：OpenAI、DeepSeek、阿里云百炼、智谱AI、ModelScope、Ollama
+/// - Anthropic 协议：Claude
+/// - Gemini 协议：Google Gemini
 class LlmHub {
   final Map<String, BaseLlmProvider> _providers = {};
 
@@ -31,21 +31,24 @@ class LlmHub {
   factory LlmHub() => _instance;
 
   void _initializeProviders() {
-    _providers['openai'] = OpenAiProvider();
-    _providers['deepseek'] = DeepSeekProvider();
+    // ── OpenAI 兼容协议 ──
+    // 所有 OpenAI 兼容的 provider 共享同一个协议入口
+    _providers['openai'] = OpenAiProvider(
+      displayName: 'OpenAI Compatible',
+    );
+
+    // ── Anthropic 协议 ──
     _providers['anthropic'] = AnthropicProvider();
-    _providers['modelscope'] = ModelScopeProvider();
+
+    // ── Gemini 协议 ──
     _providers['gemini'] = GeminiProvider();
-    _providers['qwen'] = QwenProvider();
-    _providers['zhipu'] = ZhipuProvider();
-    _providers['ollama'] = OllamaProvider();
   }
 
-  /// 解析 provider
+  /// 解析 provider — 按 protocol 字段路由
   static BaseLlmProvider _resolve(ChatModel model) {
-    final key = model.provider?.toLowerCase();
+    final key = model.protocol?.toLowerCase() ?? model.provider?.toLowerCase();
     final p = instance._providers[key];
-    if (p == null) throw UnsupportedError('不支持的提供商: ${model.provider}');
+    if (p == null) throw UnsupportedError('不支持的协议: ${model.protocol ?? model.provider}');
     return p;
   }
 
@@ -91,10 +94,6 @@ class LlmClient {
     _cancelled = false;
     bool doneReceived = false;
 
-    // 使用 buildMessages 构建初始消息列表：
-    //   [system 提示词] + [当前会话历史] + [当前用户消息]
-    // 每个会话的消息历史完全独立，不会与其他会话混合。
-    // MCP 工具调用循环中会在此基础上追加 assistant + tool 消息。
     if (kDebugMode) {
       debugPrint(
         '🧠 [LLMChat] 会话消息数: ${_session.messages.length}, 当前消息ID: ${userMessage.msgId}',
@@ -227,7 +226,6 @@ class LlmClient {
       }
 
       // 从累积文本中剥离工具调用标签，得到干净的正文内容
-      // 这将作为 assistant 消息的 content 发送给 LLM
       final cleanContent = _stripToolCallTags(loopAccContent);
 
       // 统一工具执行（MCP 工具 + Skill 内置工具）
@@ -315,19 +313,14 @@ class LlmClient {
   void cancel() => _cancelled = true;
 
   /// 发送压缩请求（非流式），用于记忆压缩
-  ///
-  /// 注意：不能直接用 _provider.sendMessage()，因为 OpenAI 兼容 provider
-  /// 的 sendMessage 硬编码了 response_format: json_object，但压缩提示词
-  /// 要求输出纯文本。这里对 OpenAI 兼容 provider 直接构造简单请求。
   Future<String?> sendCompressRequest(String prompt) async {
     try {
       final model = _session.chatModel;
       if (model == null) return null;
 
-      final provider = model.provider?.toLowerCase() ?? '';
-      const openAICompat = ['openai', 'deepseek', 'zhipu', 'modelscope', 'qwen'];
+      final protocol = model.protocol?.toLowerCase() ?? model.provider?.toLowerCase() ?? '';
 
-      if (openAICompat.contains(provider)) {
+      if (protocol == 'openai') {
         // OpenAI 兼容 provider：绕过 sendMessage 的 json_object 约束
         return await _sendOpenAICompatPlainRequest(prompt, model);
       } else {
@@ -406,9 +399,6 @@ class LlmClient {
   }
 
   /// 累积记忆并触发压缩
-  ///
-  /// 每次 LLM 回复完成后调用，将本轮对话加入 memory 列表。
-  /// 当 memory 达到 memoryRounds 阈值时触发 LLM 压缩。
   Future<ChatSession?> accumulateMemory(
     String userText,
     String assistantText,
@@ -457,17 +447,12 @@ class LlmClient {
     return _session;
   }
 
-  /// 将工具结果 JSON 中的文件路径替换为 Markdown 链接，
-  /// 使其在 UI 中可以被点击打开。
-  ///
-  /// 工具返回的 result 是 JSON 字符串，其中 "path" 或 "filePath" 字段
-  /// 包含本地绝对路径，将它们转为 `[文件名](file:///路径)` 格式。
+  /// 将工具结果 JSON 中的文件路径替换为 Markdown 链接
   static String _linkifyFilePaths(String resultText) {
     try {
       final decoded = jsonDecode(resultText);
       if (decoded is! Map) return resultText;
 
-      // 查找文件路径字段
       String? filePath;
       for (final key in ['path', 'filePath', 'outputPath']) {
         if (decoded[key] is String && (decoded[key] as String).isNotEmpty) {
@@ -477,18 +462,15 @@ class LlmClient {
       }
       if (filePath == null) return resultText;
 
-      // 提取文件名用于链接显示
       final fileName =
           filePath.contains('/')
               ? filePath.substring(filePath.lastIndexOf('/') + 1)
               : filePath;
 
-      // 将路径字段替换为 Markdown 链接
       decoded['path'] = '[$fileName](file://$filePath)';
       if (decoded.containsKey('filePath')) {
         decoded['filePath'] = '[$fileName](file://$filePath)';
       }
-      // 同时更新 message 中的路径引用
       if (decoded['message'] is String) {
         decoded['message'] = (decoded['message'] as String).replaceAll(
           filePath,
@@ -498,14 +480,11 @@ class LlmClient {
 
       return jsonEncode(decoded);
     } catch (_) {
-      // resultText 不是合法 JSON，尝试直接替换绝对路径
       return _linkifyRawPaths(resultText);
     }
   }
 
-  /// 对非 JSON 文本中的绝对路径进行链接化处理
   static String _linkifyRawPaths(String text) {
-    // 匹配 macOS/Linux 绝对路径，排除已在 Markdown 链接 [text](url) 中的
     final pathPattern = RegExp(
       r'(?<![(\[])(\/(?:Users|home|tmp|var|etc|opt|srv)\/[\w./\-_]+)',
     );
@@ -517,14 +496,10 @@ class LlmClient {
     });
   }
 
-  /// 从累积文本中剥离工具调用标签，返回干净的正文内容
-  /// 支持 XML、管道分隔、DSML 等工具调用标签格式。
   static String _stripToolCallTags(String text) {
     if (text.isEmpty) return text;
     return text
-        // 标准 XML: <tool_calls>...</tool_calls>
         .replaceAll(RegExp(r'<tool_calls>.*?</tool_calls>', dotAll: true), '')
-        // 管道分隔: <|tool_calls|>...</|tool_calls|>
         .replaceAll(
           RegExp(
             r'<\|\s*tool_calls\s*\|>.*?</\|\s*tool_calls\s*\|>',
@@ -532,7 +507,6 @@ class LlmClient {
           ),
           '',
         )
-        // DSML 全角: <｜｜DSML｜｜tool_calls>...</｜｜DSML｜｜tool_calls>
         .replaceAll(
           RegExp(
             r'<[｜\|]\s*DSML\s*[｜\|]\s*tool_calls>.*?</[｜\|]\s*DSML\s*[｜\|]\s*tool_calls>',
@@ -540,7 +514,6 @@ class LlmClient {
           ),
           '',
         )
-        // 通用 DSML 格式容错
         .replaceAll(
           RegExp(
             r'<(?:\||｜|DSML\s*)*tool_calls[^>]*>.*?</(?:\||｜|DSML\s*)*tool_calls[^>]*>',
@@ -548,13 +521,10 @@ class LlmClient {
           ),
           '',
         )
-        // 清理多余空行
         .replaceAll(RegExp(r'\n{3,}'), '\n\n')
         .trim();
   }
 
-  /// 从工具调用 delta 中提取实时进度文本给 UI 展示
-  /// 只产出当前批次 delta 中的新信息，避免重复
   static String _buildToolCallProgress(
     List<Map<String, dynamic>> deltas,
     Map<int, String> announcedNames,
@@ -571,7 +541,6 @@ class LlmClient {
           buf.writeln('🔧 $name');
           if (args.isNotEmpty) buf.writeln('   参数: $args');
         } else if (announcedNames.containsKey(index) && args.isNotEmpty) {
-          // 只输出当前批次的参数增量
           buf.writeln('$args');
         }
       }

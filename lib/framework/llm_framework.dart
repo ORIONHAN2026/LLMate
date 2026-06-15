@@ -7,11 +7,10 @@ export 'llm_hub.dart';
 // 基础抽象类
 export 'llmproviders/base_provider.dart';
 
-// 具体提供商实现
+// 协议提供商实现
+// OpenAI 兼容协议（OpenAI、DeepSeek、阿里云百炼、智谱AI、ModelScope、Ollama）
 export 'llmproviders/openai_provider.dart';
-export 'llmproviders/deepseek_provider.dart';
+// Anthropic 协议
 export 'llmproviders/anthropic_provider.dart';
-export 'llmproviders/modelscope_provider.dart';
+// Gemini 协议
 export 'llmproviders/gemini_provider.dart';
-export 'llmproviders/qwen_provider.dart';
-export 'llmproviders/ollama_provider.dart';

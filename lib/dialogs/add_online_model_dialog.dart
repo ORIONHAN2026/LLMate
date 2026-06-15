@@ -434,19 +434,37 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     double size = 18,
     Color? color,
   }) {
-    if (provider['id'] == 'deepseek') {
+    final iconPath = _getProviderIconPath(provider['id']);
+    if (iconPath != null) {
       return Image.asset(
-        'assets/icons/deepseek-color.webp',
+        iconPath,
         width: size,
         height: size,
         fit: BoxFit.contain,
       );
-    } else {
-      return Icon(
-        provider['icon'],
-        size: size,
-        color: color ?? provider['color'],
-      );
+    }
+    return Icon(
+      provider['icon'],
+      size: size,
+      color: color ?? provider['color'],
+    );
+  }
+
+  /// 根据 provider id 获取图标路径
+  String? _getProviderIconPath(String providerId) {
+    switch (providerId) {
+      case 'deepseek':
+        return 'assets/icons/deepseek-color.webp';
+      case 'chatgpt':
+        return 'assets/icons/openai.webp';
+      case 'gemini':
+        return 'assets/icons/gemini-color.webp';
+      case 'aliyun':
+        return 'assets/icons/qwen-color.webp';
+      case 'tencent':
+        return 'assets/icons/yuanbao-color.webp';
+      default:
+        return null;
     }
   }
 

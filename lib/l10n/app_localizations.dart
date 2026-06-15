@@ -2406,6 +2406,24 @@ abstract class AppLocalizations {
   /// **'Select Online Model Provider'**
   String get selectOnlineProvider;
 
+  /// No description provided for @customProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get customProvider;
+
+  /// No description provided for @customProviderDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Manually enter address, API key and model name'**
+  String get customProviderDesc;
+
+  /// No description provided for @customProviderConfigTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Model Configuration'**
+  String get customProviderConfigTitle;
+
   /// No description provided for @configureProviderParams.
   ///
   /// In en, this message translates to:

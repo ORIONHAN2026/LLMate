@@ -1286,6 +1286,16 @@ class AppLocalizationsTh extends AppLocalizations {
   String get selectOnlineProvider => 'เลือกผู้ให้บริการแบบจำลองออนไลน์';
 
   @override
+  String get customProvider => 'กำหนดเอง';
+
+  @override
+  String get customProviderDesc =>
+      'ป้อนที่อยู่, คีย์ API และชื่อแบบจำลองด้วยตนเอง';
+
+  @override
+  String get customProviderConfigTitle => 'การกำหนดค่าแบบจำลองที่กำหนดเอง';
+
+  @override
   String configureProviderParams(Object provider) {
     return 'กำหนดค่าพารามิเตอร์ $provider';
   }

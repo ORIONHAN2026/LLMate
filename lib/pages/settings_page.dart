@@ -24,6 +24,9 @@ class _SettingsPageState extends State<SettingsPage> {
   /// 当前选中页面的 actions（由子页面通过回调设置）
   List<Widget> _currentActions = [];
 
+  /// 各页面的 actions 缓存（key = index）
+  final Map<int, List<Widget>> _cachedActions = {};
+
   List<_SettingsNavItem> _buildNavItems() {
     final l10n = AppLocalizations.of(context)!;
     return [
@@ -131,7 +134,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     label: item.label,
                     isSelected: isSelected,
                     colorScheme: colorScheme,
-                    onTap: () => setState(() => _selectedIndex = index),
+                    onTap: () {
+                      setState(() {
+                        _selectedIndex = index;
+                        // 切换时从缓存恢复该页面的 actions
+                        _currentActions = _cachedActions[index] ?? [];
+                      });
+                    },
                   );
                 }),
               ],
@@ -141,11 +150,18 @@ class _SettingsPageState extends State<SettingsPage> {
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
-              children: navItems.map((item) {
-                return item.builder(
-                  (actions) => setState(() => _currentActions = actions),
+              children: List.generate(navItems.length, (i) {
+                return navItems[i].builder(
+                  (actions) {
+                    // 缓存每个页面的 actions
+                    _cachedActions[i] = actions;
+                    // 只有当前选中页面的 actions 才立即生效
+                    if (_selectedIndex == i && mounted) {
+                      setState(() => _currentActions = actions);
+                    }
+                  },
                 );
-              }).toList(),
+              }),
             ),
           ),
         ],

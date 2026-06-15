@@ -22,7 +22,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   String _selectedOnlineModel = '';
   final Map<String, String> _selectedModelSizes = {}; // 改为 Map，为每个模型独立存储选中的规格
   String _customModelName = '';
-  bool _isCustomModel = false; // 新增：是否使用自定义模型
+  bool _isCustomModel = false; // 是否使用自定义模型（在预设提供商下）
+  bool _isCustomProvider = false; // 是否使用自定义提供商（完全手动输入）
 
   // 配置测试相关状态
   bool _isTesting = false;
@@ -34,11 +35,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   bool _isLoadingOllamaModels = false;
   List<Map<String, dynamic>> _ollamaModels = [];
   String _ollamaModelsError = '';
-
-  // ModelScope模型获取相关状态
-  bool _isLoadingModelScopeModels = false;
-  List<Map<String, dynamic>> _modelScopeModels = [];
-  String _modelScopeModelsError = '';
 
   final TextEditingController _modelNameController = TextEditingController();
   final TextEditingController _apiKeyController = TextEditingController();
@@ -240,13 +236,18 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         Expanded(
           child: GridView.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 2.2, // 从2.0增加到2.2，让卡片更扁平紧凑
-              crossAxisSpacing: 10, // 从12减少到10
-              mainAxisSpacing: 10, // 从12减少到10
+              crossAxisCount: 3,
+              childAspectRatio: 1.6,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
             ),
-            itemCount: onlineProviders.length,
+            itemCount: onlineProviders.length + 1, // +1 为自定义选项
             itemBuilder: (context, index) {
+              // 最后一项是"自定义"
+              if (index == onlineProviders.length) {
+                return _buildCustomProviderCard();
+              }
+
               final provider = onlineProviders[index];
               final isSelected = _selectedProvider == provider['id'];
 
@@ -255,49 +256,32 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   setState(() {
                     _selectedProvider = provider['id'];
                     _selectedOnlineModel = '';
-                    _selectedModelSizes.clear(); // 清空所有模型的规格选择
-                    _isCustomModel = false; // 重置为预设模型模式
-                    _customModelController.clear(); // 清空自定义模型输入
-                    // 设置默认API地址
+                    _selectedModelSizes.clear();
+                    _isCustomModel = false;
+                    _isCustomProvider = false;
+                    _customModelController.clear();
                     _apiUrlController.text = provider['defaultUrl'];
 
-                    // 重置Ollama模型相关状态
                     _ollamaModels.clear();
                     _ollamaModelsError = '';
 
-                    // 重置ModelScope模型相关状态
-                    _modelScopeModels.clear();
-                    _modelScopeModelsError = '';
-
-                    // 默认选择第一个模型
                     if (provider['models'] != null &&
                         (provider['models'] as List).isNotEmpty) {
                       _selectedOnlineModel = provider['models'][0]['id'];
                     }
-                    // 重置测试状态（如果用户更换了提供商）
                     _testCompleted = false;
                     _testPassed = false;
                     _testResponse = '';
                   });
 
-                  // 如果选择了Ollama，自动获取模型列表
                   if (provider['id'] == 'ollama') {
-                    // 延迟一点执行，确保API URL已经设置
                     Future.delayed(const Duration(milliseconds: 100), () {
                       _fetchOllamaModels();
                     });
                   }
-
-                  // 如果选择了ModelScope，自动获取模型列表
-                  if (provider['id'] == 'modelscope') {
-                    // 延迟一点执行，确保API URL已经设置
-                    Future.delayed(const Duration(milliseconds: 100), () {
-                      _fetchModelScopeModels();
-                    });
-                  }
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(12), // 从16减少到12
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color:
                         isSelected
@@ -312,7 +296,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                               : Theme.of(context).dividerColor,
                       width: isSelected ? 2 : 1,
                     ),
-                    borderRadius: BorderRadius.circular(8), // 从12减少到8
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,6 +355,97 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     );
   }
 
+  /// 构建"自定义提供商"卡片
+  Widget _buildCustomProviderCard() {
+    final isSelected = _isCustomProvider;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isCustomProvider = true;
+          _selectedProvider = 'custom';
+          _selectedOnlineModel = '';
+          _selectedModelSizes.clear();
+          _isCustomModel = true; // 自定义提供商下强制使用自定义模型输入
+          _customModelController.clear();
+          _apiUrlController.clear(); // 清空，让用户手动输入
+          _apiKeyController.clear();
+
+          _ollamaModels.clear();
+          _ollamaModelsError = '';
+
+          _testCompleted = false;
+          _testPassed = false;
+          _testResponse = '';
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color:
+              isSelected
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                  : Theme.of(context).colorScheme.surface,
+          border: Border.all(
+            color:
+                isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).dividerColor,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.tune,
+                  size: 18,
+                  color:
+                      isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    AppLocalizations.of(context)!.customProvider,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color:
+                          isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Flexible(
+              child: Text(
+                AppLocalizations.of(context)!.customProviderDesc,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  height: 1.3,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Helper method to get provider icon widget
   Widget _getProviderIcon(
     Map<String, dynamic> provider, {
@@ -401,6 +476,11 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   }
 
   Widget _buildApiConfiguration() {
+    // 自定义提供商模式：完全手动输入
+    if (_isCustomProvider) {
+      return _buildCustomProviderConfig();
+    }
+
     final selectedProviderData = onlineProviders.firstWhere(
       (provider) => provider['id'] == _selectedProvider,
     );
@@ -530,13 +610,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   _ollamaModelsError = '';
                   _selectedOnlineModel = '';
                 }
-
-                // 如果是ModelScope，重置模型列表状态
-                if (_selectedProvider == 'modelscope') {
-                  _modelScopeModels.clear();
-                  _modelScopeModelsError = '';
-                  _selectedOnlineModel = '';
-                }
               });
 
               // 如果是Ollama，延迟重新获取模型列表
@@ -545,17 +618,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   if (_selectedProvider == 'ollama' &&
                       _apiUrlController.text.trim() == trimmedValue) {
                     _fetchOllamaModels();
-                  }
-                });
-              }
-
-              // 如果是ModelScope，延迟重新获取模型列表
-              if (_selectedProvider == 'modelscope' &&
-                  trimmedValue.isNotEmpty) {
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  if (_selectedProvider == 'modelscope' &&
-                      _apiUrlController.text.trim() == trimmedValue) {
-                    _fetchModelScopeModels();
                   }
                 });
               }
@@ -702,8 +764,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               child:
                   _selectedProvider == 'ollama'
                       ? _buildOllamaModelList()
-                      : _selectedProvider == 'modelscope'
-                      ? _buildModelScopeModelList()
                       : Column(
                         children:
                             (selectedProviderData['models']
@@ -956,6 +1016,167 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               style: TextStyle(fontSize: 11, color: Colors.grey[600]),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  /// 自定义提供商配置界面 — 地址、密钥、模型名全部手动输入
+  Widget _buildCustomProviderConfig() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppLocalizations.of(context)!.customProviderConfigTitle,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 16),
+          // API 地址
+          Text(
+            AppLocalizations.of(context)!.apiAddress,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _apiUrlController,
+            style: const TextStyle(fontSize: 12),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(
+                RegExp(r'[a-zA-Z0-9\-_.:/=?&+#@]'),
+              ),
+            ],
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.apiUrlHint,
+              hintStyle: const TextStyle(fontSize: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+            ),
+            onChanged: (value) {
+              final trimmedValue = value.replaceAll(' ', '');
+              if (trimmedValue != value) {
+                _apiUrlController.value = TextEditingValue(
+                  text: trimmedValue,
+                  selection: TextSelection.collapsed(offset: trimmedValue.length),
+                );
+              }
+              setState(() {
+                if (_testCompleted) {
+                  _testCompleted = false;
+                  _testPassed = false;
+                  _testResponse = '';
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 6),
+          Text(
+            AppLocalizations.of(context)!.defaultApiUrlNote,
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // API 密钥
+          Text(
+            AppLocalizations.of(context)!.modelApiKey,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _apiKeyController,
+            style: const TextStyle(fontSize: 12),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(
+                RegExp(r'[a-zA-Z0-9\-_.:/=?&+]'),
+              ),
+            ],
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.apiKeyHint,
+              hintStyle: const TextStyle(fontSize: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+            ),
+            onChanged: (value) {
+              final trimmedValue = value.replaceAll(' ', '');
+              if (trimmedValue != value) {
+                _apiKeyController.value = TextEditingValue(
+                  text: trimmedValue,
+                  selection: TextSelection.collapsed(offset: trimmedValue.length),
+                );
+              }
+              setState(() {
+                if (_testCompleted) {
+                  _testCompleted = false;
+                  _testPassed = false;
+                  _testResponse = '';
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          // 模型名称
+          Text(
+            AppLocalizations.of(context)!.modelLabel,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _customModelController,
+            style: const TextStyle(fontSize: 12),
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.modelSearchHint,
+              hintStyle: const TextStyle(fontSize: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _selectedOnlineModel = value.trim();
+                if (_testCompleted) {
+                  _testCompleted = false;
+                  _testPassed = false;
+                  _testResponse = '';
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 6),
+          Text(
+            AppLocalizations.of(context)!.enterFullModelName,
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+          ),
         ],
       ),
     );
@@ -1326,9 +1547,19 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   }
 
   Widget _buildModelNameSetting() {
-    final selectedProviderData = onlineProviders.firstWhere(
-      (provider) => provider['id'] == _selectedProvider,
-    );
+    final String providerDisplayName;
+    final String platformDisplayName;
+
+    if (_isCustomProvider) {
+      providerDisplayName = AppLocalizations.of(context)!.customProvider;
+      platformDisplayName = AppLocalizations.of(context)!.customProvider;
+    } else {
+      final selectedProviderData = onlineProviders.firstWhere(
+        (provider) => provider['id'] == _selectedProvider,
+      );
+      providerDisplayName = selectedProviderData['name'];
+      platformDisplayName = _resolveProviderPlatformName(_selectedProvider);
+    }
 
     return SingleChildScrollView(
       child: Column(
@@ -1336,18 +1567,15 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         children: [
           Text(
             AppLocalizations.of(context)!.setModelName,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ), // 从16减少到14
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 12), // 从16减少到12
+          const SizedBox(height: 12),
           // 配置摘要
           Container(
-            padding: const EdgeInsets.all(16), // 从20减少到16
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8), // 从12减少到8
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
             child: Column(
@@ -1357,33 +1585,33 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   children: [
                     const Icon(
                       CupertinoIcons.check_mark_circled,
-                      size: 14, // 从16减少到14
+                      size: 14,
                       color: Color(0xFF10B981),
                     ),
-                    const SizedBox(width: 6), // 从8减少到6
+                    const SizedBox(width: 6),
                     Text(
                       AppLocalizations.of(context)!.configSummary,
                       style: const TextStyle(
-                        fontSize: 12, // 从16减少到12
-                        fontWeight: FontWeight.w500, // 从w600减少到w500
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                         color: Color(0xFF10B981),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12), // 从16减少到12
+                const SizedBox(height: 12),
                 _buildSummaryItem(
                   AppLocalizations.of(context)!.providerLabel,
-                  selectedProviderData['name'],
+                  providerDisplayName,
                   CupertinoIcons.device_desktop,
                 ),
                 const SizedBox(height: 8),
                 _buildSummaryItem(
                   AppLocalizations.of(context)!.platformLabel,
-                  _resolveProviderPlatformName(_selectedProvider),
+                  platformDisplayName,
                   CupertinoIcons.cloud,
                 ),
-                const SizedBox(height: 8), // 从12减少到8
+                const SizedBox(height: 8),
                 _buildSummaryItem(
                   AppLocalizations.of(context)!.apiAddress,
                   _apiUrlController.text.trim().isNotEmpty
@@ -1391,43 +1619,38 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       : AppLocalizations.of(context)!.notSet,
                   CupertinoIcons.link,
                 ),
-                const SizedBox(height: 8), // 从12减少到8
+                const SizedBox(height: 8),
                 _buildSummaryItem(
                   AppLocalizations.of(context)!.modelLabel,
                   _selectedOnlineModel.isNotEmpty
-                      ? _isCustomModel
+                      ? _isCustomModel || _isCustomProvider
                           ? '$_selectedOnlineModel ${AppLocalizations.of(context)!.customSuffix}'
-                          : selectedProviderData['models'].firstWhere(
-                            (m) => m['id'] == _selectedOnlineModel,
-                            orElse:
-                                () => {
-                                  'name': _selectedOnlineModel,
-                                }, // 如果找不到，显示原始名称
-                          )['name']
+                          : (_getSelectedProviderData()['models'] as List)
+                              .firstWhere(
+                                (m) => m['id'] == _selectedOnlineModel,
+                                orElse: () => {'name': _selectedOnlineModel},
+                              )['name']
                       : AppLocalizations.of(context)!.notSelected,
                   CupertinoIcons.device_desktop,
                 ),
-                const SizedBox(height: 8), // 从12减少到8
+                const SizedBox(height: 8),
               ],
             ),
           ),
 
-          const SizedBox(height: 16), // 从24减少到16
+          const SizedBox(height: 16),
           // 自定义名称输入
           Text(
             AppLocalizations.of(context)!.customModelName,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ), // 从14减少到12
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 6), // 从8减少到6
+          const SizedBox(height: 6),
           TextField(
             controller: _modelNameController,
-            style: const TextStyle(fontSize: 12), // 从14减少到12
+            style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
-              hintText: AppLocalizations.of(context)!.enterModelNameHint(selectedProviderData['name']),
-              hintStyle: const TextStyle(fontSize: 12), // 从14减少到12
+              hintText: AppLocalizations.of(context)!.enterModelNameHint(providerDisplayName),
+              hintStyle: const TextStyle(fontSize: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
                 borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -1437,8 +1660,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 borderSide: const BorderSide(color: Color(0xFF3B82F6)),
               ),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 10, // 从12减少到10
-                vertical: 6, // 从8减少到6
+                horizontal: 10,
+                vertical: 6,
               ),
             ),
             onChanged: (value) {
@@ -1447,13 +1670,22 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               });
             },
           ),
-          const SizedBox(height: 6), // 从8减少到6
+          const SizedBox(height: 6),
           Text(
             AppLocalizations.of(context)!.modelNameSuggestion,
-            style: TextStyle(fontSize: 11, color: Colors.grey[600]), // 从12减少到11
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
           ),
         ],
       ),
+    );
+  }
+
+  /// 获取当前选中的提供商数据（仅预设提供商时有效）
+  Map<String, dynamic> _getSelectedProviderData() {
+    if (_isCustomProvider) return {};
+    return onlineProviders.firstWhere(
+      (provider) => provider['id'] == _selectedProvider,
+      orElse: () => {},
     );
   }
 
@@ -1462,6 +1694,13 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       case 0:
         return _selectedProvider.isNotEmpty;
       case 1:
+        // 自定义提供商：地址、密钥、模型名都需要填写
+        if (_isCustomProvider) {
+          return _apiUrlController.text.trim().isNotEmpty &&
+              _apiKeyController.text.trim().isNotEmpty &&
+              _selectedOnlineModel.isNotEmpty;
+        }
+
         // Ollama 可能不需要 API Key，其他提供商需要
         final apiKeyRequired = _selectedProvider != 'ollama';
         final basicRequirementsMet =
@@ -1486,14 +1725,13 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   true;
             }
           } catch (e) {
-            // 如果找不到对应的模型，返回基本要求的结果
             return basicRequirementsMet;
           }
         }
 
         return basicRequirementsMet;
       case 2:
-        return _testCompleted && _testPassed; // 必须测试通过才能继续
+        return _testCompleted && _testPassed;
       case 3:
         return _customModelName.isNotEmpty;
       default:
@@ -1507,67 +1745,90 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         _currentStep++;
       });
     } else {
-      // 完成创建 - 确保使用测试时的完整API端点
-      final selectedProviderData = onlineProviders.firstWhere(
-        (provider) => provider['id'] == _selectedProvider,
-      );
-
-      // 构建与测试时相同的完整API端点
+      // 完成创建
       final inputApiUrl = _apiUrlController.text.trim();
       final inputApiKey = _apiKeyController.text.trim();
       String finalApiUrl = inputApiUrl;
 
-      // 根据协议自动补全API端点路径
-      final protocol = selectedProviderData['protocol'];
-      switch (protocol) {
-        case 'anthropic':
-          if (!finalApiUrl.endsWith('/messages')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}messages'
-                    : '$finalApiUrl/messages';
-          }
-          break;
-        case 'gemini':
-          if (!finalApiUrl.contains('/models/')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}models/$_selectedOnlineModel:generateContent?key=$inputApiKey'
-                    : '$finalApiUrl/models/$_selectedOnlineModel:generateContent?key=$inputApiKey';
-          }
-          break;
-        // OpenAI 兼容协议（openai / deepseek / qwen / zhipu / modelscope / ollama 等）
-        default:
-          if (!finalApiUrl.endsWith('/chat/completions')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}chat/completions'
-                    : '$finalApiUrl/chat/completions';
-          }
+      final String protocol;
+      final String providerName;
+      final String providerId;
+      final String platformName;
+
+      if (_isCustomProvider) {
+        // 自定义提供商：默认 OpenAI 协议
+        protocol = 'openai';
+        providerName = AppLocalizations.of(context)!.customProvider;
+        providerId = 'custom';
+        platformName = AppLocalizations.of(context)!.customProvider;
+
+        // OpenAI 协议自动补全端点
+        if (!finalApiUrl.endsWith('/chat/completions')) {
+          finalApiUrl =
+              finalApiUrl.endsWith('/')
+                  ? '${finalApiUrl}chat/completions'
+                  : '$finalApiUrl/chat/completions';
+        }
+      } else {
+        final selectedProviderData = onlineProviders.firstWhere(
+          (provider) => provider['id'] == _selectedProvider,
+        );
+
+        protocol = selectedProviderData['protocol'];
+        providerName = selectedProviderData['name'];
+        providerId = _selectedProvider;
+        platformName = _resolveProviderPlatformName(_selectedProvider);
+
+        // 根据协议自动补全API端点路径
+        switch (protocol) {
+          case 'anthropic':
+            if (!finalApiUrl.endsWith('/messages')) {
+              finalApiUrl =
+                  finalApiUrl.endsWith('/')
+                      ? '${finalApiUrl}messages'
+                      : '$finalApiUrl/messages';
+            }
+            break;
+          case 'gemini':
+            if (!finalApiUrl.contains('/models/')) {
+              finalApiUrl =
+                  finalApiUrl.endsWith('/')
+                      ? '${finalApiUrl}models/$_selectedOnlineModel:generateContent?key=$inputApiKey'
+                      : '$finalApiUrl/models/$_selectedOnlineModel:generateContent?key=$inputApiKey';
+            }
+            break;
+          // OpenAI 兼容协议
+          default:
+            if (!finalApiUrl.endsWith('/chat/completions')) {
+              finalApiUrl =
+                  finalApiUrl.endsWith('/')
+                      ? '${finalApiUrl}chat/completions'
+                      : '$finalApiUrl/chat/completions';
+            }
+        }
       }
 
       // 构建最终的模型标识符
       String finalModelId = _selectedOnlineModel;
       if (!_isCustomModel &&
           _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
-        // 如果是预设模型且选择了 size，构建完整的模型标识符
         finalModelId =
             '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
       }
 
       final newModel = {
-        'modelId': ChatModel.generateModelId(), // 内部唯一标识符
+        'modelId': ChatModel.generateModelId(),
         'name': _customModelName,
         'model': finalModelId,
-        'status': 'active', // 默认状态改为激活
+        'status': 'active',
         'businessType': '在线模型',
-        'description': '${selectedProviderData['name']} 在线模型服务',
-        'type': 'online', // 标记为在线模型
-        'provider': _selectedProvider,
-        'protocol': selectedProviderData['protocol'],
-        'platform': _resolveProviderPlatformName(_selectedProvider),
-        'apiKey': inputApiKey, // 使用控制器中的最新值
-        'apiUrl': finalApiUrl, // 使用完整的API端点
+        'description': '$providerName 在线模型服务',
+        'type': 'online',
+        'provider': providerId,
+        'protocol': protocol,
+        'platform': platformName,
+        'apiKey': inputApiKey,
+        'apiUrl': finalApiUrl,
         'chatSettings': {
           'conversationName': '新对话',
           'systemPrompt': '',
@@ -1968,17 +2229,23 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     });
 
     try {
-      // 确保使用控制器中的最新值
       final testApiUrl = _apiUrlController.text.trim();
       final testApiKey = _apiKeyController.text.trim();
 
-      // 获取当前选中的提供商数据
-      final selectedProviderData = onlineProviders.firstWhere(
-        (provider) => provider['id'] == _selectedProvider,
-      );
+      // 自定义提供商：所有字段必须填写
+      final bool apiKeyRequired;
+      final String testProtocol;
 
-      // Ollama 可能不需要 API Key，其他提供商需要
-      final apiKeyRequired = _selectedProvider != 'ollama';
+      if (_isCustomProvider) {
+        apiKeyRequired = true;
+        testProtocol = 'openai'; // 默认 OpenAI 协议
+      } else {
+        final selectedProviderData = onlineProviders.firstWhere(
+          (provider) => provider['id'] == _selectedProvider,
+        );
+        apiKeyRequired = _selectedProvider != 'ollama';
+        testProtocol = selectedProviderData['protocol'];
+      }
 
       if (testApiUrl.isEmpty ||
           (apiKeyRequired && testApiKey.isEmpty) ||
@@ -1992,10 +2259,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         return;
       }
 
-      // 构建与测试时相同的完整API端点
+      // 构建完整API端点
       String finalApiUrl = testApiUrl;
 
-      // 构建最终的模型标识符（与创建时保持一致）
+      // 构建最终的模型标识符
       String testModelId = _selectedOnlineModel;
       if (!_isCustomModel &&
           _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
@@ -2004,7 +2271,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       }
 
       // 根据协议自动补全API端点路径
-      final testProtocol = selectedProviderData['protocol'];
       switch (testProtocol) {
         case 'anthropic':
           if (!finalApiUrl.endsWith('/messages')) {
@@ -2022,7 +2288,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     : '$finalApiUrl/models/$_selectedOnlineModel:generateContent?key=$testApiKey';
           }
           break;
-        // OpenAI 兼容协议（openai / deepseek / qwen / zhipu / modelscope / ollama 等）
+        // OpenAI 兼容协议
         default:
           if (!finalApiUrl.endsWith('/chat/completions')) {
             finalApiUrl =
@@ -2036,10 +2302,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       final tempModel = ChatModel(
         modelId: 'temp_test_model',
         name: 'Test Model',
-        model: testModelId, // 使用包含规格的模型标识符
+        model: testModelId,
         status: 'active',
         provider: _selectedProvider,
-        protocol: selectedProviderData['protocol'],
+        protocol: testProtocol,
         apiKey: testApiKey,
         apiUrl: finalApiUrl,
         createdAt: DateTime.now(),

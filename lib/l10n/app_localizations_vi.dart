@@ -1270,6 +1270,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get selectOnlineProvider => 'Chọn nhà cung cấp mô hình trực tuyến';
 
   @override
+  String get customProvider => 'Tùy chỉnh';
+
+  @override
+  String get customProviderDesc =>
+      'Nhập thủ công địa chỉ, khóa API và tên mô hình';
+
+  @override
+  String get customProviderConfigTitle => 'Cấu hình mô hình tùy chỉnh';
+
+  @override
   String configureProviderParams(Object provider) {
     return 'Cấu hình tham số $provider';
   }

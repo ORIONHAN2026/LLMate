@@ -1267,6 +1267,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get selectOnlineProvider => '选择在线模型提供商';
 
   @override
+  String get customProvider => '自定义';
+
+  @override
+  String get customProviderDesc => '手动输入地址、密钥和模型名称';
+
+  @override
+  String get customProviderConfigTitle => '自定义模型配置';
+
+  @override
   String configureProviderParams(Object provider) {
     return '配置 $provider 参数';
   }

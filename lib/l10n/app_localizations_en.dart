@@ -1284,6 +1284,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectOnlineProvider => 'Select Online Model Provider';
 
   @override
+  String get customProvider => 'Custom';
+
+  @override
+  String get customProviderDesc =>
+      'Manually enter address, API key and model name';
+
+  @override
+  String get customProviderConfigTitle => 'Custom Model Configuration';
+
+  @override
   String configureProviderParams(Object provider) {
     return 'Configure $provider Parameters';
   }

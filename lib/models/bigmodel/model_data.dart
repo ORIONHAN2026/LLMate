@@ -334,28 +334,5 @@ final List<Map<String, dynamic>> onlineProviders = [
       {'id': 'glm-3-turbo', 'name': 'GLM-3 Turbo', 'specs': '快速响应 • 高性价比 • 轻量级'},
     ],
   },
-  {
-    'name': '魔塔社区',
-    'id': 'modelscope',
-    'protocol': 'openai',
-    'icon': CupertinoIcons.device_desktop,
-    'description': 'ModelScope社区模型，兼容OpenAI API',
-    'color': const Color(0xFF9333EA),
-    'defaultUrl': 'https://api-inference.modelscope.cn/v1/',
-    'models': [
-      {'id': 'qwen2.5-72b-instruct', 'name': 'Qwen2.5-72B-Instruct', 'specs': '72B参数 • 旗舰模型 • 强推理'},
-      {'id': 'qwen2.5-32b-instruct', 'name': 'Qwen2.5-32B-Instruct', 'specs': '32B参数 • 平衡型 • 高性能'},
-      {'id': 'qwen2.5-14b-instruct', 'name': 'Qwen2.5-14B-Instruct', 'specs': '14B参数 • 中等规模 • 通用'},
-      {'id': 'qwen2.5-7b-instruct', 'name': 'Qwen2.5-7B-Instruct', 'specs': '7B参数 • 轻量级 • 快速'},
-      {'id': 'qwen2.5-coder-32b-instruct', 'name': 'Qwen2.5-Coder-32B', 'specs': '32B参数 • 代码专用 • 编程'},
-      {'id': 'qwen2.5-coder-14b-instruct', 'name': 'Qwen2.5-Coder-14B', 'specs': '14B参数 • 代码生成 • 调试'},
-      {'id': 'qwen2.5-coder-7b-instruct', 'name': 'Qwen2.5-Coder-7B', 'specs': '7B参数 • 代码辅助 • 轻量'},
-      {'id': 'baichuan2-13b-chat', 'name': 'Baichuan2-13B-Chat', 'specs': '13B参数 • 中文优化 • 对话'},
-      {'id': 'baichuan2-7b-chat', 'name': 'Baichuan2-7B-Chat', 'specs': '7B参数 • 中文模型 • 高效'},
-      {'id': 'chatglm3-6b', 'name': 'ChatGLM3-6B', 'specs': '6B参数 • 清华技术 • 中英双语'},
-      {'id': 'yi-34b-chat', 'name': 'Yi-34B-Chat', 'specs': '34B参数 • 零一万物 • 强对话'},
-      {'id': 'yi-6b-chat', 'name': 'Yi-6B-Chat', 'specs': '6B参数 • 轻量级 • 中英双语'},
-    ],
-  },
   
 ];

@@ -12,6 +12,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/bigmodel/model_data.dart';
+import '../utils/model_icon_utils.dart';
 import '../dialogs/add_online_model_dialog.dart';
 import '../widgets/model_detail_page.dart';
 
@@ -96,13 +97,6 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
             modelData['modelId'] = ChatModel.generateModelId();
           }
 
-          // 确保provider有值
-          if (modelData['provider'] == null) {
-            modelData['provider'] = _inferProviderFromName(
-              modelData['name'] ?? '',
-            );
-          }
-
           // 确保businessType有值
           if (modelData['businessType'] == null) {
             modelData['businessType'] =
@@ -124,36 +118,9 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
   }
 
   // 从模型名称推断提供商
-  String _inferProviderFromName(String modelName) {
-    final lowercaseName = modelName.toLowerCase();
-    if (lowercaseName.contains('deepseek') || lowercaseName.contains('r1')) {
-      return 'deepseek';
-    } else if (lowercaseName.contains('claude') ||
-        lowercaseName.contains('anthropic')) {
-      return 'anthropic';
-    } else if (lowercaseName.contains('gpt') ||
-        lowercaseName.contains('openai')) {
-      return 'openai';
-    } else if (lowercaseName.contains('gemini') ||
-        lowercaseName.contains('bard')) {
-      return 'google';
-    } else if (lowercaseName.contains('qwen') ||
-        lowercaseName.contains('tongyi')) {
-      return 'alibaba';
-    } else if (lowercaseName.contains('yuanbao') ||
-        lowercaseName.contains('元宝')) {
-      return 'bytedance';
-    } else if (lowercaseName.contains('modelscope') ||
-        lowercaseName.contains('魔塔')) {
-      return 'modelscope';
-    }
-    return 'ollama';
-  }
-
-  /// 根据模型ID和provider查找显示名称（保留原始大小写）
-  String _resolveModelDisplayName(String modelId, String? provider) {
+  /// 根据模型ID查找显示名称（保留原始大小写）
+  String _resolveModelDisplayName(String modelId) {
     for (var p in onlineProviders) {
-      if (provider != null && p['id'] != provider) continue;
       if (p['models'] != null) {
         for (var model in p['models']) {
           if (model['id'] == modelId) {
@@ -311,8 +278,8 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                 final isSelected = _selectedTab == index;
                 return _buildModelNavItem(
                   model.name,
-                  _resolveModelDisplayName(model.model, model.provider),
-                  model.status == 'active',
+                  _resolveModelDisplayName(model.model),
+                  true,
                   index,
                   isSelected,
                 );
@@ -391,7 +358,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                   child: _buildModelIconWidget(
                     model.name,
                     isSelected,
-                    provider: model.provider,
+                    provider: model.platform,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -478,13 +445,12 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     print('原模型名称: ${model.name}');
     print('原模型API密钥: ${model.apiKey ?? "null"}');
     print('原模型API URL: ${model.apiUrl ?? "null"}');
-    print('原模型provider: ${model.provider ?? "null"}');
+    print('原模型platform: ${model.platform ?? "null"}');
 
     // 创建模型副本，只保留基本配置，排除会话、MCP、知识库等设置
     ChatModel copiedModel = model.copyWith(
       modelId: DateTime.now().millisecondsSinceEpoch.toString(),
       name: newName,
-      // status: 'inactive', // 新复制的模型设为非激活状态
       mcpServices: null, // 不复制 MCP 配置
       chatCommands: null, // 不复制快捷指令
       createdAt: DateTime.now(),
@@ -495,7 +461,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     print('复制后模型名称: ${copiedModel.name}');
     print('复制后模型API密钥: ${copiedModel.apiKey ?? "null"}');
     print('复制后模型API URL: ${copiedModel.apiUrl ?? "null"}');
-    print('复制后模型provider: ${copiedModel.provider ?? "null"}');
+    print('复制后模型platform: ${copiedModel.platform ?? "null"}');
     print('========================');
 
     // 添加到模型列表并保存
@@ -649,67 +615,16 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     });
   }
 
-  // 根据模型名称或提供商构建对应的图标Widget
+  // 根据模型名称或平台构建对应的图标Widget
   Widget _buildModelIconWidget(
     String modelName,
     bool isSelected, {
     String? provider,
   }) {
-    final lowercaseName = modelName.toLowerCase();
-
-    // 定义模型名称到图标文件的映射
-    String? iconPath;
-
-    // 首先检查是否有明确的provider参数
-    if (provider != null) {
-      final lowercaseProvider = provider.toLowerCase();
-      if (lowercaseProvider == 'deepseek') {
-        iconPath = 'assets/icons/deepseek-color.webp';
-      } else if (lowercaseProvider == 'anthropic') {
-        iconPath = 'assets/icons/claude-color.webp';
-      } else if (lowercaseProvider == 'openai') {
-        iconPath = 'assets/icons/openai.webp';
-      } else if (lowercaseProvider == 'google') {
-        iconPath = 'assets/icons/gemini-color.webp';
-      } else if (lowercaseProvider == 'qwen' || lowercaseProvider == 'tongyi') {
-        iconPath = 'assets/icons/qwen-color.webp';
-      } else if (lowercaseProvider == 'zhipu') {
-        iconPath = 'assets/icons/yuanbao-color.webp';
-      } else if (lowercaseProvider == 'modelscope') {
-        iconPath = 'assets/icons/qwen-color.webp'; // 魔塔使用qwen图标
-      } else if (lowercaseProvider == 'ollama') {
-        iconPath = 'assets/icons/ollama.webp';
-      }
-    }
-
-    // 如果没有provider或者provider匹配失败，根据模型名称推测
-    if (iconPath == null) {
-      if (lowercaseName.contains('deepseek') || lowercaseName.contains('r1')) {
-        iconPath = 'assets/icons/deepseek-color.webp';
-      } else if (lowercaseName.contains('claude') ||
-          lowercaseName.contains('anthropic')) {
-        iconPath = 'assets/icons/claude-color.webp';
-      } else if (lowercaseName.contains('gpt') ||
-          lowercaseName.contains('openai')) {
-        iconPath = 'assets/icons/openai.webp';
-      } else if (lowercaseName.contains('gemini') ||
-          lowercaseName.contains('bard') ||
-          lowercaseName.contains('google')) {
-        iconPath = 'assets/icons/gemini-color.webp';
-      } else if (lowercaseName.contains('qwen') ||
-          lowercaseName.contains('tongyi') ||
-          lowercaseName.contains('modelscope') ||
-          lowercaseName.contains('魔塔')) {
-        iconPath = 'assets/icons/qwen-color.webp';
-      } else if (lowercaseName.contains('yuanbao') ||
-          lowercaseName.contains('元宝') ||
-          lowercaseName.contains('glm') ||
-          lowercaseName.contains('zhipu')) {
-        iconPath = 'assets/icons/yuanbao-color.webp';
-      } else if (lowercaseName.contains('ollama')) {
-        iconPath = 'assets/icons/ollama.webp';
-      }
-    }
+    final iconPath = ModelIconUtils.resolveIconPath(
+      platform: provider,
+      modelName: modelName,
+    );
 
     // 如果找到对应的图标文件，使用图片
     if (iconPath != null) {
@@ -719,7 +634,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         height: 20,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) {
-          // 如果图片加载失败，回退到FontAwesome图标
+          // 如果图片加载失败，回退到图标
           return Icon(
             CupertinoIcons.divide,
             color:
@@ -731,7 +646,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         },
       );
     } else {
-      // 没有对应图标文件的模型使用FontAwesome图标
+      // 没有对应图标文件的模型使用默认图标
       return Icon(
         CupertinoIcons.device_laptop,
         color:

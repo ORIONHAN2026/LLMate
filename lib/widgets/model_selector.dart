@@ -47,13 +47,13 @@ class _ModelSelectorState extends State<ModelSelector> {
     if (widget.currentSession?.chatModel?.model != null &&
         widget.currentSession!.chatModel!.model.isNotEmpty) {
       final chatModel = widget.currentSession!.chatModel!;
-      final provider = chatModel.provider ?? 'Unknown';
+      final platform = chatModel.platform ?? 'Unknown';
       final prompt = chatModel.chatSettings?.systemPrompt ?? '';
       if (prompt.isNotEmpty) {
-        return "$provider/${chatModel.model} | $prompt ";
+        return "$platform/${chatModel.model} | $prompt ";
       }
 
-      return "$provider/${chatModel.model}";
+      return "$platform/${chatModel.model}";
     }
     return AppLocalizations.of(context)!.clickToSelectModel;
   }
@@ -158,7 +158,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        "${model.provider ?? 'Unknown'}/${model.model}",
+                                        "${model.platform ?? 'Unknown'}/${model.model}",
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Theme.of(context)
@@ -317,7 +317,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            "${model.provider ?? 'Unknown'}/${model.model}",
+                            "${model.platform ?? 'Unknown'}/${model.model}",
                             style: TextStyle(
                               fontSize: 10,
                               color: Theme.of(

@@ -402,7 +402,7 @@ ${toolSummary.toString()}
 {"name": "生成的名称", "description": "生成的描述"}''';
 
       debugPrint('🤖 [MCP-Summarize] 调用 LLM 总结服务: $serverName');
-      debugPrint('   模型: ${model.name} (${model.provider})');
+      debugPrint('   模型: ${model.name} (${model.platform})');
 
       final messages = [
         {'role': 'user', 'content': prompt},

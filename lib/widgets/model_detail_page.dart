@@ -198,7 +198,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                 ),
                 const SizedBox(height: 6), // 从8减少到6
                 Text(
-                  _currentModel.description ?? AppLocalizations.of(context)!.noDescription,
+                  _currentModel.platform ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

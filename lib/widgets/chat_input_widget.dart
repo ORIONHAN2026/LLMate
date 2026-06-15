@@ -309,7 +309,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               modelId: ChatModel.generateModelId(),
               name: _selectedModel,
               model: _selectedModel,
-              status: 'active',
             );
 
     final newSession = ChatSession(
@@ -2838,11 +2837,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final model = updateSession.chatModel;
       if (model == null) {
         throw Exception(AppLocalizations.of(context)!.modelConfigNotFound);
-      }
-
-      final provider = model.provider;
-      if (provider == null || provider.isEmpty) {
-        throw Exception(AppLocalizations.of(context)!.modelProviderNotConfigured);
       }
 
       // 创建 LLM 客户端

@@ -306,14 +306,13 @@ class IsarService {
               ..modelId = (map['modelId'] as String?) ?? ''
               ..name = (map['name'] as String?) ?? ''
               ..model = (map['model'] as String?) ?? (map['fullName'] as String?) ?? ''
-              ..status = (map['status'] as String?) ?? 'inactive'
               ..type = map['type'] as String?
-              ..provider = map['provider'] as String?
+              ..platform = map['platform'] as String?
+              ..protocol = map['protocol'] as String?
               ..apiKey = map['apiKey'] as String?
               ..apiUrl = map['apiUrl'] as String?
               ..createdAt = map['createdAt'] != null ? DateTime.tryParse(map['createdAt'].toString()) : null
               ..updatedAt = map['updatedAt'] != null ? DateTime.tryParse(map['updatedAt'].toString()) : null
-              ..description = map['description'] as String?
               ..chatSettingsJson = map['chatSettings'] != null ? jsonEncode(map['chatSettings']) : null
               ..mcpServicesJson = map['mcpServices'] != null ? jsonEncode(map['mcpServices']) : null
               ..chatCommandsJson = map['chatCommands'] != null ? jsonEncode(map['chatCommands']) : null

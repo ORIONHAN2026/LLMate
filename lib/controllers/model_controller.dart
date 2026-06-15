@@ -120,10 +120,9 @@ class ModelController extends GetxController {
       ..modelId = (map['modelId'] as String?) ?? ''
       ..name = (map['name'] as String?) ?? ''
       ..model = (map['model'] as String?) ?? (map['fullName'] as String?) ?? ''
-      ..status = (map['status'] as String?) ?? 'inactive'
       ..type = map['type'] as String?
-      ..provider = map['provider'] as String?
       ..platform = map['platform'] as String?
+      ..protocol = map['protocol'] as String?
       ..apiKey = map['apiKey'] as String?
       ..apiUrl = map['apiUrl'] as String?
       ..createdAt = map['createdAt'] != null
@@ -132,7 +131,6 @@ class ModelController extends GetxController {
       ..updatedAt = map['updatedAt'] != null
           ? DateTime.tryParse(map['updatedAt'].toString())
           : null
-      ..description = map['description'] as String?
       ..chatSettingsJson =
           map['chatSettings'] != null ? jsonEncode(map['chatSettings']) : null
       ..mcpServicesJson =
@@ -157,15 +155,13 @@ class ModelController extends GetxController {
       'name': m.name,
       'model': m.model,
       'fullName': m.model, // 兼容旧 key
-      'status': m.status,
       if (m.type != null) 'type': m.type,
-      if (m.provider != null) 'provider': m.provider,
       if (m.platform != null) 'platform': m.platform,
+      if (m.protocol != null) 'protocol': m.protocol,
       if (m.apiKey != null) 'apiKey': m.apiKey,
       if (m.apiUrl != null) 'apiUrl': m.apiUrl,
       if (m.createdAt != null) 'createdAt': m.createdAt!.toIso8601String(),
       if (m.updatedAt != null) 'updatedAt': m.updatedAt!.toIso8601String(),
-      if (m.description != null) 'description': m.description,
       if (m.chatSettingsJson != null)
         'chatSettings': _tryJsonDecode(m.chatSettingsJson!),
       if (m.mcpServicesJson != null)

@@ -1,8 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../l10n/app_localizations.dart';
 import '../models/bigmodel/model_data.dart';
 import '../models/bigmodel/chat_model.dart';
@@ -30,11 +28,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   bool _testCompleted = false;
   bool _testPassed = false;
   String _testResponse = '';
-
-  // Ollama模型获取相关状态
-  bool _isLoadingOllamaModels = false;
-  List<Map<String, dynamic>> _ollamaModels = [];
-  String _ollamaModelsError = '';
 
   final TextEditingController _modelNameController = TextEditingController();
   final TextEditingController _apiKeyController = TextEditingController();
@@ -262,9 +255,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     _customModelController.clear();
                     _apiUrlController.text = provider['defaultUrl'];
 
-                    _ollamaModels.clear();
-                    _ollamaModelsError = '';
-
                     if (provider['models'] != null &&
                         (provider['models'] as List).isNotEmpty) {
                       _selectedOnlineModel = provider['models'][0]['id'];
@@ -274,11 +264,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     _testResponse = '';
                   });
 
-                  if (provider['id'] == 'ollama') {
-                    Future.delayed(const Duration(milliseconds: 100), () {
-                      _fetchOllamaModels();
-                    });
-                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.all(12),
@@ -371,9 +356,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           _apiUrlController.clear(); // 清空，让用户手动输入
           _apiKeyController.clear();
 
-          _ollamaModels.clear();
-          _ollamaModelsError = '';
-
           _testCompleted = false;
           _testPassed = false;
           _testResponse = '';
@@ -459,13 +441,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         height: size,
         fit: BoxFit.contain,
       );
-    } else if (provider['id'] == 'ollama') {
-      return Image.asset(
-        'assets/icons/ollama.webp',
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-      );
     } else {
       return Icon(
         provider['icon'],
@@ -515,10 +490,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ), // 只允许英文、数字和常用API密钥字符
             ],
             decoration: InputDecoration(
-              hintText:
-                  _selectedProvider == 'ollama'
-                      ? AppLocalizations.of(context)!.ollamaApiKeyOptional
-                      : AppLocalizations.of(context)!.apiKeyHint,
+              hintText: AppLocalizations.of(context)!.apiKeyHint,
               hintStyle: const TextStyle(fontSize: 12), // 从14减少到12
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
@@ -604,23 +576,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   _testResponse = '';
                 }
 
-                // 如果是Ollama，重置模型列表状态
-                if (_selectedProvider == 'ollama') {
-                  _ollamaModels.clear();
-                  _ollamaModelsError = '';
-                  _selectedOnlineModel = '';
-                }
               });
-
-              // 如果是Ollama，延迟重新获取模型列表
-              if (_selectedProvider == 'ollama' && trimmedValue.isNotEmpty) {
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  if (_selectedProvider == 'ollama' &&
-                      _apiUrlController.text.trim() == trimmedValue) {
-                    _fetchOllamaModels();
-                  }
-                });
-              }
             },
           ),
           const SizedBox(height: 6),
@@ -761,10 +717,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child:
-                  _selectedProvider == 'ollama'
-                      ? _buildOllamaModelList()
-                      : Column(
+              child: Column(
                         children:
                             (selectedProviderData['models']
                                     as List<Map<String, dynamic>>)
@@ -1182,382 +1135,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     );
   }
 
-  // 构建Ollama模型列表
-  Widget _buildOllamaModelList() {
-    return Column(
-      children: [
-        // 刷新按钮和状态
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            border: Border(
-              bottom: BorderSide(color: Colors.grey[200]!, width: 1),
-            ),
-          ),
-          child: Row(
-            children: [
-              Text(
-                AppLocalizations.of(context)!.ollamaRunningModels,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const Spacer(),
-              if (_isLoadingOllamaModels)
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                IconButton(
-                  onPressed: _fetchOllamaModels,
-                  icon: const Icon(Icons.refresh, size: 16),
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size(24, 24),
-                    padding: EdgeInsets.zero,
-                  ),
-                  tooltip: AppLocalizations.of(context)!.refreshModelList,
-                ),
-            ],
-          ),
-        ),
-
-        // 模型列表或错误信息
-        if (_ollamaModelsError.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Icon(Icons.error_outline, color: Colors.red[300], size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  _ollamaModelsError,
-                  style: TextStyle(fontSize: 12, color: Colors.red[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _fetchOllamaModels,
-                  child: Text(AppLocalizations.of(context)!.retry, style: const TextStyle(fontSize: 11)),
-                ),
-              ],
-            ),
-          )
-        else if (_ollamaModels.isEmpty && !_isLoadingOllamaModels)
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Icon(Icons.info_outline, color: Colors.grey[400], size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  AppLocalizations.of(context)!.ollamaStartHint,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _fetchOllamaModels,
-                  child: Text(AppLocalizations.of(context)!.fetchModels, style: const TextStyle(fontSize: 11)),
-                ),
-              ],
-            ),
-          )
-        else
-          ..._ollamaModels.map((model) {
-            final isSelected = _selectedOnlineModel == model['id'];
-            return InkWell(
-              onTap: () {
-                setState(() {
-                  _selectedOnlineModel = model['id'];
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      isSelected
-                          ? const Color(0xFF3B82F6).withValues(alpha: 0.08)
-                          : null,
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey[200]!, width: 0.5),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color:
-                              isSelected
-                                  ? const Color(0xFF3B82F6)
-                                  : Colors.grey[400]!,
-                          width: 2,
-                        ),
-                        color:
-                            isSelected
-                                ? const Color(0xFF3B82F6)
-                                : Colors.transparent,
-                      ),
-                      child:
-                          isSelected
-                              ? const Icon(
-                                Icons.circle,
-                                size: 8,
-                                color: Colors.white,
-                              )
-                              : null,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            model['name'],
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight:
-                                  isSelected
-                                      ? FontWeight.w500
-                                      : FontWeight.normal,
-                              color:
-                                  isSelected
-                                      ? const Color(0xFF3B82F6)
-                                      : Colors.black87,
-                            ),
-                          ),
-                          if (model['size'] != null && model['size'] > 0) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              '${AppLocalizations.of(context)!.fileSizeLabel}: ${_formatFileSize(model['size'])}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-      ],
-    );
-  }
-
-  // 格式化文件大小
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '${bytes}B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
-  }
-
-  // 构建ModelScope模型列表
-  Widget _buildModelScopeModelList() {
-    return Column(
-      children: [
-        // 刷新按钮和状态
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            border: Border(
-              bottom: BorderSide(color: Colors.grey[200]!, width: 1),
-            ),
-          ),
-          child: Row(
-            children: [
-              Text(
-                AppLocalizations.of(context)!.modelscopeAvailableModels,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const Spacer(),
-              if (_isLoadingModelScopeModels)
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                IconButton(
-                  onPressed: _fetchModelScopeModels,
-                  icon: const Icon(Icons.refresh, size: 16),
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size(24, 24),
-                    padding: EdgeInsets.zero,
-                  ),
-                  tooltip: AppLocalizations.of(context)!.refreshModelList,
-                ),
-            ],
-          ),
-        ),
-
-        // 模型列表或错误信息
-        if (_modelScopeModelsError.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Icon(Icons.error_outline, color: Colors.red[300], size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  _modelScopeModelsError,
-                  style: TextStyle(fontSize: 12, color: Colors.red[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _fetchModelScopeModels,
-                  child: Text(AppLocalizations.of(context)!.retry, style: const TextStyle(fontSize: 11)),
-                ),
-              ],
-            ),
-          )
-        else if (_modelScopeModels.isEmpty && !_isLoadingModelScopeModels)
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Icon(Icons.info_outline, color: Colors.grey[400], size: 32),
-                const SizedBox(height: 8),
-                Text(
-                  AppLocalizations.of(context)!.modelscopeApiKeyHint,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _fetchModelScopeModels,
-                  child: Text(AppLocalizations.of(context)!.fetchModels, style: const TextStyle(fontSize: 11)),
-                ),
-              ],
-            ),
-          )
-        else
-          ..._modelScopeModels.map((model) {
-            final isSelected = _selectedOnlineModel == model['id'];
-            return InkWell(
-              onTap: () {
-                setState(() {
-                  _selectedOnlineModel = model['id'];
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      isSelected
-                          ? const Color(0xFF3B82F6).withValues(alpha: 0.08)
-                          : null,
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey[200]!, width: 0.5),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color:
-                              isSelected
-                                  ? const Color(0xFF3B82F6)
-                                  : Colors.grey[400]!,
-                          width: 2,
-                        ),
-                        color:
-                            isSelected
-                                ? const Color(0xFF3B82F6)
-                                : Colors.transparent,
-                      ),
-                      child:
-                          isSelected
-                              ? const Icon(
-                                Icons.circle,
-                                size: 8,
-                                color: Colors.white,
-                              )
-                              : null,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            model['name'],
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight:
-                                  isSelected
-                                      ? FontWeight.w500
-                                      : FontWeight.normal,
-                              color:
-                                  isSelected
-                                      ? const Color(0xFF3B82F6)
-                                      : Colors.black87,
-                            ),
-                          ),
-                          if (model['object'] != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              '${AppLocalizations.of(context)!.fileTypeLabel}: ${model['object']}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-      ],
-    );
-  }
-
   Widget _buildModelNameSetting() {
-    final String providerDisplayName;
     final String platformDisplayName;
 
     if (_isCustomProvider) {
-      providerDisplayName = AppLocalizations.of(context)!.customProvider;
       platformDisplayName = AppLocalizations.of(context)!.customProvider;
     } else {
-      final selectedProviderData = onlineProviders.firstWhere(
-        (provider) => provider['id'] == _selectedProvider,
-      );
-      providerDisplayName = selectedProviderData['name'];
       platformDisplayName = _resolveProviderPlatformName(_selectedProvider);
     }
 
@@ -1601,12 +1184,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 ),
                 const SizedBox(height: 12),
                 _buildSummaryItem(
-                  AppLocalizations.of(context)!.providerLabel,
-                  providerDisplayName,
-                  CupertinoIcons.device_desktop,
-                ),
-                const SizedBox(height: 8),
-                _buildSummaryItem(
                   AppLocalizations.of(context)!.platformLabel,
                   platformDisplayName,
                   CupertinoIcons.cloud,
@@ -1649,7 +1226,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             controller: _modelNameController,
             style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
-              hintText: AppLocalizations.of(context)!.enterModelNameHint(providerDisplayName),
+              hintText: AppLocalizations.of(context)!.enterModelNameHint(platformDisplayName),
               hintStyle: const TextStyle(fontSize: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
@@ -1701,12 +1278,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               _selectedOnlineModel.isNotEmpty;
         }
 
-        // Ollama 可能不需要 API Key，其他提供商需要
-        final apiKeyRequired = _selectedProvider != 'ollama';
         final basicRequirementsMet =
-            (apiKeyRequired
-                ? _apiKeyController.text.trim().isNotEmpty
-                : true) &&
+            _apiKeyController.text.trim().isNotEmpty &&
             _apiUrlController.text.trim().isNotEmpty &&
             _selectedOnlineModel.isNotEmpty;
 
@@ -1751,15 +1324,11 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       String finalApiUrl = inputApiUrl;
 
       final String protocol;
-      final String providerName;
-      final String providerId;
       final String platformName;
 
       if (_isCustomProvider) {
         // 自定义提供商：默认 OpenAI 协议
         protocol = 'openai';
-        providerName = AppLocalizations.of(context)!.customProvider;
-        providerId = 'custom';
         platformName = AppLocalizations.of(context)!.customProvider;
 
         // OpenAI 协议自动补全端点
@@ -1775,8 +1344,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         );
 
         protocol = selectedProviderData['protocol'];
-        providerName = selectedProviderData['name'];
-        providerId = _selectedProvider;
         platformName = _resolveProviderPlatformName(_selectedProvider);
 
         // 根据协议自动补全API端点路径
@@ -1820,11 +1387,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         'modelId': ChatModel.generateModelId(),
         'name': _customModelName,
         'model': finalModelId,
-        'status': 'active',
-        'businessType': '在线模型',
-        'description': '$providerName 在线模型服务',
         'type': 'online',
-        'provider': providerId,
         'protocol': protocol,
         'platform': platformName,
         'apiKey': inputApiKey,
@@ -2243,7 +1806,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         final selectedProviderData = onlineProviders.firstWhere(
           (provider) => provider['id'] == _selectedProvider,
         );
-        apiKeyRequired = _selectedProvider != 'ollama';
+        apiKeyRequired = true;
         testProtocol = selectedProviderData['protocol'];
       }
 
@@ -2303,8 +1866,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         modelId: 'temp_test_model',
         name: 'Test Model',
         model: testModelId,
-        status: 'active',
-        provider: _selectedProvider,
         protocol: testProtocol,
         apiKey: testApiKey,
         apiUrl: finalApiUrl,
@@ -2398,128 +1959,5 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     });
   }
 
-  // 获取Ollama运行中的模型列表
-  Future<void> _fetchOllamaModels() async {
-    if (_selectedProvider != 'ollama') return;
-
-    setState(() {
-      _isLoadingOllamaModels = true;
-      _ollamaModelsError = '';
-    });
-
-    try {
-      final apiUrl =
-          _apiUrlController.text.trim().isNotEmpty
-              ? _apiUrlController.text.trim()
-              : 'http://localhost:11434/api';
-
-      // 确保URL以/api结尾
-      String baseUrl = apiUrl;
-      if (!baseUrl.endsWith('/api')) {
-        baseUrl = baseUrl.endsWith('/') ? '${baseUrl}api' : '$baseUrl/api';
-      }
-
-      final response = await http
-          .get(
-            Uri.parse('$baseUrl/tags'),
-            headers: {'Content-Type': 'application/json'},
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['models'] != null) {
-          setState(() {
-            _ollamaModels =
-                (data['models'] as List).map((model) {
-                  return {
-                    'id': model['name'] ?? '',
-                    'name': model['name'] ?? '',
-                    'size': model['size'] ?? 0,
-                    'modified_at': model['modified_at'] ?? '',
-                  };
-                }).toList();
-            _isLoadingOllamaModels = false;
-          });
-        }
-      } else {
-        setState(() {
-          _ollamaModelsError =
-              'HTTP ${response.statusCode}: ${response.reasonPhrase}';
-          _isLoadingOllamaModels = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _ollamaModelsError = AppLocalizations.of(context)!.connectionFailed(e.toString());
-        _isLoadingOllamaModels = false;
-      });
-    }
-  }
-
-  // 获取ModelScope可用的模型列表
-  Future<void> _fetchModelScopeModels() async {
-    if (_selectedProvider != 'modelscope') return;
-
-    setState(() {
-      _isLoadingModelScopeModels = true;
-      _modelScopeModelsError = '';
-    });
-
-    try {
-      final apiUrl =
-          _apiUrlController.text.trim().isNotEmpty
-              ? _apiUrlController.text.trim()
-              : 'https://api-inference.modelscope.cn/v1/';
-
-      // 确保URL以v1/结尾
-      String baseUrl = apiUrl;
-      if (!baseUrl.endsWith('/v1/')) {
-        if (baseUrl.endsWith('/')) {
-          baseUrl = '${baseUrl}v1/';
-        } else {
-          baseUrl = '$baseUrl/v1/';
-        }
-      }
-
-      final response = await http
-          .get(
-            Uri.parse('${baseUrl}models'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ${_apiKeyController.text.trim()}',
-            },
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['data'] != null) {
-          setState(() {
-            _modelScopeModels =
-                (data['data'] as List).map((model) {
-                  return {
-                    'id': model['id'] ?? '',
-                    'name': model['id'] ?? '',
-                    'object': model['object'] ?? '',
-                    'created': model['created'] ?? 0,
-                  };
-                }).toList();
-            _isLoadingModelScopeModels = false;
-          });
-        }
-      } else {
-        setState(() {
-          _modelScopeModelsError =
-              'HTTP ${response.statusCode}: ${response.reasonPhrase}';
-          _isLoadingModelScopeModels = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _modelScopeModelsError = AppLocalizations.of(context)!.connectionFailed(e.toString());
-        _isLoadingModelScopeModels = false;
-      });
-    }
-  }
 }
+

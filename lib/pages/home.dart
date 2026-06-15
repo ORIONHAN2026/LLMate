@@ -117,15 +117,10 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           // 如果当前选中的模型仍然存在，保持选择
           _selectedModel = currentSelectedModel;
         } else {
-          // 如果当前选中的模型不存在，找到第一个活跃的模型，或者使用第一个模型
-          final activeModel = _availableModels.firstWhere(
-            (model) => model.status == 'active',
-            orElse:
-                () =>
-                    _availableModels.isNotEmpty
-                        ? _availableModels.first
-                        : ChatModel.empty(),
-          );
+          // 如果当前选中的模型不存在，使用第一个模型
+          final activeModel = _availableModels.isNotEmpty
+              ? _availableModels.first
+              : ChatModel.empty();
 
           if (activeModel.name.isNotEmpty) {
             _selectedModel = activeModel.name;

@@ -298,7 +298,8 @@ class _SessionItemState extends State<_SessionItem>
     return ModelIconUtils.buildModelIconWidget(
       modelName,
       isSelected,
-      provider: widget.session.chatModel?.provider,
+      platform: widget.session.chatModel?.platform,
+      protocol: widget.session.chatModel?.protocol,
     );
   }
 

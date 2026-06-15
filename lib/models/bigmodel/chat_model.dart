@@ -6,16 +6,14 @@ import 'package:flutter/material.dart';
 import '../chat/chat_setting.dart';
 import '../chat/skill.dart';
 import '../chat/mcp_config.dart';
+import '../../utils/model_icon_utils.dart';
 
 /// 聊天模型数据结构
 class ChatModel {
   final String modelId; // 唯一标识符
   final String name;
   final String model; // API调用时使用的模型名称
-  final String status; // 'active', 'inactive'
-  final String? description;
   final String? type; // 'local', 'online'
-  final String? provider; // 提供商：deepseek, openai, anthropic, qwen, zhipu, modelscope, ollama, google 等
   final String? platform; // 平台展示名称，如：阿里云百炼、DeepSeek、OpenAI等
   final String? protocol; // 协议类型：openai, anthropic, gemini
   final String? apiKey;
@@ -39,10 +37,7 @@ class ChatModel {
     required this.modelId,
     required this.name,
     required this.model,
-    required this.status,
-    this.description,
     this.type,
-    this.provider,
     this.platform,
     this.protocol,
     this.apiKey,
@@ -86,12 +81,9 @@ class ChatModel {
       modelId: map['modelId'] ?? generateModelId(), // 如果没有modelId则生成新的
       name: map['name'] ?? '',
       model: map['model'] ?? map['fullName'] ?? '', // 兼容旧数据的fullName字段
-      status: map['status'] ?? 'inactive',
-      description: map['description'],
       type: map['type'],
-      provider: map['provider'],
-      platform: map['platform'] ?? _resolvePlatformName(map['provider']),
-      protocol: map['protocol'] ?? _resolveProtocol(map['provider']),
+      platform: map['platform'],
+      protocol: map['protocol'],
       apiKey: map['apiKey'],
       apiUrl: map['apiUrl'],
       createdAt:
@@ -186,10 +178,7 @@ class ChatModel {
       'modelId': modelId,
       'name': name,
       'model': model,
-      'status': status,
-      'description': description,
       'type': type,
-      'provider': provider,
       'platform': platform,
       'protocol': protocol,
       'apiKey': apiKey,
@@ -232,11 +221,10 @@ class ChatModel {
 
   /// 创建空的 ChatModel 实例
   static ChatModel empty() {
-    return ChatModel(
+    return const ChatModel(
       modelId: "",
       name: '请设置',
       model: '未设置对话大模型',
-      status: 'inactive',
     );
   }
 
@@ -244,11 +232,7 @@ class ChatModel {
   static ChatModel create({
     required String name,
     required String model,
-    String status = 'inactive',
-    String? businessType,
-    String? description,
     String? type,
-    String? provider,
     String? platform,
     String? protocol,
     String? apiKey,
@@ -259,12 +243,9 @@ class ChatModel {
       modelId: generateModelId(),
       name: name,
       model: model,
-      status: status,
-      description: description,
       type: type,
-      provider: provider,
-      platform: platform ?? _resolvePlatformName(provider),
-      protocol: protocol ?? _resolveProtocol(provider),
+      platform: platform,
+      protocol: protocol,
       apiKey: apiKey,
       apiUrl: apiUrl,
       createdAt: DateTime.now(),
@@ -281,11 +262,7 @@ class ChatModel {
     String? modelId,
     String? name,
     String? model,
-    String? status,
-    String? businessType,
-    String? description,
     String? type,
-    String? provider,
     String? platform,
     String? protocol,
     String? apiKey,
@@ -301,10 +278,7 @@ class ChatModel {
       modelId: modelId ?? this.modelId,
       name: name ?? this.name,
       model: model ?? this.model,
-      status: status ?? this.status,
-      description: description ?? this.description,
       type: type ?? this.type,
-      provider: provider ?? this.provider,
       platform: platform ?? this.platform,
       protocol: protocol ?? this.protocol,
       apiKey: apiKey ?? this.apiKey,
@@ -324,98 +298,21 @@ class ChatModel {
   /// 是否为本地模型
   bool get isLocalModel => type == 'local' || type == null;
 
-  /// 是否为活跃状态
-  bool get isActive => status == 'active';
-
   /// 获取显示名称（如果有自定义名称则使用自定义名称，否则使用模型名称）
   String get displayName => name.isNotEmpty ? name : model;
 
-  /// 根据模型名称或提供商获取对应的图标路径
+  /// 根据模型的 platform、protocol、name/model 字段获取对应的图标路径
   String? getIconPath() {
-    final lowercaseName = displayName.toLowerCase();
-
-    // 优先根据 provider 判断
-    if (provider != null) {
-      final lowercaseProvider = provider!.toLowerCase();
-      if (lowercaseProvider == 'deepseek') {
-        return 'assets/icons/deepseek-color.webp';
-      } else if (lowercaseProvider == 'anthropic') {
-        return 'assets/icons/claude-color.webp';
-      } else if (lowercaseProvider == 'openai') {
-        return 'assets/icons/openai.webp';
-      } else if (lowercaseProvider == 'google') {
-        return 'assets/icons/gemini-color.webp';
-      } else if (lowercaseProvider == 'qwen' ||
-          lowercaseProvider == 'tongyi' ||
-          lowercaseProvider == 'alibaba') {
-        return 'assets/icons/qwen-color.webp';
-      } else if (lowercaseProvider == 'zhipu' ||
-          lowercaseProvider == 'bytedance') {
-        return 'assets/icons/yuanbao-color.webp';
-      } else if (lowercaseProvider == 'modelscope') {
-        return 'assets/icons/qwen-color.webp';
-      } else if (lowercaseProvider == 'ollama') {
-        return 'assets/icons/ollama.webp';
-      }
-    }
-
-    // 如果没有provider或者provider匹配失败，根据模型名称推测
-    if (lowercaseName.contains('deepseek') || lowercaseName.contains('r1')) {
-      return 'assets/icons/deepseek-color.webp';
-    } else if (lowercaseName.contains('claude') ||
-        lowercaseName.contains('anthropic')) {
-      return 'assets/icons/claude-color.webp';
-    } else if (lowercaseName.contains('gpt') ||
-        lowercaseName.contains('openai')) {
-      return 'assets/icons/openai.webp';
-    } else if (lowercaseName.contains('gemini') ||
-        lowercaseName.contains('bard') ||
-        lowercaseName.contains('google')) {
-      return 'assets/icons/gemini-color.webp';
-    } else if (lowercaseName.contains('qwen') ||
-        lowercaseName.contains('tongyi') ||
-        lowercaseName.contains('baichuan') ||
-        lowercaseName.contains('chatglm') ||
-        lowercaseName.contains('yi-') ||
-        lowercaseName.contains('deepseek-v3') ||
-        lowercaseName.contains('doubao-') ||
-        lowercaseName.contains('internlm2.5')) {
-      return 'assets/icons/qwen-color.webp';
-    } else if (lowercaseName.contains('yuanbao') ||
-        lowercaseName.contains('元宝') ||
-        lowercaseName.contains('glm') ||
-        lowercaseName.contains('zhipu')) {
-      return 'assets/icons/yuanbao-color.webp';
-    } else if (lowercaseName.contains('ollama')) {
-      return 'assets/icons/ollama.webp';
-    }
-
-    return null; // 没有匹配的图标
-  }
-
-  /// 根据 provider ID 解析出平台中文展示名称
-  static String? _resolvePlatformName(String? providerId) {
-    if (providerId == null) return null;
-    final p = ModelProvider.fromString(providerId);
-    return p?.displayName ?? providerId;
-  }
-
-  /// 根据 provider ID 解析出协议类型
-  /// openai / deepseek / qwen / zhipu / modelscope / ollama → 'openai'
-  /// anthropic → 'anthropic'
-  /// google → 'gemini'
-  static String? _resolveProtocol(String? providerId) {
-    if (providerId == null) return null;
-    final p = providerId.toLowerCase();
-    if (p == 'anthropic') return 'anthropic';
-    if (p == 'google') return 'gemini';
-    // OpenAI 兼容协议（openai, deepseek, qwen, zhipu, modelscope, ollama 等）
-    return 'openai';
+    return ModelIconUtils.resolveIconPath(
+      platform: platform,
+      protocol: protocol,
+      modelName: displayName,
+    );
   }
 
   @override
   String toString() {
-    return 'ChatModel(modelId: $modelId, name: $name, model: $model, status: $status, type: $type, provider: $provider)';
+    return 'ChatModel(modelId: $modelId, name: $name, model: $model, type: $type, protocol: $protocol)';
   }
 
   @override

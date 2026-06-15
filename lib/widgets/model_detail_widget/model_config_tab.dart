@@ -76,11 +76,8 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         children: [
           _buildConfigCard(AppLocalizations.of(context)!.basicInfo, CupertinoIcons.info, [
             _buildEditableModelNameItem(),
-            _buildConfigItem(AppLocalizations.of(context)!.modelLabel, _currentModel.provider ?? AppLocalizations.of(context)!.unknown),
-
             _buildEditableModelItem(),
             _buildConfigItem(AppLocalizations.of(context)!.platformLabel, _currentModel.platform ?? AppLocalizations.of(context)!.unknown),
-
             _buildConfigItem(AppLocalizations.of(context)!.apiAddress, _currentModel.apiUrl ?? widget.apiUrl),
             // _buildConfigItem('模型ID', _currentModel.modelId),
           ]),
@@ -431,7 +428,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
           SizedBox(
             width: 80,
             child: Text(
-              '${AppLocalizations.of(context)!.versionLabel}:',
+              '${AppLocalizations.of(context)!.modelLabel}:',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -473,17 +470,14 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
 
   // 获取当前模型的显示名称
   String _getCurrentModelDisplayName() {
-    String? currentProvider = _currentModel.provider;
-
-    // 从供应商数据中查找当前模型的显示名称
+    // 从所有供应商数据中查找当前模型的显示名称
     for (var provider in onlineProviders) {
-      if (provider['id'] == currentProvider && provider['models'] != null) {
+      if (provider['models'] != null) {
         for (var model in provider['models']) {
           if (model['id'] == _currentModel.model) {
             return model['name'] ?? _currentModel.model;
           }
         }
-        break;
       }
     }
 
@@ -493,17 +487,13 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
 
   // 显示模型选择对话框
   void _showModelSelectionDialog() {
-    // 获取当前模型的供应商
-    String? currentProvider = _currentModel.provider;
-
-    // 根据供应商筛选模型
+    // 从所有供应商收集模型
     List<Map<String, dynamic>> availableModels = [];
     for (var provider in onlineProviders) {
-      if (provider['id'] == currentProvider && provider['models'] != null) {
+      if (provider['models'] != null) {
         for (var model in provider['models']) {
           availableModels.add({'id': model['id'], 'name': model['name']});
         }
-        break;
       }
     }
 

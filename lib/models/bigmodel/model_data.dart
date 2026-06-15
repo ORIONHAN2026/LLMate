@@ -41,129 +41,8 @@ final List<Map<String, dynamic>> businessTypes = [
   },
 ];
 
-// 业务类型对应的大模型
-final Map<String, List<Map<String, dynamic>>> businessModels = {
-  '代码分析': [
-    {
-      'name': 'DeepSeek-Coder',
-      'baseName': 'deepseek-coder',
-      'sizes': ['0.6B', '1.7B', '4B', '8B', '14B', '30B', '32B', '235B'],
-      'description': '专为代码理解和生成任务优化的模型',
-    },
-    {
-      'name': 'CodeLlama',
-      'baseName': 'codellama',
-      'sizes': ['7B', '13B', '34B'],
-      'description': '基于Llama2的代码生成模型',
-    },
-    {
-      'name': 'Qwen2.5-Coder',
-      'baseName': 'qwen2.5-coder',
-      'sizes': ['1.5B', '7B', '14B', '32B'],
-      'description': '阿里巴巴开发的代码专用模型',
-    },
-  ],
-  '法律查询': [
-    {
-      'name': 'Qwen3',
-      'baseName': 'qwen3',
-      'sizes': ['0.6B', '1.7B', '4B', '8B', '14B', '30B', '32B', '235B'],
-      'description': '最新一代Qwen模型，支持多语言和法律领域',
-    },
-    {
-      'name': 'ChatGLM3',
-      'baseName': 'chatglm3',
-      'sizes': ['6B', '12B'],
-      'description': '清华大学开发的对话模型',
-    },
-    {
-      'name': 'Baichuan2',
-      'baseName': 'baichuan2',
-      'sizes': ['7B', '13B'],
-      'description': '百川智能开发的中文模型',
-    },
-  ],
-  '合规管理': [
-    {
-      'name': 'Llama3',
-      'baseName': 'llama3',
-      'sizes': ['8B', '70B'],
-      'description': 'Meta开发的最新Llama模型',
-    },
-    {
-      'name': 'Mistral',
-      'baseName': 'mistral',
-      'sizes': ['7B', '8x7B', '8x22B'],
-      'description': 'Mistral AI开发的高效模型',
-    },
-  ],
-  '通用对话': [
-    {
-      'name': 'Qwen3',
-      'baseName': 'qwen3',
-      'sizes': ['0.6B', '1.7B', '4B', '8B', '14B', '30B', '32B', '235B'],
-      'description': '最新一代Qwen模型，通用对话能力强',
-    },
-    {
-      'name': 'Llama3',
-      'baseName': 'llama3',
-      'sizes': ['8B', '70B'],
-      'description': 'Meta开发的通用对话模型',
-    },
-    {
-      'name': 'Gemma',
-      'baseName': 'gemma',
-      'sizes': ['2B', '7B'],
-      'description': 'Google开发的轻量级模型',
-    },
-  ],
-  '文档处理': [
-    {
-      'name': 'Qwen3',
-      'baseName': 'qwen3',
-      'sizes': ['0.6B', '1.7B', '4B', '8B', '14B', '30B', '32B', '235B'],
-      'description': '支持长文档处理的模型',
-    },
-  ],
-  '数据分析': [
-    {
-      'name': 'DeepSeek-Math',
-      'baseName': 'deepseek-math',
-      'sizes': ['7B'],
-      'description': '专门用于数学和数据分析的模型',
-    },
-  ],
-};
-
 // 在线模型提供商列表
 final List<Map<String, dynamic>> onlineProviders = [
-  {
-    'name': 'Ollama',
-    'id': 'ollama',
-    'protocol': 'openai',
-    'icon': CupertinoIcons.device_laptop,
-    'description': '本地运行的开源大语言模型',
-    'color': const Color(0xFF22C55E),
-    'defaultUrl': 'http://localhost:11434/v1',
-    'models': [
-       {'id': 'qwen3', 'name': 'qwen3', 'specs': '8B • 中英双语 • 代码推理', 'size': ['8b']},
-
-      {'id': 'llama3.2', 'name': 'Llama 3.2', 'specs': '1B-3B • 多模态 • 轻量级', 'size': ['1b', '3b']},
-      {'id': 'llama3.1', 'name': 'Llama 3.1', 'specs': '8B-70B • 长上下文 • 高性能', 'size': ['8b', '70b']},
-      {'id': 'llama3', 'name': 'Llama 3', 'specs': '8B-70B • 通用对话 • 开源', 'size': ['8b', '70b']},
-      {'id': 'llama2', 'name': 'Llama 2', 'specs': '7B-70B • 经典模型 • 稳定', 'size': ['7b', '13b', '70b']},
-      {'id': 'codellama', 'name': 'Code Llama', 'specs': '7B-34B • 代码专用 • 编程', 'size': ['7b', '13b', '34b']},
-      {'id': 'deepseek-coder-v2', 'name': 'DeepSeek Coder V2', 'specs': '16B-236B • 代码生成 • 多语言', 'size': ['16b', '236b']},
-      {'id': 'qwen2.5', 'name': 'Qwen 2.5', 'specs': '0.5B-72B • 中英双语 • 通用', 'size': ['0.5b', '1.5b', '3b', '7b', '14b', '32b', '72b']},
-      {'id': 'qwen2.5-coder', 'name': 'Qwen 2.5 Coder', 'specs': '1.5B-32B • 代码专用 • 中英', 'size': ['1.5b', '7b', '14b', '32b']},
-      {'id': 'mistral', 'name': 'Mistral', 'specs': '7B • 高效推理 • 欧洲模型', 'size': ['7b']},
-      {'id': 'mixtral', 'name': 'Mixtral', 'specs': '8x7B • 专家混合 • 高性能', 'size': ['8x7b', '8x22b']},
-      {'id': 'phi3', 'name': 'Phi 3', 'specs': '3.8B-14B • 微软 • 小参数高性能', 'size': ['3.8b', '14b']},
-      {'id': 'gemma2', 'name': 'Gemma 2', 'specs': '2B-27B • Google • 开源', 'size': ['2b', '9b', '27b']},
-      {'id': 'yi', 'name': 'Yi', 'specs': '6B-34B • 零一万物 • 中英双语', 'size': ['6b', '34b']},
-      {'id': 'nomic-embed-text', 'name': 'Nomic Embed Text (嵌入模型)', 'specs': '向量嵌入 • 文本检索 • RAG', 'size': ['text']},
-    ],
-  },
   {
     'name': 'DeepSeek',
     'id': 'deepseek',
@@ -186,23 +65,9 @@ final List<Map<String, dynamic>> onlineProviders = [
     'color': const Color(0xFF10B981),
     'defaultUrl': 'https://api.openai.com/v1',
     'models': [
-      {'id': 'gpt-4', 'name': 'GPT-4', 'specs': '1.76T参数 • 多模态 • 高级推理', 'size': ['turbo', 'vision']},
-      {'id': 'gpt-4-turbo', 'name': 'GPT-4 Turbo', 'specs': '更快响应 • 128K上下文 • 视觉理解', 'size': ['turbo']},
-      {'id': 'gpt-3.5-turbo', 'name': 'GPT-3.5 Turbo', 'specs': '175B参数 • 快速响应 • 高性价比', 'size': ['turbo']},
-    ],
-  },
-  {
-    'name': 'Claude',
-    'id': 'anthropic',
-    'protocol': 'anthropic',
-    'icon': CupertinoIcons.device_desktop,
-    'description': 'Anthropic Claude系列模型',
-    'color': const Color(0xFFF59E0B),
-    'defaultUrl': 'https://api.anthropic.com/v1',
-    'models': [
-      {'id': 'claude-3-opus', 'name': 'Claude 3 Opus', 'specs': '旗舰模型 • 200K上下文 • 复杂推理'},
-      {'id': 'claude-3-sonnet', 'name': 'Claude 3 Sonnet', 'specs': '平衡型 • 高质量 • 性价比'},
-      {'id': 'claude-3-haiku', 'name': 'Claude 3 Haiku', 'specs': '快速响应 • 轻量级 • 高效'},
+      {'id': 'gpt-4o', 'name': 'GPT-4o', 'specs': '多模态 • 高级推理 • 最新旗舰'},
+      {'id': 'gpt-4-turbo', 'name': 'GPT-4 Turbo', 'specs': '更快响应 • 128K上下文'},
+      {'id': 'gpt-3.5-turbo', 'name': 'GPT-3.5 Turbo', 'specs': '快速响应 • 高性价比'},
     ],
   },
   {
@@ -216,6 +81,7 @@ final List<Map<String, dynamic>> onlineProviders = [
     'models': [
       {'id': 'gemini-pro', 'name': 'Gemini Pro', 'specs': '多模态 • 长上下文 • Google'},
       {'id': 'gemini-pro-vision', 'name': 'Gemini Pro Vision', 'specs': '视觉理解 • 图像分析 • 多模态'},
+      {'id': 'gemini-2.0-flash', 'name': 'Gemini 2.0 Flash', 'specs': '极速响应 • 多模态 • 轻量'},
     ],
   },
   {
@@ -321,18 +187,22 @@ final List<Map<String, dynamic>> onlineProviders = [
     ],
   },
   {
-    'name': '智谱AI',
-    'id': 'zhipu',
+    'name': '腾讯云',
+    'id': 'tencent',
     'protocol': 'openai',
-    'icon': CupertinoIcons.lightbulb,
-    'description': '智谱AI GLM系列模型',
-    'color': const Color(0xFF06B6D4),
-    'defaultUrl': 'https://open.bigmodel.cn/api/paas/v4',
+    'icon': CupertinoIcons.cloud,
+    'description': '腾讯云混元大模型服务',
+    'color': const Color(0xFF00A4FF),
+    'defaultUrl': 'https://api.hunyuan.cloud.tencent.com/v1',
     'models': [
-      {'id': 'glm-4', 'name': 'GLM-4', 'specs': '通用对话 • 中英双语 • 清华技术'},
-      {'id': 'glm-4v', 'name': 'GLM-4V', 'specs': '多模态 • 视觉理解 • 图文对话'},
-      {'id': 'glm-3-turbo', 'name': 'GLM-3 Turbo', 'specs': '快速响应 • 高性价比 • 轻量级'},
+      {'id': 'hunyuan-turbos-latest', 'name': 'Hunyuan Turbo', 'specs': '最新版 • 高性能 • 多功能'},
+      {'id': 'hunyuan-pro-latest', 'name': 'Hunyuan Pro', 'specs': '最新版 • 强推理 • 复杂任务'},
+      {'id': 'hunyuan-standard-latest', 'name': 'Hunyuan Standard', 'specs': '最新版 • 均衡型 • 成本优化'},
+      {'id': 'hunyuan-lite-latest', 'name': 'Hunyuan Lite', 'specs': '最新版 • 轻量快速 • 高性价比'},
+      {'id': 'hunyuan-code-latest', 'name': 'Hunyuan Code', 'specs': '最新版 • 代码生成 • 编程助手'},
+      {'id': 'hunyuan-roleplay-latest', 'name': 'Hunyuan RolePlay', 'specs': '最新版 • 角色扮演 • 对话创作'},
+      {'id': 'hunyuan-functioncall-latest', 'name': 'Hunyuan FunctionCall', 'specs': '最新版 • 函数调用 • Agent工具'},
+      {'id': 'hunyuan-vision-latest', 'name': 'Hunyuan Vision', 'specs': '最新版 • 视觉理解 • 图像识别'},
     ],
   },
-  
 ];

@@ -46,9 +46,10 @@ class LlmHub {
 
   /// 解析 provider — 按 protocol 字段路由
   static BaseLlmProvider _resolve(ChatModel model) {
-    final key = model.protocol?.toLowerCase() ?? model.provider?.toLowerCase();
+    final key = model.protocol?.toLowerCase();
+    if (key == null) throw UnsupportedError('模型未配置协议');
     final p = instance._providers[key];
-    if (p == null) throw UnsupportedError('不支持的协议: ${model.protocol ?? model.provider}');
+    if (p == null) throw UnsupportedError('不支持的协议: $key');
     return p;
   }
 
@@ -318,7 +319,7 @@ class LlmClient {
       final model = _session.chatModel;
       if (model == null) return null;
 
-      final protocol = model.protocol?.toLowerCase() ?? model.provider?.toLowerCase() ?? '';
+      final protocol = model.protocol?.toLowerCase() ?? '';
 
       if (protocol == 'openai') {
         // OpenAI 兼容 provider：绕过 sendMessage 的 json_object 约束

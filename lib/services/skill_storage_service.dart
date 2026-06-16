@@ -30,8 +30,8 @@ class SkillStorageService {
       final home = Platform.environment['HOME'];
       if (home != null) {
         // macOS: ~/Library/Application Support/[bundleId]/skills
-        // 尝试从 info.plist 读取 bundleId，默认为 chathub
-        final bundleId = 'chathub'; // 可以从 Plist 读取，暂时硬编码
+        // 尝试从 info.plist 读取 bundleId，默认为 com.llmwork.app
+        final bundleId = 'com.llmwork.app'; // 可以从 Plist 读取，暂时硬编码
         final fallbackDir = Directory(p.join(home, 'Library', 'Application Support', bundleId, 'skills'));
         if (!await fallbackDir.exists()) {
           await fallbackDir.create(recursive: true);

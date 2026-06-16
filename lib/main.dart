@@ -12,6 +12,8 @@ import 'controllers/mcp_controller.dart';
 import 'pages/home.dart';
 import 'pages/loading_page.dart';
 import 'services/scheduled_task_service.dart';
+import 'services/skill_storage_service.dart';
+import 'services/skill_service.dart';
 
 import 'models/bigmodel/chat_model.dart';
 import 'storage/isar_service.dart';
@@ -261,6 +263,18 @@ class _AppInitializerState extends State<AppInitializer> {
 
       // 加载 MCP 配置数据
       await mcpController.loadAll();
+
+      // 复制内置技能从 assets 到可写目录
+      await SkillStorageService.copyBuiltinSkillsFromAssets();
+      
+      // 调试：打印技能目录
+      await SkillStorageService.debugPrintSkillsDir();
+
+      // 加载技能数据
+      await SkillService.loadSkills();
+      
+      // 调试：打印加载的技能数量
+      debugPrint('✅ 已加载 ${SkillService.skills.length} 个技能');
 
       // 加载会话数据
       await sessionController.loadAll();

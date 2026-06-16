@@ -171,6 +171,9 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
         SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.extractingImport);
       }
 
+      // 获取 skills 根目录
+      final skillsRoot = await SkillStorageService.getSkillsRootDir();
+      
       final zipFile = File(file.path!);
       final bytes = await zipFile.readAsBytes();
       final archive = ZipDecoder().decodeBytes(bytes);
@@ -183,7 +186,7 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
 
           // 构建目标路径
           final targetPath = p.join(
-            SkillStorageService.skillsRootDir,
+            skillsRoot,
             fileName,
           );
           final targetFile = File(targetPath);
@@ -604,9 +607,10 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
     return _SkillCard(
       skill: skill,
       onTap: () => _showSkillDetail(skill),
-      onEdit: () {
+      onEdit: () async {
+        final skillsRoot = await SkillStorageService.getSkillsRootDir();
         final filePath = p.join(
-          SkillStorageService.skillsRootDir,
+          skillsRoot,
           skill.skillId,
           'SKILL.md',
         );

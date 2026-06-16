@@ -99,6 +99,7 @@ flutter:
     - assets/icons/
     - assets/mcp_marketplace/
     - assets/config/
+    - assets/skills/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

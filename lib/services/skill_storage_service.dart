@@ -2,29 +2,157 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../models/chat/skill.dart';
 
 /// Skill 文件系统存储服务
 ///
-/// 技能以文件夹形式存储在 `skills/` 目录下，每个技能文件夹内有一个 `SKILL.md`。
+/// 技能以文件夹形式存储在应用文档目录下，每个技能文件夹内有一个 `SKILL.md`。
+/// 内置技能从 assets/skills/ 复制到文档目录。
 class SkillStorageService {
-  /// 获取 skills 根目录
-  static String get skillsRootDir {
-    // 在开发/运行时，skills/ 位于项目根目录
-    final cwd = Directory.current.path;
-    // 尝试从当前运行目录找到 skills/
-    return p.join(cwd, 'skills');
+  /// 获取 skills 根目录（应用支持目录下的 skills/）
+  static Future<String> getSkillsRootDir() async {
+    try {
+      // 优先使用 path_provider 的 Application Support 目录
+      final appSupportDir = await getApplicationSupportDirectory();
+      final skillsDir = Directory(p.join(appSupportDir.path, 'skills'));
+      if (!await skillsDir.exists()) {
+        await skillsDir.create(recursive: true);
+      }
+      debugPrint('📂 技能目录: ${skillsDir.path}');
+      return skillsDir.path;
+    } catch (e) {
+      // 备用方案：手动构建路径
+      debugPrint('⚠️ path_provider 失败: $e，使用备用方案');
+      final home = Platform.environment['HOME'];
+      if (home != null) {
+        // macOS: ~/Library/Application Support/[bundleId]/skills
+        // 尝试从 info.plist 读取 bundleId，默认为 chathub
+        final bundleId = 'chathub'; // 可以从 Plist 读取，暂时硬编码
+        final fallbackDir = Directory(p.join(home, 'Library', 'Application Support', bundleId, 'skills'));
+        if (!await fallbackDir.exists()) {
+          await fallbackDir.create(recursive: true);
+        }
+        debugPrint('📂 备用技能目录: ${fallbackDir.path}');
+        return fallbackDir.path;
+      }
+      // 最后备用：当前目录下的 skills/
+      final cwd = Directory.current.path;
+      final fallbackDir = Directory(p.join(cwd, 'skills'));
+      if (!await fallbackDir.exists()) {
+        await fallbackDir.create(recursive: true);
+      }
+      debugPrint('📂 最后备用技能目录: ${fallbackDir.path}');
+      return fallbackDir.path;
+    }
+  }
+
+  /// 复制 assets/skills/ 中的内置技能到可写目录（仅复制不存在的技能）
+  static Future<void> copyBuiltinSkillsFromAssets() async {
+    final skillsRoot = await getSkillsRootDir();
+    
+    // 硬编码的内置技能列表（从 assets/skills/ 目录）
+    final builtinSkills = [
+      '测试',
+      '会议通知',
+      '图片转化',
+      '小红书',
+      '小红书书写',
+      '演出会截图',
+      'flutter-add-widget-preview',
+      'flutter-apply-architecture-best-practices',
+      'flutter-build-responsive-layout',
+      'flutter-fix-layout-issues',
+      'flutter-setup-declarative-routing',
+      'flutter-setup-localization',
+      'flutter-use-http-package',
+      'skill-creator',
+      'SKU重复检查工具',
+      'tencent-docs-1.0.37',
+      'travel攻略',
+      'wechat-article-spider',
+      'wechatpayrefund361',
+      'wechatpayrefund636',
+    ];
+    
+    int copiedCount = 0;
+    
+    // 复制每个技能文件夹（仅复制不存在的）
+    for (final folderName in builtinSkills) {
+      final targetDir = Directory(p.join(skillsRoot, folderName));
+      if (!await targetDir.exists()) {
+        await _copySkillFolderFromAssets(folderName, skillsRoot);
+        copiedCount++;
+      }
+    }
+    
+    debugPrint('✅ SkillStorageService: 已从 assets 复制 $copiedCount 个内置技能（共 ${builtinSkills.length} 个）');
+  }
+  
+  /// 复制单个技能文件夹从 assets 到可写目录
+  static Future<void> _copySkillFolderFromAssets(String folderName, String skillsRoot) async {
+    // 获取该技能文件夹下的所有 assets
+    final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    final skillAssets = assetManifest.listAssets()
+        .where((path) => path.startsWith('assets/skills/$folderName/'));
+    
+    debugPrint('📦 复制技能: $folderName, 文件数: ${skillAssets.length}');
+    
+    for (final assetPath in skillAssets) {
+      try {
+        final data = await rootBundle.load(assetPath);
+        final bytes = data.buffer.asUint8List();
+        
+        // 计算相对路径
+        final relativePath = assetPath.substring('assets/skills/'.length);
+        final targetFile = File(p.join(skillsRoot, relativePath));
+        
+        // 确保父目录存在
+        await targetFile.parent.create(recursive: true);
+        
+        // 写入文件
+        await targetFile.writeAsBytes(bytes);
+        debugPrint('  ✅ 已复制: $relativePath');
+      } catch (e) {
+        debugPrint('  ⚠️ 复制失败: $assetPath, 错误: $e');
+      }
+    }
+  }
+  
+  /// 打印可写目录中的技能列表（调试用）
+  static Future<void> debugPrintSkillsDir() async {
+    final skillsRoot = await getSkillsRootDir();
+    debugPrint('📂 技能目录: $skillsRoot');
+    
+    final dir = Directory(skillsRoot);
+    if (!await dir.exists()) {
+      debugPrint('  ❌ 目录不存在');
+      return;
+    }
+    
+    final entries = await dir.list().toList();
+    debugPrint('  找到 ${entries.length} 个条目:');
+    
+    for (final entry in entries) {
+      if (entry is Directory) {
+        final mdFile = File(p.join(entry.path, 'SKILL.md'));
+        final hasSkillMd = await mdFile.exists();
+        debugPrint('  📁 ${p.basename(entry.path)} ${hasSkillMd ? "✅" : "❌ (无 SKILL.md)"}');
+      }
+    }
   }
 
   /// 扫描 skills/ 目录，解析所有技能的 SKILL.md
   static Future<List<Skill>> loadSkills() async {
     final skills = <Skill>[];
-    final root = Directory(skillsRootDir);
+    final skillsRoot = await getSkillsRootDir();
+    final root = Directory(skillsRoot);
 
     if (!await root.exists()) {
-      debugPrint('⚠️ SkillStorageService: skills 目录不存在: $skillsRootDir');
+      debugPrint('⚠️ SkillStorageService: skills 目录不存在: $skillsRoot');
       return skills;
     }
 
@@ -67,11 +195,12 @@ class SkillStorageService {
     required String prompt,
     String icon = 'star',
   }) async {
+    final skillsRoot = await getSkillsRootDir();
     final folderName = name
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9\u4e00-\u9fff]+'), '-')
         .replaceAll(RegExp(r'^-|-$'), '');
-    final folder = Directory(p.join(skillsRootDir, folderName));
+    final folder = Directory(p.join(skillsRoot, folderName));
 
     if (await folder.exists()) {
       throw Exception('技能文件夹已存在: $folderName');

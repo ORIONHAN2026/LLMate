@@ -8,7 +8,6 @@ import '../controllers/model_controller.dart';
 import '../models/chat/chat_session.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../models/bigmodel/model_data.dart';
@@ -220,7 +219,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: FaIcon(
+              icon: Icon(
                 CupertinoIcons.back,
                 color: Theme.of(context).iconTheme.color,
                 size: 20,
@@ -293,7 +292,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _showOnlineModelDialog,
-                icon: const FaIcon(CupertinoIcons.plus, size: 10),
+                icon: const Icon(CupertinoIcons.plus, size: 10),
                 label: Text(
                   AppLocalizations.of(context)!.addModel,
                   style: const TextStyle(fontSize: 11),

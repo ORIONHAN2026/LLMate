@@ -835,40 +835,9 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
 
   // 构建主题切换按钮组件
   Widget _buildGreeting() {
-    final themeController = Get.find<ThemeController>();
-
-    return Obx(() {
-      final isDark = themeController.isDarkMode.value;
-
-      return InkWell(
-        onTap: () {
-          themeController.toggleTheme();
-        },
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isDark ? CupertinoIcons.moon_fill : CupertinoIcons.sun_max_fill,
-                size: 15,
-                color: isDark ? Colors.indigo[300] : Colors.amber[600],
-              ),
-              // const SizedBox(width: 6),
-              // Text(
-              //   isDark ? '暗色' : '亮色',
-              //   style: TextStyle(
-              //     fontSize: 12,
-              //     fontWeight: FontWeight.w500,
-              //     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              //   ),
-              // ),
-            ],
-          ),
-        ),
-      );
-    });
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    );
   }
 }
 

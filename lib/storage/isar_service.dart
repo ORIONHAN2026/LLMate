@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
+import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,9 +35,9 @@ class IsarService {
   Future<void> initialize() async {
     if (_isar != null) return;
 
-    // 获取 Isar 默认目录
-    final defaultDir = await getApplicationDocumentsDirectory();
-    final dbPath = defaultDir.path;
+    // 按照建议修复 Windows 问题：先创建目录再使用
+    final rootDir = path.join(Directory.current.path, '.dart_tool', 'isar');
+    await Directory(rootDir).create(recursive: true);
 
     try {
       _isar = await Isar.open(
@@ -48,11 +49,11 @@ class IsarService {
           IsarSettingsSchema,
           IsarVendorKeySchema,
         ],
-        directory: dbPath,
+        directory: rootDir,
         inspector: kDebugMode,
       );
 
-      debugPrint('✅ Isar 数据库初始化完成: $dbPath');
+      debugPrint('✅ Isar 数据库初始化完成: $rootDir');
     } catch (e) {
       final errMsg = e.toString();
       debugPrint('⚠️ Isar 数据库打开失败: $errMsg');
@@ -73,12 +74,14 @@ class IsarService {
       debugPrint('⚠️ Isar 数据库 schema 不匹配，备份旧库并重建...');
       String? backupPath;
       try {
-        final dbDir = Directory(dbPath);
+        final dbDir = Directory(rootDir);
         if (await dbDir.exists()) {
           // 备份到带时间戳的备份文件夹
-          backupPath = '${defaultDir.path}/chathub_isar_backup_${DateTime.now().millisecondsSinceEpoch}';
+          backupPath = '${rootDir}_backup_${DateTime.now().millisecondsSinceEpoch}';
           await dbDir.rename(backupPath);
           debugPrint('📦 旧数据库已备份到: $backupPath');
+          // 确保目录存在（重建时需要）
+          await Directory(rootDir).create(recursive: true);
         }
 
         // 重新打开数据库（Isar 会自动创建新库）
@@ -91,7 +94,7 @@ class IsarService {
             IsarSettingsSchema,
             IsarVendorKeySchema,
           ],
-          directory: dbPath,
+          directory: rootDir,
           inspector: kDebugMode,
         );
         debugPrint('✅ Isar 数据库重建完成');

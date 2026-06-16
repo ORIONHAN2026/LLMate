@@ -1,0 +1,15 @@
+#!/bin/bash
+
+flutter build macos --release
+
+create-dmg \
+  --volname "LLMWork" \
+  --window-pos 200 120 \
+  --window-size 800 400 \
+  --icon-size 100 \
+  --app-drop-link 600 185 \
+  LLMWork.dmg \
+  build/macos/Build/Products/Release/LLMWork.app
+
+
+  # C:\flutter\bin\flutter build windows

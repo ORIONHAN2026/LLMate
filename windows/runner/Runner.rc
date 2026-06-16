@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.llmwork.app" "\0"
-            VALUE "FileDescription", "牧狸" "\0"
+            VALUE "FileDescription", "LLMWork" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "牧狸" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 牧狸. All rights reserved." "\0"
-            VALUE "OriginalFilename", "牧狸.exe" "\0"
-            VALUE "ProductName", "牧狸" "\0"
+            VALUE "InternalName", "LLMWork" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.llmwork.app. All rights reserved." "\0"
+            VALUE "OriginalFilename", "LLMWork.exe" "\0"
+            VALUE "ProductName", "LLMWork" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

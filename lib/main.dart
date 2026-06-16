@@ -16,6 +16,7 @@ import 'services/skill_storage_service.dart';
 import 'services/skill_service.dart';
 
 import 'models/bigmodel/chat_model.dart';
+import 'models/chat/chat_session.dart';
 import 'storage/isar_service.dart';
 
 // 最小窗口宽度组成: 左侧边栏最小 200 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
@@ -278,6 +279,19 @@ class _AppInitializerState extends State<AppInitializer> {
 
       // 加载会话数据
       await sessionController.loadAll();
+
+      // 如果没有会话，自动创建一个默认会话
+      if (sessionController.sessions.isEmpty) {
+        final defaultSession = ChatSession(
+          sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: '新对话',
+          createdAt: DateTime.now(),
+          messages: [],
+          inputContent: '',
+          attachments: [],
+        );
+        await sessionController.addSession(defaultSession);
+      }
 
       // 启动定时任务调度器
       ScheduledTaskService().start();

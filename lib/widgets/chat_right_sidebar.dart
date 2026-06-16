@@ -603,6 +603,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   ) {
     return GestureDetector(
       onTap: () => _openFile(path),
+      onDoubleTap: () => _openFileLocation(path),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Row(
@@ -649,6 +650,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   ) {
     return GestureDetector(
       onTap: () => _openFile(path),
+      onDoubleTap: () => _openFileLocation(path),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         margin: const EdgeInsets.only(bottom: 4),
@@ -733,6 +735,51 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
               : 'xdg-open';
       final args = Platform.isWindows ? ['', filePath] : [filePath];
       await Process.run(command, args, runInShell: true);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.openFileFailed)));
+      }
+    }
+  }
+
+  /// 在文件管理器中打开文件所在的文件夹
+  Future<void> _openFileLocation(String path) async {
+    try {
+      final entity = FileSystemEntity.isDirectorySync(path)
+          ? Directory(path)
+          : File(path);
+      
+      if (!await entity.exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.fileNotFound)));
+        }
+        return;
+      }
+
+      if (Platform.isMacOS) {
+        // macOS: 使用 open -R 在 Finder 中显示文件并选中
+        if (entity is File) {
+          await Process.run('open', ['-R', path], runInShell: true);
+        } else {
+          // 如果是目录，直接打开
+          await Process.run('open', [path], runInShell: true);
+        }
+      } else if (Platform.isWindows) {
+        // Windows: 使用 explorer /select, 选中文件
+        if (entity is File) {
+          await Process.run('explorer', ['/select,$path'], runInShell: true);
+        } else {
+          await Process.run('explorer', [path], runInShell: true);
+        }
+      } else {
+        // Linux: 打开文件所在目录
+        final dir = entity is File ? entity.parent.path : path;
+        await Process.run('xdg-open', [dir], runInShell: true);
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(

@@ -13,7 +13,7 @@ class LoadingPage extends StatelessWidget {
           children: [
             // ChatHub 标题
             Text(
-              'ChatHub',
+              'LLMWork ',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,

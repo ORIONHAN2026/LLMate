@@ -34,11 +34,9 @@ class IsarService {
   Future<void> initialize() async {
     if (_isar != null) return;
 
-    final dir = await getApplicationDocumentsDirectory();
-    final dbPath = '${dir.path}/chathub_isar';
-
-    // 确保目录存在
-    await Directory(dbPath).create(recursive: true);
+    // 获取 Isar 默认目录
+    final defaultDir = await getApplicationDocumentsDirectory();
+    final dbPath = defaultDir.path;
 
     try {
       _isar = await Isar.open(
@@ -76,13 +74,14 @@ class IsarService {
       String? backupPath;
       try {
         final dbDir = Directory(dbPath);
-        if (dbDir.existsSync()) {
-          // 备份到同目录下带时间戳的备份文件夹
-          backupPath = '${dir.path}/chathub_isar_backup_${DateTime.now().millisecondsSinceEpoch}';
+        if (await dbDir.exists()) {
+          // 备份到带时间戳的备份文件夹
+          backupPath = '${defaultDir.path}/chathub_isar_backup_${DateTime.now().millisecondsSinceEpoch}';
           await dbDir.rename(backupPath);
           debugPrint('📦 旧数据库已备份到: $backupPath');
-          await Directory(dbPath).create(recursive: true);
         }
+
+        // 重新打开数据库（Isar 会自动创建新库）
         _isar = await Isar.open(
           [
             IsarChatModelSchema,

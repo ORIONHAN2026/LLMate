@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:chathub/models/bigmodel/chat_model.dart';
-import 'package:chathub/models/chat/mcp_config.dart';
-import 'package:chathub/utils/snackbar_utils.dart';
+import 'package:llmwork/models/bigmodel/chat_model.dart';
+import 'package:llmwork/models/chat/mcp_config.dart';
+import 'package:llmwork/utils/snackbar_utils.dart';
 
 class McpTab extends StatefulWidget {
   final ChatModel model;

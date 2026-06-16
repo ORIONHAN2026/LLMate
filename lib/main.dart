@@ -3,7 +3,7 @@ import 'dart:io' show Platform;
 import 'package:window_manager/window_manager.dart';
 import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:chathub/l10n/app_localizations.dart';
+import 'package:llmwork/l10n/app_localizations.dart';
 import 'controllers/model_controller.dart';
 import 'controllers/session_controller.dart';
 import 'controllers/theme_controller.dart';

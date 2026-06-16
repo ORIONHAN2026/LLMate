@@ -1,9 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:chathub/models/bigmodel/chat_model.dart';
-import 'package:chathub/models/chat/chat_setting.dart';
-import 'package:chathub/utils/snackbar_utils.dart';
-import 'package:chathub/widgets/common/confirm_delete_dialog.dart';
+import 'package:llmwork/models/bigmodel/chat_model.dart';
+import 'package:llmwork/models/chat/chat_setting.dart';
+import 'package:llmwork/utils/snackbar_utils.dart';
+import 'package:llmwork/widgets/common/confirm_delete_dialog.dart';
 
 class ChatCommandsTab extends StatefulWidget {
   final ChatModel model;

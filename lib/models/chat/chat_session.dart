@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'package:chathub/models/bigmodel/chat_model.dart';
-import 'package:chathub/models/chat/mcp_config.dart';
-import 'package:chathub/models/chat/skill.dart';
+import 'package:llmwork/models/bigmodel/chat_model.dart';
+import 'package:llmwork/models/chat/mcp_config.dart';
+import 'package:llmwork/models/chat/skill.dart';
 
 import 'chat_message.dart';
 import 'chat_attachment.dart';

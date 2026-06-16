@@ -1,5 +1,5 @@
-name: chathub
-description: "牧狸 - 智能对话助手"
+name: llmwork
+description: "LLMWork - 智能对话助手"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:chathub/controllers/session_controller.dart';
-import 'package:chathub/pages/settings_page.dart';
-import 'package:chathub/widgets/model_selector.dart';
-import 'package:chathub/l10n/app_localizations.dart';
+import 'package:llmwork/controllers/session_controller.dart';
+import 'package:llmwork/pages/settings_page.dart';
+import 'package:llmwork/widgets/model_selector.dart';
+import 'package:llmwork/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
@@ -14,8 +14,8 @@ import '../services/skill_service.dart';
 import '../widgets/chat_left_sidebar.dart';
 import '../widgets/chat_right_sidebar.dart';
 import '../widgets/chat_input_widget.dart';
-import 'package:chathub/utils/snackbar_utils.dart';
-import 'package:chathub/utils/responsive_utils.dart';
+import 'package:llmwork/utils/snackbar_utils.dart';
+import 'package:llmwork/utils/responsive_utils.dart';
 import '../widgets/chat_conversation_area.dart';
 
 

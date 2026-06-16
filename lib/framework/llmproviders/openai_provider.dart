@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
-import 'package:chathub/models/bigmodel/openai_response.dart';
+import 'package:llmwork/models/bigmodel/openai_response.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';

@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:chathub/l10n/app_localizations.dart';
-import 'package:chathub/models/bigmodel/chat_model.dart';
-import 'package:chathub/utils/snackbar_utils.dart';
-import 'package:chathub/models/bigmodel/model_data.dart';
-import 'package:chathub/models/chat/chat_setting.dart';
+import 'package:llmwork/l10n/app_localizations.dart';
+import 'package:llmwork/models/bigmodel/chat_model.dart';
+import 'package:llmwork/utils/snackbar_utils.dart';
+import 'package:llmwork/models/bigmodel/model_data.dart';
+import 'package:llmwork/models/chat/chat_setting.dart';
 
 class ModelConfigTab extends StatefulWidget {
   final ChatModel model;

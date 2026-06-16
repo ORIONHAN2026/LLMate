@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:chathub/models/chat/chat_message.dart';
-import 'package:chathub/models/chat/scheduled_task.dart';
-import 'package:chathub/models/chat/memory_turn.dart';
+import 'package:llmwork/models/chat/chat_message.dart';
+import 'package:llmwork/models/chat/scheduled_task.dart';
+import 'package:llmwork/models/chat/memory_turn.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:isar/isar.dart';

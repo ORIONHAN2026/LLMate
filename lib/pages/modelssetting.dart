@@ -214,16 +214,12 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         leading: Padding(
           padding: EdgeInsets.only(left: Platform.isMacOS ? 70 : 0),
           child: Transform.translate(
-            offset: const Offset(0, 0),
+            offset: const Offset(0, -5),
             child: IconButton(
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: Icon(
-                CupertinoIcons.back,
-                color: Theme.of(context).iconTheme.color,
-                size: 20,
-              ),
+              icon: const Icon(CupertinoIcons.back, size: 20),
               onPressed: () {
                 // 检查是否在对话框中
                 if (Navigator.canPop(context)) {

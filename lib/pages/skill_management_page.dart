@@ -1,4 +1,4 @@
-import 'dart:io' show Platform, File;
+import 'dart:io' show Platform, File, Directory;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +37,7 @@ class SkillManagementPage extends StatefulWidget {
 class _SkillManagementPageState extends State<SkillManagementPage> {
   List<Skill> _skills = [];
   bool _isLoading = true;
+  final GlobalKey _importButtonKey = GlobalKey();
   final GlobalKey _marketplaceButtonKey = GlobalKey();
 
   @override
@@ -65,6 +66,132 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
   Future<void> _refreshSkills() async {
     SkillService.reset();
     await _loadSkills();
+  }
+
+  void _showImportMenu() {
+    final RenderBox? button =
+        _importButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (button == null) return;
+
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final Offset buttonPosition = button.localToGlobal(
+      Offset.zero,
+      ancestor: overlay,
+    );
+
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromLTWH(
+        buttonPosition.dx - 80,
+        buttonPosition.dy + kToolbarHeight,
+        180,
+        0,
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 8,
+      color: Theme.of(context).scaffoldBackgroundColor,
+      items: [
+        PopupMenuItem(
+          height: 48,
+          onTap: () {
+            _importFromWorkBuddy();
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(
+                  CupertinoIcons.arrow_down_doc,
+                  size: 11,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text('从 WorkBuddy 导入', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _importFromWorkBuddy() async {
+    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+    if (home == null) {
+      if (mounted) SnackBarUtils.showError(context, '无法获取用户目录');
+      return;
+    }
+
+    final workbuddySkillsDir = Directory(p.join(home, '.workbuddy', 'skills'));
+    if (!await workbuddySkillsDir.exists()) {
+      if (mounted) {
+        SnackBarUtils.showError(context, '未找到 WorkBuddy 技能目录');
+      }
+      return;
+    }
+
+    final targetRoot = await SkillStorageService.getSkillsRootDir();
+    final entries = await workbuddySkillsDir.list().toList();
+    int imported = 0;
+    int skipped = 0;
+
+    for (final entry in entries) {
+      if (entry is! Directory) continue;
+      final mdFile = File(p.join(entry.path, 'SKILL.md'));
+      if (!await mdFile.exists()) continue;
+
+      final skillName = p.basename(entry.path);
+      final targetDir = Directory(p.join(targetRoot, skillName));
+
+      // 跳过已存在的技能
+      if (await targetDir.exists()) {
+        skipped++;
+        continue;
+      }
+
+      // 复制整个技能目录
+      await _copyDirectory(entry, targetDir);
+      imported++;
+    }
+
+    await _refreshSkills();
+
+    if (mounted) {
+      final msg = imported > 0
+          ? '已从 WorkBuddy 导入 $imported 个技能'
+          : '没有新技能可导入';
+      if (skipped > 0 && imported > 0) {
+        SnackBarUtils.showSuccess(context, '$msg，跳过 $skipped 个已存在的技能');
+      } else if (imported > 0) {
+        SnackBarUtils.showSuccess(context, msg);
+      } else {
+        SnackBarUtils.showInfo(context, '$msg（$skipped 个技能已存在）');
+      }
+    }
+  }
+
+  /// 递归复制目录
+  Future<void> _copyDirectory(Directory source, Directory destination) async {
+    await destination.create(recursive: true);
+    await for (final entity in source.list()) {
+      final name = p.basename(entity.path);
+      if (entity is File) {
+        await entity.copy(p.join(destination.path, name));
+      } else if (entity is Directory) {
+        await _copyDirectory(entity, Directory(p.join(destination.path, name)));
+      }
+    }
   }
 
   void _showSkillMarketplaceMenu() {
@@ -498,6 +625,16 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
             ),
           ),
           IconButton(
+            key: _importButtonKey,
+            tooltip: '导入技能',
+            onPressed: () => _showImportMenu(),
+            icon: Icon(
+              CupertinoIcons.arrow_down_doc,
+              size: 16,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+          IconButton(
             key: _marketplaceButtonKey,
             tooltip: '应用市场',
             onPressed: () => _showSkillMarketplaceMenu(),
@@ -524,6 +661,20 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
           onPressed: () => _importSkillZip(),
           icon: Icon(
             CupertinoIcons.add,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+      ),
+      Transform.translate(
+        offset: const Offset(0, -5),
+        child: IconButton(
+          visualDensity: VisualDensity.compact,
+          key: _importButtonKey,
+          tooltip: '导入技能',
+          onPressed: () => _showImportMenu(),
+          icon: Icon(
+            CupertinoIcons.arrow_down_doc,
             size: 16,
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),

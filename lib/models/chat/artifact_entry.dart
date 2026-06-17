@@ -29,81 +29,38 @@ class ArtifactEntry {
     required this.createdAt,
   });
 
-  /// 从工具执行结果中提取的所有路径，智能分组为产物条目
-  ///
-  /// 规则：如果同一目录下超过 3 个文件，则创建目录级产物；
-  /// 否则每个文件单独作为一个产物条目。
+  /// 从工具执行结果中提取的所有路径，每个文件单独作为一个产物条目
   static List<ArtifactEntry> fromPaths(List<String> allPaths) {
     if (allPaths.isEmpty) return [];
 
     final now = DateTime.now();
     final result = <ArtifactEntry>[];
     final seen = <String>{};
+    int idx = 0;
 
-    // 按父目录分组
-    final dirGroups = <String, List<String>>{};
     for (final path in allPaths) {
       if (seen.contains(path)) continue;
       seen.add(path);
 
-      final parentDir =
+      final fileName =
           path.contains('/')
-              ? path.substring(0, path.lastIndexOf('/'))
-              : '.';
-      dirGroups.putIfAbsent(parentDir, () => []).add(path);
+              ? path.substring(path.lastIndexOf('/') + 1)
+              : path;
+
+      result.add(
+        ArtifactEntry(
+          id: 'artifact_${now.millisecondsSinceEpoch}_${idx++}',
+          name: fileName,
+          path: path,
+          isDirectory: false,
+          files: [path],
+          createdAt: now,
+        ),
+      );
     }
 
-    int idx = 0;
-    for (final entry in dirGroups.entries) {
-      final dir = entry.key;
-      final paths = entry.value;
-
-      if (paths.length > 3) {
-        // 目录级产物
-        final dirName =
-            dir == '.'
-                ? '根目录'
-                : dir.contains('/')
-                ? dir.substring(dir.lastIndexOf('/') + 1)
-                : dir;
-        result.add(
-          ArtifactEntry(
-            id: 'artifact_${now.millisecondsSinceEpoch}_${idx++}',
-            name: '$dirName/ (${paths.length} 个文件)',
-            path: dir == '.' ? paths.first : dir,
-            isDirectory: true,
-            files: paths,
-            createdAt: now,
-          ),
-        );
-      } else {
-        // 单个文件产物
-        for (final path in paths) {
-          final fileName =
-              path.contains('/')
-                  ? path.substring(path.lastIndexOf('/') + 1)
-                  : path;
-          result.add(
-            ArtifactEntry(
-              id: 'artifact_${now.millisecondsSinceEpoch}_${idx++}',
-              name: fileName,
-              path: path,
-              isDirectory: false,
-              files: [path],
-              createdAt: now,
-            ),
-          );
-        }
-      }
-    }
-
-    // 按目录在前、单文件在后排序
-    result.sort((a, b) {
-      if (a.isDirectory != b.isDirectory) {
-        return a.isDirectory ? -1 : 1;
-      }
-      return a.name.compareTo(b.name);
-    });
+    // 按文件名排序
+    result.sort((a, b) => a.name.compareTo(b.name));
 
     return result;
   }

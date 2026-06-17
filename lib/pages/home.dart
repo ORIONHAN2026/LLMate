@@ -1,12 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:llmwork/controllers/session_controller.dart';
-import 'package:llmwork/pages/settings_page.dart';
 import 'package:llmwork/widgets/model_selector.dart';
 import 'package:llmwork/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import '../models/bigmodel/models.dart';
 import '../controllers/model_controller.dart';
@@ -17,7 +17,10 @@ import '../widgets/chat_input_widget.dart';
 import 'package:llmwork/utils/snackbar_utils.dart';
 import 'package:llmwork/utils/responsive_utils.dart';
 import '../widgets/chat_conversation_area.dart';
-
+import 'modelssetting.dart';
+import 'mcp_management_page.dart';
+import 'skill_management_page.dart';
+import 'other_settings_page.dart';
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});
@@ -40,7 +43,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   final GlobalKey _modelSelectorKey = GlobalKey(); // 模型选择器的key
   bool _isSidebarCollapsed = false; // 侧边栏折叠状态
   double _sidebarWidth = 280.0; // 左侧边栏宽度，可调整
-  bool _isRightSidebarCollapsed = false; // 右侧边栏折叠状态
+  bool _isRightSidebarCollapsed = true; // 右侧边栏折叠状态（默认隐藏）
   double _rightSidebarWidth = 260.0; // 右侧边栏宽度
   bool _isResizeHandleHovered = false; // 拖动条悬停状态
   bool _isRightResizeHandleHovered = false; // 右侧拖动条悬停状态
@@ -118,9 +121,10 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           _selectedModel = currentSelectedModel;
         } else {
           // 如果当前选中的模型不存在，使用第一个模型
-          final activeModel = _availableModels.isNotEmpty
-              ? _availableModels.first
-              : ChatModel.empty();
+          final activeModel =
+              _availableModels.isNotEmpty
+                  ? _availableModels.first
+                  : ChatModel.empty();
 
           if (activeModel.name.isNotEmpty) {
             _selectedModel = activeModel.name;
@@ -501,17 +505,182 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     );
   }
 
-  // 导航到设置页面
   void _showSettingsMenu() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SettingsPage(),
+    // 获取设置按钮的渲染位置
+    final RenderBox? button =
+        _settingsButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (button == null) return;
+
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final Offset buttonPosition = button.localToGlobal(
+      Offset.zero,
+      ancestor: overlay,
+    );
+
+    // 计算菜单显示位置 - 在按钮上方显示
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromLTWH(
+        buttonPosition.dx - 20, // 稍微向左偏移
+        buttonPosition.dy - 250, // 在按钮上方显示菜单
+        160, // 菜单宽度
+        280, // 菜单高度
       ),
-    ).then((_) {
-      // 从设置页面返回时重新加载模型列表
-      _loadModels();
-    });
+      Offset.zero & overlay.size,
+    );
+
+    showMenu(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 8,
+      color: Theme.of(context).scaffoldBackgroundColor,
+      items: [
+        PopupMenuItem(
+          height: 48,
+          onTap: _sendFeedbackEmail,
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.mail,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('反馈意见', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.sparkles,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('模型管理', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ModelSettingPage(),
+                  ),
+                );
+                _loadModels();
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.gear,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('工具管理(MCP)', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const McpManagementPage(),
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.wand_stars,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('技能管理(SKILL)', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SkillManagementPage(),
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                CupertinoIcons.slider_horizontal_3,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              const Text('其他设置', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OtherSettingsPage(),
+                  ),
+                );
+              }
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  // 发送反馈邮件
+  Future<void> _sendFeedbackEmail() async {
+    const String feedbackEmail = 'hanxinyc@gmail.com';
+    const String subject = 'ChatHub App Feedback';
+    const String body = '''
+
+-----------------------------
+Thank you for your feedback on ChatHub. We take every feedback seriously.
+
+Thanks!
+''';
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: feedbackEmail,
+      queryParameters: {'subject': subject, 'body': body},
+    );
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      }
+    } catch (_) {}
   }
 
   // 显示错误提示

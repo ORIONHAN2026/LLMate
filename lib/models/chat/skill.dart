@@ -28,6 +28,7 @@ class Skill {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String path; // 文件夹路径（原 folderPath）
+  final bool isBuiltin; // 是否为内置技能（从 assets/skills/ 复制而来）
   final List<McpToolInfo>? tools; // 技能工具列表（和 MCP 工具结构一致）
 
   const Skill({
@@ -40,6 +41,7 @@ class Skill {
     required this.createdAt,
     required this.updatedAt,
     required this.path,
+    this.isBuiltin = false,
     this.tools,
   });
 
@@ -105,6 +107,7 @@ class Skill {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? path,
+    bool? isBuiltin,
     List<McpToolInfo>? tools,
   }) {
     return Skill(
@@ -117,6 +120,7 @@ class Skill {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       path: path ?? this.path,
+      isBuiltin: isBuiltin ?? this.isBuiltin,
       tools: tools ?? this.tools,
     );
   }
@@ -135,6 +139,7 @@ class Skill {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'path': path,
+      'isBuiltin': isBuiltin,
     };
     if (tools != null) {
       map['tools'] = tools!.map((t) => t.toJson()).toList();
@@ -161,6 +166,7 @@ class Skill {
               ? DateTime.parse(json['updatedAt'])
               : DateTime.now(),
       path: json['path'] as String? ?? json['folderPath'] as String? ?? '',
+      isBuiltin: json['isBuiltin'] as bool? ?? false,
       tools:
           toolsList
               ?.map((t) => McpToolInfo.fromJson(t as Map<String, dynamic>))

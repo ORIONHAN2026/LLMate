@@ -42,10 +42,13 @@ class SkillService {
   }
 
   /// 从文件系统加载技能（强制刷新）
+  /// 内置技能通过 isBuiltin 标记区分，由 SkillStorageService 在加载时标记
   static Future<void> loadSkills() async {
-    _skills = await SkillStorageService.loadSkills();
+    // 先获取内置技能文件夹名集合
+    final builtinFolders = await SkillStorageService.scanBuiltinSkillFolders();
+    _skills = await SkillStorageService.loadSkills(builtinFolderNames: builtinFolders.toSet());
     _loaded = true;
-    debugPrint('✅ SkillService: 从 skills/ 加载了 ${_skills.length} 个技能');
+    debugPrint('✅ SkillService: 加载了 ${_skills.length} 个技能 (内置: ${builtinFolders.length})');
   }
 
   // ======== 查询 ========

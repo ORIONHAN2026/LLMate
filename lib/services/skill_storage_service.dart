@@ -51,32 +51,17 @@ class SkillStorageService {
   }
 
   /// 复制 assets/skills/ 中的内置技能到可写目录（仅复制不存在的技能）
+  /// 启动时动态扫描 assets/skills/ 目录，自动发现所有内置技能文件夹
   static Future<void> copyBuiltinSkillsFromAssets() async {
     final skillsRoot = await getSkillsRootDir();
     
-    // 硬编码的内置技能列表（从 assets/skills/ 目录）
-    final builtinSkills = [
-      '测试',
-      '会议通知',
-      '图片转化',
-      '小红书',
-      '小红书书写',
-      '演出会截图',
-      'flutter-add-widget-preview',
-      'flutter-apply-architecture-best-practices',
-      'flutter-build-responsive-layout',
-      'flutter-fix-layout-issues',
-      'flutter-setup-declarative-routing',
-      'flutter-setup-localization',
-      'flutter-use-http-package',
-      'skill-creator',
-      'SKU重复检查工具',
-      'tencent-docs-1.0.37',
-      'travel攻略',
-      'wechat-article-spider',
-      'wechatpayrefund361',
-      'wechatpayrefund636',
-    ];
+    // 动态扫描 assets/skills/ 下的所有文件夹，获取内置技能列表
+    final builtinSkills = await scanBuiltinSkillFolders();
+    
+    if (builtinSkills.isEmpty) {
+      debugPrint('⚠️ SkillStorageService: assets/skills/ 中没有发现内置技能');
+      return;
+    }
     
     int copiedCount = 0;
     
@@ -92,12 +77,41 @@ class SkillStorageService {
     debugPrint('✅ SkillStorageService: 已从 assets 复制 $copiedCount 个内置技能（共 ${builtinSkills.length} 个）');
   }
   
+  /// 动态扫描 assets/skills/ 下的所有子文件夹，返回文件夹名列表
+  static Future<List<String>> scanBuiltinSkillFolders() async {
+    try {
+      final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final allAssets = assetManifest.listAssets();
+      
+      // 筛选 assets/skills/ 下的文件，提取一级子文件夹名
+      final folderNames = <String>{};
+      for (final assetPath in allAssets) {
+        if (assetPath.startsWith('assets/skills/')) {
+          final relative = assetPath.substring('assets/skills/'.length);
+          final slashIndex = relative.indexOf('/');
+          if (slashIndex > 0) {
+            folderNames.add(relative.substring(0, slashIndex));
+          }
+        }
+      }
+      
+      final sorted = folderNames.toList()..sort();
+      debugPrint('📦 扫描到 ${sorted.length} 个内置技能: ${sorted.join(", ")}');
+      return sorted;
+    } catch (e, stackTrace) {
+      debugPrint('⚠️ 扫描内置技能失败: $e');
+      debugPrint('  堆栈: $stackTrace');
+      return [];
+    }
+  }
+  
   /// 复制单个技能文件夹从 assets 到可写目录
   static Future<void> _copySkillFolderFromAssets(String folderName, String skillsRoot) async {
-    // 获取该技能文件夹下的所有 assets
     final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    final prefix = 'assets/skills/$folderName/';
     final skillAssets = assetManifest.listAssets()
-        .where((path) => path.startsWith('assets/skills/$folderName/'));
+        .where((path) => path.startsWith(prefix))
+        .toList();
     
     debugPrint('📦 复制技能: $folderName, 文件数: ${skillAssets.length}');
     
@@ -146,7 +160,8 @@ class SkillStorageService {
   }
 
   /// 扫描 skills/ 目录，解析所有技能的 SKILL.md
-  static Future<List<Skill>> loadSkills() async {
+  /// [builtinFolderNames] 为内置技能文件夹名集合，用于标记 isBuiltin
+  static Future<List<Skill>> loadSkills({Set<String>? builtinFolderNames}) async {
     final skills = <Skill>[];
     final skillsRoot = await getSkillsRootDir();
     final root = Directory(skillsRoot);
@@ -168,6 +183,7 @@ class SkillStorageService {
         final body = Skill.extractBody(raw);
         final folderName = p.basename(entry.path);
         final stat = await entry.stat();
+        final isBuiltin = builtinFolderNames?.contains(folderName) ?? false;
 
         final skill = Skill(
           skillId: folderName,
@@ -178,6 +194,7 @@ class SkillStorageService {
           createdAt: stat.changed,
           updatedAt: stat.changed,
           path: entry.path,
+          isBuiltin: isBuiltin,
         );
         skills.add(skill.copyWith(content: jsonEncode(skill.toJson())));
       } catch (e) {

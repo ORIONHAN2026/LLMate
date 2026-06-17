@@ -2882,6 +2882,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           updateSession = updateSession.copyWith(isSending: false);
           sessionController.updateSession(updateSession);
           setState(() {});
+          break; // 收到 done 后立即退出循环
         }
 
         // 处理记忆更新

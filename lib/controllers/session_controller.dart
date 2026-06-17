@@ -94,16 +94,14 @@ class SessionController extends GetxController {
     // McpService.initForSession(s);
 
     currentSession.value = s;
-    await _persistCurrentSession();
+    await _persistSessionAndCurrent(s, isCurrent: true);
   }
 
   /// 新增会话并持久化
   Future<void> addSession(ChatSession session) async {
     sessions.add(session);
     currentSession.value = session;
-
-    await _persistCurrentSession();
-    await _persistSessions();
+    await _persistSessionAndCurrent(session, isCurrent: true);
   }
 
   /// 更新会话并持久化
@@ -113,11 +111,84 @@ class SessionController extends GetxController {
     );
     if (idx != -1) {
       sessions[idx] = updatedSession;
-      await _persistSessions();
     }
-    if (currentSession.value?.sessionId == updatedSession.sessionId) {
+    final isCurrent = currentSession.value?.sessionId == updatedSession.sessionId;
+    if (isCurrent) {
       currentSession.value = updatedSession;
-      await _persistCurrentSession();
+    }
+    // 合并持久化：单次 writeTxn 完成 sessions + currentSession + messages
+    if (idx != -1 || isCurrent) {
+      await _persistSessionAndCurrent(updatedSession, isCurrent: isCurrent);
+    }
+  }
+
+  /// 合并持久化：在同一次 writeTxn 中更新 sessions 列表和 currentSession
+  Future<void> _persistSessionAndCurrent(ChatSession updatedSession, {required bool isCurrent}) async {
+    try {
+      final isar = IsarService.instance.isar;
+      await isar.writeTxn(() async {
+        // === 1. 持久化所有会话 ===
+        final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
+        for (final session in sessions) {
+          final existing =
+              await isar.isarChatSessions.getBySessionId(session.sessionId);
+          if (existing != null) {
+            _updateIsarSessionFromChatSession(existing, session);
+            existing.isCurrent = currentSession.value?.sessionId == session.sessionId;
+            await isar.isarChatSessions.put(existing);
+          } else {
+            final entity = _chatSessionToIsar(session);
+            entity.isCurrent = currentSession.value?.sessionId == session.sessionId;
+            await isar.isarChatSessions.put(entity);
+          }
+        }
+        // 删除不在当前会话列表中的旧数据
+        final allEntities =
+            await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
+        for (final entity in allEntities) {
+          if (!currentSessionIds.contains(entity.sessionId)) {
+            await isar.isarChatSessions.delete(entity.id);
+          }
+        }
+
+        // === 2. 持久化当前会话的消息 ===
+        if (isCurrent) {
+          final messages = updatedSession.messages;
+          if (messages.isNotEmpty) {
+            for (final m in messages) {
+              final existing =
+                  await isar.isarChatMessages.getByMsgId(m.msgId);
+              if (existing != null) {
+                existing.sessionId = updatedSession.sessionId;
+                existing.timestamp = m.timestamp;
+                existing.messageJson = jsonEncode(m.toJson());
+                await isar.isarChatMessages.put(existing);
+              } else {
+                final entity = IsarChatMessage()
+                  ..msgId = m.msgId
+                  ..sessionId = updatedSession.sessionId
+                  ..timestamp = m.timestamp
+                  ..messageJson = jsonEncode(m.toJson());
+                await isar.isarChatMessages.put(entity);
+              }
+            }
+          }
+          // 删除不在新消息列表中的旧消息
+          final currentMsgIds = messages.map((m) => m.msgId).toSet();
+          final oldMessages = await isar.isarChatMessages
+              .where()
+              .sessionIdEqualTo(updatedSession.sessionId)
+              .sortByTimestamp()
+              .findAll();
+          for (final oldMsg in oldMessages) {
+            if (!currentMsgIds.contains(oldMsg.msgId)) {
+              await isar.isarChatMessages.delete(oldMsg.id);
+            }
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('合并持久化失败: $e');
     }
   }
 
@@ -137,13 +208,14 @@ class SessionController extends GetxController {
     // 创建新的 messages 列表，确保 RxList 能检测到变化
     final newMessages = List<ChatMessage>.from(session.messages);
     newMessages[messageIndex] = updateMessage;
-    sessions[sessionIndex] = session.copyWith(messages: newMessages);
+    final updatedSession = session.copyWith(messages: newMessages);
+    sessions[sessionIndex] = updatedSession;
 
-    if (currentSession.value?.sessionId == session.sessionId) {
-      currentSession.value = sessions[sessionIndex];
-      await _persistCurrentSession();
+    final isCurrent = currentSession.value?.sessionId == session.sessionId;
+    if (isCurrent) {
+      currentSession.value = updatedSession;
     }
-    await _persistSessions();
+    await _persistSessionAndCurrent(updatedSession, isCurrent: isCurrent);
   }
 
   /// 删除消息
@@ -162,13 +234,14 @@ class SessionController extends GetxController {
     // 创建新的 messages 列表（不含被删除的消息），确保 RxList 能检测到变化
     final newMessages = List<ChatMessage>.from(session.messages);
     newMessages.removeAt(messageIndex);
-    sessions[sessionIndex] = session.copyWith(messages: newMessages);
+    final updatedSession = session.copyWith(messages: newMessages);
+    sessions[sessionIndex] = updatedSession;
 
-    if (currentSession.value?.sessionId == session.sessionId) {
-      currentSession.value = sessions[sessionIndex];
-      await _persistCurrentSession();
+    final isCurrent = currentSession.value?.sessionId == session.sessionId;
+    if (isCurrent) {
+      currentSession.value = updatedSession;
     }
-    await _persistSessions();
+    await _persistSessionAndCurrent(updatedSession, isCurrent: isCurrent);
   }
 
   /// 切换到指定会话并持久化（不阻塞 UI）
@@ -178,11 +251,12 @@ class SessionController extends GetxController {
 
     final targetIndex = sessions.indexWhere((s) => s.sessionId == sessionId);
     if (targetIndex >= 0 && targetIndex < sessions.length) {
-      currentSession.value = sessions[targetIndex];
+      final target = sessions[targetIndex];
+      currentSession.value = target;
       // 新会话有 MCP 则立即预初始化
-      McpService.initForSession(sessions[targetIndex]);
+      McpService.initForSession(target);
       // 持久化放到微任务中异步执行，不阻塞 UI 切换
-      Future.microtask(() => _persistCurrentSession());
+      Future.microtask(() => _persistSessionAndCurrent(target, isCurrent: true));
     }
   }
 
@@ -222,13 +296,20 @@ class SessionController extends GetxController {
         if (entity != null) {
           await isar.isarChatSessions.delete(entity.id);
         }
+        // 在同一次事务中持久化剩余的会话和当前会话
+        final currentId = currentSession.value?.sessionId;
+        for (final s in sessions) {
+          final existing = await isar.isarChatSessions.getBySessionId(s.sessionId);
+          if (existing != null) {
+            _updateIsarSessionFromChatSession(existing, s);
+            existing.isCurrent = currentId == s.sessionId;
+            await isar.isarChatSessions.put(existing);
+          }
+        }
       });
     } catch (e) {
       debugPrint('从 Isar 删除会话失败: $e');
     }
-
-    await _persistCurrentSession();
-    await _persistSessions();
   }
 
   /// 收藏/取消收藏会话并持久化
@@ -263,8 +344,11 @@ class SessionController extends GetxController {
       }
 
       if (hasUpdates) {
-        await _persistSessions();
-        await _persistCurrentSession();
+        final cur = currentSession.value;
+        await _persistSessionAndCurrent(
+          cur ?? sessions.first,
+          isCurrent: cur != null,
+        );
         debugPrint('已同步更新 $updatedCount 个会话的模型设置: ${updatedModel.name}');
       }
     });
@@ -278,12 +362,13 @@ class SessionController extends GetxController {
     return Future.microtask(() async {
       final idx = sessions.indexWhere((s) => s.sessionId == sessionId);
       if (idx != -1) {
-        sessions[idx] = sessions[idx].copyWith(messages: messages);
-        if (currentSession.value?.sessionId == sessionId) {
-          currentSession.value = sessions[idx];
+        final updated = sessions[idx].copyWith(messages: messages);
+        sessions[idx] = updated;
+        final isCurrent = currentSession.value?.sessionId == sessionId;
+        if (isCurrent) {
+          currentSession.value = updated;
         }
-        await _persistCurrentSession();
-        await _persistSessions();
+        await _persistSessionAndCurrent(updated, isCurrent: isCurrent);
       }
     });
   }
@@ -292,8 +377,7 @@ class SessionController extends GetxController {
   Future<void> clearAllSessions() async {
     sessions.clear();
     currentSession.value = null;
-    await _persistSessions();
-    await _persistCurrentSession();
+    await _persistSessions(); // _persistCurrentSession 在 currentSession 为 null 时直接返回，无需重复调用
   }
 
   /// 加载所有会话和当前会话（消息懒加载：仅加载会话元数据）

@@ -1,264 +1,259 @@
 ---
 name: skill-creator
-description: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends LLMWork's capabilities with specialized knowledge, workflows, or tool integrations.
+description: 创建高效技能的指南。当用户想要创建新技能（或更新已有技能），通过专业知识、工作流或工具集成来扩展 LLMWork 的能力时使用此技能。
 license: Complete terms in LICENSE.txt
 allowed-tools:
 disable: false
 ---
 
-# Skill Creator
+# 技能创建器
 
-This skill provides guidance for creating effective skills.
+本技能提供创建高效技能的指南。
 
-## About Skills
+## 关于技能
 
-Skills are modular, self-contained packages that extend LLMWork's capabilities by providing
-specialized knowledge, workflows, and tools. Think of them as "onboarding guides" for specific
-domains or tasks—they transform LLMWork from a general-purpose agent into a specialized agent
-equipped with procedural knowledge that no model can fully possess.
+技能是模块化、自包含的扩展包，通过提供专业知识、工作流和工具来扩展 LLMWork 的能力。可以将它们理解为针对特定领域或任务的"上手指南"——它们将 LLMWork 从通用型助手转变为配备了任何模型都无法完全掌握的程序性知识的专业助手。
 
-### What Skills Provide
+### 技能提供什么
 
-1. Specialized workflows - Multi-step procedures for specific domains
-2. Tool integrations - Instructions for working with specific file formats or APIs
-3. Domain expertise - Company-specific knowledge, schemas, business logic
-4. Bundled resources - Scripts, references, and assets for complex and repetitive tasks
+1. 专业工作流 - 针对特定领域的多步骤流程
+2. 工具集成 - 处理特定文件格式或 API 的说明
+3. 领域专长 - 公司特定的知识、数据模式、业务逻辑
+4. 打包资源 - 用于复杂和重复性任务的脚本、参考资料和资源文件
 
-### Anatomy of a Skill
+### 技能的构成
 
-Every skill consists of a required SKILL.md file and optional bundled resources:
+每个技能由一个必需的 SKILL.md 文件和可选的打包资源组成：
 
 ```
 skill-name/
-├── SKILL.md (required)
-│   ├── YAML frontmatter metadata (required)
-│   │   ├── name: (required)
-│   │   └── description: (required)
-│   └── Markdown instructions (required)
-└── Bundled Resources (optional)
-    ├── scripts/          - Executable code (Python/Bash/etc.)
-    ├── references/       - Documentation intended to be loaded into context as needed
-    └── assets/           - Files used in output (templates, icons, fonts, etc.)
+├── SKILL.md（必需）
+│   ├── YAML 前置元数据（必需）
+│   │   ├── name:（必需）
+│   │   └── description:（必需）
+│   └── Markdown 说明（必需）
+└── 打包资源（可选）
+    ├── scripts/          - 可执行代码（Python/Bash 等）
+    ├── references/       - 按需加载到上下文中的文档
+    └── assets/           - 用于输出的文件（模板、图标、字体等）
 ```
 
-#### SKILL.md (required)
+#### SKILL.md（必需）
 
-**Metadata Quality:** The `name` and `description` in YAML frontmatter determine when LLMWork will use the skill. Be specific about what the skill does and when to use it. Use the third-person (e.g. "This skill should be used when..." instead of "Use this skill when...").
+**元数据质量：** YAML 前置元数据中的 `name` 和 `description` 决定了 LLMWork 何时使用该技能。请明确描述技能的功能和使用时机。使用第三人称（例如"当……时应使用此技能"而非"当你……时使用此技能"）。
 
-**Agent-Created Flag:** The YAML frontmatter MUST include `agent_created: true` so that `skill_manage` can modify or delete the skill later.
+**Agent 创建标记：** YAML 前置元数据中必须包含 `agent_created: true`，以便 `skill_manage` 后续可以修改或删除该技能。
 
-#### Bundled Resources (optional)
+#### 打包资源（可选）
 
-##### Scripts (`scripts/`)
+##### 脚本（`scripts/`）
 
-Executable code (Python/Bash/etc.) for tasks that require deterministic reliability or are repeatedly rewritten.
+用于需要确定性可靠性或反复重写场景的可执行代码（Python/Bash 等）。
 
-- **When to include**: When the same code is being rewritten repeatedly or deterministic reliability is needed
-- **Example**: `scripts/rotate_pdf.py` for PDF rotation tasks
-- **Benefits**: Token efficient, deterministic, may be executed without loading into context
-- **Note**: Scripts may still need to be read by LLMWork for patching or environment-specific adjustments
+- **何时包含**：当同一段代码被反复重写，或需要确定性可靠性时
+- **示例**：用于 PDF 旋转任务的 `scripts/rotate_pdf.py`
+- **优点**：节省 Token、确定性高、无需加载到上下文中即可执行
+- **注意**：脚本可能仍需要被 LLMWork 读取以进行修补或环境特定的调整
 
-##### References (`references/`)
+##### 参考资料（`references/`）
 
-Documentation and reference material intended to be loaded as needed into context to inform LLMWork's process and thinking.
+用于按需加载到上下文中的文档和参考资料，以指导 LLMWork 的流程和思考。
 
-- **When to include**: For documentation that LLMWork should reference while working
-- **Examples**: `references/finance.md` for financial schemas, `references/mnda.md` for company NDA template, `references/policies.md` for company policies, `references/api_docs.md` for API specifications
-- **Use cases**: Database schemas, API documentation, domain knowledge, company policies, detailed workflow guides
-- **Benefits**: Keeps SKILL.md lean, loaded only when LLMWork determines it's needed
-- **Best practice**: If files are large (>10k words), include grep search patterns in SKILL.md
-- **Avoid duplication**: Information should live in either SKILL.md or references files, not both. Prefer references files for detailed information unless it's truly core to the skill—this keeps SKILL.md lean while making information discoverable without hogging the context window. Keep only essential procedural instructions and workflow guidance in SKILL.md; move detailed reference material, schemas, and examples to references files.
+- **何时包含**：当 LLMWork 在工作时需要参考的文档
+- **示例**：`references/finance.md`（财务数据模式）、`references/mnda.md`（公司保密协议模板）、`references/policies.md`（公司政策）、`references/api_docs.md`（API 规范）
+- **使用场景**：数据库模式、API 文档、领域知识、公司政策、详细的工作流指南
+- **优点**：保持 SKILL.md 精简，仅在 LLMWork 判断需要时才加载
+- **最佳实践**：如果文件较大（>1 万字），在 SKILL.md 中包含 grep 搜索模式
+- **避免重复**：信息应只存在于 SKILL.md 或 references 文件中的一处，而非两者皆有。优先将详细信息放在 references 文件中，除非这些信息确实是核心内容——这样可以在保持 SKILL.md 精简的同时使信息可被发现，而不会占用上下文窗口。仅保留必要的程序性指示和工作流指导在 SKILL.md 中；将详细的参考资料、数据模式和示例移至 references 文件。
 
-##### Assets (`assets/`)
+##### 资源文件（`assets/`）
 
-Files not intended to be loaded into context, but rather used within the output LLMWork produces.
+不需要加载到上下文中，而是在 LLMWork 生成的输出中使用的文件。
 
-- **When to include**: When the skill needs files that will be used in the final output
-- **Examples**: `assets/logo.png` for brand assets, `assets/slides.pptx` for PowerPoint templates, `assets/frontend-template/` for HTML/React boilerplate, `assets/font.ttf` for typography
-- **Use cases**: Templates, images, icons, boilerplate code, fonts, sample documents that get copied or modified
-- **Benefits**: Separates output resources from documentation, enables LLMWork to use files without loading them into context
+- **何时包含**：当技能需要在最终输出中使用的文件时
+- **示例**：`assets/logo.png`（品牌资源）、`assets/slides.pptx`（PowerPoint 模板）、`assets/frontend-template/`（HTML/React 样板代码）、`assets/font.ttf`（字体）
+- **使用场景**：模板、图片、图标、样板代码、字体、需要复制或修改的示例文档
+- **优点**：将输出资源与文档分离，使 LLMWork 无需将文件加载到上下文中即可使用
 
-### Progressive Disclosure Design Principle
+### 渐进式信息披露设计原则
 
-Skills use a three-level loading system to manage context efficiently:
+技能使用三级加载系统来高效管理上下文：
 
-1. **Metadata (name + description)** - Always in context (~100 words)
-2. **SKILL.md body** - When skill triggers (<5k words)
-3. **Bundled resources** - As needed by LLMWork (Unlimited*)
+1. **元数据（名称 + 描述）** - 始终在上下文中（约 100 词）
+2. **SKILL.md 正文** - 当技能被触发时（<5k 词）
+3. **打包资源** - 由 LLMWork 按需加载（无限制*）
 
-*Unlimited because scripts can be executed without reading into context window.
+*无限制是因为脚本无需读入上下文窗口即可执行。
 
-## Skill Creation Process
+## 技能创建流程
 
-To create a skill, follow the "Skill Creation Process" in order, skipping steps only if there is a clear reason why they are not applicable.
+创建技能时，请按顺序遵循"技能创建流程"，仅在有明确理由说明某步骤不适用时才跳过。
 
-### Step 1: Understanding the Skill with Concrete Examples
+### 第 1 步：通过具体示例理解技能
 
-Skip this step only when the skill's usage patterns are already clearly understood. It remains valuable even when working with an existing skill.
+仅当技能的使用模式已经清晰理解时才跳过此步骤。即使处理已有技能，此步骤仍有价值。
 
-To create an effective skill, clearly understand concrete examples of how the skill will be used. This understanding can come from either direct user examples or generated examples that are validated with user feedback.
+要创建高效的技能，需清晰地理解该技能将如何被使用的具体示例。这种理解可以来自用户的直接示例，也可以来自经过用户反馈验证的生成示例。
 
-For example, when building an image-editor skill, relevant questions include:
+例如，在构建图片编辑技能时，相关问题包括：
 
-- "What functionality should the image-editor skill support? Editing, rotating, anything else?"
-- "Can you give some examples of how this skill would be used?"
-- "I can imagine users asking for things like 'Remove the red-eye from this image' or 'Rotate this image'. Are there other ways you imagine this skill being used?"
-- "What would a user say that should trigger this skill?"
+- "图片编辑技能应该支持哪些功能？编辑、旋转，还有其他吗？"
+- "你能给出一些该技能使用方式的示例吗？"
+- "我能想象用户会说'移除这张图片的红眼'或'旋转这张图片'。你还能想到其他使用方式吗？"
+- "用户说什么话应该触发这个技能？"
 
-To avoid overwhelming users, avoid asking too many questions in a single message. Start with the most important questions and follow up as needed for better effectiveness.
+为避免让用户不知所措，避免在一条消息中提出太多问题。从最重要的问题开始，根据需要跟进，以获得更好的效果。
 
-Conclude this step when there is a clear sense of the functionality the skill should support.
+当对技能应支持的功能有了清晰的认识后，此步骤结束。
 
-### Step 2: Planning the Reusable Skill Contents
+### 第 2 步：规划可复用的技能内容
 
-To turn concrete examples into an effective skill, analyze each example by:
+要将具体示例转化为高效的技能，通过以下方式分析每个示例：
 
-1. Considering how to execute on the example from scratch
-2. Identifying what scripts, references, and assets would be helpful when executing these workflows repeatedly
+1. 思考如何从零开始执行该示例
+2. 识别在反复执行这些工作流时哪些脚本、参考资料和资源文件会有所帮助
 
-Example: When building a `pdf-editor` skill to handle queries like "Help me rotate this PDF," the analysis shows:
+示例：在构建 `pdf-editor` 技能来处理"帮我旋转这个 PDF"等查询时，分析表明：
 
-1. Rotating a PDF requires re-writing the same code each time
-2. A `scripts/rotate_pdf.py` script would be helpful to store in the skill
+1. 旋转 PDF 每次都需要重写相同的代码
+2. 在技能中存储一个 `scripts/rotate_pdf.py` 脚本会很有帮助
 
-Example: When designing a `frontend-webapp-builder` skill for queries like "Build me a todo app" or "Build me a dashboard to track my steps," the analysis shows:
+示例：在设计 `frontend-webapp-builder` 技能来处理"帮我构建一个待办事项应用"或"帮我构建一个追踪步数的仪表盘"等查询时，分析表明：
 
-1. Writing a frontend webapp requires the same boilerplate HTML/React each time
-2. An `assets/hello-world/` template containing the boilerplate HTML/React project files would be helpful to store in the skill
+1. 编写前端 Web 应用每次都需要相同的 HTML/React 样板代码
+2. 在技能中存储一个包含项目样板文件的 `assets/hello-world/` 模板会很有帮助
 
-Example: When building a `big-query` skill to handle queries like "How many users have logged in today?" the analysis shows:
+示例：在构建 `big-query` 技能来处理"今天有多少用户登录了？"等查询时，分析表明：
 
-1. Querying BigQuery requires re-discovering the table schemas and relationships each time
-2. A `references/schema.md` file documenting the table schemas would be helpful to store in the skill
+1. 查询 BigQuery 每次都需要重新了解表结构和关系
+2. 在技能中存储一个记录表结构的 `references/schema.md` 文件会很有帮助
 
-To establish the skill's contents, analyze each concrete example to create a list of the reusable resources to include: scripts, references, and assets.
+要确定技能内容，分析每个具体示例以创建需要包含的可复用资源列表：脚本、参考资料和资源文件。
 
-### Step 3: Initializing the Skill
+### 第 3 步：初始化技能
 
-At this point, it is time to actually create the skill.
+此时，是时候实际创建技能了。
 
-Skip this step only if the skill being developed already exists, and iteration or packaging is needed. In this case, continue to the next step.
+仅当正在开发的技能已存在且需要迭代或打包时才跳过此步骤。在这种情况下，继续下一步。
 
-Skills are stored in the LLMWork skills directory:
+技能存储在 LLMWork 技能目录中：
 
-| Type | Path | Scope |
-|------|------|-------|
-| User skill | `~/.llmwork/skills/skill-name/` | Available across all your projects |
+| 类型 | 路径 | 作用范围 |
+|------|------|---------|
+| 用户技能 | `~/.llmwork/skills/skill-name/` | 在所有项目中可用 |
 
-All skills are stored as user skills under `~/.llmwork/skills/`, making them available globally across all workspaces.
+所有技能都以用户技能的形式存储在 `~/.llmwork/skills/` 下，使其在所有工作区中全局可用。
 
-When creating a new skill from scratch, always run the `init_skill.py` script. The script conveniently generates a new template skill directory that automatically includes everything a skill requires, making the skill creation process much more efficient and reliable.
+从头创建新技能时，始终运行 `init_skill.py` 脚本。该脚本可以方便地生成一个新的模板技能目录，自动包含技能所需的一切，使技能创建过程更加高效可靠。
 
-Usage:
+用法：
 
 ```bash
 scripts/init_skill.py <skill-name> [--path <output-directory>]
 ```
 
-If `--path` is omitted, the skill is created under `~/.llmwork/skills/` by default.
+如果省略 `--path`，技能默认创建在 `~/.llmwork/skills/` 下。
 
-The script:
+该脚本将：
 
-- Creates the skill directory at the specified path
-- Generates a SKILL.md template with proper frontmatter and TODO placeholders
-- Creates example resource directories: `scripts/`, `references/`, and `assets/`
-- Adds example files in each directory that can be customized or deleted
+- 在指定路径创建技能目录
+- 生成包含正确前置元数据和 TODO 占位符的 SKILL.md 模板
+- 创建示例资源目录：`scripts/`、`references/` 和 `assets/`
+- 在每个目录中添加可自定义或删除的示例文件
 
-After initialization, customize or remove the generated SKILL.md and example files as needed.
+初始化后，根据需要自定义或删除生成的 SKILL.md 和示例文件。
 
-### Step 4: Edit the Skill
+### 第 4 步：编辑技能
 
-When editing the (newly-generated or existing) skill, remember that the skill is being created for another instance of LLMWork to use. Focus on including information that would be beneficial and non-obvious to LLMWork. Consider what procedural knowledge, domain-specific details, or reusable assets would help another LLMWork instance execute these tasks more effectively.
+在编辑（新生成或已有的）技能时，请记住该技能是为另一个 LLMWork 实例使用而创建的。专注于包含对 LLMWork 有益且非显而易见的信息。思考哪些程序性知识、领域特定细节或可复用资源能帮助另一个 LLMWork 实例更有效地执行这些任务。
 
-#### Start with Reusable Skill Contents
+#### 从可复用技能内容开始
 
-To begin implementation, start with the reusable resources identified above: `scripts/`, `references/`, and `assets/` files. Note that this step may require user input. For example, when implementing a `brand-guidelines` skill, the user may need to provide brand assets or templates to store in `assets/`, or documentation to store in `references/`.
+要开始实现，先从上面确定的可复用资源入手：`scripts/`、`references/` 和 `assets/` 文件。请注意，此步骤可能需要用户提供输入。例如，在实现 `brand-guidelines` 技能时，用户可能需要提供品牌资源或模板存储在 `assets/` 中，或提供文档存储在 `references/` 中。
 
-Also, delete any example files and directories not needed for the skill. The initialization script creates example files in `scripts/`, `references/`, and `assets/` to demonstrate structure, but most skills won't need all of them.
+同时，删除技能不需要的任何示例文件和目录。初始化脚本会在 `scripts/`、`references/` 和 `assets/` 中创建示例文件以展示结构，但大多数技能并不需要全部这些。
 
-#### Update SKILL.md
+#### 更新 SKILL.md
 
-**Writing Style:** Write the entire skill using **imperative/infinitive form** (verb-first instructions), not second person. Use objective, instructional language (e.g., "To accomplish X, do Y" rather than "You should do X" or "If you need to do X"). This maintains consistency and clarity for AI consumption.
+**写作风格：** 使用**祈使/不定式形式**（以动词为首的指令）编写整个技能，而非第二人称。使用客观的、指导性的语言（例如"要完成 X，执行 Y"而非"你应该做 X"或"如果你需要做 X"）。这保持了 AI 使用的一致性和清晰度。
 
-To complete SKILL.md, answer the following questions:
+要完成 SKILL.md，回答以下问题：
 
-1. What is the purpose of the skill, in a few sentences?
-2. When should the skill be used?
-3. In practice, how should LLMWork use the skill? All reusable skill contents developed above should be referenced so that LLMWork knows how to use them.
+1. 该技能的目的是什么，用几句话描述？
+2. 何时应使用该技能？
+3. 在实践中，LLMWork 应如何使用该技能？应引用上面开发的所有可复用技能内容，以便 LLMWork 知道如何使用它们。
 
-### Step 5: Packaging a Skill
+### 第 5 步：打包技能
 
-Once the skill is ready, it should be packaged into a distributable zip file that gets shared with the user. The packaging process automatically validates the skill first to ensure it meets all requirements:
+技能准备就绪后，应将其打包为可分发的 zip 文件并与用户分享。打包过程会自动先验证技能以确保其满足所有要求：
 
 ```bash
 scripts/package_skill.py <path/to/skill-folder>
 ```
 
-Optional output directory specification:
+可选的输出目录指定：
 
 ```bash
 scripts/package_skill.py <path/to/skill-folder> ./dist
 ```
 
-The packaging script will:
+打包脚本将：
 
-1. **Validate** the skill automatically, checking:
-   - YAML frontmatter format and required fields
-   - Skill naming conventions and directory structure
-   - Description completeness and quality
-   - File organization and resource references
+1. **自动验证**技能，检查：
+   - YAML 前置元数据格式和必填字段
+   - 技能命名规范和目录结构
+   - 描述完整性和质量
+   - 文件组织和资源引用
 
-2. **Package** the skill if validation passes, creating a zip file named after the skill (e.g., `my-skill.zip`) that includes all files and maintains the proper directory structure for distribution.
+2. 如果验证通过，**打包**技能，创建以技能命名的 zip 文件（例如 `my-skill.zip`），包含所有文件并保持正确的目录结构以供分发。
 
-If validation fails, the script will report the errors and exit without creating a package. Fix any validation errors and run the packaging command again.
+如果验证失败，脚本将报告错误并退出，不创建包。修复所有验证错误后再次运行打包命令。
 
-### Step 6: Iterate
+### 第 6 步：迭代
 
-After testing the skill, users may request improvements. Often this happens right after using the skill, with fresh context of how the skill performed.
+测试技能后，用户可能会提出改进建议。这通常发生在刚刚使用完技能后，有对技能表现的新鲜记忆。
 
-**Iteration workflow:**
-1. Use the skill on real tasks
-2. Notice struggles or inefficiencies
-3. Identify how SKILL.md or bundled resources should be updated
-4. Implement changes and test again
+**迭代工作流：**
+1. 在实际任务中使用技能
+2. 注意遇到的困难或低效之处
+3. 确定 SKILL.md 或打包资源应如何更新
+4. 实施更改并再次测试
 
-## Editing an Already-Installed Marketplace Skill
+## 编辑已安装的市场技能
 
-When the user asks to edit an existing skill that they installed from the marketplace
-(e.g. via the "Edit" entry on a skill card, which inserts a prompt like
-"使用 /skill-creator 帮我编辑 /<skill-id> 技能"), follow this flow:
+当用户要求编辑他们从市场安装的已有技能时
+（例如通过技能卡片上的"编辑"按钮，触发类似
+"使用 /skill-creator 帮我编辑 /<skill-id> 技能"的提示），按以下流程操作：
 
-1. Read the existing `SKILL.md` (and other relevant files under the skill directory)
-   to understand what is there before changing anything.
-2. Apply the user's requested edits with the file editing tools.
-3. **After successfully saving the edits**, mark the skill as user-modified by
-   writing `"userModified": true` into the skill's local marketplace meta file.
-   This prevents automatic updates from silently overwriting the user's edits.
+1. 先阅读已有的 `SKILL.md`（以及技能目录下的其他相关文件），
+   在更改任何内容之前先理解现有内容。
+2. 使用文件编辑工具应用用户请求的修改。
+3. **成功保存编辑后**，通过在技能的本地市场元数据文件中
+   写入 `"userModified": true` 来将该技能标记为用户已修改。
+   这可以防止自动更新静默覆盖用户的编辑。
 
-   **How to mark user-modified:**
+   **如何标记用户已修改：**
 
-   Look for a marketplace meta file in the skill directory (the directory
-   containing the edited `SKILL.md`). The file is named one of:
-   - `_skillhub_meta.json` (BuiltinMarket / SkillHub source)
-   - `_knot_meta.json` (Knot source)
+   在技能目录（包含被编辑的 `SKILL.md` 的目录）中查找市场元数据文件。
+   文件名可能为以下之一：
+   - `_skillhub_meta.json`（BuiltinMarket / SkillHub 源）
+   - `_knot_meta.json`（Knot 源）
 
-   If found, read the JSON, set `"userModified": true`, and write it back:
+   如果找到，读取 JSON，设置 `"userModified": true`，然后写回：
 
    ```
-   # Pseudocode (use Read + Write tools):
-   1. Read <skill-dir>/_skillhub_meta.json (or _knot_meta.json)
-   2. Parse JSON → add/set "userModified": true
-   3. Write the updated JSON back to the same file
+   # 伪代码（使用读取 + 写入工具）：
+   1. 读取 <skill-dir>/_skillhub_meta.json（或 _knot_meta.json）
+   2. 解析 JSON → 添加/设置 "userModified": true
+   3. 将更新后的 JSON 写回同一文件
    ```
 
-   If neither meta file exists, the skill was created locally (not from a
-   marketplace) — skip this step silently, no error to surface.
+   如果两个元数据文件都不存在，说明该技能是本地创建的（非市场来源）——
+   静默跳过此步骤，不报错。
 
-4. Briefly tell the user that the edit is saved and that future marketplace
-   updates will ask before overwriting their changes.
+4. 简要告知用户编辑已保存，未来的市场更新在覆盖其更改前会先询问。
 
-**Important:**
-- Only mark user-modified after files have actually been written. Do not do it
-  speculatively or before edits are saved.
-- Do not mark when creating a brand-new skill — the flag is only meaningful
-  for marketplace-installed skills.
+**重要：**
+- 仅在文件已被实际写入后才标记用户已修改。不要在保存编辑之前
+  或推测性地执行此操作。
+- 创建全新技能时不要标记——此标记仅对市场安装的技能有意义。

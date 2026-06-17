@@ -1033,8 +1033,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final currentSession = sessionController.currentSession.value;
-    final hasMcpOrSkill = currentSession?.mcp != null || currentSession?.skill != null;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: Container(
@@ -1120,21 +1118,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       const SizedBox(width: 8),
                       _buildDeepThinkToggle(),
                       const SizedBox(width: 8),
-                      // MCP：只在有全局 MCP 服务时显示
-                      if (McpService.hasGlobalMcpServices) ...[
-                        _buildMcpToolsToggle(),
-                        const SizedBox(width: 8),
-                      ],
-                      // 描述：只在已绑定 MCP 或 Skill 时显示
-                      if (hasMcpOrSkill) ...[
-                        _buildConnectPromptToggle(),
-                        const SizedBox(width: 8),
-                      ],
-                      // Skill：只在有可用技能时显示
-                      if (SkillService.skills.isNotEmpty) ...[
-                        _buildSkillToggle(),
-                        const SizedBox(width: 8),
-                      ],
+                      _buildMcpToolsToggle(),
+                      const SizedBox(width: 8),
+                      _buildConnectPromptToggle(),
+                      const SizedBox(width: 8),
+
+                      _buildSkillToggle(),
+                      const SizedBox(width: 8),
                       if (FeatureToggleService().isMemoryConfigEnabled) ...[
                         _buildMemoryToggle(),
                         const SizedBox(width: 8),
@@ -1712,24 +1702,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           context,
                         ).colorScheme.onSurface.withOpacity(0.3),
               ),
-              if (hasMcpServices) ...[
-                const SizedBox(width: 4),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 100),
-                  child: Text(
-                    displayText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
-                    ),
+              const SizedBox(width: 4),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 100),
+                child: Text(
+                  displayText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: hasMcpServices
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ),

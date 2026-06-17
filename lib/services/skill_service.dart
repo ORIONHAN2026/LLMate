@@ -42,13 +42,10 @@ class SkillService {
   }
 
   /// 从文件系统加载技能（强制刷新）
-  /// 内置技能通过 isBuiltin 标记区分，由 SkillStorageService 在加载时标记
   static Future<void> loadSkills() async {
-    // 先获取内置技能文件夹名集合
-    final builtinFolders = await SkillStorageService.scanBuiltinSkillFolders();
-    _skills = await SkillStorageService.loadSkills(builtinFolderNames: builtinFolders.toSet());
+    _skills = await SkillStorageService.loadSkills();
     _loaded = true;
-    debugPrint('✅ SkillService: 加载了 ${_skills.length} 个技能 (内置: ${builtinFolders.length})');
+    debugPrint('✅ SkillService: 加载了 ${_skills.length} 个技能');
   }
 
   // ======== 查询 ========
@@ -202,7 +199,9 @@ class SkillService {
         final fileName = parts.last;
         final relDir =
             parts.length > 1
-                ? parts.sublist(0, parts.length - 1).join(Platform.pathSeparator)
+                ? parts
+                    .sublist(0, parts.length - 1)
+                    .join(Platform.pathSeparator)
                 : '';
         entries.add(
           _FileEntry(name: fileName, relDir: relDir, size: entity.lengthSync()),
@@ -223,8 +222,7 @@ class SkillService {
         try {
           final content = sub.readAsStringSync().trim();
           if (content.isNotEmpty) {
-            final relPath =
-                sub.path.substring(dir.path.length + 1);
+            final relPath = sub.path.substring(dir.path.length + 1);
             buffer.writeln(
               '\n[依赖: $relPath]\n$content\n(安装命令: cd "${dir.path}" && pip install -r "$relPath")',
             );
@@ -274,9 +272,10 @@ class SkillService {
     final safeName = _sanitizeToolName(raw);
     if (safeName.isEmpty) return null;
 
-    final desc = skill.description.isNotEmpty
-        ? '${skill.name}: ${skill.description}'
-        : skill.name;
+    final desc =
+        skill.description.isNotEmpty
+            ? '${skill.name}: ${skill.description}'
+            : skill.name;
 
     return {
       'type': 'function',
@@ -318,5 +317,9 @@ class _FileEntry {
   final String name;
   final String relDir;
   final int size;
-  const _FileEntry({required this.name, required this.relDir, required this.size});
+  const _FileEntry({
+    required this.name,
+    required this.relDir,
+    required this.size,
+  });
 }

@@ -58,6 +58,7 @@ class SkillStorageService {
   }
 
   /// 复制内置技能到可写目录（覆盖模式）
+  /// 复制内置技能到可写目录（覆盖模式）
   static Future<void> copyBuiltinSkillsFromAssets() async {
     final skillsRoot = await getSkillsRootDir();
 
@@ -65,26 +66,47 @@ class SkillStorageService {
     const builtinSkills = ['skill-creator'];
 
     final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    // 拿到所有的 asset keys
+    final allAssets = assetManifest.listAssets();
+
+    // 💡 调试利器：如果还是拷不成功，把下面这行的注释打开，看看到底输出了什么路径
+    // debugPrint('📦 Flutter 识别到的所有资源: $allAssets');
+
     int copiedCount = 0;
 
     for (final skillName in builtinSkills) {
-      final prefix = 'assets/skills/$skillName/';
+      // 兼容处理：有些版本的 key 带有 assets/，有些没有，我们用 contains 或更宽松的匹配
+      final targetPart = 'skills/$skillName/';
+      debugPrint('📂 开始检索技能资源，关键字: $targetPart');
+
+      // 筛选出属于当前技能的资源文件
       final skillAssets =
-          assetManifest
-              .listAssets()
-              .where((path) => path.startsWith(prefix))
-              .toList();
+          allAssets.where((path) => path.contains(targetPart)).toList();
+
+      debugPrint('📂 匹配到的相关资源文件数量: ${skillAssets.length}');
 
       for (final assetPath in skillAssets) {
         try {
           final data = await rootBundle.load(assetPath);
           final bytes = data.buffer.asUint8List();
 
-          final relativePath = assetPath.substring('assets/skills/'.length);
+          // 动态计算相对路径：从包含 skills/ 的地方开始截取
+          final skillsIndex = assetPath.indexOf('skills/');
+          if (skillsIndex == -1) continue;
+
+          // 截取后变成: skills/skill-creator/SKILL.md
+          final relativePathWithSkills = assetPath.substring(skillsIndex);
+          // 进一步去掉 'skills/'，得到: skill-creator/SKILL.md
+          final relativePath = relativePathWithSkills.substring(
+            'skills/'.length,
+          );
+
           final targetFile = File(p.join(skillsRoot, relativePath));
 
           await targetFile.parent.create(recursive: true);
           await targetFile.writeAsBytes(bytes);
+
+          debugPrint('  📄 成功复制到: ${targetFile.path}');
           copiedCount++;
         } catch (e) {
           debugPrint('  ⚠️ 复制失败: $assetPath, 错误: $e');
@@ -93,13 +115,6 @@ class SkillStorageService {
     }
 
     debugPrint('✅ SkillStorageService: 已从 assets 复制 $copiedCount 个文件（覆盖模式）');
-  }
-
-  /// 返回内置技能文件夹名列表（用于区分内置/自定义技能）
-  static Future<List<String>> scanBuiltinSkillFolders() async {
-    const builtinSkills = ['skill-creator'];
-    debugPrint('📦 内置技能: ${builtinSkills.join(", ")}');
-    return builtinSkills;
   }
 
   /// 打印可写目录中的技能列表（调试用）
@@ -128,10 +143,7 @@ class SkillStorageService {
   }
 
   /// 扫描 skills/ 目录，解析所有技能的 SKILL.md
-  /// [builtinFolderNames] 为内置技能文件夹名集合，用于标记 isBuiltin
-  static Future<List<Skill>> loadSkills({
-    Set<String>? builtinFolderNames,
-  }) async {
+  static Future<List<Skill>> loadSkills() async {
     final skills = <Skill>[];
     final skillsRoot = await getSkillsRootDir();
     final root = Directory(skillsRoot);
@@ -153,7 +165,6 @@ class SkillStorageService {
         final body = Skill.extractBody(raw);
         final folderName = p.basename(entry.path);
         final stat = await entry.stat();
-        final isBuiltin = builtinFolderNames?.contains(folderName) ?? false;
 
         final skill = Skill(
           skillId: folderName,
@@ -164,7 +175,6 @@ class SkillStorageService {
           createdAt: stat.changed,
           updatedAt: stat.changed,
           path: entry.path,
-          isBuiltin: isBuiltin,
         );
         skills.add(skill.copyWith(content: jsonEncode(skill.toJson())));
       } catch (e) {

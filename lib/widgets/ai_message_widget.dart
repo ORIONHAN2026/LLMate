@@ -48,6 +48,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   late AnimationController _breathingAnimationController;
   late Animation<double> _breathingAnimation;
 
+  // 扳手旋转动画
+  late AnimationController _wrenchAnimationController;
+
   @override
   void initState() {
     super.initState();
@@ -63,11 +66,22 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       ),
     );
     _breathingAnimationController.repeat(reverse: true);
+
+    // 初始化扳手旋转动画
+    _wrenchAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    // 如果消息正在工具调用中，启动动画
+    if (widget.message.isToolCalling) {
+      _wrenchAnimationController.repeat();
+    }
   }
 
   @override
   void dispose() {
     _breathingAnimationController.dispose();
+    _wrenchAnimationController.dispose();
     super.dispose();
   }
 
@@ -75,6 +89,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   void didUpdateWidget(covariant AiMessageWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.message.isToolCalling != widget.message.isToolCalling) {
+      if (widget.message.isToolCalling) {
+        _wrenchAnimationController.repeat();
+      } else {
+        _wrenchAnimationController.stop();
+      }
       setState(() {});
     }
   }
@@ -1377,18 +1396,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     // 回退兼容：旧消息没有 contentBlocks
     if (blocks.isEmpty) {
-      if (widget.message.isToolCalling) {
-        return Icon(
-          CupertinoIcons.wrench_fill,
-          size: 14,
-          color: Theme.of(
-            context,
-          ).colorScheme.onSurface.withOpacity(0.5),
-        );
-      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildAnimatedWrenchIcon(),
+          const SizedBox(height: 4),
           if (widget.message.think.isNotEmpty)
             _buildThinkBlock(widget.message.think),
 
@@ -1511,6 +1523,18 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
   }
 
+  /// 构建旋转动画扳手图标（工具执行中旋转，闲置时静止）
+  Widget _buildAnimatedWrenchIcon() {
+    return RotationTransition(
+      turns: _wrenchAnimationController,
+      child: Icon(
+        CupertinoIcons.wrench_fill,
+        size: 14,
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+      ),
+    );
+  }
+
   /// 工具执行块（折叠/展开）
   /// 折叠态：扳手图标 + 固定文案
   /// 展开态：完整工具执行结果
@@ -1551,14 +1575,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               ),
               child: Row(
                 children: [
-                  // 工具执行图标
-                  Icon(
-                    CupertinoIcons.wrench_fill,
-                    size: 14,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.5),
-                  ),
+                  // 工具执行图标（执行中旋转动画）
+                  _buildAnimatedWrenchIcon(),
                   const SizedBox(width: 6),
                   // 最新一行内容预览（动态更新）
                   Expanded(

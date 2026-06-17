@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
@@ -35,8 +34,11 @@ class IsarService {
   Future<void> initialize() async {
     if (_isar != null) return;
 
-    // 按照建议修复 Windows 问题：先创建目录再使用
-    final rootDir = path.join(Directory.current.path, '.dart_tool', 'isar');
+    // Isar 数据库存储到 ~/.llmwork/isar
+    final home = Platform.environment['HOME'] ?? 
+                 Platform.environment['USERPROFILE'] ?? 
+                 '.';
+    final rootDir = path.join(home, '.llmwork', 'isar');
     await Directory(rootDir).create(recursive: true);
 
     try {
@@ -116,11 +118,6 @@ class IsarService {
       }
     }
 
-    // 迁移旧的 SharedPreferences 数据
-    await _migrateFromSharedPreferences();
-
-    // 迁移消息到独立集合（messagesJson → IsarChatMessage）
-    await _migrateMessagesToCollection();
   }
 
   // ── 数据库备份与恢复 ──
@@ -278,255 +275,6 @@ class IsarService {
       await prefs.setStringList('isar_backups', existing);
     } catch (e) {
       debugPrint('⚠️ 清除备份记录失败: $e');
-    }
-  }
-
-  // ── SharedPreferences 迁移 ──
-
-  /// 从 SharedPreferences 迁移数据到 Isar
-  Future<void> _migrateFromSharedPreferences() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final migratedKey = 'isar_migration_done';
-
-      if (prefs.getBool(migratedKey) == true) {
-        debugPrint('📦 数据迁移已完成，跳过');
-        return;
-      }
-
-      debugPrint('🔄 开始从 SharedPreferences 迁移数据到 Isar...');
-      int migratedCount = 0;
-
-      // 迁移模型
-      final modelsJson = prefs.getString('ai_models');
-      if (modelsJson != null && modelsJson.isNotEmpty) {
-        try {
-          final List<dynamic> list = jsonDecode(modelsJson);
-          final isarModels = list.map((m) {
-            final map = m as Map<String, dynamic>;
-            return IsarChatModel()
-              ..modelId = (map['modelId'] as String?) ?? ''
-              ..name = (map['name'] as String?) ?? ''
-              ..model = (map['model'] as String?) ?? (map['fullName'] as String?) ?? ''
-              ..type = map['type'] as String?
-              ..platform = map['platform'] as String?
-              ..protocol = map['protocol'] as String?
-              ..apiKey = map['apiKey'] as String?
-              ..apiUrl = map['apiUrl'] as String?
-              ..createdAt = map['createdAt'] != null ? DateTime.tryParse(map['createdAt'].toString()) : null
-              ..updatedAt = map['updatedAt'] != null ? DateTime.tryParse(map['updatedAt'].toString()) : null
-              ..chatSettingsJson = map['chatSettings'] != null ? jsonEncode(map['chatSettings']) : null
-              ..mcpServicesJson = map['mcpServices'] != null ? jsonEncode(map['mcpServices']) : null
-              ..chatCommandsJson = map['chatCommands'] != null ? jsonEncode(map['chatCommands']) : null
-              ..skillsJson = map['skills'] != null ? jsonEncode(map['skills']) : null;
-          }).toList();
-
-          await isar.writeTxn(() async {
-            await isar.isarChatModels.putAll(isarModels);
-          });
-          migratedCount += isarModels.length;
-          debugPrint('   ✅ 迁移模型: ${isarModels.length} 条');
-        } catch (e) {
-          debugPrint('   ⚠️ 迁移模型失败: $e');
-        }
-      }
-
-      // 迁移会话
-      final sessionsJson = prefs.getString('chat_sessions');
-      if (sessionsJson != null && sessionsJson.isNotEmpty) {
-        try {
-          final List<dynamic> list = jsonDecode(sessionsJson);
-          final isarSessions = list.map((s) {
-            final map = s as Map<String, dynamic>;
-            final sessionId = (map['id'] as String?) ?? '';
-
-            return IsarChatSession()
-              ..sessionId = sessionId
-              ..name = (map['name'] as String?) ?? '新会话'
-              ..createdAt = map['createdAt'] != null
-                  ? DateTime.tryParse(map['createdAt'].toString()) ?? DateTime.now()
-                  : DateTime.now()
-              ..isFavorite = (map['isFavorite'] as bool?) ?? false
-              ..isSending = false
-              ..shouldStopResponse = false
-              ..scrollPosition = (map['scrollPosition'] as num?)?.toDouble() ?? 0.0
-              ..inputContent = (map['inputContent'] as String?) ?? ''
-              ..lastSelectedDirectory = map['lastSelectedDirectory'] as String?
-              ..messagesJson = map['messages'] != null ? jsonEncode(map['messages']) : '[]'
-              ..chatModelJson = map['chatModel'] != null ? jsonEncode(map['chatModel']) : null
-              ..modelId = map['modelId'] as String? ??
-                  (map['chatModel'] is Map
-                      ? (map['chatModel'] as Map)['modelId'] as String?
-                      : null)
-              ..mcpServerJson = map['mcpServer'] != null ? jsonEncode(map['mcpServer']) : null
-              ..skillJson = map['skill'] != null ? jsonEncode(map['skill']) : null
-              ..attachmentsJson = map['attachments'] != null ? jsonEncode(map['attachments']) : null
-              ..sessionQuickCommandsJson = map['sessionQuickCommands'] != null
-                  ? jsonEncode(map['sessionQuickCommands'])
-                  : null
-              ..isCurrent = false;
-          }).toList();
-
-          await isar.writeTxn(() async {
-            await isar.isarChatSessions.putAll(isarSessions);
-          });
-          migratedCount += isarSessions.length;
-          debugPrint('   ✅ 迁移会话: ${isarSessions.length} 条');
-        } catch (e) {
-          debugPrint('   ⚠️ 迁移会话失败: $e');
-        }
-      }
-
-      // 迁移当前会话标记
-      final currentJson = prefs.getString('chat_current_session');
-      if (currentJson != null && currentJson.isNotEmpty) {
-        try {
-          final map = jsonDecode(currentJson) as Map<String, dynamic>;
-          final currentId = map['id'] as String?;
-          if (currentId != null) {
-            await isar.writeTxn(() async {
-              final session = await isar.isarChatSessions
-                  .getBySessionId(currentId);
-              if (session != null) {
-                session.isCurrent = true;
-                await isar.isarChatSessions.put(session);
-              }
-            });
-            debugPrint('   ✅ 迁移当前会话标记: $currentId');
-          }
-        } catch (e) {
-          debugPrint('   ⚠️ 迁移当前会话标记失败: $e');
-        }
-      }
-
-      // 迁移 MCP 服务
-      final mcpJson = prefs.getString('mcp_services');
-      if (mcpJson != null && mcpJson.isNotEmpty) {
-        try {
-          final List<dynamic> list = jsonDecode(mcpJson);
-          final isarMcps = list.map((m) {
-            final map = m as Map<String, dynamic>;
-            final name = (map['name'] as String?) ?? '';
-            final mcpId = (map['mcpId'] as String?) ?? name;
-            return IsarMcpService()
-              ..mcpId = mcpId
-              ..content = jsonEncode(map);
-          }).toList();
-
-          await isar.writeTxn(() async {
-            await isar.isarMcpServices.putAll(isarMcps);
-          });
-          migratedCount += isarMcps.length;
-          debugPrint('   ✅ 迁移 MCP 服务: ${isarMcps.length} 条');
-        } catch (e) {
-          debugPrint('   ⚠️ 迁移 MCP 服务失败: $e');
-        }
-      }
-
-      // 迁移主题设置
-      final isDark = prefs.getBool('isDarkMode');
-      if (isDark != null) {
-        await isar.writeTxn(() async {
-          await isar.isarSettings.put(IsarSettings()
-            ..key = 'isDarkMode'
-            ..value = isDark.toString());
-        });
-        migratedCount++;
-        debugPrint('   ✅ 迁移主题设置: isDarkMode=$isDark');
-      }
-
-      // 迁移供应商 API 密钥（从 SharedPreferences 到 Isar）
-      const vendorIds = ['aliyun', 'modelscope', 'tencent'];
-      for (final vid in vendorIds) {
-        final key = prefs.getString('mcp_vendor_key_$vid');
-        if (key != null && key.isNotEmpty) {
-          final existing = await isar.isarVendorKeys.getByVendorId(vid);
-          if (existing == null) {
-            await isar.writeTxn(() async {
-              await isar.isarVendorKeys.put(IsarVendorKey()
-                ..vendorId = vid
-                ..apiKey = key
-                ..updatedAt = DateTime.now());
-            });
-            migratedCount++;
-            debugPrint('   ✅ 迁移供应商密钥: $vid');
-          }
-        }
-      }
-
-      // 标记迁移完成
-      if (migratedCount > 0) {
-        await prefs.setBool(migratedKey, true);
-        debugPrint('🎉 数据迁移完成，共迁移 $migratedCount 条记录');
-      } else {
-        await prefs.setBool(migratedKey, true);
-        debugPrint('📦 无数据需要迁移（首次安装）');
-      }
-    } catch (e) {
-      debugPrint('❌ 数据迁移失败: $e');
-    }
-  }
-
-  // ── 消息独立存储迁移 ──
-
-  /// 将旧版本存储在 messagesJson 中的消息迁移到独立的 IsarChatMessage 集合
-  Future<void> _migrateMessagesToCollection() async {
-    try {
-      final migratedKey = 'messages_to_collection_done';
-      final existing = await isar.isarSettings.getByKey(migratedKey);
-      if (existing != null) {
-        return; // 已迁移
-      }
-
-      debugPrint('🔄 开始迁移消息到独立集合...');
-      final sessions = await isar.isarChatSessions.where().findAll();
-      int totalMessages = 0;
-
-      for (final session in sessions) {
-        final json = session.messagesJson;
-        if (json == null || json.isEmpty) continue;
-
-        try {
-          final list = jsonDecode(json) as List<dynamic>;
-          final messages = <IsarChatMessage>[];
-
-          for (final m in list) {
-            final map = m as Map<String, dynamic>;
-            final msgId = (map['id'] as String?) ?? '';
-            if (msgId.isEmpty) continue;
-
-            messages.add(IsarChatMessage()
-              ..msgId = msgId
-              ..sessionId = session.sessionId
-              ..timestamp = map['timestamp'] != null
-                  ? (DateTime.tryParse(map['timestamp'].toString()) ?? DateTime.now())
-                  : DateTime.now()
-              ..messageJson = jsonEncode(map));
-          }
-
-          if (messages.isNotEmpty) {
-            await isar.writeTxn(() async {
-              await isar.isarChatMessages.putAll(messages);
-              // 清空旧的 messagesJson 以释放空间
-              session.messagesJson = null;
-              await isar.isarChatSessions.put(session);
-            });
-            totalMessages += messages.length;
-          }
-        } catch (e) {
-          debugPrint('   ⚠️ 迁移会话 ${session.sessionId} 的消息失败: $e');
-        }
-      }
-
-      // 标记迁移完成
-      await isar.writeTxn(() async {
-        await isar.isarSettings.put(IsarSettings()
-          ..key = migratedKey
-          ..value = 'true');
-      });
-      debugPrint('✅ 消息迁移完成，共 ${totalMessages} 条');
-    } catch (e) {
-      debugPrint('⚠️ 消息迁移失败: $e');
     }
   }
 

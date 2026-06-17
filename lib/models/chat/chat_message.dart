@@ -19,6 +19,7 @@ class ChatMessage {
 
   // 工具调用相关字段
   final String? toolName; // 工具名称（用于tool类型消息）
+  final String? toolCallId; // 工具调用ID（用于tool类型消息，匹配 tool_calls 中的 id）
   bool isToolCalling; // 是否正在调用工具，默认为 false
 
   // 性能统计字段
@@ -41,6 +42,7 @@ class ChatMessage {
     this.attachments = const [], // 默认为空列表
     this.pairedMsgId, // 配对的消息ID（可选）
     this.toolName, // 工具名称（可选）
+    this.toolCallId, // 工具调用ID（可选）
     this.isToolCalling = false, // 是否正在调用工具，默认为 false
     this.generationStartTime,
     this.generationEndTime,
@@ -93,6 +95,7 @@ class ChatMessage {
           [],
       pairedMsgId: json['pairedMessageId'],
       toolName: json['toolName'],
+      toolCallId: json['toolCallId'],
       isToolCalling: json['isToolCalling'] ?? false,
       generationStartTime:
           json['generationStartTime'] != null
@@ -143,6 +146,7 @@ class ChatMessage {
           attachments.map((attachment) => attachment.toJson()).toList(),
       'pairedMessageId': pairedMsgId,
       'toolName': toolName,
+      'toolCallId': toolCallId,
       'isToolCalling': isToolCalling,
       'generationStartTime': generationStartTime?.toIso8601String(),
       'generationEndTime': generationEndTime?.toIso8601String(),
@@ -177,6 +181,7 @@ class ChatMessage {
     List<ChatAttachment>? attachments,
     String? pairedMsgId, // 配对的消息ID
     String? toolName,
+    String? toolCallId,
     bool? isToolCalling,
     DateTime? generationStartTime,
     DateTime? generationEndTime,
@@ -197,6 +202,7 @@ class ChatMessage {
       attachments: attachments ?? this.attachments,
       pairedMsgId: pairedMsgId ?? this.pairedMsgId, // 配对的消息ID
       toolName: toolName ?? this.toolName,
+      toolCallId: toolCallId ?? this.toolCallId,
       isToolCalling: isToolCalling ?? this.isToolCalling,
       generationStartTime: generationStartTime ?? this.generationStartTime,
       generationEndTime: generationEndTime ?? this.generationEndTime,

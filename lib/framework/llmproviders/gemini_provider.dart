@@ -40,6 +40,13 @@ class GeminiProvider extends BaseLlmProvider {
     required List<Map<String, dynamic>> messages,
     ChatSession? session,
   }) {
+    // 合并所有 system 消息（Gemini 的 systemInstruction 只支持单条）
+    final systemMessages = messages.where((msg) => msg['role'] == 'system').toList();
+    final systemContent = systemMessages
+        .map((msg) => msg['content'].toString())
+        .where((c) => c.isNotEmpty)
+        .join('\n\n');
+
     final contents = messages.where((msg) => msg['role'] != 'system').map((msg) {
       return {
         'role': msg['role'] == 'user' ? 'user' : 'model',
@@ -52,13 +59,9 @@ class GeminiProvider extends BaseLlmProvider {
       'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 4000},
     };
 
-    final systemMessage = messages.firstWhere(
-      (msg) => msg['role'] == 'system',
-      orElse: () => {'content': ''},
-    );
-    if (systemMessage['content'].toString().isNotEmpty) {
+    if (systemContent.isNotEmpty) {
       requestData['systemInstruction'] = {
-        'parts': [{'text': systemMessage['content']}],
+        'parts': [{'text': systemContent}],
       };
     }
 

@@ -168,7 +168,7 @@ abstract class BaseLlmProvider {
     var messages = <Map<String, dynamic>>[];
     final m = model;
 
-    // ── 1. 系统提示词 ──
+    // ── 1. 系统提示词（按优先级排列，最重要的放最后） ──
     // 1a. 模型级自定义 system prompt
     if (m?.chatSettings?.systemPrompt != null &&
         m!.chatSettings!.systemPrompt.isNotEmpty) {
@@ -180,37 +180,13 @@ abstract class BaseLlmProvider {
       messages.add({'role': 'system', 'content': providerPrompt});
     }
 
-    // 1b2. 根据应用语言设置回复语言
+    // 1c. 回复语言
     messages.add({
       'role': 'system',
       'content': CommonSystemPrompts.responseLanguage(Get.locale?.languageCode ?? 'zh'),
     });
 
-    // 1c. 公共规则：禁止 Web 搜索
-    // messages.add({
-    //   'role': 'system',
-    //   'content': CommonSystemPrompts.noWebSearch,
-    // });
-
-    // 1c2. 禁止将内部系统工具视为用户可见功能
-    messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.hideInternalTools,
-    });
-
-    // 1c3. 强制使用工具获取数据，不从历史聊天获取
-    messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.useToolsForData,
-    });
-
-    // 1c4. 反幻觉规则
-    messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.antiHallucination,
-    });
-
-    // 1d. 技能提示词（会话级 + 模型绑定技能）
+    // 1d. 技能提示词
     if (session?.skill != null) {
       final sp = SkillService.buildSkillPrompt(session!.skill);
       if (sp.isNotEmpty) {
@@ -234,7 +210,7 @@ abstract class BaseLlmProvider {
       });
     }
 
-    // 1g. 记忆上下文（压缩记忆 + 最近记忆）
+    // 1g. 记忆上下文
     if (session != null) {
       final memoryCtx = _buildMemoryContext(session);
       if (memoryCtx.isNotEmpty) {
@@ -242,12 +218,18 @@ abstract class BaseLlmProvider {
       }
     }
 
-    // ── 2. 历史消息（滑动窗口，仅保留 user + assistant） ──
+    // ── 2. 历史消息（滑动窗口，保留 user/assistant/tool） ──
     if (session != null && session.messages.isNotEmpty) {
       _appendHistoryMessages(messages, session, userMessage);
     }
 
-    // ── 3. 当前用户消息 + 附件 ──
+    // ── 3. 核心规则（放在用户消息紧前面，优先级最高） ──
+    messages.add({
+      'role': 'system',
+      'content': CommonSystemPrompts.coreRules,
+    });
+
+    // ── 4. 当前用户消息 + 附件 ──
     final userContent = _buildUserContent(userMessage);
     messages.add({'role': 'user', 'content': userContent});
 
@@ -315,6 +297,7 @@ abstract class BaseLlmProvider {
 
       if (tools.isNotEmpty) {
         data['tools'] = tools;
+        data['tool_choice'] = 'auto';
       }
       if (session.deepThink) {
         data['thinking'] = {'type': 'enabled'};
@@ -461,8 +444,7 @@ abstract class BaseLlmProvider {
 
     final included = historyMessages.sublist(historyStart);
     for (final msg in included) {
-      // 只保留 user 和 assistant 消息，过滤掉 tool 和 system 等
-      if (msg.role == MessageRole.tool) continue;
+      // 保留 user/assistant/tool 消息
       if (msg.content.isEmpty && msg.attachments.isEmpty) continue;
       final apiRole = _toOpenAIRole(msg.role);
       if (apiRole == null) continue;
@@ -470,6 +452,13 @@ abstract class BaseLlmProvider {
       if (msg.role == MessageRole.user && msg.attachments.isNotEmpty) {
         final msgContent = _buildUserContent(msg);
         messages.add({'role': apiRole, 'content': msgContent});
+      } else if (msg.role == MessageRole.tool) {
+        // tool 消息需要 tool_call_id（如果有的话）
+        messages.add({
+          'role': 'tool',
+          'tool_call_id': msg.toolCallId ?? msg.msgId,
+          'content': msg.content,
+        });
       } else {
         messages.add({'role': apiRole, 'content': msg.content});
       }

@@ -41,9 +41,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   final sessionController = Get.find<SessionController>();
   final GlobalKey _messageKey = GlobalKey();
 
-  // 工具执行块的展开状态（存储已展开的工具块索引）
-  final Set<int> _expandedToolIndices = {};
-
   // 是否为当前会话最后一条消息
   bool get _isLastMessage {
     final msgs = sessionController.currentSession.value?.messages ?? [];
@@ -54,13 +51,14 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   late AnimationController _breathingAnimationController;
   late Animation<double> _breathingAnimation;
 
-  // 扳手旋转动画
-  late AnimationController _wrenchAnimationController;
+  // 工具执行呼吸灯动画
+  late AnimationController _toolIndicatorController;
+  late Animation<double> _toolIndicatorAnimation;
 
   @override
   void initState() {
     super.initState();
-    // 初始化呼吸动画
+    // 初始化思考呼吸动画
     _breathingAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -73,21 +71,27 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
     _breathingAnimationController.repeat(reverse: true);
 
-    // 初始化扳手旋转动画
-    _wrenchAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+    // 初始化工具执行呼吸灯动画（opacity 脉冲）
+    _toolIndicatorController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    // 如果消息正在工具调用中，启动动画
+    _toolIndicatorAnimation = Tween<double>(begin: 0.25, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _toolIndicatorController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    // 如果消息正在工具调用中，启动呼吸
     if (widget.message.isToolCalling) {
-      _wrenchAnimationController.repeat();
+      _toolIndicatorController.repeat(reverse: true);
     }
   }
 
   @override
   void dispose() {
     _breathingAnimationController.dispose();
-    _wrenchAnimationController.dispose();
+    _toolIndicatorController.dispose();
     super.dispose();
   }
 
@@ -96,9 +100,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.message.isToolCalling != widget.message.isToolCalling) {
       if (widget.message.isToolCalling) {
-        _wrenchAnimationController.repeat();
+        _toolIndicatorController.repeat(reverse: true);
       } else {
-        _wrenchAnimationController.stop();
+        _toolIndicatorController.stop();
+        _toolIndicatorController.reset();
       }
       setState(() {});
     }
@@ -355,8 +360,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                       },
                                     ),
                                     const SizedBox(width: 4),
-                                    // 工具执行扳手（始终显示，执行时旋转）
-                                    _buildAnimatedWrenchIcon(),
+                                    // 工具执行呼吸灯（始终显示，执行时呼吸脉冲）
+                                    _buildToolIndicator(),
                                   ],
                                 ),
                                 // 时间信息
@@ -1521,148 +1526,33 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     );
   }
 
-  /// 构建旋转动画扳手图标（工具执行中旋转，闲置时静止）
-  Widget _buildAnimatedWrenchIcon() {
-    return RotationTransition(
-      turns: _wrenchAnimationController,
-      child: Icon(
-        CupertinoIcons.wrench_fill,
-        size: 14,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-      ),
-    );
-  }
-
-  /// 工具执行块（折叠/展开）
-  /// 折叠态：扳手图标 + 固定文案
-  /// 展开态：完整工具执行结果
-  Widget _buildToolBlock(int index, String text, {bool isExecuting = false}) {
-    final isExpanded = _expandedToolIndices.contains(index);
-
-    final previewText = isExecuting ? AppLocalizations.of(context)!.callingTool : AppLocalizations.of(context)!.toolCallRecord;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 折叠态：圆圈刷新图标 + 最新一行内容预览
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                if (isExpanded) {
-                  _expandedToolIndices.remove(index);
-                } else {
-                  _expandedToolIndices.add(index);
-                }
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest.withOpacity(0.25),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.outline.withOpacity(0.15),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  // 最新一行内容预览（动态更新）
-                  Expanded(
-                    child: Text(
-                      previewText,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.55),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+  /// 构建工具执行呼吸灯（执行时呼吸脉冲，闲置时暗淡常亮）
+  Widget _buildToolIndicator() {
+    final isCalling = widget.message.isToolCalling;
+    return AnimatedBuilder(
+      animation: _toolIndicatorAnimation,
+      builder: (context, child) {
+        final opacity = isCalling ? _toolIndicatorAnimation.value : 0.3;
+        return Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: isCalling
+                ? const Color(0xFF4CAF50).withValues(alpha: opacity)
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: opacity),
+            shape: BoxShape.circle,
+            boxShadow: isCalling
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF4CAF50).withValues(alpha: opacity * 0.5),
+                      blurRadius: 8,
+                      spreadRadius: 2,
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    isExpanded
-                        ? CupertinoIcons.chevron_up
-                        : CupertinoIcons.chevron_down,
-                    size: 10,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.35),
-                  ),
-                ],
-              ),
-            ),
+                  ]
+                : null,
           ),
-          // 展开态：使用 MarkdownBody 渲染，使文件链接可点击
-          if (isExpanded)
-            Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(maxHeight: 200),
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: SingleChildScrollView(
-                child: MarkdownBody(
-                  data: _sanitizeMarkdown(text),
-                  styleSheet: _buildToolBlockMarkdownStyleSheet(),
-                  selectable: true,
-                  onTapLink: (text, href, title) {
-                    if (href != null) _openLink(href);
-                  },
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  /// 构建工具块专用的 Markdown 样式（小字号 monospace）
-  MarkdownStyleSheet _buildToolBlockMarkdownStyleSheet() {
-    final base = TextStyle(
-      fontSize: 10,
-      fontFamily: 'monospace',
-      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
-    );
-    return MarkdownStyleSheet(
-      p: base.copyWith(height: 1.4),
-      a: base.copyWith(
-        color: Theme.of(context).colorScheme.primary,
-        decoration: TextDecoration.underline,
-        decorationColor: Theme.of(context).colorScheme.primary,
-      ),
-      code: base.copyWith(
-        backgroundColor: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      h1: base,
-      h2: base,
-      h3: base,
-      h4: base,
-      h5: base,
-      h6: base,
-      em: base,
-      strong: base,
-      del: base,
-      blockquote: base,
-      listBullet: base,
-      tableHead: base,
-      tableBody: base,
+        );
+      },
     );
   }
 

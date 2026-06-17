@@ -41,10 +41,12 @@ class AnthropicProvider extends BaseLlmProvider {
     required List<Map<String, dynamic>> messages,
     ChatSession? session,
   }) {
-    final systemMessage = messages.firstWhere(
-      (msg) => msg['role'] == 'system',
-      orElse: () => {'content': ''},
-    );
+    // 合并所有 system 消息（Claude API 只支持单个 system 字段）
+    final systemContent = messages
+        .where((msg) => msg['role'] == 'system')
+        .map((msg) => msg['content'].toString())
+        .where((c) => c.isNotEmpty)
+        .join('\n\n');
     final userMessages = messages.where((msg) => msg['role'] != 'system').toList();
 
     final requestData = <String, dynamic>{
@@ -54,8 +56,8 @@ class AnthropicProvider extends BaseLlmProvider {
       'messages': userMessages,
     };
 
-    if (systemMessage['content'].toString().isNotEmpty) {
-      requestData['system'] = systemMessage['content'];
+    if (systemContent.isNotEmpty) {
+      requestData['system'] = systemContent;
     }
 
     if (session != null) {

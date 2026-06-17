@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 import '../models/bigmodel/chat_model.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/chat_message.dart';
@@ -114,6 +116,11 @@ class LlmClient {
       session: _session,
     );
 
+    // 保存请求报文快照（深拷贝，避免后续 tool 消息追加污染日志）
+    final requestSnapshot = List<Map<String, dynamic>>.from(
+      messages.map((m) => Map<String, dynamic>.from(m)),
+    );
+
     if (kDebugMode) {
       debugPrint('🧠 [LLMChat] buildMessages 返回 ${messages.length} 条消息');
       for (int i = 0; i < messages.length; i++) {
@@ -125,8 +132,10 @@ class LlmClient {
       }
     }
 
-    // 累积完整响应用于记忆捕获
+    // 累积完整响应用于记忆捕获 & 日志
     final responseBuffer = StringBuffer();
+    final thinkBuffer = StringBuffer();
+    final toolCallLog = <Map<String, dynamic>>[];
 
     // 循环：LLM 返回工具调用后追加结果并重发，直到无工具调用或检测到重复调用
     int toolIteration = 0;
@@ -180,6 +189,7 @@ class LlmClient {
 
         final t = chunk['think'] ?? '';
         if (t.isNotEmpty) {
+          thinkBuffer.write(t);
           if (kDebugMode) debugPrint('📤 [LLMChat] think: $t');
           yield {'think': t};
         }
@@ -197,6 +207,18 @@ class LlmClient {
           _finalizeNativeToolCalls(nativeToolCallDeltas);
 
       if (_cancelled || parsedCalls.isEmpty) {
+        // ========== 请求日志写入 ==========
+        if (!_cancelled) {
+          // 不 await，异步写日志不阻塞 UI
+          _writeRequestLog(
+            requestMessages: requestSnapshot,
+            responseContent: responseBuffer.toString(),
+            responseThink: thinkBuffer.toString(),
+            toolCalls: toolCallLog,
+            sessionId: _session.sessionId,
+            modelName: _session.chatModel?.model ?? 'unknown',
+          );
+        }
         // ========== 记忆累积 & 压缩（必须在 done 之前处理，避免接收端 break 后丢失） ==========
         if (!_cancelled && responseBuffer.isNotEmpty) {
           // 累积到会话级记忆并检查压缩
@@ -250,6 +272,16 @@ class LlmClient {
                 : null;
         final ok = !(er?['isError'] == true);
         final resultText = er?['result'] ?? '';
+
+        // 记录到工具调用日志
+        toolCallLog.add({
+          'name': name,
+          'arguments': args,
+          'success': ok,
+          'result': resultText.length > 2000
+              ? '${resultText.substring(0, 2000)}...(truncated)'
+              : resultText,
+        });
 
         final buf = StringBuffer();
         buf.writeln('${ok ? '✅' : '❌'} $name');
@@ -313,7 +345,61 @@ class LlmClient {
 
   void cancel() => _cancelled = true;
 
-  /// 发送压缩请求（非流式），用于记忆压缩
+  // ======================== 请求日志 ========================
+
+  /// 日志目录名
+  /// 项目日志目录（硬编码为代码仓库路径）
+  static const _projectRoot = '/Users/orion/Documents/Flutter/llmchat';
+  static const _logDir = 'log_request';
+
+  /// 将当前轮次的请求报文和回复写入本地日志文件
+  static Future<void> _writeRequestLog({
+    required List<Map<String, dynamic>> requestMessages,
+    required String responseContent,
+    String? responseThink,
+    List<Map<String, dynamic>>? toolCalls,
+    required String sessionId,
+    required String modelName,
+  }) async {
+    try {
+      final dir = Directory(p.join(_projectRoot, _logDir));
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+
+      final now = DateTime.now();
+      final timestamp = '${now.year}${_pad(now.month)}${_pad(now.day)}_'
+          '${_pad(now.hour)}${_pad(now.minute)}${_pad(now.second)}';
+      final fileName = '${timestamp}_${sessionId.substring(0, 8)}.json';
+      final file = File(p.join(dir.path, fileName));
+
+      final logData = {
+        'timestamp': now.toIso8601String(),
+        'sessionId': sessionId,
+        'model': modelName,
+        'request': {
+          'messages': requestMessages,
+        },
+        'response': {
+          if (responseThink != null && responseThink.isNotEmpty)
+            'think': responseThink,
+          'content': responseContent,
+          if (toolCalls != null && toolCalls.isNotEmpty) 'tool_calls': toolCalls,
+        },
+      };
+
+      await file.writeAsString(
+        const JsonEncoder.withIndent('  ').convert(logData),
+      );
+      if (kDebugMode) debugPrint('📝 [RequestLog] 日志已写入: ${file.path}');
+    } catch (e) {
+      if (kDebugMode) debugPrint('📝 [RequestLog] 写入日志失败: $e');
+    }
+  }
+
+  static String _pad(int n) => n.toString().padLeft(2, '0');
+
+  // ==================== 工具调用解析等 ====================
   Future<String?> sendCompressRequest(String prompt) async {
     try {
       final model = _session.chatModel;

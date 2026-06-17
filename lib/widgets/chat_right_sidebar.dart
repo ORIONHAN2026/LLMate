@@ -102,7 +102,10 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         unselectedLabelColor: Theme.of(
           context,
         ).colorScheme.onSurface.withValues(alpha: 0.35),
-        tabs: [Tab(text: AppLocalizations.of(context)!.files), Tab(text: AppLocalizations.of(context)!.memory)],
+        tabs: [
+          Tab(text: AppLocalizations.of(context)!.files),
+          Tab(text: AppLocalizations.of(context)!.memory),
+        ],
       ),
     );
   }
@@ -164,14 +167,20 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
           // 压缩记忆摘要
           if (compressedMemory != null &&
               compressedMemory.trim().isNotEmpty) ...[
-            _buildSectionTitle(context, AppLocalizations.of(context)!.memorySummary),
+            _buildSectionTitle(
+              context,
+              AppLocalizations.of(context)!.memorySummary,
+            ),
             const SizedBox(height: 6),
             _buildCompressedMemoryCard(context, compressedMemory),
             const SizedBox(height: 16),
           ],
           // 最近记忆轮次
           if (memory.isNotEmpty) ...[
-            _buildSectionTitle(context, '${AppLocalizations.of(context)!.recentConversations} (${AppLocalizations.of(context)!.messageCount(memory.length.toString())})'),
+            _buildSectionTitle(
+              context,
+              '${AppLocalizations.of(context)!.recentConversations} (${AppLocalizations.of(context)!.messageCount(memory.length.toString())})',
+            ),
             const SizedBox(height: 6),
             ...memory.map((turn) => _buildMemoryTurnItem(context, turn)),
           ],
@@ -262,7 +271,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isUser ? AppLocalizations.of(context)!.user : AppLocalizations.of(context)!.assistant,
+                  isUser
+                      ? AppLocalizations.of(context)!.user
+                      : AppLocalizations.of(context)!.assistant,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -293,10 +304,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   // ========== 文件 Tab 相关 ==========
 
   /// 文件列表内容 — 从消息中提取文件路径，智能分组为目录/单文件产物
-  Widget _buildFilesContent(
-    BuildContext context,
-    List<ChatMessage> messages,
-  ) {
+  Widget _buildFilesContent(BuildContext context, List<ChatMessage> messages) {
     final artifacts = _extractArtifactsFromMessages(messages);
 
     if (artifacts.isEmpty) {
@@ -346,7 +354,10 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle(context, '${AppLocalizations.of(context)!.sessionFiles} (${_totalFileCount(artifacts)})'),
+          _buildSectionTitle(
+            context,
+            '${AppLocalizations.of(context)!.sessionFiles} (${_totalFileCount(artifacts)})',
+          ),
           const SizedBox(height: 8),
           ...artifacts.map((a) => _buildArtifactItem(context, a)),
         ],
@@ -510,11 +521,8 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontFamily: 'monospace',
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withValues(
-                                    alpha: 0.35,
-                                  ),
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.35),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -721,9 +729,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       final file = File(filePath);
       if (!await file.exists()) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.fileNotFound)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context)!.fileNotFound)),
+          );
         }
         return;
       }
@@ -737,9 +745,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       await Process.run(command, args, runInShell: true);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.openFileFailed)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.openFileFailed)),
+        );
       }
     }
   }
@@ -747,15 +755,14 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   /// 在文件管理器中打开文件所在的文件夹
   Future<void> _openFileLocation(String path) async {
     try {
-      final entity = FileSystemEntity.isDirectorySync(path)
-          ? Directory(path)
-          : File(path);
-      
+      final entity =
+          FileSystemEntity.isDirectorySync(path) ? Directory(path) : File(path);
+
       if (!await entity.exists()) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.fileNotFound)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context)!.fileNotFound)),
+          );
         }
         return;
       }
@@ -782,9 +789,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.openFileFailed)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.openFileFailed)),
+        );
       }
     }
   }

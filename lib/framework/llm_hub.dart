@@ -197,11 +197,7 @@ class LlmClient {
           _finalizeNativeToolCalls(nativeToolCallDeltas);
 
       if (_cancelled || parsedCalls.isEmpty) {
-        // 所有工具调用处理完毕，此时才发送 done 信号
-        if (doneReceived) {
-          yield {'done': 'true'};
-        }
-        // ========== 记忆累积 & 压缩 ==========
+        // ========== 记忆累积 & 压缩（必须在 done 之前处理，避免接收端 break 后丢失） ==========
         if (!_cancelled && responseBuffer.isNotEmpty) {
           // 累积到会话级记忆并检查压缩
           final memoryUpdatedSession = await accumulateMemory(
@@ -214,6 +210,10 @@ class LlmClient {
               'memory_updated': jsonEncode(memoryUpdatedSession.toJson()),
             };
           }
+        }
+        // 所有工具调用处理完毕，此时才发送 done 信号
+        if (doneReceived) {
+          yield {'done': 'true'};
         }
         return;
       }
@@ -399,15 +399,25 @@ class LlmClient {
     return null;
   }
 
-  /// 累积记忆并触发压缩
+  /// 累积对话记忆并在达到阈值时触发压缩
+  ///
+  /// 逻辑：
+  /// 1. 将本轮 user/assistant 消息添加到 [ChatSession.memory]
+  /// 2. 检查记忆轮数是否达到 [ChatSession.memoryRounds] 阈值
+  /// 3. 达到阈值时，调用 LLM 压缩 memory + compressedMemory，生成新的压缩摘要
+  /// 4. 压缩成功后，更新 compressedMemory 并清空 memory（重新累积）
+  /// 5. 未达到阈值时，只更新 memory
+  ///
+  /// 返回更新后的 ChatSession（如果记忆有变化），否则返回 null
   Future<ChatSession?> accumulateMemory(
     String userText,
     String assistantText,
     SessionController? sessionController,
   ) async {
+    // 禁用记忆压缩
     if (_session.memoryRounds <= 0) return null;
 
-    // 添加本轮到记忆
+    // 添加本轮对话到记忆
     final now = DateTime.now();
     final updatedMemory = List<MemoryTurn>.from(_session.memory)
       ..add(MemoryTurn(role: 'user', content: userText, timestamp: now))
@@ -419,7 +429,7 @@ class LlmClient {
 
     final rounds = MemoryTurn.roundCount(updatedMemory);
 
-    // 检查是否需要压缩（使用 memoryRounds 作为阈值）
+    // 达到压缩阈值，触发 LLM 压缩
     if (rounds >= _session.memoryRounds) {
       if (kDebugMode) {
         debugPrint(

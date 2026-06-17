@@ -33,7 +33,8 @@ class ChatSession {
   /// 绑定的技能（null = 未绑定，运行时由 skillId 动态解析）
   final Skill? skill;
 
-  /// 记忆轮数（0 = 无记忆，默认 20）
+  /// 触发记忆压缩的轮数（0 = 禁用记忆压缩，默认 20）
+  /// 当累积的记忆达到此轮数时，自动触发 LLM 压缩
   final int memoryRounds;
 
   /// 深度思考模式（默认关闭）
@@ -49,9 +50,6 @@ class ChatSession {
 
   /// 压缩后的记忆摘要（由 LLM 生成）
   final String? compressedMemory;
-
-  /// 触发记忆压缩的轮数阈值（默认 20）
-  final int memoryCompressThreshold;
 
   // ============================
 
@@ -96,7 +94,6 @@ class ChatSession {
     this.scheduledTask,
     this.memory = const [],
     this.compressedMemory,
-    this.memoryCompressThreshold = 20,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcpId = mcpId ?? mcp?.mcpId,
        skillId = skillId ?? skill?.skillId;
@@ -164,7 +161,6 @@ class ChatSession {
     bool clearMemory = false,
     String? compressedMemory,
     bool clearCompressedMemory = false,
-    int? memoryCompressThreshold,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -238,7 +234,6 @@ class ChatSession {
       memory: clearMemory ? [] : (memory ?? this.memory),
       compressedMemory:
           clearCompressedMemory ? null : (compressedMemory ?? this.compressedMemory),
-      memoryCompressThreshold: memoryCompressThreshold ?? this.memoryCompressThreshold,
     );
   }
 
@@ -299,7 +294,6 @@ class ChatSession {
               .toList() ??
           [],
       compressedMemory: json['compressedMemory'] as String?,
-      memoryCompressThreshold: json['memoryCompressThreshold'] as int? ?? 20,
       modelId: modelId,
       mcpId: mcpId,
       skillId: skillId,
@@ -332,7 +326,6 @@ class ChatSession {
       if (scheduledTask != null) 'scheduledTask': scheduledTask!.toJson(),
       'memory': memory.map((t) => t.toJson()).toList(),
       if (compressedMemory != null) 'compressedMemory': compressedMemory,
-      'memoryCompressThreshold': memoryCompressThreshold,
       if (modelId != null) 'modelId': modelId,
       if (mcpId != null) 'mcpId': mcpId,
       if (skillId != null) 'skillId': skillId,

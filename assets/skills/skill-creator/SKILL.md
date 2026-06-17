@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends CodeBuddy's capabilities with specialized knowledge, workflows, or tool integrations.
+description: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends LLMWork's capabilities with specialized knowledge, workflows, or tool integrations.
 license: Complete terms in LICENSE.txt
 allowed-tools:
 disable: false
@@ -12,9 +12,9 @@ This skill provides guidance for creating effective skills.
 
 ## About Skills
 
-Skills are modular, self-contained packages that extend CodeBuddy's capabilities by providing
+Skills are modular, self-contained packages that extend LLMWork's capabilities by providing
 specialized knowledge, workflows, and tools. Think of them as "onboarding guides" for specific
-domains or tasks—they transform CodeBuddy from a general-purpose agent into a specialized agent
+domains or tasks—they transform LLMWork from a general-purpose agent into a specialized agent
 equipped with procedural knowledge that no model can fully possess.
 
 ### What Skills Provide
@@ -43,7 +43,7 @@ skill-name/
 
 #### SKILL.md (required)
 
-**Metadata Quality:** The `name` and `description` in YAML frontmatter determine when CodeBuddy will use the skill. Be specific about what the skill does and when to use it. Use the third-person (e.g. "This skill should be used when..." instead of "Use this skill when...").
+**Metadata Quality:** The `name` and `description` in YAML frontmatter determine when LLMWork will use the skill. Be specific about what the skill does and when to use it. Use the third-person (e.g. "This skill should be used when..." instead of "Use this skill when...").
 
 **Agent-Created Flag:** The YAML frontmatter MUST include `agent_created: true` so that `skill_manage` can modify or delete the skill later.
 
@@ -56,27 +56,27 @@ Executable code (Python/Bash/etc.) for tasks that require deterministic reliabil
 - **When to include**: When the same code is being rewritten repeatedly or deterministic reliability is needed
 - **Example**: `scripts/rotate_pdf.py` for PDF rotation tasks
 - **Benefits**: Token efficient, deterministic, may be executed without loading into context
-- **Note**: Scripts may still need to be read by CodeBuddy for patching or environment-specific adjustments
+- **Note**: Scripts may still need to be read by LLMWork for patching or environment-specific adjustments
 
 ##### References (`references/`)
 
-Documentation and reference material intended to be loaded as needed into context to inform CodeBuddy's process and thinking.
+Documentation and reference material intended to be loaded as needed into context to inform LLMWork's process and thinking.
 
-- **When to include**: For documentation that CodeBuddy should reference while working
+- **When to include**: For documentation that LLMWork should reference while working
 - **Examples**: `references/finance.md` for financial schemas, `references/mnda.md` for company NDA template, `references/policies.md` for company policies, `references/api_docs.md` for API specifications
 - **Use cases**: Database schemas, API documentation, domain knowledge, company policies, detailed workflow guides
-- **Benefits**: Keeps SKILL.md lean, loaded only when CodeBuddy determines it's needed
+- **Benefits**: Keeps SKILL.md lean, loaded only when LLMWork determines it's needed
 - **Best practice**: If files are large (>10k words), include grep search patterns in SKILL.md
 - **Avoid duplication**: Information should live in either SKILL.md or references files, not both. Prefer references files for detailed information unless it's truly core to the skill—this keeps SKILL.md lean while making information discoverable without hogging the context window. Keep only essential procedural instructions and workflow guidance in SKILL.md; move detailed reference material, schemas, and examples to references files.
 
 ##### Assets (`assets/`)
 
-Files not intended to be loaded into context, but rather used within the output CodeBuddy produces.
+Files not intended to be loaded into context, but rather used within the output LLMWork produces.
 
 - **When to include**: When the skill needs files that will be used in the final output
 - **Examples**: `assets/logo.png` for brand assets, `assets/slides.pptx` for PowerPoint templates, `assets/frontend-template/` for HTML/React boilerplate, `assets/font.ttf` for typography
 - **Use cases**: Templates, images, icons, boilerplate code, fonts, sample documents that get copied or modified
-- **Benefits**: Separates output resources from documentation, enables CodeBuddy to use files without loading them into context
+- **Benefits**: Separates output resources from documentation, enables LLMWork to use files without loading them into context
 
 ### Progressive Disclosure Design Principle
 
@@ -84,7 +84,7 @@ Skills use a three-level loading system to manage context efficiently:
 
 1. **Metadata (name + description)** - Always in context (~100 words)
 2. **SKILL.md body** - When skill triggers (<5k words)
-3. **Bundled resources** - As needed by CodeBuddy (Unlimited*)
+3. **Bundled resources** - As needed by LLMWork (Unlimited*)
 
 *Unlimited because scripts can be executed without reading into context window.
 
@@ -139,14 +139,13 @@ At this point, it is time to actually create the skill.
 
 Skip this step only if the skill being developed already exists, and iteration or packaging is needed. In this case, continue to the next step.
 
-Skills can be stored in two locations depending on the intended scope:
+Skills are stored in the LLMWork skills directory:
 
 | Type | Path | Scope |
 |------|------|-------|
-| User skill | `~/.codebuddy/skills/skill-name/` | Available across all your projects |
-| Project skill | `.codebuddy/skills/skill-name/` | Shared with everyone using the repository |
+| User skill | `~/.llmwork/skills/skill-name/` | Available across all your projects |
 
-When the intended scope is unclear, prefer a **user skill** — it follows you across all workspaces and is appropriate for most personal workflows. Use a **project skill** only when there is a clear need to share the skill with collaborators, such as team conventions, project-specific schemas, or shared workflows.
+All skills are stored as user skills under `~/.llmwork/skills/`, making them available globally across all workspaces.
 
 When creating a new skill from scratch, always run the `init_skill.py` script. The script conveniently generates a new template skill directory that automatically includes everything a skill requires, making the skill creation process much more efficient and reliable.
 
@@ -156,7 +155,7 @@ Usage:
 scripts/init_skill.py <skill-name> [--path <output-directory>]
 ```
 
-If `--path` is omitted, the skill is created under `~/.codebuddy/skills/` (user scope) by default.
+If `--path` is omitted, the skill is created under `~/.llmwork/skills/` by default.
 
 The script:
 
@@ -169,7 +168,7 @@ After initialization, customize or remove the generated SKILL.md and example fil
 
 ### Step 4: Edit the Skill
 
-When editing the (newly-generated or existing) skill, remember that the skill is being created for another instance of CodeBuddy to use. Focus on including information that would be beneficial and non-obvious to CodeBuddy. Consider what procedural knowledge, domain-specific details, or reusable assets would help another CodeBuddy instance execute these tasks more effectively.
+When editing the (newly-generated or existing) skill, remember that the skill is being created for another instance of LLMWork to use. Focus on including information that would be beneficial and non-obvious to LLMWork. Consider what procedural knowledge, domain-specific details, or reusable assets would help another LLMWork instance execute these tasks more effectively.
 
 #### Start with Reusable Skill Contents
 
@@ -185,7 +184,7 @@ To complete SKILL.md, answer the following questions:
 
 1. What is the purpose of the skill, in a few sentences?
 2. When should the skill be used?
-3. In practice, how should CodeBuddy use the skill? All reusable skill contents developed above should be referenced so that CodeBuddy knows how to use them.
+3. In practice, how should LLMWork use the skill? All reusable skill contents developed above should be referenced so that LLMWork knows how to use them.
 
 ### Step 5: Packaging a Skill
 

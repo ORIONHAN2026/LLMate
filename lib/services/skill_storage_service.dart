@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 import '../models/chat/skill.dart';
 
@@ -13,108 +12,74 @@ import '../models/chat/skill.dart';
 /// 技能以文件夹形式存储在应用文档目录下，每个技能文件夹内有一个 `SKILL.md`。
 /// 内置技能从 assets/skills/ 复制到文档目录。
 class SkillStorageService {
-  /// 获取 skills 根目录（应用支持目录下的 skills/）
+  /// 获取 skills 根目录（~/.llmwork/skills/）
   static Future<String> getSkillsRootDir() async {
-    try {
-      // 优先使用 path_provider 的 Application Support 目录
-      final appSupportDir = await getApplicationSupportDirectory();
-      final skillsDir = Directory(p.join(appSupportDir.path, 'skills'));
-      debugPrint('📂 技能目录:1 ${skillsDir.path}');
-
-      if (!await skillsDir.exists()) {
-        debugPrint('📂 创建技能目录: ${skillsDir.path}');
-
-        await skillsDir.create(recursive: true);
-      } else {
-        debugPrint('📂 已存在技能目录: ${skillsDir.path}');
-      }
-      return skillsDir.path;
-    } catch (e) {
-      // 备用方案：手动构建路径
-      debugPrint('⚠️ path_provider 失败: $e，使用备用方案');
-      final home = Platform.environment['HOME'];
-      if (home != null) {
-        // macOS: ~/Library/Application Support/[bundleId]/skills
-        // 尝试从 info.plist 读取 bundleId，默认为 com.llmwork.app
-        final bundleId = 'com.feedfox.llmwork'; // 可以从 Plist 读取，暂时硬编码
-        final fallbackDir = Directory(
-          p.join(home, 'Library', 'Application Support', bundleId, 'skills'),
-        );
-        if (!await fallbackDir.exists()) {
-          await fallbackDir.create(recursive: true);
-        }
-        debugPrint('📂 备用技能目录: ${fallbackDir.path}');
-        return fallbackDir.path;
-      }
-      // 最后备用：当前目录下的 skills/
-      final cwd = Directory.current.path;
-      final fallbackDir = Directory(p.join(cwd, 'skills'));
-      if (!await fallbackDir.exists()) {
-        await fallbackDir.create(recursive: true);
-      }
-      debugPrint('📂 最后备用技能目录: ${fallbackDir.path}');
-      return fallbackDir.path;
+    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+    final skillsDir = Directory(p.join(home!, '.llmwork', 'skills'));
+    if (!await skillsDir.exists()) {
+      await skillsDir.create(recursive: true);
     }
+    return skillsDir.path;
   }
 
   /// 复制内置技能到可写目录（覆盖模式）
-  /// 复制内置技能到可写目录（覆盖模式）
+  /// 自动动态复制 assets/skills/ 目录下的所有内置技能到可写目录（覆盖模式）
   static Future<void> copyBuiltinSkillsFromAssets() async {
     final skillsRoot = await getSkillsRootDir();
 
-    // 直接指定内置技能列表
-    const builtinSkills = ['skill-creator'];
-
+    // 1. 加载 Flutter 资源清单
     final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
-    // 拿到所有的 asset keys
     final allAssets = assetManifest.listAssets();
 
-    // 💡 调试利器：如果还是拷不成功，把下面这行的注释打开，看看到底输出了什么路径
-    // debugPrint('📦 Flutter 识别到的所有资源: $allAssets');
-
     int copiedCount = 0;
+    final Set<String> detectedSkills = {}; // 用于统计识别到了多少个独立技能文件夹
 
-    for (final skillName in builtinSkills) {
-      // 兼容处理：有些版本的 key 带有 assets/，有些没有，我们用 contains 或更宽松的匹配
-      final targetPart = 'skills/$skillName/';
-      debugPrint('📂 开始检索技能资源，关键字: $targetPart');
+    debugPrint('📂 开始扫描内置技能资源...');
 
-      // 筛选出属于当前技能的资源文件
-      final skillAssets =
-          allAssets.where((path) => path.contains(targetPart)).toList();
+    // 2. 过滤出所有属于 skills 目录的资源文件
+    // 兼容处理：检查路径中是否包含 'skills/'
+    final skillAssets =
+        allAssets.where((path) => path.contains('skills/')).toList();
 
-      debugPrint('📂 匹配到的相关资源文件数量: ${skillAssets.length}');
+    for (final assetPath in skillAssets) {
+      try {
+        // 3. 定位 'skills/' 在路径中的位置，动态计算相对路径
+        final skillsIndex = assetPath.indexOf('skills/');
+        if (skillsIndex == -1) continue;
 
-      for (final assetPath in skillAssets) {
-        try {
-          final data = await rootBundle.load(assetPath);
-          final bytes = data.buffer.asUint8List();
+        // 截取后得到如: skills/skill-creator/SKILL.md
+        final relativePathWithSkills = assetPath.substring(skillsIndex);
 
-          // 动态计算相对路径：从包含 skills/ 的地方开始截取
-          final skillsIndex = assetPath.indexOf('skills/');
-          if (skillsIndex == -1) continue;
+        // 进一步去掉 'skills/'，得到真实的相对路径: skill-creator/SKILL.md
+        final relativePath = relativePathWithSkills.substring('skills/'.length);
 
-          // 截取后变成: skills/skill-creator/SKILL.md
-          final relativePathWithSkills = assetPath.substring(skillsIndex);
-          // 进一步去掉 'skills/'，得到: skill-creator/SKILL.md
-          final relativePath = relativePathWithSkills.substring(
-            'skills/'.length,
-          );
+        // 如果相对路径为空或者是纯空字符串，则跳过
+        if (relativePath.trim().isEmpty) continue;
 
-          final targetFile = File(p.join(skillsRoot, relativePath));
+        // 统计识别到的技能文件夹名称（第一级子目录）
+        final firstSegment = p.split(relativePath).first;
+        detectedSkills.add(firstSegment);
 
-          await targetFile.parent.create(recursive: true);
-          await targetFile.writeAsBytes(bytes);
+        // 4. 构建目标写入路径
+        final targetFile = File(p.join(skillsRoot, relativePath));
 
-          debugPrint('  📄 成功复制到: ${targetFile.path}');
-          copiedCount++;
-        } catch (e) {
-          debugPrint('  ⚠️ 复制失败: $assetPath, 错误: $e');
-        }
+        // 5. 读取并写入文件
+        final data = await rootBundle.load(assetPath);
+        final bytes = data.buffer.asUint8List();
+
+        await targetFile.parent.create(recursive: true);
+        await targetFile.writeAsBytes(bytes);
+
+        copiedCount++;
+      } catch (e) {
+        debugPrint('  ⚠️ 复制文件失败: $assetPath, 错误: $e');
       }
     }
 
-    debugPrint('✅ SkillStorageService: 已从 assets 复制 $copiedCount 个文件（覆盖模式）');
+    debugPrint(
+      '✅ SkillStorageService: 扫描到 ${detectedSkills.length} 个技能文件夹 (${detectedSkills.toList()})',
+    );
+    debugPrint('✅ 成功从 assets 复制了 $copiedCount 个文件到沙盒目录。');
   }
 
   /// 打印可写目录中的技能列表（调试用）

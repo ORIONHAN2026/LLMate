@@ -1911,7 +1911,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       await for (final chunkMap in provider.sendMessageStream(
         userMessage: testMessage,
         session: null,
-      )) {
+      ).timeout(const Duration(seconds: 10))) {
         hasReceived = true;
 
         final chunk = chunkMap['content'] ?? '';

@@ -44,6 +44,12 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   // 工具执行块的展开状态（存储已展开的工具块索引）
   final Set<int> _expandedToolIndices = {};
 
+  // 是否为当前会话最后一条消息
+  bool get _isLastMessage {
+    final msgs = sessionController.currentSession.value?.messages ?? [];
+    return msgs.isNotEmpty && msgs.last.msgId == widget.message.msgId;
+  }
+
   // 内部动画控制器和动画
   late AnimationController _breathingAnimationController;
   late Animation<double> _breathingAnimation;
@@ -289,9 +295,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
                         // 底部时间信息和操作按钮 - 悬停时显示，但保持布局高度
                         SizedBox(
-                          height: 32, // 固定高度避免飘动
+                          height: 32,
                           child: AnimatedOpacity(
-                            opacity: _isHovered ? 1.0 : 0.0,
+                            opacity: (_isHovered || widget.message.isToolCalling || _isLastMessage) ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 200),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -348,6 +354,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                         );
                                       },
                                     ),
+                                    const SizedBox(width: 4),
+                                    // 工具执行扳手（始终显示，执行时旋转）
+                                    _buildAnimatedWrenchIcon(),
                                   ],
                                 ),
                                 // 时间信息
@@ -1399,8 +1408,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAnimatedWrenchIcon(),
-          const SizedBox(height: 4),
           if (widget.message.think.isNotEmpty)
             _buildThinkBlock(widget.message.think),
 
@@ -1452,15 +1459,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           },
         ),
       _buildFileTags(allContentText.toString()),
-      // 仅在工具执行中展示调用状态，完成后隐藏工具调用记录
-      if (toolBlocks.isNotEmpty && widget.message.isToolCalling) ...[
-        const SizedBox(height: 12),
-        _buildToolBlock(
-          0, // 固定索引，因为只有一个聚合块
-          toolBlocks.map((t) => t.$2.text).join('\n\n'),
-          isExecuting: true,
-        ),
-      ],
     ];
 
     return Column(
@@ -1575,9 +1573,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               ),
               child: Row(
                 children: [
-                  // 工具执行图标（执行中旋转动画）
-                  _buildAnimatedWrenchIcon(),
-                  const SizedBox(width: 6),
                   // 最新一行内容预览（动态更新）
                   Expanded(
                     child: Text(

@@ -156,7 +156,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     if (messageDate == today) {
       return l10n.todayTime(timeString);
     } else {
-      return l10n.monthDayTime(timestamp.month.toString(), timestamp.day.toString(), timeString);
+      return l10n.monthDayTime(
+        timestamp.month.toString(),
+        timestamp.day.toString(),
+        timeString,
+      );
     }
   }
 
@@ -302,7 +306,12 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         SizedBox(
                           height: 32,
                           child: AnimatedOpacity(
-                            opacity: (_isHovered || widget.message.isToolCalling || _isLastMessage) ? 1.0 : 0.0,
+                            opacity:
+                                (_isHovered ||
+                                        widget.message.isToolCalling ||
+                                        _isLastMessage)
+                                    ? 1.0
+                                    : 0.0,
                             duration: const Duration(milliseconds: 200),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -361,7 +370,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                     ),
                                     const SizedBox(width: 4),
                                     // 工具执行呼吸灯（始终显示，执行时呼吸脉冲）
-                                    _buildToolIndicator(),
+                                    Tooltip(
+                                      message: '工具执行指示灯',
+                                      child: _buildToolIndicator(),
+                                    ),
                                   ],
                                 ),
                                 // 时间信息
@@ -461,7 +473,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     } catch (e) {
       debugPrint('打开链接时发生错误: $e');
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.openLinkFailed);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.openLinkFailed,
+        );
       }
     }
   }
@@ -479,9 +494,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       }
 
       // 根据操作系统选择命令打开文件
-      final command = Platform.isWindows
-          ? 'start'
-          : Platform.isMacOS
+      final command =
+          Platform.isWindows
+              ? 'start'
+              : Platform.isMacOS
               ? 'open'
               : 'xdg-open';
       final args = Platform.isWindows ? ['', filePath] : [filePath];
@@ -494,13 +510,19 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       } else {
         debugPrint('打开文件失败: ${result.stderr}');
         if (mounted) {
-          SnackBarUtils.showError(context, '${l10n.cannotOpenFile}: ${result.stderr}');
+          SnackBarUtils.showError(
+            context,
+            '${l10n.cannotOpenFile}: ${result.stderr}',
+          );
         }
       }
     } catch (e) {
       debugPrint('打开文件时发生错误: $e');
       if (mounted) {
-        SnackBarUtils.showError(context, '${AppLocalizations.of(context)!.openFileFailed}: $e');
+        SnackBarUtils.showError(
+          context,
+          '${AppLocalizations.of(context)!.openFileFailed}: $e',
+        );
       }
     }
   }
@@ -550,7 +572,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       widget.onUpdate?.call();
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, l10n.xFailed(l10n.regenerate, e.toString()));
+        SnackBarUtils.showError(
+          context,
+          l10n.xFailed(l10n.regenerate, e.toString()),
+        );
       }
     }
   }
@@ -583,7 +608,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.cannotFindQuestion,
+        );
       }
       return;
     }
@@ -618,7 +646,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.cannotFindQuestion,
+        );
       }
       return;
     }
@@ -653,7 +684,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.cannotFindQuestion,
+        );
       }
       return;
     }
@@ -687,7 +721,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (lastAiMessage == null) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.noAiReplyFound);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.noAiReplyFound,
+        );
       }
       return;
     }
@@ -705,7 +742,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.cannotFindQuestion,
+        );
       }
       return;
     }
@@ -739,7 +779,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           // 重新生成此回复：只替换当前消息内容，保留前后所有消息
           if (targetIndex < 0 || targetIndex >= messages.length) {
             if (mounted) {
-              SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotRegenerateInvalidIndex);
+              SnackBarUtils.showError(
+                context,
+                AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
+              );
             }
             return;
           }
@@ -767,7 +810,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           // 其他情况：删除从目标索引开始的所有消息
           if (targetIndex < 0 || targetIndex > messages.length) {
             if (mounted) {
-              SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotRegenerateInvalidIndex);
+              SnackBarUtils.showError(
+                context,
+                AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
+              );
             }
             return;
           }
@@ -792,7 +838,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       );
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(actionName, e.toString()));
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.xFailed(actionName, e.toString()),
+        );
       }
 
       // 确保重置发送状态
@@ -1037,11 +1086,17 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       }
 
       if (mounted) {
-        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.xDone(actionName));
+        SnackBarUtils.showSuccess(
+          context,
+          AppLocalizations.of(context)!.xDone(actionName),
+        );
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(actionName, e.toString()));
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.xFailed(actionName, e.toString()),
+        );
       }
 
       // 重置发送状态
@@ -1166,7 +1221,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 if (newContent.isNotEmpty) {
                   // 使用专用的编辑回调
                   if (newContent.trim().isEmpty) {
-                    SnackBarUtils.showError(context, l10n.messageContentCannotBeEmpty);
+                    SnackBarUtils.showError(
+                      context,
+                      l10n.messageContentCannotBeEmpty,
+                    );
                     return;
                   }
 
@@ -1180,7 +1238,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
                   Navigator.of(context).pop();
                 } else {
-                  SnackBarUtils.showError(context, l10n.messageContentCannotBeEmpty);
+                  SnackBarUtils.showError(
+                    context,
+                    l10n.messageContentCannotBeEmpty,
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -1245,7 +1306,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         SnackBarUtils.showSuccess(context, l10n.newChatCreatedFromHere);
       }
     } catch (e) {
-      SnackBarUtils.showError(context, AppLocalizations.of(context)!.createNewChatFailed);
+      SnackBarUtils.showError(
+        context,
+        AppLocalizations.of(context)!.createNewChatFailed,
+      );
     }
   }
 
@@ -1537,19 +1601,33 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           width: 12,
           height: 12,
           decoration: BoxDecoration(
-            color: isCalling
-                ? const Color(0xFF4CAF50).withValues(alpha: opacity)
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: opacity),
+            color:
+                isCalling
+                    ? const Color.fromARGB(
+                      255,
+                      0,
+                      100,
+                      0,
+                    ).withValues(alpha: opacity)
+                    : Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: opacity),
             shape: BoxShape.circle,
-            boxShadow: isCalling
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF4CAF50).withValues(alpha: opacity * 0.5),
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                    ),
-                  ]
-                : null,
+            boxShadow:
+                isCalling
+                    ? [
+                      BoxShadow(
+                        color: const Color.fromARGB(
+                          255,
+                          0,
+                          100,
+                          0,
+                        ).withValues(alpha: opacity * 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                    : null,
           ),
         );
       },
@@ -1563,11 +1641,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       r'(?<![(\[])(?<!file:\/{1,3})(\/(?:Users|home|tmp|var|etc|opt|srv)\/[\w./\-_\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+\.(?:docx?|xlsx?|xls|csv|pdf|pptx?|png|jpe?g|gif|webp|bmp|tiff?|md|txt|json|html?|css|dart|py|js|ts|java|xml|yaml|yml|toml|sh|log))',
       caseSensitive: false,
     );
-    return pathRegex
-        .allMatches(text)
-        .map((m) => m.group(0)!)
-        .toSet()
-        .toList();
+    return pathRegex.allMatches(text).map((m) => m.group(0)!).toSet().toList();
   }
 
   /// 构建文件路径标签行（位于消息内容下方）
@@ -1580,53 +1654,63 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       child: Wrap(
         spacing: 6,
         runSpacing: 6,
-        children: paths.map((path) {
-          final fileName = path.contains('/')
-              ? path.substring(path.lastIndexOf('/') + 1)
-              : path;
-          return GestureDetector(
-            onTap: () => _openFile(path),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                  width: 0.5,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _iconForExtension(fileName),
-                    size: 12,
-                    color: Theme.of(context).colorScheme.primary,
+        children:
+            paths.map((path) {
+              final fileName =
+                  path.contains('/')
+                      ? path.substring(path.lastIndexOf('/') + 1)
+                      : path;
+              return GestureDetector(
+                onTap: () => _openFile(path),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    fileName,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w500,
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.2),
+                      width: 0.5,
                     ),
                   ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _iconForExtension(fileName),
+                        size: 12,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        fileName,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
       ),
     );
   }
 
   /// 根据文件扩展名返回对应图标
   IconData _iconForExtension(String fileName) {
-    final ext = fileName.contains('.')
-        ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase()
-        : '';
+    final ext =
+        fileName.contains('.')
+            ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase()
+            : '';
     switch (ext) {
       case 'pdf':
         return CupertinoIcons.doc_text;
@@ -1852,9 +1936,15 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                           await sessionController.deleteMessage(widget.message);
                           // 通知父组件更新
                           widget.onUpdate?.call();
-                          SnackBarUtils.showSuccess(context, l10n.messageDeleted);
+                          SnackBarUtils.showSuccess(
+                            context,
+                            l10n.messageDeleted,
+                          );
                         } catch (e) {
-                          SnackBarUtils.showError(context, l10n.xFailed(l10n.deleteMessage, e.toString()));
+                          SnackBarUtils.showError(
+                            context,
+                            l10n.xFailed(l10n.deleteMessage, e.toString()),
+                          );
                         }
                       },
                     ),

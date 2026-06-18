@@ -170,8 +170,11 @@ class OtherSettingsPage extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(CupertinoIcons.checkmark_alt_circle_fill,
-                  size: 22, color: colorScheme.primary),
+              Icon(
+                CupertinoIcons.checkmark_alt_circle_fill,
+                size: 22,
+                color: colorScheme.primary,
+              ),
           ],
         ),
       ),
@@ -205,8 +208,7 @@ class OtherSettingsPage extends StatelessWidget {
               selected: isSys,
               isFirst: true,
               isLast: false,
-              onTap: () =>
-                  themeController.setThemeMode(ThemeMode.system),
+              onTap: () => themeController.setThemeMode(ThemeMode.system),
             ),
             _buildDivider(colorScheme),
             _buildSkinTile(
@@ -217,8 +219,7 @@ class OtherSettingsPage extends StatelessWidget {
               selected: !isSys && !isDark,
               isFirst: false,
               isLast: false,
-              onTap: () =>
-                  themeController.setThemeMode(ThemeMode.light),
+              onTap: () => themeController.setThemeMode(ThemeMode.light),
             ),
             _buildDivider(colorScheme),
             _buildSkinTile(
@@ -229,8 +230,7 @@ class OtherSettingsPage extends StatelessWidget {
               selected: !isSys && isDark,
               isFirst: false,
               isLast: true,
-              onTap: () =>
-                  themeController.setThemeMode(ThemeMode.dark),
+              onTap: () => themeController.setThemeMode(ThemeMode.dark),
             ),
           ],
         );
@@ -258,8 +258,11 @@ class OtherSettingsPage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, size: 20,
-                color: colorScheme.onSurface.withValues(alpha: 0.6)),
+            Icon(
+              icon,
+              size: 20,
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -285,8 +288,11 @@ class OtherSettingsPage extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(CupertinoIcons.checkmark_alt_circle_fill,
-                  size: 22, color: colorScheme.primary),
+              Icon(
+                CupertinoIcons.checkmark_alt_circle_fill,
+                size: 22,
+                color: colorScheme.primary,
+              ),
           ],
         ),
       ),

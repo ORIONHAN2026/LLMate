@@ -280,13 +280,34 @@ class _AppInitializerState extends State<AppInitializer> {
       // 加载会话数据
       await sessionController.loadAll();
 
-      // 如果没有会话，自动创建一个默认会话
+      // 如果没有会话，自动创建一个默认会话（模拟手动按钮行为）
       if (sessionController.sessions.isEmpty) {
+        // 严格模拟 home.dart 中 _createNewSession 的模型匹配逻辑
+        ChatModel? selectedModelObject;
+        try {
+          final modelController = Get.find<ModelController>();
+          final availableModels = modelController.models;
+          if (availableModels.isNotEmpty) {
+            const defaultModelName = 'DeepSeekR1';
+            try {
+              selectedModelObject = availableModels.firstWhere(
+                (m) => m.name == defaultModelName,
+              );
+            } catch (_) {
+              // 没找到 DeepSeekR1，使用第一个可用模型
+              selectedModelObject = availableModels.first;
+            }
+          }
+        } catch (_) {
+          // ModelController 不可用
+        }
+
         final defaultSession = ChatSession(
           sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
           name: '新对话',
           createdAt: DateTime.now(),
           messages: [],
+          chatModel: selectedModelObject, // 有可用模型时自动绑定
           inputContent: '',
           attachments: [],
         );

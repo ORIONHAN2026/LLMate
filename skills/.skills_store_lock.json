@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "skills": {
+    "chat": {
+      "name": "Chat",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=chat",
+      "source": "community",
+      "version": "1.1.0",
+      "installedAt": "2026-06-17T22:57:40Z"
+    },
+    "weather": {
+      "name": "Weather",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=weather",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-17T23:31:48Z"
+    }
+  }
+}

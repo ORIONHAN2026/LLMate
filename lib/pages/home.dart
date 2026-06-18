@@ -588,7 +588,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('工具管理(MCP)', style: TextStyle(fontSize: 12)),
+              const Text('连接器管理(MCP)', style: TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {

@@ -33,7 +33,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get languageSettings => '语言设置';
 
   @override
-  String get skinSettings => '皮肤设置';
+  String get skinSettings => '外观设置';
 
   @override
   String get followSystem => '跟随系统';

@@ -1,0 +1,6 @@
+{
+  "envId": "cloud1-1gqqkl7s9ff46343",
+  "cloudrun": {
+    "name": "llmwork-wechatpublic"
+  }
+}

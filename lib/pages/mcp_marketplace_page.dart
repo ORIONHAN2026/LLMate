@@ -1117,7 +1117,10 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
         }
       }
 
+      // 保留原始服务 JSON 作为 content，确保 body 等非标准字段不丢失
+      final content = jsonEncode(serviceJson);
       return Mcp(
+        content: content,
         mcpId: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
         name: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
         command: serviceJson['command'] as String?,

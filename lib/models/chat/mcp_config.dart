@@ -87,6 +87,19 @@ class Mcp {
   final DateTime? lastUpdated; // 最后更新时间
   final String? prompt; // LLM 用的工具介绍文本（添加/刷新时生成）
 
+  /// 从 content JSON 中提取 body 字段（非标准 MCP 扩展，用于传递服务端特定参数）
+  Map<String, dynamic>? get body {
+    if (content == null || content!.isEmpty) return null;
+    try {
+      final map = jsonDecode(content!) as Map<String, dynamic>;
+      final bodyVal = map['body'];
+      if (bodyVal is Map<String, dynamic> && bodyVal.isNotEmpty) {
+        return bodyVal;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   const Mcp({
     this.content,
     required this.mcpId,

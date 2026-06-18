@@ -28,6 +28,10 @@ class StreamableHttpTransportConfig {
   /// Additional headers to send with requests
   final Map<String, String> headers;
 
+  /// Additional body fields to merge into every JSON-RPC request
+  /// (non-standard extension for passing server-specific credentials)
+  final Map<String, dynamic>? body;
+
   /// Request timeout
   final Duration timeout;
 
@@ -47,6 +51,7 @@ class StreamableHttpTransportConfig {
     required this.baseUrl,
     this.oauthConfig,
     this.headers = const {},
+    this.body,
     this.timeout = const Duration(seconds: 30),
     this.sseReadTimeout = const Duration(minutes: 5),
     this.maxConcurrentRequests = 10,
@@ -89,6 +94,7 @@ class StreamableHttpClientTransport implements ClientTransport {
     required String baseUrl,
     OAuthConfig? oauthConfig,
     Map<String, String>? headers,
+    Map<String, dynamic>? body,
     Duration? timeout,
     int? maxConcurrentRequests,
     bool? useHttp2,
@@ -99,6 +105,7 @@ class StreamableHttpClientTransport implements ClientTransport {
       baseUrl: baseUrl,
       oauthConfig: oauthConfig,
       headers: headers ?? const {},
+      body: body,
       timeout: timeout ?? const Duration(seconds: 30),
       maxConcurrentRequests: maxConcurrentRequests ?? 10,
       useHttp2: useHttp2 ?? true,
@@ -222,6 +229,18 @@ class StreamableHttpClientTransport implements ClientTransport {
           }
           rethrow;
         }
+      }
+
+      // Merge extra body fields from config into the JSON-RPC message
+      // (non-standard extension, e.g. for passing server-specific credentials)
+      if (config.body != null && config.body!.isNotEmpty && message is Map) {
+        final merged = Map<String, dynamic>.from(message);
+        config.body!.forEach((key, value) {
+          if (!merged.containsKey(key)) {
+            merged[key] = value;
+          }
+        });
+        message = merged;
       }
 
       final body = jsonEncode(message);

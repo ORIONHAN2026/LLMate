@@ -135,6 +135,7 @@ class McpService {
         return StreamableHttpClientTransport.create(
           baseUrl: config.url!,
           headers: config.headers,
+          body: config.body,
           timeout: timeout,
         );
       } else if (transportType == McpTransportType.sse) {
@@ -152,6 +153,7 @@ class McpService {
             return StreamableHttpClientTransport.create(
               baseUrl: config.url!,
               headers: config.headers,
+              body: config.body,
               timeout: timeout,
             );
           }
@@ -173,6 +175,7 @@ class McpService {
             return StreamableHttpClientTransport.create(
               baseUrl: config.url!,
               headers: config.headers,
+              body: config.body,
               timeout: timeout,
             );
           }

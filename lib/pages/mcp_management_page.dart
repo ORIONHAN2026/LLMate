@@ -778,12 +778,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
   String _buildSubtitle(Mcp service) => buildSubtitle(service);
 
   String _buildConfigJson(Mcp service) {
-    final map = service.toJson();
-    map['name'] = service.name;
-    if (service.workingDirectory != null) {
-      map['workingDirectory'] = service.workingDirectory;
-    }
-    return const JsonEncoder.withIndent('  ').convert(map);
+    return const JsonEncoder.withIndent('  ').convert(service.toFullJson());
   }
 
   void _showMarketplaceDialog() {

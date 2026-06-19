@@ -27,9 +27,6 @@ class IsarChatModel {
 
   // JSON blobs for complex nested objects
   late String? chatSettingsJson;
-  late String? mcpServicesJson;
-  late String? chatCommandsJson;
-  late String? skillsJson;
 }
 
 /// Isar 集合：聊天消息（每条消息独立存储，通过 sessionId 关联）
@@ -103,7 +100,7 @@ class IsarChatSession {
   late String? skillId;
 }
 
-/// Isar 集合：MCP 服务配置（mcpId + 完整 JSON content）
+/// Isar 集合：MCP 服务配置（与 Mcp 结构体一一对应）
 @collection
 class IsarMcpService {
   Id id = Isar.autoIncrement;
@@ -111,8 +108,30 @@ class IsarMcpService {
   @Index(unique: true)
   late String mcpId;
 
-  /// 完整配置 JSON（标准 MCP 服务配置格式）
-  late String content;
+  late String name;
+
+  late String? description;
+
+  /// MCP 脚本内容（如 JavaScript/Go 源码）
+  late String? code;
+
+  // ── Stdio 类型配置 ──
+  late String? command;
+  late List<String>? args;
+  late String? env; // Map<String, String> → JSON
+  late String? workingDirectory;
+
+  // ── URL 类型配置 ──
+  late int? timeout;
+  late String? url;
+  late String? headers; // Map<String, String> → JSON
+  late String? body; // Map<String, dynamic> → JSON
+  late String? type; // McpTransportType → string value
+
+  // ── 运行时数据 ──
+  late String? tools; // List<McpToolInfo> → JSON
+  late DateTime? lastUpdated;
+  late String? prompt; // LLM 用的工具介绍文本
 }
 
 /// Isar 集合：通用键值设置（如主题偏好）

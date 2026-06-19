@@ -65,46 +65,34 @@ class McpToolInfo {
 
 /// MCP服务器配置模型
 class Mcp {
-  /// 数据库原始 JSON 内容（从 content 字段读出，toFullJson 直接返回此内容）
-  final String? content;
-
-  /// 系统生成的唯一标识（添加时由调用方生成 UUID/时间戳）
-  final String mcpId;
-
+  final String mcpId; // 唯一标识 ID
   final String name;
   final String? description; // 从 MCP 服务器 instructions 获取的描述
+  final String code; // MCP 配置脚本（原始 JSON 配置，必定保存）
 
-  // ── 以下字段运行时从 content 解析，不独立持久化 ──
+  // ── Stdio 类型配置 ──
   final String? command; // Stdio 命令（URL 型为 null）
   final List<String>? args; // Stdio 参数（URL 型为 null）
   final Map<String, String>? env;
   final String? workingDirectory;
+
+  // ── URL 类型配置 ──
   final int? timeout;
   final String? url; // URL 型 MCP（HTTP/SSE/StreamableHTTP 传输）
   final Map<String, String>? headers; // URL 型请求头
+  final Map<String, dynamic>? body; // 请求体额外参数（非标准 MCP 扩展，如 appid/secret）
   final McpTransportType? type; // 传输协议枚举
+
+  // ── 运行时数据 ──
   final List<McpToolInfo>? tools; // 工具信息列表
   final DateTime? lastUpdated; // 最后更新时间
   final String? prompt; // LLM 用的工具介绍文本（添加/刷新时生成）
 
-  /// 从 content JSON 中提取 body 字段（非标准 MCP 扩展，用于传递服务端特定参数）
-  Map<String, dynamic>? get body {
-    if (content == null || content!.isEmpty) return null;
-    try {
-      final map = jsonDecode(content!) as Map<String, dynamic>;
-      final bodyVal = map['body'];
-      if (bodyVal is Map<String, dynamic> && bodyVal.isNotEmpty) {
-        return bodyVal;
-      }
-    } catch (_) {}
-    return null;
-  }
-
   const Mcp({
-    this.content,
     required this.mcpId,
     required this.name,
     this.description,
+    required this.code,
     this.command,
     this.args,
     this.env,
@@ -112,19 +100,22 @@ class Mcp {
     this.timeout,
     this.url,
     this.headers,
+    this.body,
     this.type,
     this.tools,
     this.lastUpdated,
     this.prompt,
   });
 
-  /// 从数据库 content JSON 反序列化（核心入口）
-  factory Mcp.fromContent(String content) {
-    final map = jsonDecode(content) as Map<String, dynamic>;
-    return Mcp.fromMap(map, content: content);
+  /// 从包含 name 字段的 Map 反序列化
+  factory Mcp.fromMap(Map<String, dynamic> json) {
+    return Mcp.fromJson(
+      json['name'] as String? ?? '',
+      json,
+    );
   }
 
-  factory Mcp.fromJson(String name, Map<String, dynamic> json, {String? content}) {
+  factory Mcp.fromJson(String name, Map<String, dynamic> json) {
     final toolsList = json['tools'] as List<dynamic>?;
     final tools =
         toolsList
@@ -135,11 +126,22 @@ class Mcp {
     final lastUpdated =
         lastUpdatedStr != null ? DateTime.tryParse(lastUpdatedStr) : null;
 
+    // 兜底：确保 name 和 mcpId 至少有一个有效值
+    final rawName = name.isNotEmpty ? name : (json['mcpId'] as String? ?? '');
+    final rawMcpId = (json['mcpId'] as String? ?? '').isNotEmpty
+        ? json['mcpId'] as String
+        : rawName;
+    final fallback = rawName.isNotEmpty
+        ? rawName
+        : 'mcp_${jsonEncode(json).hashCode}';
+    final effectiveName = rawName.isNotEmpty ? rawName : fallback;
+    final effectiveMcpId = rawMcpId.isNotEmpty ? rawMcpId : fallback;
+
     return Mcp(
-      content: content,
-      mcpId: json['mcpId'] as String? ?? name,
-      name: name,
+      mcpId: effectiveMcpId,
+      name: effectiveName,
       description: json['description'] as String?,
+      code: json['code'] as String? ?? jsonEncode(json),
       command: json['command'] as String?,
       args: json['args'] != null ? List<String>.from(json['args']) : null,
       env: json['env'] != null ? Map<String, String>.from(json['env']) : null,
@@ -150,6 +152,9 @@ class Mcp {
           json['headers'] != null
               ? Map<String, String>.from(json['headers'])
               : null,
+      body: json['body'] != null
+          ? Map<String, dynamic>.from(json['body'] as Map)
+          : null,
       type: McpTransportTypeExt.fromString(json['type'] as String?),
       tools: tools,
       lastUpdated: lastUpdated,
@@ -157,16 +162,7 @@ class Mcp {
     );
   }
 
-  /// 从包含 name 字段的 Map 反序列化（用于独立存储）
-  factory Mcp.fromMap(Map<String, dynamic> json, {String? content}) {
-    return Mcp.fromJson(
-      json['name'] as String? ?? '',
-      json,
-      content: content ?? jsonEncode(json),
-    );
-  }
-
-  /// 序列化为标准 MCP 服务配置 JSON（不含内部字段）
+  /// 序列化为标准 MCP 服务配置 JSON（不含内部字段，用于导出/展示）
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
 
@@ -179,6 +175,7 @@ class Mcp {
     if (url != null && url!.isNotEmpty) data['url'] = url;
     if (type != null) data['type'] = type!.value;
     if (headers != null && headers!.isNotEmpty) data['headers'] = headers;
+    if (body != null && body!.isNotEmpty) data['body'] = body;
 
     // 通用
     if (timeout != null) data['timeout'] = timeout;
@@ -186,34 +183,30 @@ class Mcp {
     return data;
   }
 
-  /// 序列化为包含内部字段的完整 JSON（content 基础上叠加 prompt 等）
+  /// 序列化为包含所有字段的完整 JSON（用于展示/导出）
   Map<String, dynamic> toFullJson() {
-    Map<String, dynamic> data;
-    if (content != null && content!.isNotEmpty) {
-      data = Map<String, dynamic>.from(jsonDecode(content!) as Map<String, dynamic>);
-    } else {
-      data = toJson();
-      data['mcpId'] = mcpId;
-      data['name'] = name;
-      if (description != null) data['description'] = description;
-      if (workingDirectory != null) data['workingDirectory'] = workingDirectory;
-      if (tools != null) {
-        data['tools'] = tools!.map((tool) => tool.toJson()).toList();
-      }
-      if (lastUpdated != null) {
-        data['lastUpdated'] = lastUpdated!.toIso8601String();
-      }
-    }
+    final data = toJson();
+    data['mcpId'] = mcpId;
+    data['name'] = name;
+    if (description != null) data['description'] = description;
+    data['code'] = code;
+    if (workingDirectory != null) data['workingDirectory'] = workingDirectory;
     if (prompt != null && prompt!.isNotEmpty) data['prompt'] = prompt;
+    if (tools != null && tools!.isNotEmpty) {
+      data['tools'] = tools!.map((tool) => tool.toJson()).toList();
+    }
+    if (lastUpdated != null) {
+      data['lastUpdated'] = lastUpdated!.toIso8601String();
+    }
     return data;
   }
 
   /// 创建带有工具信息的副本
   Mcp copyWith({
-    String? content,
     String? mcpId,
     String? name,
     String? description,
+    String? code, // 允许为空以支持 copyWith(code: null) 不覆盖场景，但实际创建时必填
     String? command,
     List<String>? args,
     Map<String, String>? env,
@@ -221,16 +214,17 @@ class Mcp {
     int? timeout,
     String? url,
     Map<String, String>? headers,
+    Map<String, dynamic>? body,
     McpTransportType? type,
     List<McpToolInfo>? tools,
     DateTime? lastUpdated,
     String? prompt,
   }) {
     return Mcp(
-      content: content ?? this.content,
       mcpId: mcpId ?? this.mcpId,
       name: name ?? this.name,
       description: description ?? this.description,
+      code: code ?? this.code,
       command: command ?? this.command,
       args: args ?? this.args,
       env: env ?? this.env,
@@ -238,6 +232,7 @@ class Mcp {
       timeout: timeout ?? this.timeout,
       url: url ?? this.url,
       headers: headers ?? this.headers,
+      body: body ?? this.body,
       type: type ?? this.type,
       tools: tools ?? this.tools,
       lastUpdated: lastUpdated ?? this.lastUpdated,
@@ -301,12 +296,14 @@ class McpConfig {
         '12306-mcp': Mcp(
           mcpId: '12306-mcp',
           name: '12306-mcp',
+          code: '{"command":"npx","args":["-y","12306-mcp"]}',
           command: 'npx',
           args: ['-y', '12306-mcp'],
         ),
         'filesystem': Mcp(
           mcpId: 'filesystem',
           name: 'filesystem',
+          code: '{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/path/to/allowed/files"]}',
           command: 'npx',
           args: [
             '-y',
@@ -317,6 +314,7 @@ class McpConfig {
         'sqlite': Mcp(
           mcpId: 'sqlite',
           name: 'sqlite',
+          code: '{"command":"npx","args":["-y","@modelcontextprotocol/server-sqlite","/path/to/database.db"]}',
           command: 'npx',
           args: [
             '-y',

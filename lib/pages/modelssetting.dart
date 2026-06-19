@@ -446,8 +446,6 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     ChatModel copiedModel = model.copyWith(
       modelId: DateTime.now().millisecondsSinceEpoch.toString(),
       name: newName,
-      mcpServices: null, // 不复制 MCP 配置
-      chatCommands: null, // 不复制快捷指令
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );

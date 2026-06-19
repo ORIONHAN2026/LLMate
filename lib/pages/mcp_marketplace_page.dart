@@ -9,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../controllers/session_controller.dart';
 import '../controllers/mcp_controller.dart';
-import '../models/bigmodel/chat_model.dart';
 import '../models/chat/mcp_config.dart';
 import '../services/mcp_service.dart';
 import '../controllers/model_controller.dart';
@@ -426,9 +425,6 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
   // 筛选结果
   List<_MarketItem> _filteredItems = [];
 
-  ChatModel? get _currentModel =>
-      sessionController.currentSession.value?.chatModel;
-
   @override
   void initState() {
     super.initState();
@@ -514,28 +510,8 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
     return ['全部', ...cats];
   }
 
-  List<String> get _addedNames {
-    final modelNames = _currentModel?.mcpServices?.map((s) => s.name).toList() ?? [];
-    final globalNames = Get.find<McpController>().configs.map((s) => s.name).toList();
-    return {...modelNames, ...globalNames}.toList();
-  }
-
-  Future<void> _saveModel(ChatModel updatedModel) async {
-    final session = sessionController.currentSession.value;
-    if (session != null) {
-      sessionController.updateSession(
-        session.copyWith(chatModel: updatedModel),
-      );
-    }
-    final models = await modelController.loadModels();
-    final updatedModels =
-        models.map((m) {
-          final cm = ChatModel.fromMap(m);
-          if (cm.modelId == updatedModel.modelId) return updatedModel.toMap();
-          return m;
-        }).toList();
-    await modelController.saveModelsData(updatedModels);
-  }
+  List<String> get _addedNames =>
+      Get.find<McpController>().configs.map((s) => s.name).toList();
 
   /// 根据 item 构建 Mcp 配置，从 content 解析并替换 ${API_KEY}
   Mcp _buildMcpConfig(_MarketItem item) {
@@ -557,11 +533,13 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
     }
 
     final hasUrl = parsed['url'] is String && (parsed['url'] as String).isNotEmpty;
+    final code = jsonEncode(parsed);
 
     return Mcp(
       mcpId: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
       name: item.name,
       description: item.description,
+      code: code,
       command: parsed['command'] as String?,
       args: (parsed['args'] as List<dynamic>?)?.cast<String>(),
       url: parsed['url'] as String?,
@@ -605,11 +583,6 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
       await mcpc.addService(config);
     }
 
-    final model = _currentModel;
-    if (model != null) {
-      await _saveModel(model.addMcpService(config));
-    }
-
     if (mounted) {
       setState(() {});
       SnackBarUtils.showSuccess(context, '已添加: ${config.name} ($toolCount 个工具)');
@@ -643,12 +616,6 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
     final global = mcpc.configs.firstWhereOrNull((s) => s.name == name);
     if (global != null) {
       await mcpc.removeService(global.mcpId);
-    }
-
-    // 从当前模型移除
-    final model = _currentModel;
-    if (model != null) {
-      await _saveModel(model.removeMcpService(name));
     }
 
     if (mounted) {
@@ -1117,17 +1084,19 @@ class _McpMarketplacePageState extends State<McpMarketplacePage> {
         }
       }
 
-      // 保留原始服务 JSON 作为 content，确保 body 等非标准字段不丢失
-      final content = jsonEncode(serviceJson);
+      final code = jsonEncode(serviceJson);
       return Mcp(
-        content: content,
         mcpId: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
         name: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
+        code: code,
         command: serviceJson['command'] as String?,
         args: (serviceJson['args'] as List<dynamic>?)?.cast<String>(),
         url: serviceJson['url'] as String?,
         headers: serviceJson['headers'] != null
             ? Map<String, String>.from(serviceJson['headers'])
+            : null,
+        body: serviceJson['body'] != null
+            ? Map<String, dynamic>.from(serviceJson['body'] as Map)
             : null,
         env: serviceJson['env'] != null
             ? Map<String, String>.from(serviceJson['env'])

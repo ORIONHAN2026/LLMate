@@ -253,14 +253,6 @@ class SkillService {
       final t = _skillToTool(session.skill!);
       if (t != null) tools.add(t);
     }
-    // 模型绑定的技能
-    final modelSkills = session.chatModel?.skills;
-    if (modelSkills != null) {
-      for (final skill in modelSkills) {
-        final t = _skillToTool(skill);
-        if (t != null) tools.add(t);
-      }
-    }
     return tools;
   }
 

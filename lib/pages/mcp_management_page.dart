@@ -85,20 +85,34 @@ class _McpManagementPageState extends State<McpManagementPage> {
   }
 
   Future<void> _removeService(String mcpId, String displayName) async {
-    // 通过 McpController 统一移除（同步清理 configs 列表 + 存储）
-    await Get.find<McpController>().removeService(mcpId);
+    // 从 McpController（Isar 全局存储）删除
+    final mcpc = Get.find<McpController>();
+    debugPrint('🗑 [MCP删除] 开始删除: mcpId=$mcpId, name=$displayName');
+    debugPrint('🗑 [MCP删除] 删除前 configs 数量: ${mcpc.configs.length}');
+    debugPrint('🗑 [MCP删除] configs 列表: ${mcpc.configs.map((s) => s.name).toList()}');
+    await mcpc.removeService(mcpId);
+    debugPrint('🗑 [MCP删除] removeService 完成，删除后 configs 数量: ${mcpc.configs.length}');
 
-    // 清理所有引用此 MCP 的会话：清除 mcpId、mcp 和 connectPrompt
+    // 清理所有引用此 MCP 的会话
     final sessionController = Get.find<SessionController>();
+    debugPrint('🗑 [MCP删除] 检查 ${sessionController.sessions.length} 个会话...');
     for (final session in sessionController.sessions) {
+      debugPrint('🗑 [MCP删除]   会话 ${session.name}: mcpId=${session.mcpId}, skillId=${session.skillId}');
       if (session.mcpId == mcpId) {
+        debugPrint('🗑 [MCP删除]   匹配! 清理会话 "${session.name}"');
         await sessionController.updateSession(
           session.copyWith(clearMcp: true, clearConnectPrompt: true),
         );
       }
     }
+    debugPrint('🗑 [MCP删除] 完成');
 
-    await _loadServices();
+    // 刷新 UI
+    if (mounted) {
+      setState(() {
+        _services = mcpc.configs.toList();
+      });
+    }
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
@@ -109,9 +123,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    final content = _isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : _buildServiceGrid();
+    final content =
+        _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _buildServiceGrid();
 
     if (widget.embedded) {
       // 通知父页面 AppBar actions
@@ -217,9 +232,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                   onSuccess: (finalConfig, toolCount) async {
                     final mcpc = Get.find<McpController>();
                     await mcpc.ensureLoaded();
-                    if (!mcpc.configs.any(
-                      (s) => s.name == finalConfig.name,
-                    )) {
+                    if (!mcpc.configs.any((s) => s.name == finalConfig.name)) {
                       await mcpc.addService(finalConfig);
                     }
                     _loadServices();
@@ -778,6 +791,17 @@ class _McpManagementPageState extends State<McpManagementPage> {
   String _buildSubtitle(Mcp service) => buildSubtitle(service);
 
   String _buildConfigJson(Mcp service) {
+    // 优先展示原始配置脚本（code），否则用完整 JSON
+    if (service.code != null && service.code!.isNotEmpty) {
+      try {
+        // 格式化 JSON 方便阅读
+        return const JsonEncoder.withIndent('  ').convert(
+          jsonDecode(service.code!) as Map<String, dynamic>,
+        );
+      } catch (_) {
+        return service.code!;
+      }
+    }
     return const JsonEncoder.withIndent('  ').convert(service.toFullJson());
   }
 

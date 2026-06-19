@@ -132,12 +132,7 @@ class ModelController extends GetxController {
           ? DateTime.tryParse(map['updatedAt'].toString())
           : null
       ..chatSettingsJson =
-          map['chatSettings'] != null ? jsonEncode(map['chatSettings']) : null
-      ..mcpServicesJson =
-          map['mcpServices'] != null ? jsonEncode(map['mcpServices']) : null
-      ..chatCommandsJson =
-          map['chatCommands'] != null ? jsonEncode(map['chatCommands']) : null
-      ..skillsJson = map['skills'] != null ? jsonEncode(map['skills']) : null;
+          map['chatSettings'] != null ? jsonEncode(map['chatSettings']) : null;
   }
 
   static dynamic _tryJsonDecode(String jsonStr) {
@@ -164,11 +159,6 @@ class ModelController extends GetxController {
       if (m.updatedAt != null) 'updatedAt': m.updatedAt!.toIso8601String(),
       if (m.chatSettingsJson != null)
         'chatSettings': _tryJsonDecode(m.chatSettingsJson!),
-      if (m.mcpServicesJson != null)
-        'mcpServices': _tryJsonDecode(m.mcpServicesJson!),
-      if (m.chatCommandsJson != null)
-        'chatCommands': _tryJsonDecode(m.chatCommandsJson!),
-      if (m.skillsJson != null) 'skills': _tryJsonDecode(m.skillsJson!),
     };
   }
 }

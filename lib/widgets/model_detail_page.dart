@@ -7,7 +7,6 @@ import 'package:llmwork/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:convert';
 
 class ModelDetailPage extends StatefulWidget {
   final ChatModel model;
@@ -67,9 +66,6 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
 
     _apiKeyController.text = _currentModel.apiKey ?? '';
     _modelNameController.text = _currentModel.name;
-
-    //打印 MCP的配置内容
-    print('MCP Services: ${jsonEncode(_currentModel.mcpServices)}');
 
     // 初始化系统提示词控制器
     _systemPromptController.text =

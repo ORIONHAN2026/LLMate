@@ -17,6 +17,7 @@ import '../services/mcp_service.dart';
 import '../models/chat/skill.dart';
 import '../services/skill_service.dart';
 import '../services/skill_storage_service.dart';
+import '../pages/skill_edit_page.dart';
 import '../services/word_tool_service.dart';
 import '../services/excel_tool_service.dart';
 import '../services/pdf_tool_service.dart';
@@ -1119,8 +1120,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       _buildDeepThinkToggle(),
                       const SizedBox(width: 8),
                       _buildMcpToolsToggle(),
-                      const SizedBox(width: 8),
-                      _buildConnectPromptToggle(),
                       const SizedBox(width: 8),
 
                       _buildSkillToggle(),
@@ -3269,6 +3268,43 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                             style: const TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        // 编辑按钮（与技能名称同行，靠右）
+                                        Tooltip(
+                                          message: '编辑技能',
+                                          child: InkWell(
+                                            onTap: () async {
+                                              Navigator.of(ctx).pop(); // 关闭弹窗
+                                              await Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => SkillEditPage(skill: skill),
+                                                ),
+                                              );
+                                              // 编辑返回后刷新技能数据
+                                              await SkillService.loadSkills();
+                                              final updatedSkill = SkillService.getSkillById(skill.skillId);
+                                              if (updatedSkill != null && mounted) {
+                                                final currentSession = sessionController.currentSession.value;
+                                                if (currentSession != null) {
+                                                  final refreshedSession = currentSession.copyWith(
+                                                    skill: updatedSkill,
+                                                  );
+                                                  sessionController.updateSession(refreshedSession);
+                                                  setState(() {});
+                                                }
+                                              }
+                                            },
+                                            borderRadius: BorderRadius.circular(6),
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              child: Icon(
+                                                CupertinoIcons.pencil,
+                                                size: 14,
+                                                color: Theme.of(ctx).colorScheme.onSurface,
+                                              ),
                                             ),
                                           ),
                                         ),

@@ -13,6 +13,7 @@ import '../services/skill_storage_service.dart';
 import '../utils/snackbar_utils.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/common/confirm_delete_dialog.dart';
+import 'skill_edit_page.dart';
 
 /// 技能管理页面
 ///
@@ -759,13 +760,15 @@ class _SkillManagementPageState extends State<SkillManagementPage> {
       skill: skill,
       onTap: () => _showSkillDetail(skill),
       onEdit: () async {
-        final skillsRoot = await SkillStorageService.getSkillsRootDir();
-        final filePath = p.join(
-          skillsRoot,
-          skill.skillId,
-          'SKILL.md',
+        final result = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SkillEditPage(skill: skill),
+          ),
         );
-        launchUrl(Uri.file(filePath));
+        if (result == true) {
+          await _refreshSkills();
+        }
       },
       onDelete: () => _confirmDeleteSkill(skill),
     );

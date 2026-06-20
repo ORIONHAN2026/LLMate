@@ -583,7 +583,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           child: Row(
             children: [
               Icon(
-                CupertinoIcons.gear,
+                CupertinoIcons.link,
                 size: 16,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),

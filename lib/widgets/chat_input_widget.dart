@@ -1690,7 +1690,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                CupertinoIcons.gear,
+                CupertinoIcons.link,
                 size: 13,
                 color:
                     hasMcpServices && !_isSending

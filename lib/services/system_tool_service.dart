@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/chat/chat_session.dart';
 import 'node_tool_service.dart';
+import 'ocr_tool_service.dart';
 import 'python_tool_service.dart';
 
 class SystemToolDefinition {
@@ -23,9 +24,11 @@ class SystemToolDefinition {
 /// 提供以下内置工具：
 /// - `node_execute`: 执行 Node.js 脚本
 /// - `python_execute`: 执行 Python 脚本
+/// - `ocr_extract`: 对图片执行 OCR 文字识别
 class SystemToolService {
   static const String nodeExecuteTool = 'node_execute';
   static const String pythonExecuteTool = 'python_execute';
+  static const String ocrExtractTool = 'ocr_extract';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -90,6 +93,28 @@ class SystemToolService {
         },
       },
     ),
+    SystemToolDefinition(
+      name: ocrExtractTool,
+      description:
+          '对图片执行 OCR 文字识别，提取图片中的文字内容。使用 RapidOCR（基于 ONNXRuntime），'
+          '纯 pip 安装无需额外系统依赖，速度比 Tesseract 更快。自动安装 rapidocr_onnxruntime。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要识别的图片文件完整路径（支持 PNG/JPEG/BMP/TIFF 等格式）。',
+          },
+          'lang': {
+            'type': 'string',
+            'description':
+                'OCR 语言代码。默认 "ch"（中文，自动包含英文）。'
+                '常用值: "ch"（中英混合）、"en"（英文）、"ja"（日语）、"ko"（韩语）。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
   ];
 
   static List<SystemToolDefinition> get tools => List.unmodifiable(_tools);
@@ -129,6 +154,11 @@ class SystemToolService {
         );
       case pythonExecuteTool:
         return PythonToolService.execute(
+          arguments: arguments,
+          callId: callId,
+        );
+      case ocrExtractTool:
+        return OcrToolService.execute(
           arguments: arguments,
           callId: callId,
         );

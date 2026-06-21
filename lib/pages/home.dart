@@ -506,6 +506,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   }
 
   void _showSettingsMenu() {
+    final l10n = AppLocalizations.of(context)!;
     // 获取设置按钮的渲染位置
     final RenderBox? button =
         _settingsButtonKey.currentContext?.findRenderObject() as RenderBox?;
@@ -547,7 +548,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('反馈意见', style: TextStyle(fontSize: 12)),
+              Text(l10n.feedback, style: const TextStyle(fontSize: 12)),
             ],
           ),
         ),
@@ -561,7 +562,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('模型管理', style: TextStyle(fontSize: 12)),
+              Text(l10n.modelManagement, style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -588,7 +589,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('连接器管理(MCP)', style: TextStyle(fontSize: 12)),
+              Text(l10n.connectorManagement, style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -614,7 +615,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('技能管理(SKILL)', style: TextStyle(fontSize: 12)),
+              Text(l10n.skillManagement, style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -640,7 +641,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              const Text('其他设置', style: TextStyle(fontSize: 12)),
+              Text(l10n.otherSettings, style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {

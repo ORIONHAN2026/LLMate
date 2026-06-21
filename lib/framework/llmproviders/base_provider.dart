@@ -180,13 +180,7 @@ abstract class BaseLlmProvider {
       messages.add({'role': 'system', 'content': providerPrompt});
     }
 
-    // 1c. 回复语言
-    messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.responseLanguage(Get.locale?.languageCode ?? 'zh'),
-    });
-
-    // 1d. 技能提示词
+    // 1c. 技能提示词
     if (session?.skill != null) {
       final sp = SkillService.buildSkillPrompt(session!.skill);
       if (sp.isNotEmpty) {
@@ -223,10 +217,13 @@ abstract class BaseLlmProvider {
       _appendHistoryMessages(messages, session, userMessage);
     }
 
-    // ── 3. 核心规则（放在用户消息紧前面，优先级最高） ──
+    // ── 3. 核心规则 + 语言（放在用户消息紧前面，优先级最高） ──
+    messages.add({'role': 'system', 'content': CommonSystemPrompts.coreRules});
     messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.coreRules,
+      'role': 'user',
+      'content': CommonSystemPrompts.responseLanguage(
+        Get.locale?.languageCode ?? 'zh',
+      ),
     });
 
     // ── 4. 当前用户消息 + 附件 ──

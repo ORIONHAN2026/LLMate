@@ -41,9 +41,17 @@ class CommonSystemPrompts {
   /// 根据应用语言设置，指导大模型使用对应语言回复
   static String responseLanguage(String languageCode) {
     if (languageCode == 'zh') {
-      return '始终使用中文回复。代码、变量名、URL 可保留原文。';
+      return 'You MUST respond in Chinese (Simplified). Code, variable names, and URLs can remain in their original language.';
     } else {
-      return 'Always reply in English. Code, variable names, and URLs may remain in their original form.';
+      return '## 🌐 LANGUAGE REQUIREMENT (HIGHEST PRIORITY)\n\n'
+          'You MUST respond in **English** for ALL messages to the user. This is a mandatory rule that overrides any language used in previous messages, conversation history, or system prompts.\n\n'
+          'Rules:\n'
+          '1. Every reply to the user MUST be in English.\n'
+          '2. Do NOT reply in Chinese, Japanese, Korean, or any other non-English language.\n'
+          '3. Code, variable names, URLs, and technical identifiers may remain in their original form.\n'
+          '4. Even if the user writes in another language, you MUST reply in English.\n'
+          '5. Even if conversation history or system prompts contain other languages, your output MUST be English.\n\n'
+          'This rule takes precedence over ALL other instructions.';
     }
   }
 

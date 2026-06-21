@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="ChatHub - 智能对话助手，支持多模型、MCP协议、文件操作、技能系统的AI工作台">
-  <meta name="keywords" content="AI助手,ChatHub,LLM,MCP,智能对话,多模型,AI工作台">
-  <meta property="og:title" content="ChatHub - 智能对话助手">
+  <meta name="description" content="LLMWork - 智能对话助手，支持多模型、MCP协议、文件操作、技能系统的AI工作台">
+  <meta name="keywords" content="AI助手,LLMWork,LLM,MCP,智能对话,多模型,AI工作台">
+  <meta property="og:title" content="LLMWork - 智能对话助手">
   <meta property="og:description" content="一个平台，连接所有AI模型。支持OpenAI、Claude、Gemini等8+主流模型，内置MCP协议、文件操作、技能系统。">
   <meta property="og:type" content="website">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="ChatHub">
+  <meta name="apple-mobile-web-app-title" content="LLMWork">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
   <link rel="manifest" href="manifest.json">
-  <title>ChatHub - 智能对话助手 | 多模型 AI 工作台</title>
+  <title>LLMWork - 智能对话助手 | 多模型 AI 工作台</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
@@ -41,10 +41,12 @@
     .nav-logo{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:700;color:#fff}
     .nav-logo img{width:32px;height:32px;border-radius:8px}
     .nav-links{display:flex;gap:32px;align-items:center}
-    .nav-links a{font-size:14px;color:#a1a1aa;transition:color .2s}
+    .nav-links a{font-size:14px;color:#a1a1aa;transition:color .2s;cursor:pointer}
     .nav-links a:hover{color:#fff}
+    .nav-links a.active{color:#60a5fa}
     .nav-cta{background:linear-gradient(135deg,#2196F3,#7c3aed);color:#fff!important;padding:8px 20px;border-radius:8px;font-weight:600!important;transition:opacity .2s,transform .2s}
     .nav-cta:hover{opacity:.9;transform:translateY(-1px)}
+    .nav-cta.active{box-shadow:0 0 12px rgba(33,150,243,0.4)}
 
     .hero{position:relative;z-index:1;padding:160px 24px 100px;text-align:center;max-width:900px;margin:0 auto}
     .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(33,150,243,0.1);border:1px solid rgba(33,150,243,0.25);border-radius:100px;padding:6px 16px;font-size:13px;color:#60a5fa;margin-bottom:32px}
@@ -65,6 +67,9 @@
     .platform-badge svg{width:16px;height:16px;opacity:.6}
 
     .section{position:relative;z-index:1;padding:100px 24px}
+    .page{display:none;min-height:100vh}
+    .page.active{display:block;animation:fadeIn .3s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
     .section-inner{max-width:1200px;margin:0 auto}
     .section-label{font-size:13px;font-weight:600;color:#2196F3;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
     .section-title{font-size:clamp(28px,4vw,40px);font-weight:700;margin-bottom:16px;letter-spacing:-0.02em}
@@ -112,6 +117,38 @@
     .timeline-item li.fix::before{background:#f59e0b}
     .timeline-item li.improve::before{background:#3b82f6}
 
+    .mcp-market{background:rgba(255,255,255,0.015)}
+    .mcp-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px}
+    .mcp-filter-btn{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#71717a;cursor:pointer;transition:all .2s}
+    .mcp-filter-btn:hover,.mcp-filter-btn.active{background:rgba(33,150,243,0.12);border-color:rgba(33,150,243,0.3);color:#60a5fa}
+    .mcp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+    .mcp-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:24px;transition:border-color .3s,transform .3s;cursor:pointer}
+    .mcp-card:hover{border-color:rgba(33,150,243,0.3);transform:translateY(-4px)}
+    .mcp-card-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .mcp-card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(33,150,243,0.1);color:#60a5fa}
+    .mcp-card-icon.search{background:rgba(34,197,94,0.1);color:#4ade80}
+    .mcp-card-icon.file{background:rgba(251,191,36,0.1);color:#fbbf24}
+    .mcp-card-icon.dev{background:rgba(139,92,246,0.1);color:#a78bfa}
+    .mcp-card-icon.data{background:rgba(6,182,212,0.1);color:#22d3ee}
+    .mcp-card-icon.cloud{background:rgba(244,63,94,0.1);color:#fb7185}
+    .mcp-card-icon.browser{background:rgba(34,197,94,0.1);color:#4ade80}
+    .mcp-card-icon.knowledge{background:rgba(99,102,241,0.1);color:#818cf8}
+    .mcp-card-icon.slack{background:rgba(234,88,12,0.1);color:#fb923c}
+    .mcp-card h3{font-size:16px;font-weight:600;flex:1}
+    .mcp-card .mcp-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(33,150,243,0.12);color:#60a5fa;margin-left:4px}
+    .mcp-card .mcp-tag.sse{background:rgba(34,197,94,0.12);color:#4ade80}
+    .mcp-card .mcp-tag.stdio{background:rgba(251,191,36,0.12);color:#fbbf24}
+    .mcp-card .mcp-tag.http{background:rgba(139,92,246,0.12);color:#a78bfa}
+    .mcp-card .mcp-desc{font-size:14px;color:#71717a;line-height:1.6;margin-bottom:16px}
+    .mcp-card .mcp-meta{display:flex;gap:12px;font-size:12px;color:#52525b}
+    .mcp-card .mcp-meta span{display:flex;align-items:center;gap:4px}
+    .mcp-card .mcp-install{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;background:linear-gradient(135deg,#2196F3,#7c3aed);color:#fff;margin-top:12px;transition:opacity .2s}
+    .mcp-card .mcp-install:hover{opacity:.9}
+    .mcp-stats{display:flex;gap:24px;justify-content:center;margin-top:40px;padding:24px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px}
+    .mcp-stat{text-align:center}
+    .mcp-stat .mcp-stat-num{font-size:28px;font-weight:700;color:#60a5fa}
+    .mcp-stat .mcp-stat-label{font-size:13px;color:#71717a;margin-top:4px}
+
     .download-section{text-align:center}
     .download-cards{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:48px}
     .download-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:40px 32px;width:280px;text-align:center;transition:border-color .3s,transform .3s}
@@ -150,38 +187,40 @@
 <nav class="nav">
   <div class="nav-inner">
     <a href="#" class="nav-logo">
-      <img src="favicon.png" alt="ChatHub">
-      ChatHub
+      <img src="favicon.png" alt="LLMWork">
+      LLMWork
     </a>
     <div class="nav-links">
-      <a href="#features">功能特性</a>
-      <a href="#changelog">更新日志</a>
-      <a href="#download" class="nav-cta">立即下载</a>
+      <a data-page="features" class="active">功能特性</a>
+      <a data-page="mcp-market">MCP 市场</a>
+      <a data-page="changelog">更新日志</a>
+      <a data-page="download" class="nav-cta">立即下载</a>
     </div>
   </div>
 </nav>
 
+<div class="page active" id="page-features">
 <section class="hero">
   <div class="hero-badge">
     <span class="dot"></span>
-    最新版本 v1.0.0 已发布
+    最新版本 v1.1.0 已发布
   </div>
   <h1>
     一个平台，连接<br>
     <span class="gradient-text">所有 AI 模型</span>
   </h1>
   <p class="hero-desc">
-    ChatHub 是你的全能 AI 工作台。统一管理 OpenAI、Claude、Gemini、DeepSeek 等 8+ 主流模型，
+    LLMWork 是你的全能 AI 工作台。统一管理 OpenAI、Claude、Gemini、DeepSeek 等 8+ 主流模型，
     内置 MCP 协议支持、文件操作引擎、技能系统，让 AI 真正成为你的生产力伙伴。
   </p>
   <div class="hero-actions">
-    <a href="#download" class="btn btn-primary">
+    <a class="btn btn-primary" onclick="navigate('download')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       免费下载
     </a>
-    <a href="#features" class="btn btn-secondary">
+    <a class="btn btn-secondary" onclick="navigate('mcp-market')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      了解更多
+      MCP 市场
     </a>
   </div>
   <div class="platform-badges">
@@ -203,7 +242,7 @@
 <section class="section" id="features">
   <div class="section-inner">
     <div class="section-label">核心功能</div>
-    <h2 class="section-title">为什么选择 ChatHub？</h2>
+    <h2 class="section-title">为什么选择 LLMWork？</h2>
     <p class="section-desc">不只是聊天客户端，更是你的 AI 生产力工作台。从多模型管理到文件操作，从 MCP 扩展到技能系统，一站式满足所有 AI 工作需求。</p>
     <div class="feature-grid">
       <div class="feature-card">
@@ -261,13 +300,162 @@
     </div>
   </div>
 </section>
+</div>
 
+<div class="page" id="page-mcp-market">
+<section class="section mcp-market" id="mcp-market">
+  <div class="section-inner">
+    <div class="section-label">MCP 市场</div>
+    <h2 class="section-title">无限扩展 AI 能力边界</h2>
+    <p class="section-desc">MCP (Model Context Protocol) 让 AI 连接外部工具与数据源。LLMWork 内置 MCP 市场，一键安装数百个 MCP 服务，从搜索到开发、从文件操作到云端协作，让 AI 成为真正的全能助手。</p>
+    <div class="mcp-filter">
+      <button class="mcp-filter-btn active" onclick="filterMcp('all')">全部</button>
+      <button class="mcp-filter-btn" onclick="filterMcp('search')">搜索与知识</button>
+      <button class="mcp-filter-btn" onclick="filterMcp('file')">文件与文档</button>
+      <button class="mcp-filter-btn" onclick="filterMcp('dev')">开发工具</button>
+      <button class="mcp-filter-btn" onclick="filterMcp('data')">数据与可视化</button>
+      <button class="mcp-filter-btn" onclick="filterMcp('cloud')">云端服务</button>
+      <button class="mcp-filter-btn" onclick="filterMcp('browser')">浏览器自动化</button>
+    </div>
+    <div class="mcp-grid" id="mcp-grid">
+      <div class="mcp-card" data-category="search">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon search">🔍</div>
+          <h3>Tavily Search</h3><span class="mcp-tag sse">SSE</span>
+        </div>
+        <p class="mcp-desc">AI 优化的搜索引擎，为 LLM 提供实时、准确的网页搜索结果，支持深度研究和快速搜索两种模式。</p>
+        <div class="mcp-meta"><span>⭐ 4.8</span><span>📥 12K+</span><span>v2.1.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="file">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon file">📁</div>
+          <h3>Filesystem</h3><span class="mcp-tag stdio">Stdio</span>
+        </div>
+        <p class="mcp-desc">安全的文件系统操作工具，支持读写文件、列出目录、创建文件夹、移动和搜索文件，可配置允许访问的目录范围。</p>
+        <div class="mcp-meta"><span>⭐ 4.9</span><span>📥 28K+</span><span>v1.0.2</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="dev">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon dev">💻</div>
+          <h3>GitHub</h3><span class="mcp-tag sse">SSE</span>
+        </div>
+        <p class="mcp-desc">完整的 GitHub API 集成，支持创建/搜索仓库、管理 Issue 和 PR、读取文件内容、推送代码等全方位 Git 操作。</p>
+        <div class="mcp-meta"><span>⭐ 4.7</span><span>📥 9K+</span><span>v3.0.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="browser">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon browser">🌐</div>
+          <h3>Puppeteer</h3><span class="mcp-tag stdio">Stdio</span>
+        </div>
+        <p class="mcp-desc">浏览器自动化工具，支持网页导航、截图、点击交互、执行 JavaScript，让 AI 直接操控浏览器完成复杂任务。</p>
+        <div class="mcp-meta"><span>⭐ 4.5</span><span>📥 6K+</span><span>v1.1.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="data">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon data">📊</div>
+          <h3>SQLite</h3><span class="mcp-tag stdio">Stdio</span>
+        </div>
+        <p class="mcp-desc">SQLite 数据库操作工具，支持读写数据库、列出表和模式、执行 SQL 查询，让 AI 直接与本地数据库交互。</p>
+        <div class="mcp-meta"><span>⭐ 4.6</span><span>📥 8K+</span><span>v0.2.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="dev">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon dev">🔧</div>
+          <h3>Docker</h3><span class="mcp-tag stdio">Stdio</span>
+        </div>
+        <p class="mcp-desc">Docker 容器管理工具，支持列出/创建/删除容器、管理镜像、查看日志和执行命令，AI 随时掌控你的容器环境。</p>
+        <div class="mcp-meta"><span>⭐ 4.4</span><span>📥 5K+</span><span>v0.1.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="cloud">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon cloud">☁️</div>
+          <h3>CloudBase</h3><span class="mcp-tag http">HTTP</span>
+        </div>
+        <p class="mcp-desc">腾讯云开发集成工具，支持云数据库读写、云函数调用、云存储文件管理，让 AI 直接操作你的云端资源。</p>
+        <div class="mcp-meta"><span>⭐ 4.5</span><span>📥 3K+</span><span>v1.2.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="knowledge">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon knowledge">🧠</div>
+          <h3>Memory</h3><span class="mcp-tag stdio">Stdio</span>
+        </div>
+        <p class="mcp-desc">AI 持久化记忆系统，支持创建知识图谱、存储实体与关系、检索相关记忆，让 AI 跨会话保持长期记忆与上下文理解。</p>
+        <div class="mcp-meta"><span>⭐ 4.7</span><span>📥 15K+</span><span>v0.3.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="search">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon search">🔎</div>
+          <h3>Brave Search</h3><span class="mcp-tag sse">SSE</span>
+        </div>
+        <p class="mcp-desc">隐私优先的搜索引擎 MCP，提供实时网页搜索与结果摘要，支持本地和网页两种搜索模式，无需广告追踪。</p>
+        <div class="mcp-meta"><span>⭐ 4.6</span><span>📥 7K+</span><span>v1.0.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="cloud">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon cloud">🟢</div>
+          <h3>Supabase</h3><span class="mcp-tag http">HTTP</span>
+        </div>
+        <p class="mcp-desc">Supabase 平台集成，支持 PostgreSQL 数据库操作、认证管理、存储文件上传、Realtime 订阅，一站式后端服务。</p>
+        <div class="mcp-meta"><span>⭐ 4.6</span><span>📥 4K+</span><span>v1.1.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="file">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon file">📝</div>
+          <h3>Google Drive</h3><span class="mcp-tag sse">SSE</span>
+        </div>
+        <p class="mcp-desc">Google Drive 文件管理工具，支持搜索、读取和创建文件与文件夹，让 AI 直接访问你的云端文档与资料。</p>
+        <div class="mcp-meta"><span>⭐ 4.3</span><span>📥 2K+</span><span>v0.2.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+      <div class="mcp-card" data-category="dev">
+        <div class="mcp-card-header">
+          <div class="mcp-card-icon dev">⚡</div>
+          <h3>Sequential Thinking</h3><span class="mcp-tag stdio">Stdio</span>
+        </div>
+        <p class="mcp-desc">动态反思思考工具，通过结构化步骤引导 AI 进行深度推理和问题分解，显著提升复杂任务的思考质量与决策能力。</p>
+        <div class="mcp-meta"><span>⭐ 4.8</span><span>📥 20K+</span><span>v1.0.0</span></div>
+        <div class="mcp-install">一键安装</div>
+      </div>
+    </div>
+    <div class="mcp-stats">
+      <div class="mcp-stat"><div class="mcp-stat-num">200+</div><div class="mcp-stat-label">MCP 服务</div></div>
+      <div class="mcp-stat"><div class="mcp-stat-num">3</div><div class="mcp-stat-label">传输协议</div></div>
+      <div class="mcp-stat"><div class="mcp-stat-num">100K+</div><div class="mcp-stat-label">累计安装</div></div>
+      <div class="mcp-stat"><div class="mcp-stat-num">一键</div><div class="mcp-stat-label">安装配置</div></div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div class="page" id="page-changelog">
 <section class="section changelog" id="changelog">
   <div class="section-inner">
     <div class="section-label">更新日志</div>
     <h2 class="section-title">版本更新记录</h2>
-    <p class="section-desc">持续迭代，不断进化。每一次更新都让 ChatHub 更强大。</p>
+    <p class="section-desc">持续迭代，不断进化。每一次更新都让 LLMWork 更强大。</p>
     <div class="timeline">
+      <div class="timeline-item">
+        <span class="version-tag">v1.1.0</span>
+        <span class="version-date">2025-06-21</span>
+        <h4>🚀 MCP 市场与官网升级</h4>
+        <ul>
+          <li class="feature">全新 MCP 市场页面，展示 200+ MCP 服务，支持分类筛选与一键安装</li>
+          <li class="feature">官网 SPA 页面架构，导航按钮切换独立页面，告别锚点滚动</li>
+          <li class="feature">MCP 服务卡片：展示传输协议（SSE/Stdio/HTTP）、评分、安装量、版本号</li>
+          <li class="feature">页面切换动画：fadeIn 过渡效果，导航栏高亮当前页面</li>
+          <li class="improve">MCP 市场分类筛选：搜索与知识、文件与文档、开发工具、数据与可视化、云端服务、浏览器自动化</li>
+        </ul>
+      </div>
       <div class="timeline-item">
         <span class="version-tag">v1.0.0</span>
         <span class="version-date">2025-06-14</span>
@@ -308,11 +496,13 @@
     </div>
   </div>
 </section>
+</div>
 
+<div class="page" id="page-download">
 <section class="section download-section" id="download">
   <div class="section-inner">
     <div class="section-label">下载</div>
-    <h2 class="section-title">获取 ChatHub</h2>
+    <h2 class="section-title">获取 LLMWork</h2>
     <p class="section-desc" style="margin:0 auto 0">选择你的平台，开始 AI 生产力之旅。完全免费，持续更新。</p>
     <div class="download-cards">
       <div class="download-card">
@@ -357,17 +547,52 @@
     </div>
   </div>
 </section>
+</div>
 
 <footer class="footer">
   <div class="footer-inner">
     <div class="footer-links">
-      <a href="#features">功能特性</a>
-      <a href="#changelog">更新日志</a>
-      <a href="#download">下载</a>
+      <a onclick="navigate('features')">功能特性</a>
+      <a onclick="navigate('mcp-market')">MCP 市场</a>
+      <a onclick="navigate('changelog')">更新日志</a>
+      <a onclick="navigate('download')">下载</a>
     </div>
-    <p>&copy; 2025 ChatHub. All rights reserved.</p>
+    <p>&copy; 2025 LLMWork. All rights reserved.</p>
   </div>
 </footer>
+
+<script>
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById('page-' + page);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    a.classList.toggle('active', a.dataset.page === page);
+  });
+  window.scrollTo(0, 0);
+}
+
+document.querySelectorAll('.nav-links a').forEach(a => {
+  a.addEventListener('click', () => navigate(a.dataset.page));
+});
+
+function filterMcp(category) {
+  document.querySelectorAll('.mcp-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === getCategoryLabel(category));
+  });
+  document.querySelectorAll('.mcp-card').forEach(card => {
+    if (category === 'all') {
+      card.style.display = '';
+    } else {
+      card.style.display = card.dataset.category === category ? '' : 'none';
+    }
+  });
+}
+function getCategoryLabel(cat) {
+  const map = {all:'全部',search:'搜索与知识',file:'文件与文档',dev:'开发工具',data:'数据与可视化',cloud:'云端服务',browser:'浏览器自动化',knowledge:'搜索与知识'};
+  return map[cat] || cat;
+}
+</script>
 
 </body>
 </html>

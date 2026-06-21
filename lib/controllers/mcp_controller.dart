@@ -103,6 +103,7 @@ class McpController extends GetxController {
           ? jsonEncode(mcp.body)
           : null
       ..type = mcp.type?.value
+      ..version = mcp.version
       ..tools = mcp.tools != null && mcp.tools!.isNotEmpty
           ? jsonEncode(mcp.tools!.map((t) => t.toJson()).toList())
           : null
@@ -163,6 +164,7 @@ class McpController extends GetxController {
       headers: headers,
       body: body,
       type: McpTransportTypeExt.fromString(entity.type),
+      version: entity.version,
       tools: tools,
       lastUpdated: entity.lastUpdated,
       prompt: entity.prompt,

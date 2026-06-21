@@ -129,6 +129,7 @@ class IsarMcpService {
   late String? type; // McpTransportType → string value
 
   // ── 运行时数据 ──
+  late String? version; // MCP 服务器版本号
   late String? tools; // List<McpToolInfo> → JSON
   late DateTime? lastUpdated;
   late String? prompt; // LLM 用的工具介绍文本

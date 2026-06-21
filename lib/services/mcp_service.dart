@@ -42,12 +42,14 @@ class McpToolResult {
 class McpConnectionInfo {
   final String serverName;
   final String? description; // 服务器描述（来自 instructions）
+  final String? serverVersion; // 服务器版本号（来自 serverInfo.version）
   final List<McpToolInfo> tools;
   final String prompt; // LLM 用的工具介绍文本
 
   const McpConnectionInfo({
     required this.serverName,
     this.description,
+    this.serverVersion,
     required this.tools,
     required this.prompt,
   });
@@ -507,12 +509,15 @@ ${toolSummary.toString()}
           );
 
       final serverInfo = client.serverInfo;
-      final serverName =
-          serverInfo != null
-              ? (serverInfo['name'] as String? ?? config.name)
-              : config.name;
+      // 以服务器返回的名称为准，不再用 LLM 重写
+      final serverName = serverInfo != null
+          ? (serverInfo['name'] as String? ?? config.name)
+          : config.name;
+      final serverVersion = serverInfo != null
+          ? (serverInfo['version'] as String? ?? '')
+          : '';
       final serverDescription = client.instructions;
-      debugPrint('📋 服务器名称: $serverName, 描述: $serverDescription');
+      debugPrint('📋 服务器名称: $serverName, 版本: $serverVersion, 描述: $serverDescription');
 
       final tools = await client.listTools().timeout(
         Duration(seconds: timeoutSec),
@@ -533,22 +538,29 @@ ${toolSummary.toString()}
             );
           }).toList();
 
-      // 用 LLM 总结生成更好的名称和描述（如果没有预定义值）
-      String finalName = preDefinedName ?? serverName;
-      String? finalDescription = preDefinedDescription ?? serverDescription;
-      if (preDefinedName == null && toolInfos.isNotEmpty) {
-        final summary = await _summarizeMcpWithLLM(
+      // 名称使用服务器返回值（或预定义值），版本使用服务器返回值
+      final finalName = preDefinedName ?? serverName;
+
+      // 描述：优先使用 LLM 总结，LLM 失败则 fallback 到服务器 instructions
+      String? finalDescription;
+      if (preDefinedDescription != null) {
+        finalDescription = preDefinedDescription;
+      } else {
+        final llmResult = await _summarizeMcpWithLLM(
           serverName: serverName,
           tools: toolInfos,
         );
-        if (summary != null) {
-          finalName = summary['name'] ?? serverName;
-          finalDescription = summary['description'] ?? serverDescription;
+        finalDescription = llmResult?['description'] ?? serverDescription;
+        if (llmResult != null) {
+          debugPrint('🤖 LLM 总结描述: ${finalDescription}');
+        } else {
+          debugPrint('⚠️ LLM 总结失败，使用服务器描述: ${serverDescription}');
         }
       }
 
       // 缓存工具信息
-      _cachedConfigs[serverName] = config.copyWith(
+      _cachedConfigs[finalName] = config.copyWith(
+        name: finalName,
         description: finalDescription,
         tools: toolInfos,
         lastUpdated: DateTime.now(),
@@ -568,6 +580,7 @@ ${toolSummary.toString()}
       return McpConnectionInfo(
         serverName: finalName,
         description: finalDescription,
+        serverVersion: serverVersion.isNotEmpty ? serverVersion : null,
         tools: toolInfos,
         prompt: prompt,
       );

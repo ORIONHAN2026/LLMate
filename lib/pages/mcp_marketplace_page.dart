@@ -1199,6 +1199,7 @@ class _MarketplaceAddDialogState extends State<_MarketplaceAddDialog> {
       final finalConfig = config.copyWith(
         name: info.serverName,
         description: info.description,
+        version: info.serverVersion,
         tools: info.tools,
         lastUpdated: DateTime.now(),
       );
@@ -1455,6 +1456,7 @@ class _CustomAddProgressDialogState extends State<_CustomAddProgressDialog> {
       final finalConfig = widget.config.copyWith(
         name: info.serverName,
         description: info.description,
+        version: info.serverVersion,
         tools: info.tools,
         lastUpdated: DateTime.now(),
       );

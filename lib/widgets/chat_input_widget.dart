@@ -1355,13 +1355,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 CupertinoIcons.folder,
                 size: 13,
                 color:
-                    !_isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(
-                          hasWorkDir ? 0.8 : 0.5,
-                        )
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3),
+                    _isSending
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        : hasWorkDir
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -1372,15 +1370,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
-                    fontWeight:
-                        hasWorkDir ? FontWeight.w500 : FontWeight.normal,
+                    fontWeight: hasWorkDir ? FontWeight.w700 : FontWeight.w500,
                     color:
-                        !_isSending
+                        _isSending
+                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                            : hasWorkDir
                             ? Theme.of(context).colorScheme.onSurface
-                                .withOpacity(hasWorkDir ? 0.8 : 0.5)
-                            : Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.3),
+                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ),
@@ -1424,6 +1420,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Widget _buildMemoryToggle() {
     final currentSession = sessionController.currentSession.value;
     final rounds = currentSession?.memoryRounds ?? 20;
+    final hasMemory = rounds > 0;
     final label = rounds == 0 ? AppLocalizations.of(context)!.noMemory : AppLocalizations.of(context)!.nRounds(rounds);
 
     return Tooltip(
@@ -1440,12 +1437,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     _isSending
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        : hasMemory
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 4),
               Text(
@@ -1454,10 +1449,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  fontWeight: hasMemory ? FontWeight.w700 : FontWeight.w500,
+                  color:
+                      _isSending
+                          ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                          : hasMemory
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ],
@@ -1693,13 +1691,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 CupertinoIcons.link,
                 size: 13,
                 color:
-                    hasMcpServices && !_isSending
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6)
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3),
+                    _isSending
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        : hasSelectedService
+                        ? Theme.of(context).colorScheme.onSurface
+                        : hasMcpServices
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -1710,8 +1708,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: hasMcpServices
+                    fontWeight: hasSelectedService ? FontWeight.w700 : FontWeight.w500,
+                    color:
+                        _isSending
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        : hasSelectedService
+                        ? Theme.of(context).colorScheme.onSurface
+                        : hasMcpServices
                         ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
                         : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                   ),
@@ -2031,11 +2034,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final displayText =
         activeSkill != null ? activeSkill.name : (hasSkills ? AppLocalizations.of(context)!.selectSkill : AppLocalizations.of(context)!.noAvailableSkill);
 
+    final hasSelectedSkill = activeSkill != null;
+
     final iconWidget = Icon(
       CupertinoIcons.wand_stars,
       size: 13,
       color:
-          hasSkills && !_isSending
+          _isSending
+              ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+              : hasSelectedSkill
+              ? Theme.of(context).colorScheme.onSurface
+              : hasSkills
               ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
               : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
     );
@@ -2068,10 +2077,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      fontWeight: hasSelectedSkill ? FontWeight.w700 : FontWeight.w500,
+                      color:
+                          _isSending
+                          ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                          : hasSelectedSkill
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ),

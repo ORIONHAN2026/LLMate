@@ -84,6 +84,7 @@ class Mcp {
   final McpTransportType? type; // 传输协议枚举
 
   // ── 运行时数据 ──
+  final String? version; // MCP 服务器版本号（来自 serverInfo.version）
   final List<McpToolInfo>? tools; // 工具信息列表
   final DateTime? lastUpdated; // 最后更新时间
   final String? prompt; // LLM 用的工具介绍文本（添加/刷新时生成）
@@ -102,6 +103,7 @@ class Mcp {
     this.headers,
     this.body,
     this.type,
+    this.version,
     this.tools,
     this.lastUpdated,
     this.prompt,
@@ -156,6 +158,7 @@ class Mcp {
           ? Map<String, dynamic>.from(json['body'] as Map)
           : null,
       type: McpTransportTypeExt.fromString(json['type'] as String?),
+      version: json['version'] as String?,
       tools: tools,
       lastUpdated: lastUpdated,
       prompt: json['prompt'] as String?,
@@ -190,6 +193,7 @@ class Mcp {
     data['name'] = name;
     if (description != null) data['description'] = description;
     data['code'] = code;
+    if (version != null) data['version'] = version;
     if (workingDirectory != null) data['workingDirectory'] = workingDirectory;
     if (prompt != null && prompt!.isNotEmpty) data['prompt'] = prompt;
     if (tools != null && tools!.isNotEmpty) {
@@ -216,6 +220,7 @@ class Mcp {
     Map<String, String>? headers,
     Map<String, dynamic>? body,
     McpTransportType? type,
+    String? version,
     List<McpToolInfo>? tools,
     DateTime? lastUpdated,
     String? prompt,
@@ -234,6 +239,7 @@ class Mcp {
       headers: headers ?? this.headers,
       body: body ?? this.body,
       type: type ?? this.type,
+      version: version ?? this.version,
       tools: tools ?? this.tools,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       prompt: prompt ?? this.prompt,

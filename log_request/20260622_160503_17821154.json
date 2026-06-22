@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-06-22T16:05:03.464222",
+  "sessionId": "1782115489879",
+  "model": "deepseek-v4-flash",
+  "request": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "## ⚡ 核心规则\n\n1. **工具优先**：回答需要文件内容、目录结构、代码片段或数据时，必须先调用工具获取。严禁在未调用工具的情况下编造文件名、路径、代码内容或数据。\n2. **操作验证**：声称完成了任何操作（修改文件、执行命令等），必须确实通过工具执行过。严禁假装执行。\n3. **诚实回应**：如果无法获取需要的信息，直接说\"无法确定\"，不要编造。区分事实（工具返回的）与推测。\n4. **静默执行**：直接调用工具并返回结果，无需向用户解释你正在使用什么工具。不要将内部工具作为功能特性向用户介绍。\n5. **过期数据**：不要依赖历史对话中看到过的数据，每次都重新通过工具获取最新内容。\n\n一句话：没调用工具就不准呈现数据，没执行操作就不准说已完成。"
+      },
+      {
+        "role": "system",
+        "content": "You MUST respond in Chinese (Simplified). Code, variable names, and URLs can remain in their original language."
+      },
+      {
+        "role": "user",
+        "content": "查询下token"
+      }
+    ]
+  },
+  "response": {
+    "content": "我先查一下当前缓存的 access_token 状态。当前 access_token 状态如下：\n\n| 项目 | 内容 |\n|------|------|\n| **状态** | ✅ 内存缓存有效，未过期 |\n| **token** | `105_0yxIZoN19pEro8HMMfTGBV_06gl71NlqynFO6CzGvYygUlO81wGd7qCyBK8-KeRn59dRBNyGAddVIXkeHNkaUdLt2KORbXZ4vY1wexKAndX1p6aVDhzTr-lSe5cFDTaADAPND` |\n| **过期时间戳** | 1782122271 |\n\n当前缓存的 token 还在有效期内，无需重新获取。如果需要强制刷新获取新 token，可以传 `force: true` 参数。",
+    "tool_calls": [
+      {
+        "name": "getAccessToken",
+        "arguments": {},
+        "success": true,
+        "result": "✅ **access_token 获取成功（内存缓存命中）**\n\n- **状态**: 内存缓存有效，未过期\n- **access_token**: `105_0yxIZoN19pEro8HMMfTGBV_06gl71NlqynFO6CzGvYygUlO81wGd7qCyBK8-KeRn59dRBNyGAddVIXkeHNkaUdLt2KORbXZ4vY1wexKAndX1p6aVDhzTr-lSe5cFDTaADAPND`\n- **过期时间戳**: 1782122271"
+      }
+    ]
+  }
+}

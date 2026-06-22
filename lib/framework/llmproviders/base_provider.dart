@@ -220,7 +220,7 @@ abstract class BaseLlmProvider {
     // ── 3. 核心规则 + 语言（放在用户消息紧前面，优先级最高） ──
     messages.add({'role': 'system', 'content': CommonSystemPrompts.coreRules});
     messages.add({
-      'role': 'user',
+      'role': 'system',
       'content': CommonSystemPrompts.responseLanguage(
         Get.locale?.languageCode ?? 'zh',
       ),

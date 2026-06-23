@@ -1431,8 +1431,74 @@ abstract class AppLocalizations {
   /// No description provided for @parseContractPrompt.
   ///
   /// In en, this message translates to:
-  /// **'The following are document files in the working directory. Please first determine which files are actual contract documents (not attachments, descriptions, or other non-contract files). Then, only for files confirmed as contracts, extract and organize the following information:\n1. Contract Type\n2. Income/Expense Clauses\n3. Payment Schedule\n4. Breach Clauses\n5. Liability for Breach\n6. Contract Start Date\n7. Contract End Date\n\nPlease output each contract one by one, and explain which files were determined as non-contract and why, in a clear format.'**
+  /// **'The following are document files in the working directory. Please first determine which files are actual contract documents (not attachments, descriptions, or other non-contract files). Then, only for files confirmed as contracts, use the contract_inspect tool to write each contract\'s information.\n\nWriting rules:\n- For each contract, first call action=add to create a contract entry (fill in contractName, contractType, paymentClause, paymentSchedule, breachClause, liabilityClause, startDate, endDate, signingDate, etc.)\n- Then call action=addParty for each party, adding Party A, Party B, etc. one by one\n- Also briefly explain in your reply which files were determined as non-contract and why'**
   String get parseContractPrompt;
+
+  /// No description provided for @contractPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract Points'**
+  String get contractPoints;
+
+  /// No description provided for @noContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'No contract points'**
+  String get noContracts;
+
+  /// No description provided for @contractParsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract points will appear here after parsing'**
+  String get contractParsing;
+
+  /// No description provided for @contractParty.
+  ///
+  /// In en, this message translates to:
+  /// **'Parties'**
+  String get contractParty;
+
+  /// No description provided for @contractPaymentClause.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Clause'**
+  String get contractPaymentClause;
+
+  /// No description provided for @contractPaymentSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Schedule'**
+  String get contractPaymentSchedule;
+
+  /// No description provided for @contractBreachClause.
+  ///
+  /// In en, this message translates to:
+  /// **'Breach Clause'**
+  String get contractBreachClause;
+
+  /// No description provided for @contractLiability.
+  ///
+  /// In en, this message translates to:
+  /// **'Liability'**
+  String get contractLiability;
+
+  /// No description provided for @contractPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract Period'**
+  String get contractPeriod;
+
+  /// No description provided for @contractSigningDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing Date'**
+  String get contractSigningDate;
+
+  /// No description provided for @contractTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract Type'**
+  String get contractTypeLabel;
 
   /// No description provided for @nRounds.
   ///

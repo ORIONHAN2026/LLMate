@@ -66,7 +66,7 @@ void main() async {
     });
   }
 
-  // 初始化 Isar 数据库（必须在 ThemeController 之前）
+  // 初始化文件存储（必须在 ThemeController 之前）
   await IsarService.instance.initialize();
 
   // 在应用启动前初始化 ThemeController

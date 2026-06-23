@@ -1,15 +1,15 @@
-import 'dart:convert';
 import 'package:llmwork/models/chat/chat_message.dart';
 import 'package:llmwork/models/chat/scheduled_task.dart';
-import 'package:llmwork/models/chat/memory_turn.dart';
+import 'package:llmwork/models/chat/chat_attachment.dart';
+import 'package:llmwork/models/chat/chat_setting.dart';
+import 'package:llmwork/models/chat/contract_info.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:isar/isar.dart';
 
 import '../models/chat/chat_session.dart';
 import '../models/bigmodel/chat_model.dart';
-import '../storage/isar_models.dart';
 import '../storage/isar_service.dart';
+import '../storage/storage_paths.dart';
 import '../services/mcp_service.dart';
 import '../services/skill_service.dart';
 import 'model_controller.dart';
@@ -30,15 +30,13 @@ class SessionController extends GetxController {
   Future<void> setCurrentSession(ChatSession? session) async {
     if (session == null) {
       currentSession.value = null;
-      await _persistCurrentSession();
       return;
     }
 
-    // 使用非空局部变量，允许后续 copyWith 重新赋值
     ChatSession s = session;
     bool updated = false;
 
-    // 懒加载：如果消息为空，从 IsarChatMessage 加载
+    // 懒加载：如果消息为空，从文件加载
     if (s.messages.isEmpty) {
       final messages = await loadMessages(s.sessionId);
       if (messages.isNotEmpty) {
@@ -47,7 +45,7 @@ class SessionController extends GetxController {
       }
     }
 
-    // 每次进入会话时，根据 modelId 动态重新加载 chatModel
+    // 根据 modelId 动态重新加载 chatModel
     if (s.modelId != null && s.modelId!.isNotEmpty) {
       try {
         final modelController = Get.find<ModelController>();
@@ -56,9 +54,7 @@ class SessionController extends GetxController {
         );
         s = s.copyWith(chatModel: m);
         updated = true;
-      } catch (_) {
-        // 模型已被删除，chatModel 保持为 null
-      }
+      } catch (_) {}
     }
 
     // 根据 mcpId 动态解析 mcp
@@ -82,16 +78,12 @@ class SessionController extends GetxController {
       }
     }
 
-    // 同步更新 sessions 列表中的对应项
     if (updated) {
       final idx = sessions.indexWhere((ss) => ss.sessionId == s.sessionId);
       if (idx != -1) {
         sessions[idx] = s;
       }
     }
-
-    // 会话打开时预初始化 MCP 连接
-    // McpService.initForSession(s);
 
     currentSession.value = s;
     await _persistSessionAndCurrent(s, isCurrent: true);
@@ -116,77 +108,77 @@ class SessionController extends GetxController {
     if (isCurrent) {
       currentSession.value = updatedSession;
     }
-    // 合并持久化：单次 writeTxn 完成 sessions + currentSession + messages
     if (idx != -1 || isCurrent) {
       await _persistSessionAndCurrent(updatedSession, isCurrent: isCurrent);
     }
   }
 
-  /// 合并持久化：在同一次 writeTxn 中更新 sessions 列表和 currentSession
-  Future<void> _persistSessionAndCurrent(ChatSession updatedSession, {required bool isCurrent}) async {
+  /// 合并持久化：session.json + message.json + memory.md + 相关文件
+  Future<void> _persistSessionAndCurrent(ChatSession updatedSession,
+      {required bool isCurrent}) async {
     try {
-      final isar = IsarService.instance.isar;
-      await isar.writeTxn(() async {
-        // === 1. 持久化所有会话 ===
-        final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
-        for (final session in sessions) {
-          final existing =
-              await isar.isarChatSessions.getBySessionId(session.sessionId);
-          if (existing != null) {
-            _updateIsarSessionFromChatSession(existing, session);
-            existing.isCurrent = currentSession.value?.sessionId == session.sessionId;
-            await isar.isarChatSessions.put(existing);
-          } else {
-            final entity = _chatSessionToIsar(session);
-            entity.isCurrent = currentSession.value?.sessionId == session.sessionId;
-            await isar.isarChatSessions.put(entity);
-          }
-        }
-        // 删除不在当前会话列表中的旧数据
-        final allEntities =
-            await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
-        for (final entity in allEntities) {
-          if (!currentSessionIds.contains(entity.sessionId)) {
-            await isar.isarChatSessions.delete(entity.id);
-          }
-        }
+      final store = IsarService.instance.store;
 
-        // === 2. 持久化当前会话的消息 ===
-        if (isCurrent) {
-          final messages = updatedSession.messages;
-          if (messages.isNotEmpty) {
-            for (final m in messages) {
-              final existing =
-                  await isar.isarChatMessages.getByMsgId(m.msgId);
-              if (existing != null) {
-                existing.sessionId = updatedSession.sessionId;
-                existing.timestamp = m.timestamp;
-                existing.messageJson = jsonEncode(m.toJson());
-                await isar.isarChatMessages.put(existing);
-              } else {
-                final entity = IsarChatMessage()
-                  ..msgId = m.msgId
-                  ..sessionId = updatedSession.sessionId
-                  ..timestamp = m.timestamp
-                  ..messageJson = jsonEncode(m.toJson());
-                await isar.isarChatMessages.put(entity);
-              }
-            }
-          }
-          // 删除不在新消息列表中的旧消息
-          final currentMsgIds = messages.map((m) => m.msgId).toSet();
-          final oldMessages = await isar.isarChatMessages
-              .where()
-              .sessionIdEqualTo(updatedSession.sessionId)
-              .sortByTimestamp()
-              .findAll();
-          for (final oldMsg in oldMessages) {
-            if (!currentMsgIds.contains(oldMsg.msgId)) {
-              await isar.isarChatMessages.delete(oldMsg.id);
-            }
-          }
+      // === 1. 持久化所有会话元数据 ===
+      final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
+      for (final session in sessions) {
+        final sessionData = _sessionToMap(session);
+        sessionData['isCurrent'] =
+            currentSession.value?.sessionId == session.sessionId;
+        await store.isarChatSessions.put(sessionData);
+      }
+
+      // 删除不在当前列表中的旧会话
+      final allSessions = await store.isarChatSessions.findAll();
+      for (final entity in allSessions) {
+        final sid = entity['sessionId'] as String;
+        if (!currentSessionIds.contains(sid)) {
+          await store.isarChatSessions.delete(sid);
         }
-      });
+      }
+
+      // === 2. 持久化当前会话的消息 ===
+      if (isCurrent) {
+        final messages = updatedSession.messages;
+        final messagesJson =
+            messages.map((m) => m.toJson()).toList();
+        await store.isarChatMessages.putAll(
+            updatedSession.sessionId, messagesJson);
+      }
+
+      // === 3. 持久化记忆到 memory.md ===
+      if (updatedSession.compressedMemory != null &&
+          updatedSession.compressedMemory!.isNotEmpty) {
+        await SessionFileStore.writeMemory(
+            updatedSession.sessionId, updatedSession.compressedMemory!);
+      }
+
+      // === 4. 持久化技能绑定到 skill.json ===
+      if (updatedSession.skill != null) {
+        await SessionFileStore.writeSkill(
+            updatedSession.sessionId, updatedSession.skill!.toJson());
+      }
+
+      // === 5. 持久化 MCP 绑定到 mcp.json ===
+      if (updatedSession.mcp != null) {
+        await SessionFileStore.writeMcp(
+            updatedSession.sessionId, updatedSession.mcp!.toFullJson());
+      }
+
+      // === 6. 持久化合约要点到 business.md ===
+      if (updatedSession.contracts != null && updatedSession.contracts!.isNotEmpty) {
+        final mdContent = StringBuffer();
+        mdContent.writeln('# 合约要点');
+        mdContent.writeln();
+        for (final c in updatedSession.contracts!) {
+          mdContent.write(c.toMarkdown());
+        }
+        await SessionFileStore.writeBusiness(
+            updatedSession.sessionId, mdContent.toString());
+      } else {
+        await SessionFileStore.writeBusiness(
+            updatedSession.sessionId, '');
+      }
     } catch (e) {
       debugPrint('合并持久化失败: $e');
     }
@@ -205,13 +197,13 @@ class SessionController extends GetxController {
     );
     if (messageIndex == -1) return;
 
-    // 创建新的 messages 列表，确保 RxList 能检测到变化
     final newMessages = List<ChatMessage>.from(session.messages);
     newMessages[messageIndex] = updateMessage;
     final updatedSession = session.copyWith(messages: newMessages);
     sessions[sessionIndex] = updatedSession;
 
-    final isCurrent = currentSession.value?.sessionId == session.sessionId;
+    final isCurrent =
+        currentSession.value?.sessionId == session.sessionId;
     if (isCurrent) {
       currentSession.value = updatedSession;
     }
@@ -231,32 +223,30 @@ class SessionController extends GetxController {
     );
     if (messageIndex == -1) return;
 
-    // 创建新的 messages 列表（不含被删除的消息），确保 RxList 能检测到变化
     final newMessages = List<ChatMessage>.from(session.messages);
     newMessages.removeAt(messageIndex);
     final updatedSession = session.copyWith(messages: newMessages);
     sessions[sessionIndex] = updatedSession;
 
-    final isCurrent = currentSession.value?.sessionId == session.sessionId;
+    final isCurrent =
+        currentSession.value?.sessionId == session.sessionId;
     if (isCurrent) {
       currentSession.value = updatedSession;
     }
     await _persistSessionAndCurrent(updatedSession, isCurrent: isCurrent);
   }
 
-  /// 切换到指定会话并持久化（不阻塞 UI）
+  /// 切换到指定会话并持久化
   Future<void> switchToSession(String sessionId) async {
-    // 切换会话时关闭所有 MCP 连接
     await McpService.closeAllClients();
 
     final targetIndex = sessions.indexWhere((s) => s.sessionId == sessionId);
     if (targetIndex >= 0 && targetIndex < sessions.length) {
       final target = sessions[targetIndex];
       currentSession.value = target;
-      // 新会话有 MCP 则立即预初始化
       McpService.initForSession(target);
-      // 持久化放到微任务中异步执行，不阻塞 UI 切换
-      Future.microtask(() => _persistSessionAndCurrent(target, isCurrent: true));
+      Future.microtask(() =>
+          _persistSessionAndCurrent(target, isCurrent: true));
     }
   }
 
@@ -277,38 +267,14 @@ class SessionController extends GetxController {
       }
     }
 
-    // 从 Isar 中删除会话及关联消息
+    // 从文件系统删除
     try {
-      final isar = IsarService.instance.isar;
-      await isar.writeTxn(() async {
-        // 删除关联消息
-        final sessionMessages = await isar.isarChatMessages
-            .where()
-            .sessionIdEqualTo(sessionId)
-            .sortByTimestamp()
-            .findAll();
-        if (sessionMessages.isNotEmpty) {
-          await isar.isarChatMessages
-              .deleteAll(sessionMessages.map((m) => m.id).toList());
-        }
-        // 删除会话本身
-        final entity = await isar.isarChatSessions.getBySessionId(sessionId);
-        if (entity != null) {
-          await isar.isarChatSessions.delete(entity.id);
-        }
-        // 在同一次事务中持久化剩余的会话和当前会话
-        final currentId = currentSession.value?.sessionId;
-        for (final s in sessions) {
-          final existing = await isar.isarChatSessions.getBySessionId(s.sessionId);
-          if (existing != null) {
-            _updateIsarSessionFromChatSession(existing, s);
-            existing.isCurrent = currentId == s.sessionId;
-            await isar.isarChatSessions.put(existing);
-          }
-        }
-      });
+      final store = IsarService.instance.store;
+      await store.isarChatSessions.delete(sessionId);
+      // 删除会话目录（包含 session.json, message.json, memory.md 等）
+      await store.isarChatMessages.delete(sessionId);
     } catch (e) {
-      debugPrint('从 Isar 删除会话失败: $e');
+      debugPrint('删除会话失败: $e');
     }
   }
 
@@ -364,7 +330,8 @@ class SessionController extends GetxController {
       if (idx != -1) {
         final updated = sessions[idx].copyWith(messages: messages);
         sessions[idx] = updated;
-        final isCurrent = currentSession.value?.sessionId == sessionId;
+        final isCurrent =
+            currentSession.value?.sessionId == sessionId;
         if (isCurrent) {
           currentSession.value = updated;
         }
@@ -377,35 +344,29 @@ class SessionController extends GetxController {
   Future<void> clearAllSessions() async {
     sessions.clear();
     currentSession.value = null;
-    await _persistSessions(); // _persistCurrentSession 在 currentSession 为 null 时直接返回，无需重复调用
+    await _persistSessions();
   }
 
-  /// 加载所有会话和当前会话（消息懒加载：仅加载会话元数据）
+  /// 加载所有会话和当前会话（消息懒加载）
   Future<void> loadAll() async {
     try {
-      final isar = IsarService.instance.isar;
-
-      // 加载所有 Isar 会话（不含消息，消息独立存储）
-      final isarSessions =
-          await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
+      final store = IsarService.instance.store;
+      final isarSessions = await store.isarChatSessions.findAll();
 
       final List<ChatSession> loaded = [];
       ChatSession? current;
 
       for (final entity in isarSessions) {
-        // 轻量加载：不含消息
-        final session = _isarToChatSession(entity, loadMessages: false);
+        final session = await _mapToSession(entity);
         loaded.add(session);
-        if (entity.isCurrent) {
+        if (entity['isCurrent'] == true) {
           current = session;
         }
       }
 
-      // 按创建时间排序
       loaded.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       sessions.value = loaded;
 
-      // 通过 setCurrentSession 解析 mcp/skill/model，并加载当前会话的消息
       if (current != null) {
         await setCurrentSession(current);
       } else {
@@ -416,25 +377,23 @@ class SessionController extends GetxController {
     }
   }
 
-  /// 为指定会话加载消息（从 IsarChatMessage 集合）
+  /// 为指定会话加载消息
   Future<List<ChatMessage>> loadMessages(String sessionId) async {
     try {
-      final isar = IsarService.instance.isar;
-      final entities = await isar.isarChatMessages
-          .where()
-          .sessionIdEqualTo(sessionId)
-          .sortByTimestamp()
-          .findAll();
+      final store = IsarService.instance.store;
+      final messagesData =
+          await store.isarChatMessages.getBySessionId(sessionId);
 
-      return entities.map((e) {
-        try {
-          return ChatMessage.fromJson(
-            jsonDecode(e.messageJson) as Map<String, dynamic>,
-          );
-        } catch (_) {
-          return null;
-        }
-      }).whereType<ChatMessage>().toList();
+      return messagesData
+          .map((m) {
+            try {
+              return ChatMessage.fromJson(m);
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<ChatMessage>()
+          .toList();
     } catch (e) {
       debugPrint('加载会话消息失败: $e');
       return [];
@@ -445,321 +404,269 @@ class SessionController extends GetxController {
 
   Future<void> _persistSessions() async {
     try {
-      final isar = IsarService.instance.isar;
-      await isar.writeTxn(() async {
-        final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
-        for (final session in sessions) {
-          // 查找已有实体，存在则更新，不存在则新建（避免唯一索引冲突）
-          final existing =
-              await isar.isarChatSessions.getBySessionId(session.sessionId);
-          if (existing != null) {
-            _updateIsarSessionFromChatSession(existing, session);
-            existing.isCurrent =
-                currentSession.value?.sessionId == session.sessionId;
-            await isar.isarChatSessions.put(existing);
-          } else {
-            final entity = _chatSessionToIsar(session);
-            entity.isCurrent =
-                currentSession.value?.sessionId == session.sessionId;
-            await isar.isarChatSessions.put(entity);
-          }
+      final store = IsarService.instance.store;
+      final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
+
+      for (final session in sessions) {
+        final sessionData = _sessionToMap(session);
+        sessionData['isCurrent'] =
+            currentSession.value?.sessionId == session.sessionId;
+        await store.isarChatSessions.put(sessionData);
+      }
+
+      // 删除不在当前列表中的旧会话
+      final allSessions = await store.isarChatSessions.findAll();
+      for (final entity in allSessions) {
+        final sid = entity['sessionId'] as String;
+        if (!currentSessionIds.contains(sid)) {
+          await store.isarChatSessions.delete(sid);
         }
-        // 再删除不在当前会话列表中的旧数据（避免先删后写导致崩溃丢数据）
-        final allEntities =
-            await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
-        for (final entity in allEntities) {
-          if (!currentSessionIds.contains(entity.sessionId)) {
-            await isar.isarChatSessions.delete(entity.id);
-          }
-        }
-      });
+      }
     } catch (e) {
       debugPrint('保存会话失败: $e');
     }
   }
 
-  /// 持久化单个会话的所有消息（先写后删，避免崩溃丢数据）
-  Future<void> _persistMessagesForSession(
-    String sessionId,
-    List<ChatMessage> messages,
-  ) async {
-    try {
-      final isar = IsarService.instance.isar;
-      await isar.writeTxn(() async {
-        // 先写入新消息（查找已有实体，存在则更新，不存在则新建，避免唯一索引冲突）
-        if (messages.isNotEmpty) {
-          for (final m in messages) {
-            final existing =
-                await isar.isarChatMessages.getByMsgId(m.msgId);
-            if (existing != null) {
-              existing.sessionId = sessionId;
-              existing.timestamp = m.timestamp;
-              existing.messageJson = jsonEncode(m.toJson());
-              await isar.isarChatMessages.put(existing);
-            } else {
-              final entity = IsarChatMessage()
-                ..msgId = m.msgId
-                ..sessionId = sessionId
-                ..timestamp = m.timestamp
-                ..messageJson = jsonEncode(m.toJson());
-              await isar.isarChatMessages.put(entity);
-            }
-          }
-        }
-        // 再删除不在新消息列表中的旧消息
-        final currentMsgIds = messages.map((m) => m.msgId).toSet();
-        final oldMessages = await isar.isarChatMessages
-            .where()
-            .sessionIdEqualTo(sessionId)
-            .sortByTimestamp()
-            .findAll();
-        for (final oldMsg in oldMessages) {
-          if (!currentMsgIds.contains(oldMsg.msgId)) {
-            await isar.isarChatMessages.delete(oldMsg.id);
-          }
-        }
-      });
-    } catch (e) {
-      debugPrint('持久化消息失败: $e');
-    }
-  }
-
-  Future<void> _persistCurrentSession() async {
-    try {
-      if (currentSession.value == null) return;
-      final isar = IsarService.instance.isar;
-      final currentId = currentSession.value!.sessionId;
-
-      await isar.writeTxn(() async {
-        // 只查找旧当前会话（而非加载全部），清除 isCurrent 标记
-        final allSessions =
-            await isar.isarChatSessions.buildQuery<IsarChatSession>().findAll();
-        IsarChatSession? oldCurrent;
-        for (final s in allSessions) {
-          if (s.isCurrent) {
-            oldCurrent = s;
-            break;
-          }
-        }
-        if (oldCurrent != null && oldCurrent.sessionId != currentId) {
-          oldCurrent.isCurrent = false;
-          await isar.isarChatSessions.put(oldCurrent);
-        }
-
-        // 设置新当前会话 - 使用 putBySessionId 避免唯一索引冲突
-        final entity = await isar.isarChatSessions.getBySessionId(currentId);
-        if (entity != null) {
-          // 直接更新现有实体的字段，而不是创建新对象
-          _updateIsarSessionFromChatSession(entity, currentSession.value!);
-          entity.isCurrent = true;
-          await isar.isarChatSessions.put(entity);
-        } else {
-          // 新会话首次持久化
-          final newEntity = _chatSessionToIsar(currentSession.value!);
-          newEntity.isCurrent = true;
-          await isar.isarChatSessions.put(newEntity);
-        }
-      });
-
-      // 单独持久化当前会话的消息
-      await _persistMessagesForSession(
-        currentId,
-        currentSession.value!.messages,
-      );
-    } catch (e) {
-      debugPrint('保存当前会话失败: $e');
-    }
-  }
-
-  // ==================== 转换方法 ====================
-
-  /// ChatSession → IsarChatSession
-  IsarChatSession _chatSessionToIsar(ChatSession session) {
-    return IsarChatSession()
-      ..sessionId = session.sessionId
-      ..name = session.name
-      ..createdAt = session.createdAt
-      ..isFavorite = session.isFavorite
-      ..isSending = session.isSending
-      ..shouldStopResponse = session.shouldStopResponse
-      ..scrollPosition = session.scrollPosition
-      ..inputContent = session.inputContent
-      ..lastSelectedDirectory = session.lastSelectedDirectory
-      ..workDirectory = session.workDirectory
-      ..messagesJson = null // 不再写入，消息已通过 _persistMessagesForSession 独立存储
-      ..modelId = session.modelId
-      ..mcpId = session.mcpId
-      ..skillId = session.skillId
-      ..attachmentsJson =
-          session.attachments.isNotEmpty
-              ? jsonEncode(session.attachments.map((a) => a.toJson()).toList())
-              : null
-      ..sessionQuickCommandsJson =
-          session.sessionQuickCommands.isNotEmpty
-              ? jsonEncode(
-                session.sessionQuickCommands.map((c) => c.toJson()).toList(),
-              )
-              : null
-      ..scheduledTasksJson =
-          session.scheduledTask != null
-              ? jsonEncode(session.scheduledTask!.toJson())
-              : null
-      ..memoryRounds = session.memoryRounds
-      ..deepThink = session.deepThink
-      ..memoryJson =
-          session.memory.isNotEmpty
-              ? jsonEncode(session.memory.map((t) => t.toJson()).toList())
-              : null
-      ..compressedMemory = session.compressedMemory
-      ..isCurrent = false; // 由调用方设置
-  }
-
-  /// 更新 IsarChatSession 实体字段（复用现有实体，避免唯一索引冲突）
-  void _updateIsarSessionFromChatSession(
-    IsarChatSession entity,
-    ChatSession session,
-  ) {
-    entity.sessionId = session.sessionId;
-    entity.name = session.name;
-    entity.createdAt = session.createdAt;
-    entity.isFavorite = session.isFavorite;
-    entity.isSending = session.isSending;
-    entity.shouldStopResponse = session.shouldStopResponse;
-    entity.scrollPosition = session.scrollPosition;
-    entity.inputContent = session.inputContent;
-    entity.lastSelectedDirectory = session.lastSelectedDirectory;
-    entity.workDirectory = session.workDirectory;
-    entity.messagesJson = null; // 不再写入，消息已通过 _persistMessagesForSession 独立存储
-    entity.modelId = session.modelId;
-    entity.mcpId = session.mcpId;
-    entity.skillId = session.skillId;
-    entity.attachmentsJson =
-        session.attachments.isNotEmpty
-            ? jsonEncode(session.attachments.map((a) => a.toJson()).toList())
-            : null;
-    entity.sessionQuickCommandsJson =
-        session.sessionQuickCommands.isNotEmpty
-            ? jsonEncode(
-              session.sessionQuickCommands.map((c) => c.toJson()).toList(),
-            )
-            : null;
-    entity.scheduledTasksJson =
-        session.scheduledTask != null
-            ? jsonEncode(session.scheduledTask!.toJson())
-            : null;
-    entity.memoryRounds = session.memoryRounds;
-    entity.deepThink = session.deepThink;
-    entity.memoryJson =
-        session.memory.isNotEmpty
-            ? jsonEncode(session.memory.map((t) => t.toJson()).toList())
-            : null;
-    entity.compressedMemory = session.compressedMemory;
-  }
-
-  /// 根据消息ID查找会话（先从内存查找，未找到则从Isar搜索消息集合）
+  /// 根据消息ID查找会话
   Future<ChatSession?> findSessionByMessageId(String messageId) async {
-    // 先从内存列表查找
+    // 先从内存查找
     for (final session in sessions) {
       if (session.messages.any((msg) => msg.msgId == messageId)) {
         return session;
       }
     }
 
-    // 内存中未找到，从 IsarChatMessage 集合搜索
+    // 从文件系统搜索
     try {
-      final isar = IsarService.instance.isar;
-      final msgEntity = await isar.isarChatMessages.getByMsgId(messageId);
-      if (msgEntity != null) {
-        final sessionEntity = await isar.isarChatSessions
-            .getBySessionId(msgEntity.sessionId);
-        if (sessionEntity != null) {
-          return _isarToChatSession(sessionEntity);
+      final store = IsarService.instance.store;
+      final ids = await StoragePaths.listSessionIds();
+      for (final sid in ids) {
+        final messagesData =
+            await store.isarChatMessages.getBySessionId(sid);
+        if (messagesData.any((m) => m['id'] == messageId)) {
+          final sessionData =
+              await store.isarChatSessions.getBySessionId(sid);
+          if (sessionData != null) {
+            return await _mapToSession(sessionData);
+          }
         }
       }
     } catch (e) {
-      debugPrint('从Isar搜索会话失败: $e');
+      debugPrint('从文件搜索会话失败: $e');
     }
 
     return null;
   }
 
-  /// IsarChatSession → ChatSession
-  /// [loadMessages] 为 true 时从旧格式 messagesJson 加载消息（兼容），默认 false 配合懒加载
-  ChatSession _isarToChatSession(IsarChatSession entity, {bool loadMessages = false}) {
-    // 解析消息（仅在 loadMessages=true 时从遗留 messagesJson 加载）
-    List<ChatMessage> messages = [];
-    if (loadMessages && entity.messagesJson != null && entity.messagesJson!.isNotEmpty) {
-      try {
-        final list = jsonDecode(entity.messagesJson!) as List<dynamic>;
-        messages =
-            list
-                .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
-                .toList();
-      } catch (_) {}
-    }
+  // ==================== 转换方法 ====================
 
-    // 根据 modelId 动态解析 ChatModel
-    final String? modelId = entity.modelId;
+  /// ChatSession → Map（用于 session.json）
+  Map<String, dynamic> _sessionToMap(ChatSession session) {
+    return {
+      'sessionId': session.sessionId,
+      'name': session.name,
+      'createdAt': session.createdAt.toIso8601String(),
+      'isFavorite': session.isFavorite,
+      'isSending': false, // 运行时状态不持久化
+      'shouldStopResponse': false, // 运行时状态不持久化
+      'scrollPosition': session.scrollPosition,
+      'inputContent': session.inputContent,
+      'lastSelectedDirectory': session.lastSelectedDirectory,
+      'workDirectory': session.workDirectory,
+      'modelId': session.modelId,
+      'mcpId': session.mcpId,
+      'skillId': session.skillId,
+      'memoryRounds': session.memoryRounds,
+      'deepThink': session.deepThink,
+      'connectPrompt': session.connectPrompt,
+      'sessionQuickCommands':
+          session.sessionQuickCommands.map((c) => c.toJson()).toList(),
+      'scheduledTask': session.scheduledTask?.toJson(),
+      'compressedMemory': session.compressedMemory,
+      'attachments':
+          session.attachments.map((a) => a.toJson()).toList(),
+    };
+  }
+
+  /// Map → ChatSession（从 session.json）
+  Future<ChatSession> _mapToSession(Map<String, dynamic> entity) async {
+    final String? modelId = entity['modelId'] as String?;
     ChatModel? chatModel;
     if (modelId != null && modelId.isNotEmpty) {
       try {
         final modelController = Get.find<ModelController>();
-        chatModel = modelController.models.firstWhere(
-          (m) => m.modelId == modelId,
-        );
-      } catch (_) {
-        // 模型已被删除，chatModel 为 null
-      }
-    }
-
-    // mcp / skill 在 setCurrentSession 中动态解析（此时 MCP/Skill 可能尚未加载）
-
-    // 解析定时任务（兼容旧格式列表 → 取第一条）
-    ScheduledTask? scheduledTask;
-    if (entity.scheduledTasksJson != null && entity.scheduledTasksJson!.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(entity.scheduledTasksJson!);
-        if (decoded is List && decoded.isNotEmpty) {
-          scheduledTask = ScheduledTask.fromJson(decoded.first as Map<String, dynamic>);
-        } else if (decoded is Map<String, dynamic>) {
-          scheduledTask = ScheduledTask.fromJson(decoded);
-        }
+        chatModel =
+            modelController.models.firstWhere((m) => m.modelId == modelId);
       } catch (_) {}
     }
 
-    // 解析记忆
-    List<MemoryTurn> memory = [];
-    if (entity.memoryJson != null && entity.memoryJson!.isNotEmpty) {
+    // 解析定时任务
+    ScheduledTask? scheduledTask;
+    if (entity['scheduledTask'] is Map<String, dynamic>) {
       try {
-        final list = jsonDecode(entity.memoryJson!) as List<dynamic>;
-        memory =
-            list
-                .map((t) => MemoryTurn.fromJson(t as Map<String, dynamic>))
-                .toList();
+        scheduledTask =
+            ScheduledTask.fromJson(entity['scheduledTask'] as Map<String, dynamic>);
+      } catch (_) {}
+    }
+
+    // 解析快捷指令
+    List<ChatCommand> commands = [];
+    if (entity['sessionQuickCommands'] is List) {
+      try {
+        commands = (entity['sessionQuickCommands'] as List)
+            .map((c) => ChatCommand.fromJson(c as Map<String, dynamic>))
+            .toList();
+      } catch (_) {}
+    }
+
+    // 解析附件
+    List<ChatAttachment> attachments = [];
+    if (entity['attachments'] is List) {
+      try {
+        attachments = (entity['attachments'] as List)
+            .map((a) => ChatAttachment.fromJson(a as Map<String, dynamic>))
+            .toList();
       } catch (_) {}
     }
 
     return ChatSession(
-      sessionId: entity.sessionId,
-      name: entity.name,
-      createdAt: entity.createdAt,
-      messages: messages,
-      isFavorite: entity.isFavorite,
-      isSending: entity.isSending,
-      shouldStopResponse: entity.shouldStopResponse,
-      scrollPosition: entity.scrollPosition,
-      inputContent: entity.inputContent,
-      lastSelectedDirectory: entity.lastSelectedDirectory,
-      workDirectory: entity.workDirectory,
+      sessionId: entity['sessionId'] as String? ?? '',
+      name: entity['name'] as String? ?? '新对话',
+      createdAt: entity['createdAt'] != null
+          ? DateTime.tryParse(entity['createdAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      messages: [], // 消息懒加载
       modelId: modelId,
-      mcpId: entity.mcpId,
-      skillId: entity.skillId,
+      mcpId: entity['mcpId'] as String?,
+      skillId: entity['skillId'] as String?,
       chatModel: chatModel,
-      memoryRounds: entity.memoryRounds,
-      deepThink: entity.deepThink,
+      isFavorite: entity['isFavorite'] as bool? ?? false,
+      inputContent: entity['inputContent'] as String? ?? '',
+      attachments: attachments,
+      isSending: false,
+      shouldStopResponse: false,
+      scrollPosition: (entity['scrollPosition'] as num?)?.toDouble() ?? 0.0,
+      lastSelectedDirectory: entity['lastSelectedDirectory'] as String?,
+      workDirectory: entity['workDirectory'] as String?,
+      memoryRounds: entity['memoryRounds'] as int? ?? 20,
+      deepThink: entity['deepThink'] as bool? ?? false,
+      connectPrompt: entity['connectPrompt'] as String?,
+      sessionQuickCommands: commands,
       scheduledTask: scheduledTask,
-      memory: memory,
-      compressedMemory: entity.compressedMemory,
+      compressedMemory: entity['compressedMemory'] as String?,
+      contracts: await _loadContracts(entity['sessionId'] as String? ?? ''),
     );
+  }
+
+  /// 从 business.md 加载合约要点
+  Future<List<ContractInfo>?> _loadContracts(String sessionId) async {
+    if (sessionId.isEmpty) return null;
+    try {
+      final content = await SessionFileStore.readBusiness(sessionId);
+      if (content == null || content.trim().isEmpty) return null;
+      return _parseContractsFromMarkdown(content);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 从 Markdown 解析合约列表
+  List<ContractInfo> _parseContractsFromMarkdown(String markdown) {
+    final contracts = <ContractInfo>[];
+    // 按 ## 分割合同段落
+    final sections = markdown.split(RegExp(r'^## ', multiLine: true));
+
+    for (final section in sections) {
+      final trimmed = section.trim();
+      if (trimmed.isEmpty) continue;
+
+      final lines = trimmed.split('\n');
+      final name = lines.first.trim();
+      if (name.isEmpty || name == '合约要点' || name.startsWith('# ')) continue;
+
+      String? contractType;
+      String? startDate, endDate, signingDate;
+      String? paymentClause, paymentSchedule, breachClause, liabilityClause;
+      final parties = <ContractParty>[];
+
+      for (int i = 1; i < lines.length; i++) {
+        final line = lines[i].trim();
+        if (line.isEmpty || line == '---') continue;
+
+        // 单值字段: **标签**: 值
+        final kvMatch = RegExp(r'^\*\*(.+?)\*\*:\s*(.*)').firstMatch(line);
+        if (kvMatch != null) {
+          final label = kvMatch.group(1)!;
+          final value = kvMatch.group(2)!.trim();
+          switch (label) {
+            case '合同类型':
+              contractType = value;
+            case '收支条款':
+              paymentClause = _readMultilineBlock(lines, i + 1);
+            case '支付计划':
+              paymentSchedule = _readMultilineBlock(lines, i + 1);
+            case '违约条款':
+              breachClause = _readMultilineBlock(lines, i + 1);
+            case '违约责任':
+              liabilityClause = _readMultilineBlock(lines, i + 1);
+            case '签署方':
+              // 跳过，下面用 - 解析
+              break;
+            case '合同期限':
+              // 跳过，下面用 - 解析
+              break;
+          }
+          continue;
+        }
+
+        // 签署方: - **角色**: 名称
+        final partyMatch = RegExp(r'^-\s*\*\*(.+?)\*\*:\s*(.+)').firstMatch(line);
+        if (partyMatch != null) {
+          parties.add(ContractParty(
+            role: partyMatch.group(1)!,
+            name: partyMatch.group(2)!.trim(),
+          ));
+          continue;
+        }
+
+        // 期限项: - 标签: 值
+        final periodMatch = RegExp(r'^-\s*(.+?):\s*(.+)').firstMatch(line);
+        if (periodMatch != null) {
+          final label = periodMatch.group(1)!;
+          final value = periodMatch.group(2)!.trim();
+          if (label.contains('起始')) startDate = value;
+          else if (label.contains('结束')) endDate = value;
+          else if (label.contains('签订') || label.contains('签署')) signingDate = value;
+        }
+      }
+
+      contracts.add(ContractInfo(
+        name: name,
+        parties: parties,
+        contractType: contractType,
+        startDate: startDate,
+        endDate: endDate,
+        signingDate: signingDate,
+        paymentClause: paymentClause,
+        paymentSchedule: paymentSchedule,
+        breachClause: breachClause,
+        liabilityClause: liabilityClause,
+      ));
+    }
+
+    return contracts;
+  }
+
+  /// 从当前位置读取多行文本块（直到遇到下一个 **标签**: 或 --- 或空行后跟 **标签**:）
+  String _readMultilineBlock(List<String> lines, int start) {
+    final buf = StringBuffer();
+    for (int i = start; i < lines.length; i++) {
+      final line = lines[i].trim();
+      if (line == '---') break;
+      if (line.startsWith('**') && line.contains('**:')) break;
+      if (buf.isNotEmpty) buf.writeln();
+      buf.write(line);
+    }
+    return buf.toString().trim();
   }
 }

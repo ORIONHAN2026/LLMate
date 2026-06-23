@@ -1,18 +1,29 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:isar/isar.dart';
-import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'isar_models.dart';
+import 'storage_paths.dart';
+import 'file_storage.dart';
 
-/// Isar 数据库服务（单例）
+export 'storage_paths.dart' show StoragePaths;
+
+/// 本地文件存储服务（单例）
 ///
-/// 使用方式：
-/// ```dart
-/// final isarService = IsarService.instance;
-/// await isarService.initialize();
+/// 替代原 Isar 数据库，使用 ~/.llmwork/ 目录下的 JSON 文件存储数据。
+///
+/// 存储结构：
+/// ```
+/// ~/.llmwork/
+/// ├── models.json              # 所有模型配置
+/// ├── mcp.json                 # 所有 MCP 服务配置
+/// ├── settings.json            # 通用设置（主题、语言等）
+/// ├── vendor_keys.json         # 供应商 API 密钥
+/// └── chats/                   # 会话目录
+///     └── {sessionId}/
+///         ├── session.json     # 会话元数据
+///         ├── message.json     # 消息列表
+///         ├── memory.md        # 压缩记忆（markdown）
+///         ├── skill.json       # 技能绑定
+///         ├── mcp.json         # MCP 绑定
+///         └── business.json    # 商务合同内容
 /// ```
 class IsarService {
   static final IsarService _instance = IsarService._internal();
@@ -20,307 +31,434 @@ class IsarService {
   static IsarService get instance => _instance;
   IsarService._internal();
 
-  Isar? _isar;
-  Isar get isar {
-    if (_isar == null) {
-      throw StateError('IsarService 未初始化，请先调用 initialize()');
-    }
-    return _isar!;
-  }
+  bool _initialized = false;
+  bool get isInitialized => _initialized;
 
-  bool get isInitialized => _isar != null;
-
-  /// 初始化 Isar 数据库
+  /// 初始化（确保目录存在）
   Future<void> initialize() async {
-    if (_isar != null) return;
-
-    // Isar 数据库存储到 ~/.llmwork/isar
-    final home = Platform.environment['HOME'] ?? 
-                 Platform.environment['USERPROFILE'] ?? 
-                 '.';
-    final rootDir = path.join(home, '.llmwork', 'isar');
-    await Directory(rootDir).create(recursive: true);
-
-    try {
-      _isar = await Isar.open(
-        [
-          IsarChatModelSchema,
-          IsarChatSessionSchema,
-          IsarChatMessageSchema,
-          IsarMcpServiceSchema,
-          IsarSettingsSchema,
-          IsarVendorKeySchema,
-        ],
-        directory: rootDir,
-        inspector: kDebugMode,
-      );
-
-      debugPrint('✅ Isar 数据库初始化完成: $rootDir');
-    } catch (e) {
-      final errMsg = e.toString();
-      debugPrint('⚠️ Isar 数据库打开失败: $errMsg');
-
-      // 仅在明确的 schema 版本不匹配时才重建
-      final isSchemaMismatch =
-          errMsg.contains('version') ||
-          errMsg.contains('schema') ||
-          errMsg.contains('IsarError') ||
-          errMsg.contains('mismatch');
-
-      if (!isSchemaMismatch) {
-        debugPrint('❌ Isar 数据库错误（非 schema 问题），无法自动恢复: $errMsg');
-        rethrow;
-      }
-
-      // Schema 不匹配：备份旧库再重建
-      debugPrint('⚠️ Isar 数据库 schema 不匹配，备份旧库并重建...');
-      String? backupPath;
-      try {
-        final dbDir = Directory(rootDir);
-        if (await dbDir.exists()) {
-          // 备份到带时间戳的备份文件夹
-          backupPath = '${rootDir}_backup_${DateTime.now().millisecondsSinceEpoch}';
-          await dbDir.rename(backupPath);
-          debugPrint('📦 旧数据库已备份到: $backupPath');
-          // 确保目录存在（重建时需要）
-          await Directory(rootDir).create(recursive: true);
-        }
-
-        // 重新打开数据库（Isar 会自动创建新库）
-        _isar = await Isar.open(
-          [
-            IsarChatModelSchema,
-            IsarChatSessionSchema,
-            IsarChatMessageSchema,
-            IsarMcpServiceSchema,
-            IsarSettingsSchema,
-            IsarVendorKeySchema,
-          ],
-          directory: rootDir,
-          inspector: kDebugMode,
-        );
-        debugPrint('✅ Isar 数据库重建完成');
-
-        // 尝试从备份恢复数据
-        if (backupPath != null) {
-          final recovered = await _tryRecoverFromBackup(backupPath);
-          if (recovered) {
-            debugPrint('🎉 已从备份自动恢复数据');
-          } else {
-            // 备份 schema 不兼容，记录路径供手动恢复
-            await _storeBackupInfo(backupPath);
-            debugPrint('💡 备份数据保留在 $backupPath，可手动恢复');
-          }
-        }
-      } catch (e2) {
-        debugPrint('❌ Isar 数据库重建失败: $e2');
-        rethrow;
-      }
-    }
-
+    if (_initialized) return;
+    await StoragePaths.ensureRoot();
+    _initialized = true;
+    debugPrint('✅ FileStorage 初始化完成: ${StoragePaths.root}');
   }
 
-  // ── 数据库备份与恢复 ──
+  /// 获取 isar 兼容的存储访问对象（新接口）
+  FileStore get store => FileStore.instance;
 
-  /// 查找最新的备份目录
-  static Future<String?> findLatestBackup() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final parent = Directory(dir.path);
-    if (!parent.existsSync()) return null;
-    final backups = parent
-        .listSync()
-        .whereType<Directory>()
-        .where((d) {
-          final name = d.path.split('/').last;
-          return name.startsWith('chathub_isar_backup_');
-        })
-        .map((d) => d.path)
-        .toList();
-    if (backups.isEmpty) return null;
-    backups.sort((a, b) => b.compareTo(a)); // 最新优先
-    return backups.first;
-  }
-
-  /// 列出所有备份（返回路径列表，最新在前）
-  static Future<List<String>> listBackups() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final parent = Directory(dir.path);
-    if (!parent.existsSync()) return [];
-    final backups = parent
-        .listSync()
-        .whereType<Directory>()
-        .where((d) {
-          final name = d.path.split('/').last;
-          return name.startsWith('chathub_isar_backup_');
-        })
-        .map((d) => d.path)
-        .toList();
-    backups.sort((a, b) => b.compareTo(a));
-    return backups;
-  }
-
-  /// 检查当前数据库是否为空
-  Future<bool> _isDatabaseEmpty() async {
-    final modelCount = await isar.isarChatModels.count();
-    final sessionCount = await isar.isarChatSessions.count();
-    final mcpCount = await isar.isarMcpServices.count();
-    return modelCount == 0 && sessionCount == 0 && mcpCount == 0;
-  }
-
-  /// 尝试从备份 Isar 数据库恢复数据到当前数据库
-  Future<bool> _tryRecoverFromBackup(String backupPath) async {
-    // 只有当前数据库为空时才恢复，避免重复数据
-    if (!await _isDatabaseEmpty()) {
-      debugPrint('📦 当前数据库非空，跳过备份恢复');
-      return false;
-    }
-
-    try {
-      // 尝试用当前 schema 打开备份库
-      final backupIsar = await Isar.open(
-        [
-          IsarChatModelSchema,
-          IsarChatSessionSchema,
-          IsarChatMessageSchema,
-          IsarMcpServiceSchema,
-          IsarSettingsSchema,
-          IsarVendorKeySchema,
-        ],
-        directory: backupPath,
-        inspector: false,
-      );
-
-      debugPrint('🔍 备份数据库可打开，开始迁移数据...');
-
-      await isar.writeTxn(() async {
-        // 迁移模型
-        final models = await backupIsar.isarChatModels.where().findAll();
-        if (models.isNotEmpty) {
-          await isar.isarChatModels.putAll(models);
-          debugPrint('   ✅ 恢复模型: ${models.length} 条');
-        }
-
-        // 迁移会话（清除运行时状态）
-        final sessions = await backupIsar.isarChatSessions.where().findAll();
-        if (sessions.isNotEmpty) {
-          for (final s in sessions) {
-            s.isSending = false;
-            s.shouldStopResponse = false;
-            s.isCurrent = false;
-          }
-          await isar.isarChatSessions.putAll(sessions);
-          debugPrint('   ✅ 恢复会话: ${sessions.length} 条');
-        }
-
-        // 迁移 MCP 服务
-        final mcps = await backupIsar.isarMcpServices.where().findAll();
-        if (mcps.isNotEmpty) {
-          await isar.isarMcpServices.putAll(mcps);
-          debugPrint('   ✅ 恢复 MCP 服务: ${mcps.length} 条');
-        }
-
-        // 迁移设置
-        final settings = await backupIsar.isarSettings.where().findAll();
-        if (settings.isNotEmpty) {
-          await isar.isarSettings.putAll(settings);
-          debugPrint('   ✅ 恢复设置: ${settings.length} 条');
-        }
-
-        // 迁移供应商 API 密钥
-        final vendorKeys = await backupIsar.isarVendorKeys.where().findAll();
-        if (vendorKeys.isNotEmpty) {
-          await isar.isarVendorKeys.putAll(vendorKeys);
-          debugPrint('   ✅ 恢复供应商密钥: ${vendorKeys.length} 条');
-        }
-      });
-
-      await backupIsar.close();
-      return true;
-    } catch (e) {
-      debugPrint('⚠️ 无法打开备份数据库（schema 不兼容，需手动恢复）: $e');
-      return false;
-    }
-  }
-
-  /// 记录备份信息到 SharedPreferences，供 UI 层展示
-  static Future<void> _storeBackupInfo(String backupPath) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final existing = prefs.getStringList('isar_backups') ?? [];
-      if (!existing.contains(backupPath)) {
-        existing.add(backupPath);
-      }
-      await prefs.setStringList('isar_backups', existing);
-    } catch (e) {
-      debugPrint('⚠️ 保存备份信息失败: $e');
-    }
-  }
-
-  /// 获取所有备份路径（供 UI 层调用）
-  static Future<List<String>> getBackupPaths() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getStringList('isar_backups') ?? [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// 清除备份记录（备份目录删除后调用）
-  static Future<void> clearBackupRecord(String backupPath) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final existing = prefs.getStringList('isar_backups') ?? [];
-      existing.remove(backupPath);
-      await prefs.setStringList('isar_backups', existing);
-    } catch (e) {
-      debugPrint('⚠️ 清除备份记录失败: $e');
-    }
-  }
-
-  // ── 供应商 API 密钥 CRUD ──
-
-  /// 获取供应商 API 密钥
-  static Future<String?> getVendorKey(String vendorId) async {
-    final isar = instance.isar;
-    final record = await isar.isarVendorKeys.getByVendorId(vendorId);
-    return record?.apiKey;
-  }
-
-  /// 保存供应商 API 密钥（插入或更新）
-  static Future<void> saveVendorKey(String vendorId, String apiKey) async {
-    final isar = instance.isar;
-    await isar.writeTxn(() async {
-      final existing = await isar.isarVendorKeys.getByVendorId(vendorId);
-      if (existing != null) {
-        existing.apiKey = apiKey;
-        existing.updatedAt = DateTime.now();
-        await isar.isarVendorKeys.put(existing);
-      } else {
-        await isar.isarVendorKeys.put(IsarVendorKey()
-          ..vendorId = vendorId
-          ..apiKey = apiKey
-          ..updatedAt = DateTime.now());
-      }
-    });
-  }
-
-  /// 删除供应商 API 密钥
-  static Future<void> deleteVendorKey(String vendorId) async {
-    final isar = instance.isar;
-    await isar.writeTxn(() async {
-      final existing = await isar.isarVendorKeys.getByVendorId(vendorId);
-      if (existing != null) {
-        await isar.isarVendorKeys.delete(existing.id);
-      }
-    });
-  }
-
-  /// 关闭数据库
+  /// 关闭（文件存储无需显式关闭）
   Future<void> close() async {
-    if (_isar != null) {
-      await _isar!.close();
-      _isar = null;
+    _initialized = false;
+  }
+
+  // ── 供应商密钥便捷方法（供 mcp_marketplace_page 等页面调用）──
+
+  static Future<String?> getVendorKey(String vendorId) async {
+    final record = await instance.store.isarVendorKeys.getByVendorId(vendorId);
+    return record?['apiKey'] as String?;
+  }
+
+  static Future<void> saveVendorKey(String vendorId, String apiKey) async {
+    await instance.store.isarVendorKeys.put(vendorId, apiKey);
+  }
+
+  static Future<void> deleteVendorKey(String vendorId) async {
+    await instance.store.isarVendorKeys.delete(vendorId);
+  }
+
+}
+
+/// 文件存储访问对象 — 替代原 Isar 实例
+///
+/// 提供与原 Isar 相似的访问模式，但底层使用 JSON 文件。
+class FileStore {
+  static final FileStore _instance = FileStore._();
+  static FileStore get instance => _instance;
+  FileStore._();
+
+  // ── 模型 ──
+  final ModelStore isarChatModels = ModelStore();
+
+  // ── 会话 ──
+  final SessionStore isarChatSessions = SessionStore();
+
+  // ── 消息 ──
+  final MessageStore isarChatMessages = MessageStore();
+
+  // ── MCP ──
+  final McpStore isarMcpServices = McpStore();
+
+  // ── 设置 ──
+  final SettingsStore isarSettings = SettingsStore();
+
+  // ── 供应商密钥 ──
+  final VendorKeyStore isarVendorKeys = VendorKeyStore();
+}
+
+// ══════════════════════════════════════════════════════════
+// 模型存储
+// ══════════════════════════════════════════════════════════
+
+class ModelStore {
+  List<Map<String, dynamic>> _cache = [];
+  bool _loaded = false;
+
+  Future<List<Map<String, dynamic>>> findAll() async {
+    if (!_loaded) await _load();
+    return List.unmodifiable(_cache);
+  }
+
+  Future<Map<String, dynamic>?> getByModelId(String modelId) async {
+    if (!_loaded) await _load();
+    try {
+      return _cache.firstWhere((m) => m['modelId'] == modelId);
+    } catch (_) {
+      return null;
     }
+  }
+
+  Future<void> putAll(List<Map<String, dynamic>> models) async {
+    _cache = List.from(models);
+    _loaded = true;
+    await _save();
+  }
+
+  Future<void> put(Map<String, dynamic> model) async {
+    if (!_loaded) await _load();
+    final idx = _cache.indexWhere((m) => m['modelId'] == model['modelId']);
+    if (idx >= 0) {
+      _cache[idx] = model;
+    } else {
+      _cache.add(model);
+    }
+    await _save();
+  }
+
+  Future<void> delete(String modelId) async {
+    if (!_loaded) await _load();
+    _cache.removeWhere((m) => m['modelId'] == modelId);
+    await _save();
+  }
+
+  Future<void> clear() async {
+    _cache = [];
+    _loaded = true;
+    await _save();
+  }
+
+  Future<int> count() async {
+    if (!_loaded) await _load();
+    return _cache.length;
+  }
+
+  Future<void> _load() async {
+    final data = await FileStorage.readJsonList(StoragePaths.modelsFile);
+    _cache = data?.cast<Map<String, dynamic>>() ?? [];
+    _loaded = true;
+  }
+
+  Future<void> _save() async {
+    await FileStorage.writeJsonList(StoragePaths.modelsFile, _cache);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 会话存储
+// ══════════════════════════════════════════════════════════
+
+class SessionStore {
+  /// 所有会话的元数据缓存（不含消息）
+  List<Map<String, dynamic>> _cache = [];
+  bool _loaded = false;
+
+  Future<List<Map<String, dynamic>>> findAll() async {
+    if (!_loaded) await _load();
+    return List.unmodifiable(_cache);
+  }
+
+  Future<Map<String, dynamic>?> getBySessionId(String sessionId) async {
+    if (!_loaded) await _load();
+    try {
+      return _cache.firstWhere((s) => s['sessionId'] == sessionId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> put(Map<String, dynamic> session) async {
+    if (!_loaded) await _load();
+    final sid = session['sessionId'] as String;
+    final idx = _cache.indexWhere((s) => s['sessionId'] == sid);
+    if (idx >= 0) {
+      _cache[idx] = session;
+    } else {
+      _cache.add(session);
+    }
+    // 写入文件
+    await StoragePaths.ensureSessionDir(sid);
+    await FileStorage.writeJson(StoragePaths.sessionFile(sid), session);
+    await _saveIndex();
+  }
+
+  Future<void> delete(String sessionId) async {
+    if (!_loaded) await _load();
+    _cache.removeWhere((s) => s['sessionId'] == sessionId);
+    await FileStorage.deleteDir(StoragePaths.sessionDir(sessionId));
+    await _saveIndex();
+  }
+
+  Future<void> clear() async {
+    _cache = [];
+    _loaded = true;
+    // 删除所有会话目录
+    final ids = await StoragePaths.listSessionIds();
+    for (final id in ids) {
+      await FileStorage.deleteDir(StoragePaths.sessionDir(id));
+    }
+    await _saveIndex();
+  }
+
+  Future<int> count() async {
+    if (!_loaded) await _load();
+    return _cache.length;
+  }
+
+  Future<void> _load() async {
+    // 从 chats/ 目录扫描所有会话
+    final ids = await StoragePaths.listSessionIds();
+    _cache = [];
+    for (final sid in ids) {
+      final data = await FileStorage.readJson(StoragePaths.sessionFile(sid));
+      if (data != null) {
+        _cache.add(data);
+      }
+    }
+    _loaded = true;
+  }
+
+  Future<void> _saveIndex() async {
+    // 索引已通过各会话文件维护，无需额外索引文件
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 消息存储
+// ══════════════════════════════════════════════════════════
+
+class MessageStore {
+  Future<List<Map<String, dynamic>>> getBySessionId(String sessionId) async {
+    final data =
+        await FileStorage.readJsonList(StoragePaths.messageFile(sessionId));
+    return data?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  Future<void> putAll(
+      String sessionId, List<Map<String, dynamic>> messages) async {
+    await StoragePaths.ensureSessionDir(sessionId);
+    await FileStorage.writeJsonList(StoragePaths.messageFile(sessionId), messages);
+  }
+
+  /// 删除指定会话的消息文件（并删除整个会话目录）
+  Future<void> delete(String sessionId) async {
+    await FileStorage.deleteDir(StoragePaths.sessionDir(sessionId));
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// MCP 存储
+// ══════════════════════════════════════════════════════════
+
+class McpStore {
+  List<Map<String, dynamic>> _cache = [];
+  bool _loaded = false;
+
+  Future<List<Map<String, dynamic>>> findAll() async {
+    if (!_loaded) await _load();
+    return List.unmodifiable(_cache);
+  }
+
+  Future<Map<String, dynamic>?> getByMcpId(String mcpId) async {
+    if (!_loaded) await _load();
+    try {
+      return _cache.firstWhere((m) => m['mcpId'] == mcpId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> put(Map<String, dynamic> mcp) async {
+    if (!_loaded) await _load();
+    final mid = mcp['mcpId'] as String;
+    final idx = _cache.indexWhere((m) => m['mcpId'] == mid);
+    if (idx >= 0) {
+      _cache[idx] = mcp;
+    } else {
+      _cache.add(mcp);
+    }
+    await _save();
+  }
+
+  Future<void> delete(String mcpId) async {
+    if (!_loaded) await _load();
+    _cache.removeWhere((m) => m['mcpId'] == mcpId);
+    await _save();
+  }
+
+  Future<void> clear() async {
+    _cache = [];
+    _loaded = true;
+    await _save();
+  }
+
+  Future<void> _load() async {
+    final data = await FileStorage.readJsonList(StoragePaths.mcpFile);
+    _cache = data?.cast<Map<String, dynamic>>() ?? [];
+    _loaded = true;
+  }
+
+  Future<void> _save() async {
+    await FileStorage.writeJsonList(StoragePaths.mcpFile, _cache);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 设置存储
+// ══════════════════════════════════════════════════════════
+
+class SettingsStore {
+  Map<String, dynamic> _cache = {};
+  bool _loaded = false;
+
+  Future<Map<String, dynamic>?> getByKey(String key) async {
+    if (!_loaded) await _load();
+    final value = _cache[key];
+    if (value == null) return null;
+    return {'key': key, 'value': value.toString()};
+  }
+
+  Future<void> put(String key, String value) async {
+    if (!_loaded) await _load();
+    _cache[key] = value;
+    await _save();
+  }
+
+  Future<void> putAll(Map<String, String> entries) async {
+    if (!_loaded) await _load();
+    _cache.addAll(entries);
+    await _save();
+  }
+
+  Future<void> delete(String key) async {
+    if (!_loaded) await _load();
+    _cache.remove(key);
+    await _save();
+  }
+
+  Future<void> _load() async {
+    final data = await FileStorage.readJson(StoragePaths.settingsFile);
+    _cache = data?.map((k, v) => MapEntry(k, v.toString())) ?? {};
+    _loaded = true;
+  }
+
+  Future<void> _save() async {
+    await FileStorage.writeJson(StoragePaths.settingsFile, _cache);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 供应商密钥存储
+// ══════════════════════════════════════════════════════════
+
+class VendorKeyStore {
+  Map<String, Map<String, dynamic>> _cache = {};
+  bool _loaded = false;
+
+  Future<Map<String, dynamic>?> getByVendorId(String vendorId) async {
+    if (!_loaded) await _load();
+    return _cache[vendorId];
+  }
+
+  Future<void> put(String vendorId, String apiKey) async {
+    if (!_loaded) await _load();
+    _cache[vendorId] = {
+      'vendorId': vendorId,
+      'apiKey': apiKey,
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+    await _save();
+  }
+
+  Future<void> delete(String vendorId) async {
+    if (!_loaded) await _load();
+    _cache.remove(vendorId);
+    await _save();
+  }
+
+  Future<void> _load() async {
+    final data = await FileStorage.readJsonList(StoragePaths.vendorKeysFile);
+    if (data != null) {
+      for (final item in data) {
+        final map = item as Map<String, dynamic>;
+        final vid = map['vendorId'] as String?;
+        if (vid != null) _cache[vid] = map;
+      }
+    }
+    _loaded = true;
+  }
+
+  Future<void> _save() async {
+    await FileStorage.writeJsonList(
+        StoragePaths.vendorKeysFile, _cache.values.toList());
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 会话扩展 — 提供 session.json 中额外字段的读写
+// ══════════════════════════════════════════════════════════
+class SessionFileStore {
+  /// 读取 memory.md
+  static Future<String?> readMemory(String sessionId) async {
+    return FileStorage.readText(StoragePaths.memoryFile(sessionId));
+  }
+
+  /// 写入 memory.md
+  static Future<void> writeMemory(String sessionId, String content) async {
+    await StoragePaths.ensureSessionDir(sessionId);
+    await FileStorage.writeText(StoragePaths.memoryFile(sessionId), content);
+  }
+
+  /// 读取 skill.json
+  static Future<Map<String, dynamic>?> readSkill(String sessionId) async {
+    return FileStorage.readJson(StoragePaths.skillFile(sessionId));
+  }
+
+  /// 写入 skill.json
+  static Future<void> writeSkill(
+      String sessionId, Map<String, dynamic> data) async {
+    await StoragePaths.ensureSessionDir(sessionId);
+    await FileStorage.writeJson(StoragePaths.skillFile(sessionId), data);
+  }
+
+  /// 读取 mcp.json（会话级）
+  static Future<Map<String, dynamic>?> readMcp(String sessionId) async {
+    return FileStorage.readJson(StoragePaths.sessionMcpFile(sessionId));
+  }
+
+  /// 写入 mcp.json（会话级）
+  static Future<void> writeMcp(
+      String sessionId, Map<String, dynamic> data) async {
+    await StoragePaths.ensureSessionDir(sessionId);
+    await FileStorage.writeJson(StoragePaths.sessionMcpFile(sessionId), data);
+  }
+
+  /// 读取 business.md
+  static Future<String?> readBusiness(String sessionId) async {
+    return FileStorage.readText(StoragePaths.businessFile(sessionId));
+  }
+
+  /// 写入 business.md
+  static Future<void> writeBusiness(
+      String sessionId, String content) async {
+    await StoragePaths.ensureSessionDir(sessionId);
+    await FileStorage.writeText(StoragePaths.businessFile(sessionId), content);
   }
 }

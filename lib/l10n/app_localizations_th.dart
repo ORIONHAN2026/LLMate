@@ -699,7 +699,41 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get parseContractPrompt =>
-      'The following are document files in the working directory. Please first determine which files are actual contract documents (not attachments, descriptions, or other non-contract files). Then, only for files confirmed as contracts, extract and organize the following information:\n1. Contract Type\n2. Income/Expense Clauses\n3. Payment Schedule\n4. Breach Clauses\n5. Liability for Breach\n6. Contract Start Date\n7. Contract End Date\n\nPlease output each contract one by one, and explain which files were determined as non-contract and why, in a clear format.';
+      'The following are document files in the working directory. Please first determine which files are actual contract documents (not attachments, descriptions, or other non-contract files). Then, only for files confirmed as contracts, use the contract_inspect tool to write each contract\'s information.\n\nWriting rules:\n- For each contract, first call action=add to create a contract entry (fill in contractName, contractType, paymentClause, paymentSchedule, breachClause, liabilityClause, startDate, endDate, signingDate, etc.)\n- Then call action=addParty for each party, adding Party A, Party B, etc. one by one\n- Also briefly explain in your reply which files were determined as non-contract and why';
+
+  @override
+  String get contractPoints => 'Contract Points';
+
+  @override
+  String get noContracts => 'No contract points';
+
+  @override
+  String get contractParsing =>
+      'Contract points will appear here after parsing';
+
+  @override
+  String get contractParty => 'Parties';
+
+  @override
+  String get contractPaymentClause => 'Payment Clause';
+
+  @override
+  String get contractPaymentSchedule => 'Payment Schedule';
+
+  @override
+  String get contractBreachClause => 'Breach Clause';
+
+  @override
+  String get contractLiability => 'Liability';
+
+  @override
+  String get contractPeriod => 'Contract Period';
+
+  @override
+  String get contractSigningDate => 'Signing Date';
+
+  @override
+  String get contractTypeLabel => 'Contract Type';
 
   @override
   String nRounds(Object n) {

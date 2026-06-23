@@ -1,0 +1,82 @@
+import 'dart:io';
+import 'package:path/path.dart' as p;
+
+/// 集中管理 ~/.llmwork/ 下的所有文件路径
+class StoragePaths {
+  StoragePaths._();
+
+  static String? _home;
+
+  static String get home =>
+      _home ??
+      (Platform.environment['HOME'] ??
+              Platform.environment['USERPROFILE'] ??
+              '.')
+          .replaceAll('\\', '/');
+
+  /// ~/.llmwork/
+  static String get root => p.join(home, '.llmwork');
+
+  /// ~/.llmwork/models.json
+  static String get modelsFile => p.join(root, 'models.json');
+
+  /// ~/.llmwork/mcp.json
+  static String get mcpFile => p.join(root, 'mcp.json');
+
+  /// ~/.llmwork/settings.json
+  static String get settingsFile => p.join(root, 'settings.json');
+
+  /// ~/.llmwork/vendor_keys.json
+  static String get vendorKeysFile => p.join(root, 'vendor_keys.json');
+
+  /// ~/.llmwork/chats/
+  static String get chatsDir => p.join(root, 'chats');
+
+  /// ~/.llmwork/chats/{sessionId}/
+  static String sessionDir(String sessionId) => p.join(chatsDir, sessionId);
+
+  /// ~/.llmwork/chats/{sessionId}/session.json
+  static String sessionFile(String sessionId) =>
+      p.join(sessionDir(sessionId), 'session.json');
+
+  /// ~/.llmwork/chats/{sessionId}/message.json
+  static String messageFile(String sessionId) =>
+      p.join(sessionDir(sessionId), 'message.json');
+
+  /// ~/.llmwork/chats/{sessionId}/memory.md
+  static String memoryFile(String sessionId) =>
+      p.join(sessionDir(sessionId), 'memory.md');
+
+  /// ~/.llmwork/chats/{sessionId}/skill.json
+  static String skillFile(String sessionId) =>
+      p.join(sessionDir(sessionId), 'skill.json');
+
+  /// ~/.llmwork/chats/{sessionId}/mcp.json
+  static String sessionMcpFile(String sessionId) =>
+      p.join(sessionDir(sessionId), 'mcp.json');
+
+  /// ~/.llmwork/chats/{sessionId}/business.md
+  static String businessFile(String sessionId) =>
+      p.join(sessionDir(sessionId), 'business.md');
+
+  /// 确保根目录存在
+  static Future<void> ensureRoot() async {
+    await Directory(root).create(recursive: true);
+  }
+
+  /// 确保会话目录存在
+  static Future<void> ensureSessionDir(String sessionId) async {
+    await Directory(sessionDir(sessionId)).create(recursive: true);
+  }
+
+  /// 列出所有会话目录名（sessionId）
+  static Future<List<String>> listSessionIds() async {
+    final chats = Directory(chatsDir);
+    if (!await chats.exists()) return [];
+    final entries = await chats.list().toList();
+    return entries
+        .whereType<Directory>()
+        .map((d) => p.basename(d.path))
+        .toList();
+  }
+}

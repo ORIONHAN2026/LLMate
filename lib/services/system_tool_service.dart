@@ -1,8 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
+import '../controllers/session_controller.dart';
 import '../models/chat/chat_session.dart';
+import '../models/chat/contract_info.dart';
 import 'node_tool_service.dart';
 import 'ocr_tool_service.dart';
 import 'python_tool_service.dart';
@@ -29,6 +32,7 @@ class SystemToolService {
   static const String nodeExecuteTool = 'node_execute';
   static const String pythonExecuteTool = 'python_execute';
   static const String ocrExtractTool = 'ocr_extract';
+  static const String contractInspectTool = 'contract_inspect';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -115,6 +119,76 @@ class SystemToolService {
         'required': ['filePath'],
       },
     ),
+    SystemToolDefinition(
+      name: contractInspectTool,
+      description:
+          '将合同解析结果写入当前会话的合同列表。'
+          '支持三种操作：add（新增一份合同）、update（更新已有合同的字段）、addParty（向已有合同添加签署方）。'
+          '每次调用只能操作一份合同。合同信息会在右侧边栏"合约要点"Tab中展示。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'action': {
+            'type': 'string',
+            'description': '操作类型：add（新增合同）、update（更新已有合同）、addParty（添加签署方）',
+            'enum': ['add', 'update', 'addParty'],
+          },
+          'contractName': {
+            'type': 'string',
+            'description': '合同名称（add 操作必填，update 操作用来定位目标合同）',
+          },
+          'contractType': {
+            'type': 'string',
+            'description': '合同类型，如：采购合同、服务合同、租赁合同等',
+          },
+          'startDate': {
+            'type': 'string',
+            'description': '合同起始日期，格式如 2024-01-01',
+          },
+          'endDate': {
+            'type': 'string',
+            'description': '合同结束日期，格式如 2025-12-31',
+          },
+          'signingDate': {
+            'type': 'string',
+            'description': '合同签订日期',
+          },
+          'paymentClause': {
+            'type': 'string',
+            'description': '收支条款详细内容',
+          },
+          'paymentSchedule': {
+            'type': 'string',
+            'description': '收支计划/付款计划详细内容',
+          },
+          'breachClause': {
+            'type': 'string',
+            'description': '违约条款详细内容',
+          },
+          'liabilityClause': {
+            'type': 'string',
+            'description': '违约责任详细内容',
+          },
+          'partyRole': {
+            'type': 'string',
+            'description': '签署方角色，如：甲方、乙方',
+          },
+          'partyName': {
+            'type': 'string',
+            'description': '签署方名称/公司名',
+          },
+          'partyContact': {
+            'type': 'string',
+            'description': '签署方联系方式',
+          },
+          'partyAddress': {
+            'type': 'string',
+            'description': '签署方地址',
+          },
+        },
+        'required': ['action', 'contractName'],
+      },
+    ),
   ];
 
   static List<SystemToolDefinition> get tools => List.unmodifiable(_tools);
@@ -162,6 +236,12 @@ class SystemToolService {
           arguments: arguments,
           callId: callId,
         );
+      case contractInspectTool:
+        return _executeContractInspect(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
       default:
         return {
           'id': callId,
@@ -172,4 +252,150 @@ class SystemToolService {
         };
     }
   }
+
+  /// 执行 contract_inspect 工具：向会话写入合同信息
+  static Future<Map<String, dynamic>> _executeContractInspect({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final action = arguments['action'] as String? ?? 'add';
+      final contractName = arguments['contractName'] as String? ?? '';
+
+      if (contractName.isEmpty) {
+        return _errorResult(callId, arguments, 'contractName 不能为空');
+      }
+
+      final currentContracts = List<ContractInfo>.from(session.contracts ?? []);
+
+      switch (action) {
+        case 'add':
+          // 新增合同
+          final newContract = ContractInfo(
+            name: contractName,
+            contractType: arguments['contractType'] as String?,
+            startDate: arguments['startDate'] as String?,
+            endDate: arguments['endDate'] as String?,
+            signingDate: arguments['signingDate'] as String?,
+            paymentClause: arguments['paymentClause'] as String?,
+            paymentSchedule: arguments['paymentSchedule'] as String?,
+            breachClause: arguments['breachClause'] as String?,
+            liabilityClause: arguments['liabilityClause'] as String?,
+          );
+          currentContracts.add(newContract);
+          break;
+
+        case 'update':
+          // 按名称查找已有合同并更新字段
+          final idx = currentContracts.indexWhere(
+            (c) => c.name == contractName,
+          );
+          if (idx == -1) {
+            return _errorResult(
+              callId,
+              arguments,
+              '未找到名称为 "$contractName" 的合同',
+            );
+          }
+          final existing = currentContracts[idx];
+          currentContracts[idx] = existing.copyWith(
+            contractType:
+                arguments['contractType'] as String? ?? existing.contractType,
+            clearContractType: arguments.containsKey('contractType') && arguments['contractType'] == null,
+            startDate:
+                arguments['startDate'] as String? ?? existing.startDate,
+            clearStartDate: arguments.containsKey('startDate') && arguments['startDate'] == null,
+            endDate: arguments['endDate'] as String? ?? existing.endDate,
+            clearEndDate: arguments.containsKey('endDate') && arguments['endDate'] == null,
+            signingDate:
+                arguments['signingDate'] as String? ?? existing.signingDate,
+            clearSigningDate: arguments.containsKey('signingDate') && arguments['signingDate'] == null,
+            paymentClause:
+                arguments['paymentClause'] as String? ?? existing.paymentClause,
+            clearPaymentClause: arguments.containsKey('paymentClause') && arguments['paymentClause'] == null,
+            paymentSchedule:
+                arguments['paymentSchedule'] as String? ?? existing.paymentSchedule,
+            clearPaymentSchedule: arguments.containsKey('paymentSchedule') && arguments['paymentSchedule'] == null,
+            breachClause:
+                arguments['breachClause'] as String? ?? existing.breachClause,
+            clearBreachClause: arguments.containsKey('breachClause') && arguments['breachClause'] == null,
+            liabilityClause:
+                arguments['liabilityClause'] as String? ?? existing.liabilityClause,
+            clearLiabilityClause: arguments.containsKey('liabilityClause') && arguments['liabilityClause'] == null,
+          );
+          break;
+
+        case 'addParty':
+          final partyRole = arguments['partyRole'] as String?;
+          final partyName = arguments['partyName'] as String?;
+          if (partyRole == null || partyRole.isEmpty || partyName == null || partyName.isEmpty) {
+            return _errorResult(callId, arguments, 'addParty 操作需要 partyRole 和 partyName');
+          }
+          final idx2 = currentContracts.indexWhere(
+            (c) => c.name == contractName,
+          );
+          if (idx2 == -1) {
+            return _errorResult(
+              callId,
+              arguments,
+              '未找到名称为 "$contractName" 的合同',
+            );
+          }
+          final existing2 = currentContracts[idx2];
+          final newParty = ContractParty(
+            role: partyRole,
+            name: partyName,
+            contact: arguments['partyContact'] as String?,
+            address: arguments['partyAddress'] as String?,
+          );
+          currentContracts[idx2] = existing2.copyWith(
+            parties: [...existing2.parties, newParty],
+          );
+          break;
+
+        default:
+          return _errorResult(callId, arguments, '未知操作类型: $action');
+      }
+
+      // 通过全局 controller 更新 session
+      try {
+        final sessionController = Get.find<SessionController>();
+        final updatedSession = session.copyWith(contracts: currentContracts);
+        await sessionController.updateSession(updatedSession);
+      } catch (e) {
+        debugPrint('contract_inspect: 更新 session 失败: $e');
+      }
+
+      return {
+        'id': callId,
+        'name': contractInspectTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'action': action,
+          'contractName': contractName,
+          'totalContracts': currentContracts.length,
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '合同信息写入失败: $e');
+    }
+  }
+
+  static Map<String, dynamic> _errorResult(
+    String callId,
+    Map<String, dynamic> arguments,
+    String message,
+  ) {
+    return {
+      'id': callId,
+      'name': contractInspectTool,
+      'args': arguments,
+      'result': message,
+      'isError': true,
+    };
+  }
+
 }

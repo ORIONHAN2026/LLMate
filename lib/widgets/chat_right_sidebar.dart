@@ -6,9 +6,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/session_controller.dart';
+import '../controllers/work_mode_controller.dart';
 import '../models/chat/chat_message.dart';
 import '../models/chat/content_block.dart';
 import '../models/chat/artifact_entry.dart';
+import '../models/chat/contract_info.dart';
 
 /// 右侧边栏 — 显示当前会话的记忆内容和文件列表
 class ChatRightSidebar extends StatefulWidget {
@@ -30,15 +32,19 @@ class ChatRightSidebar extends StatefulWidget {
 class _ChatRightSidebarState extends State<ChatRightSidebar>
     with SingleTickerProviderStateMixin {
   final sessionController = Get.find<SessionController>();
+  final workModeController = Get.find<WorkModeController>();
   late TabController _tabController;
 
   /// 记录展开的目录产物 ID
   final Set<String> _expandedDirs = {};
 
+  /// 当前 tab 数量（商务模式3个，其他2个）
+  int get _tabCount => workModeController.workMode.value == WorkMode.business ? 3 : 2;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: _tabCount, vsync: this);
   }
 
   @override
@@ -54,6 +60,30 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       final compressedMemory = session?.compressedMemory;
       final memory = session?.memory ?? [];
       final messages = session?.messages ?? const [];
+      final isBusiness =
+          workModeController.workMode.value == WorkMode.business;
+      final contracts = session?.contracts ?? const [];
+
+      // 动态调整 tab 数量
+      final currentTabCount = isBusiness ? 3 : 2;
+      if (_tabController.length != currentTabCount) {
+        _tabController.dispose();
+        _tabController = TabController(length: currentTabCount, vsync: this);
+      }
+
+      final tabChildren = <Widget>[
+        // Tab 0: 文件列表
+        _buildFilesContent(context, messages),
+        // Tab 1: 会话记忆
+        compressedMemory == null && memory.isEmpty
+            ? _buildEmptyState(context)
+            : _buildMemoryContent(context, compressedMemory, memory),
+      ];
+
+      if (isBusiness) {
+        // Tab 2: 合约要点（仅商务模式）
+        tabChildren.add(_buildContractPointsContent(context, contracts));
+      }
 
       return Container(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -61,19 +91,12 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 顶部Tab栏（下划线与聊天主窗口顶部栏对齐）
-            _buildTabBar(context),
+            _buildTabBar(context, isBusiness),
             // 内容区域
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [
-                  // Tab 0: 文件列表
-                  _buildFilesContent(context, messages),
-                  // Tab 1: 会话记忆
-                  compressedMemory == null && memory.isEmpty
-                      ? _buildEmptyState(context)
-                      : _buildMemoryContent(context, compressedMemory, memory),
-                ],
+                children: tabChildren,
               ),
             ),
           ],
@@ -82,7 +105,15 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     });
   }
 
-  Widget _buildTabBar(BuildContext context) {
+  Widget _buildTabBar(BuildContext context, bool isBusiness) {
+    final tabs = <Tab>[
+      Tab(text: AppLocalizations.of(context)!.files),
+      Tab(text: AppLocalizations.of(context)!.memory),
+    ];
+    if (isBusiness) {
+      tabs.add(Tab(text: AppLocalizations.of(context)!.contractPoints));
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -102,10 +133,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         unselectedLabelColor: Theme.of(
           context,
         ).colorScheme.onSurface.withValues(alpha: 0.35),
-        tabs: [
-          Tab(text: AppLocalizations.of(context)!.files),
-          Tab(text: AppLocalizations.of(context)!.memory),
-        ],
+        tabs: tabs,
       ),
     );
   }
@@ -720,6 +748,325 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
           ],
         ),
       ),
+    );
+  }
+
+  // ========== 合约要点 Tab 相关 ==========
+
+  /// 合约要点内容
+  Widget _buildContractPointsContent(
+    BuildContext context,
+    List<ContractInfo> contracts,
+  ) {
+    if (contracts.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                CupertinoIcons.doc_checkmark,
+                size: 32,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.15),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                AppLocalizations.of(context)!.noContracts,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.35),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                AppLocalizations.of(context)!.contractParsing,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.5,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.25),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle(
+            context,
+            '${AppLocalizations.of(context)!.contractPoints} (${contracts.length})',
+          ),
+          const SizedBox(height: 8),
+          ...contracts.map((c) => _buildContractCard(context, c)),
+        ],
+      ),
+    );
+  }
+
+  /// 单个合同卡片
+  Widget _buildContractCard(BuildContext context, ContractInfo contract) {
+    final loc = AppLocalizations.of(context)!;
+    final hasParties = contract.parties.isNotEmpty;
+    final hasDates =
+        contract.startDate != null ||
+        contract.endDate != null ||
+        contract.signingDate != null;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+          width: 0.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 合同名称
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.doc_plaintext,
+                size: 14,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  contract.name,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // 合同类型
+          if (contract.contractType != null) ...[
+            _buildContractField(
+              context,
+              loc.contractTypeLabel,
+              contract.contractType!,
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          // 签署方
+          if (hasParties) ...[
+            _buildContractSectionLabel(context, loc.contractParty),
+            const SizedBox(height: 4),
+            ...contract.parties.map(
+              (p) => _buildPartyItem(context, p),
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          // 收支条款
+          if (contract.paymentClause != null) ...[
+            _buildContractField(
+              context,
+              loc.contractPaymentClause,
+              contract.paymentClause!,
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          // 收支计划
+          if (contract.paymentSchedule != null) ...[
+            _buildContractField(
+              context,
+              loc.contractPaymentSchedule,
+              contract.paymentSchedule!,
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          // 违约条款
+          if (contract.breachClause != null) ...[
+            _buildContractField(
+              context,
+              loc.contractBreachClause,
+              contract.breachClause!,
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          // 违约责任
+          if (contract.liabilityClause != null) ...[
+            _buildContractField(
+              context,
+              loc.contractLiability,
+              contract.liabilityClause!,
+            ),
+            const SizedBox(height: 6),
+          ],
+
+          // 合同期限 & 签订日期
+          if (hasDates) ...[
+            _buildContractSectionLabel(context, loc.contractPeriod),
+            const SizedBox(height: 4),
+            if (contract.startDate != null)
+              _buildDateRow(context, loc.contractPeriod, contract.startDate!),
+            if (contract.endDate != null) ...[
+              const SizedBox(height: 2),
+              _buildDateRow(context, '→', contract.endDate!),
+            ],
+            if (contract.signingDate != null) ...[
+              const SizedBox(height: 2),
+              _buildDateRow(
+                context,
+                loc.contractSigningDate,
+                contract.signingDate!,
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 合约字段标签+值
+  Widget _buildContractField(
+    BuildContext context,
+    String label,
+    String value,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.45,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 合约小节标签
+  Widget _buildContractSectionLabel(BuildContext context, String label) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+      ),
+    );
+  }
+
+  /// 签署方条目
+  Widget _buildPartyItem(BuildContext context, ContractParty party) {
+    final detail = StringBuffer(party.name);
+    if (party.contact != null && party.contact!.isNotEmpty) {
+      detail.write(' · ${party.contact}');
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.tertiary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Text(
+              party.role,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              detail.toString(),
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.4,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.65),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 日期行
+  Widget _buildDateRow(BuildContext context, String label, String date) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          date,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+      ],
     );
   }
 

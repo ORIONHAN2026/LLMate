@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/chat/mcp_config.dart';
-import '../storage/isar_models.dart';
 import '../storage/isar_service.dart';
 
 /// MCP 服务配置全局控制器
@@ -79,104 +77,73 @@ class McpController extends GetxController {
     await _updateMcpService(oldMcpId, newService);
   }
 
-  // ── Isar 存储内部方法 ──
+  // ── 文件存储内部方法 ──
 
-  /// Mcp → IsarMcpService
-  static IsarMcpService _mcpToEntity(Mcp mcp) {
-    return IsarMcpService()
-      ..mcpId = mcp.mcpId
-      ..name = mcp.name
-      ..description = mcp.description
-      ..code = mcp.code
-      ..command = mcp.command
-      ..args = mcp.args
-      ..env = mcp.env != null && mcp.env!.isNotEmpty
-          ? jsonEncode(mcp.env)
-          : null
-      ..workingDirectory = mcp.workingDirectory
-      ..timeout = mcp.timeout
-      ..url = mcp.url
-      ..headers = mcp.headers != null && mcp.headers!.isNotEmpty
-          ? jsonEncode(mcp.headers)
-          : null
-      ..body = mcp.body != null && mcp.body!.isNotEmpty
-          ? jsonEncode(mcp.body)
-          : null
-      ..type = mcp.type?.value
-      ..version = mcp.version
-      ..tools = mcp.tools != null && mcp.tools!.isNotEmpty
-          ? jsonEncode(mcp.tools!.map((t) => t.toJson()).toList())
-          : null
-      ..lastUpdated = mcp.lastUpdated
-      ..prompt = mcp.prompt;
+  /// Mcp → Map（用于 JSON 序列化）
+  static Map<String, dynamic> _mcpToMap(Mcp mcp) {
+    return {
+      'mcpId': mcp.mcpId,
+      'name': mcp.name,
+      'description': mcp.description,
+      'code': mcp.code,
+      'command': mcp.command,
+      'args': mcp.args,
+      'env': mcp.env,
+      'workingDirectory': mcp.workingDirectory,
+      'timeout': mcp.timeout,
+      'url': mcp.url,
+      'headers': mcp.headers,
+      'body': mcp.body,
+      'type': mcp.type?.value,
+      'version': mcp.version,
+      'tools': mcp.tools?.map((t) => t.toJson()).toList(),
+      'lastUpdated': mcp.lastUpdated?.toIso8601String(),
+      'prompt': mcp.prompt,
+    };
   }
 
-  /// IsarMcpService → Mcp
-  static Mcp _entityToMcp(IsarMcpService entity) {
-    List<McpToolInfo>? tools;
-    if (entity.tools != null && entity.tools!.isNotEmpty) {
-      try {
-        final list = jsonDecode(entity.tools!) as List<dynamic>;
-        tools = list
-            .map((t) => McpToolInfo.fromJson(t as Map<String, dynamic>))
-            .toList();
-      } catch (e) {
-        debugPrint('⚠️ 解析 tools 失败: $e');
-      }
-    }
-
-    Map<String, String>? env;
-    if (entity.env != null && entity.env!.isNotEmpty) {
-      try {
-        env = Map<String, String>.from(jsonDecode(entity.env!) as Map);
-      } catch (_) {}
-    }
-
-    Map<String, String>? headers;
-    if (entity.headers != null && entity.headers!.isNotEmpty) {
-      try {
-        headers = Map<String, String>.from(jsonDecode(entity.headers!) as Map);
-      } catch (_) {}
-    }
-
-    Map<String, dynamic>? body;
-    if (entity.body != null && entity.body!.isNotEmpty) {
-      try {
-        body = Map<String, dynamic>.from(jsonDecode(entity.body!) as Map);
-      } catch (_) {}
-    }
-
+  /// Map → Mcp
+  static Mcp _mapToMcp(Map<String, dynamic> map) {
     return Mcp(
-      mcpId: entity.mcpId.isNotEmpty ? entity.mcpId : 'mcp_unknown',
-      name: entity.name.isNotEmpty ? entity.name : entity.mcpId,
-      description: entity.description,
-      code: entity.code ?? jsonEncode({
-        'mcpId': entity.mcpId,
-        'name': entity.name,
-        'command': entity.command,
-        'url': entity.url,
-      }),
-      args: entity.args,
-      env: env,
-      workingDirectory: entity.workingDirectory,
-      timeout: entity.timeout,
-      url: entity.url,
-      headers: headers,
-      body: body,
-      type: McpTransportTypeExt.fromString(entity.type),
-      version: entity.version,
-      tools: tools,
-      lastUpdated: entity.lastUpdated,
-      prompt: entity.prompt,
+      mcpId: (map['mcpId'] as String?)?.isNotEmpty == true
+          ? map['mcpId'] as String
+          : 'mcp_unknown',
+      name: (map['name'] as String?)?.isNotEmpty == true
+          ? map['name'] as String
+          : (map['mcpId'] as String?) ?? 'unknown',
+      description: map['description'] as String?,
+      code: map['code'] as String? ?? '{}',
+      command: map['command'] as String?,
+      args: map['args'] != null ? List<String>.from(map['args']) : null,
+      env: map['env'] != null
+          ? Map<String, String>.from(map['env'] as Map)
+          : null,
+      workingDirectory: map['workingDirectory'] as String?,
+      timeout: map['timeout'] as int?,
+      url: map['url'] as String?,
+      headers: map['headers'] != null
+          ? Map<String, String>.from(map['headers'] as Map)
+          : null,
+      body: map['body'] != null
+          ? Map<String, dynamic>.from(map['body'] as Map)
+          : null,
+      type: McpTransportTypeExt.fromString(map['type'] as String?),
+      version: map['version'] as String?,
+      tools: (map['tools'] as List<dynamic>?)
+          ?.map((t) => McpToolInfo.fromJson(t as Map<String, dynamic>))
+          .toList(),
+      lastUpdated: map['lastUpdated'] != null
+          ? DateTime.tryParse(map['lastUpdated'] as String)
+          : null,
+      prompt: map['prompt'] as String?,
     );
   }
 
   static Future<List<Mcp>> _loadMcpServices() async {
     try {
-      final isar = IsarService.instance.isar;
-      final entities =
-          await isar.isarMcpServices.buildQuery<IsarMcpService>().findAll();
-      return entities.map((e) => _entityToMcp(e)).toList();
+      final store = IsarService.instance.store;
+      final entities = await store.isarMcpServices.findAll();
+      return entities.map((e) => _mapToMcp(e)).toList();
     } catch (e) {
       debugPrint('❌ 加载 MCP 服务失败: $e');
       return [];
@@ -185,51 +152,30 @@ class McpController extends GetxController {
 
   static Future<void> _addMcpService(Mcp service) async {
     try {
-      final isar = IsarService.instance.isar;
-      await isar.writeTxn(() async {
-        final existing = await isar.isarMcpServices.getByMcpId(service.mcpId);
-        if (existing != null) {
-          final updated = _mcpToEntity(service);
-          updated.id = existing.id;
-          await isar.isarMcpServices.put(updated);
-        } else {
-          await isar.isarMcpServices.put(_mcpToEntity(service));
-        }
-      });
+      final store = IsarService.instance.store;
+      await store.isarMcpServices.put(_mcpToMap(service));
     } catch (e) {
       debugPrint('❌ 添加 MCP 服务失败: $e');
     }
   }
 
   static Future<void> _removeMcpService(String mcpId) async {
-    if (mcpId.isEmpty) {
-      debugPrint('⚠️ _removeMcpService: mcpId 为空，跳过删除');
-      return;
+    if (mcpId.isEmpty) return;
+    try {
+      final store = IsarService.instance.store;
+      await store.isarMcpServices.delete(mcpId);
+    } catch (e) {
+      debugPrint('❌ 删除 MCP 服务失败: $e');
     }
-    final isar = IsarService.instance.isar;
-    await isar.writeTxn(() async {
-      final existing = await isar.isarMcpServices.getByMcpId(mcpId);
-      if (existing != null) {
-        await isar.isarMcpServices.delete(existing.id);
-      }
-    });
   }
 
   static Future<void> _updateMcpService(String oldMcpId, Mcp newService) async {
     try {
-      final isar = IsarService.instance.isar;
-      await isar.writeTxn(() async {
-        final existing = await isar.isarMcpServices.getByMcpId(oldMcpId);
-        final entity = _mcpToEntity(newService);
-        if (existing != null) {
-          if (oldMcpId != newService.mcpId) {
-            await isar.isarMcpServices.delete(existing.id);
-          } else {
-            entity.id = existing.id;
-          }
-        }
-        await isar.isarMcpServices.put(entity);
-      });
+      final store = IsarService.instance.store;
+      if (oldMcpId != newService.mcpId) {
+        await store.isarMcpServices.delete(oldMcpId);
+      }
+      await store.isarMcpServices.put(_mcpToMap(newService));
     } catch (e) {
       debugPrint('❌ 更新 MCP 服务失败: $e');
     }

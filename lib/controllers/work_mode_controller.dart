@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 
-import '../storage/isar_models.dart';
 import '../storage/isar_service.dart';
 
 /// 工作模式枚举
@@ -32,11 +31,11 @@ class WorkModeController extends GetxController {
 
   Future<void> _load() async {
     try {
-      final isar = IsarService.instance.isar;
-      final setting = await isar.isarSettings.getByKey(_settingsKey);
+      final store = IsarService.instance.store;
+      final setting = await store.isarSettings.getByKey(_settingsKey);
       if (setting != null) {
         final mode = WorkMode.values.cast<WorkMode?>().firstWhere(
-              (m) => m?.name == setting.value,
+              (m) => m?.name == setting['value'],
               orElse: () => null,
             );
         if (mode != null) {
@@ -51,18 +50,8 @@ class WorkModeController extends GetxController {
   Future<void> setWorkMode(WorkMode mode) async {
     workMode.value = mode;
     try {
-      final isar = IsarService.instance.isar;
-      await isar.writeTxn(() async {
-        final existing = await isar.isarSettings.getByKey(_settingsKey);
-        if (existing != null) {
-          existing.value = mode.name;
-          await isar.isarSettings.put(existing);
-        } else {
-          await isar.isarSettings.put(IsarSettings()
-            ..key = _settingsKey
-            ..value = mode.name);
-        }
-      });
+      final store = IsarService.instance.store;
+      await store.isarSettings.put(_settingsKey, mode.name);
     } catch (e) {
       // 忽略保存错误
     }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../storage/isar_models.dart';
 import '../storage/isar_service.dart';
 
 class ThemeController extends GetxController {
@@ -34,10 +33,9 @@ class ThemeController extends GetxController {
     Get.changeThemeMode(mode);
   }
 
-  /// 切换主题模式（保留旧的 toggle 以兼容）
+  /// 切换主题模式
   void toggleTheme() {
     if (useSystemTheme.value) {
-      // 从跟随系统切换时，根据当前系统亮度选择
       final brightness =
           WidgetsBinding.instance.platformDispatcher.platformBrightness;
       setThemeMode(
@@ -56,19 +54,19 @@ class ThemeController extends GetxController {
   /// 加载保存的主题模式
   Future<void> _loadThemeMode() async {
     try {
-      final isar = IsarService.instance.isar;
+      final store = IsarService.instance.store;
       final useSysSetting =
-          await isar.isarSettings.getByKey('useSystemTheme');
-      if (useSysSetting != null && useSysSetting.value == 'true') {
+          await store.isarSettings.getByKey('useSystemTheme');
+      if (useSysSetting != null && useSysSetting['value'] == 'true') {
         useSystemTheme.value = true;
         isDarkMode.value = false;
         Get.changeThemeMode(ThemeMode.system);
         return;
       }
 
-      final setting = await isar.isarSettings.getByKey('isDarkMode');
+      final setting = await store.isarSettings.getByKey('isDarkMode');
       if (setting != null) {
-        isDarkMode.value = setting.value == 'true';
+        isDarkMode.value = setting['value'] == 'true';
         Get.changeThemeMode(
             isDarkMode.value ? ThemeMode.dark : ThemeMode.light);
       }
@@ -80,31 +78,11 @@ class ThemeController extends GetxController {
   /// 保存主题模式
   Future<void> _saveThemeMode() async {
     try {
-      final isar = IsarService.instance.isar;
-      await isar.writeTxn(() async {
-        // 保存 useSystemTheme
-        final useSysExisting =
-            await isar.isarSettings.getByKey('useSystemTheme');
-        if (useSysExisting != null) {
-          useSysExisting.value = useSystemTheme.value.toString();
-          await isar.isarSettings.put(useSysExisting);
-        } else {
-          await isar.isarSettings.put(IsarSettings()
-            ..key = 'useSystemTheme'
-            ..value = useSystemTheme.value.toString());
-        }
-
-        // 保存 isDarkMode
-        final existing = await isar.isarSettings.getByKey('isDarkMode');
-        if (existing != null) {
-          existing.value = isDarkMode.value.toString();
-          await isar.isarSettings.put(existing);
-        } else {
-          await isar.isarSettings.put(IsarSettings()
-            ..key = 'isDarkMode'
-            ..value = isDarkMode.value.toString());
-        }
-      });
+      final store = IsarService.instance.store;
+      await store.isarSettings
+          .put('useSystemTheme', useSystemTheme.value.toString());
+      await store.isarSettings
+          .put('isDarkMode', isDarkMode.value.toString());
     } catch (e) {
       debugPrint('保存主题模式失败: $e');
     }

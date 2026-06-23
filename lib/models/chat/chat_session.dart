@@ -8,6 +8,7 @@ import 'chat_attachment.dart';
 import 'chat_setting.dart';
 import 'scheduled_task.dart';
 import 'memory_turn.dart';
+import 'contract_info.dart';
 
 // 聊天会话类
 class ChatSession {
@@ -50,6 +51,9 @@ class ChatSession {
 
   /// 压缩后的记忆摘要（由 LLM 生成）
   final String? compressedMemory;
+
+  /// 合约要点列表（商务模式下，由 contract_inspect 工具写入）
+  final List<ContractInfo>? contracts;
 
   // ============================
 
@@ -94,6 +98,7 @@ class ChatSession {
     this.scheduledTask,
     this.memory = const [],
     this.compressedMemory,
+    this.contracts,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcpId = mcpId ?? mcp?.mcpId,
        skillId = skillId ?? skill?.skillId;
@@ -161,6 +166,8 @@ class ChatSession {
     bool clearMemory = false,
     String? compressedMemory,
     bool clearCompressedMemory = false,
+    List<ContractInfo>? contracts,
+    bool clearContracts = false,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -234,6 +241,8 @@ class ChatSession {
       memory: clearMemory ? [] : (memory ?? this.memory),
       compressedMemory:
           clearCompressedMemory ? null : (compressedMemory ?? this.compressedMemory),
+      contracts:
+          clearContracts ? null : (contracts ?? this.contracts),
     );
   }
 
@@ -294,6 +303,12 @@ class ChatSession {
               .toList() ??
           [],
       compressedMemory: json['compressedMemory'] as String?,
+      contracts:
+          (json['contracts'] as List<dynamic>?)
+              ?.map(
+                (c) => ContractInfo.fromJson(c as Map<String, dynamic>),
+              )
+              .toList(),
       modelId: modelId,
       mcpId: mcpId,
       skillId: skillId,
@@ -326,6 +341,8 @@ class ChatSession {
       if (scheduledTask != null) 'scheduledTask': scheduledTask!.toJson(),
       'memory': memory.map((t) => t.toJson()).toList(),
       if (compressedMemory != null) 'compressedMemory': compressedMemory,
+      if (contracts != null)
+        'contracts': contracts!.map((c) => c.toJson()).toList(),
       if (modelId != null) 'modelId': modelId,
       if (mcpId != null) 'mcpId': mcpId,
       if (skillId != null) 'skillId': skillId,

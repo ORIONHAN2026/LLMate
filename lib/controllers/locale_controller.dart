@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../storage/isar_models.dart';
 import '../storage/isar_service.dart';
 
 /// 管理应用语言切换
@@ -29,10 +28,10 @@ class LocaleController extends GetxController {
   /// 从持久化存储加载语言设置
   Future<void> _loadLocale() async {
     try {
-      final isar = IsarService.instance.isar;
-      final setting = await isar.isarSettings.getByKey('appLanguage');
+      final store = IsarService.instance.store;
+      final setting = await store.isarSettings.getByKey('appLanguage');
       if (setting != null) {
-        final lang = setting.value;
+        final lang = setting['value'];
         if (lang == 'en') {
           locale.value = const Locale('en');
           Get.updateLocale(const Locale('en'));
@@ -46,18 +45,8 @@ class LocaleController extends GetxController {
   /// 保存语言设置到持久化存储
   Future<void> _saveLocale() async {
     try {
-      final isar = IsarService.instance.isar;
-      await isar.writeTxn(() async {
-        final existing = await isar.isarSettings.getByKey('appLanguage');
-        if (existing != null) {
-          existing.value = locale.value.languageCode;
-          await isar.isarSettings.put(existing);
-        } else {
-          await isar.isarSettings.put(IsarSettings()
-            ..key = 'appLanguage'
-            ..value = locale.value.languageCode);
-        }
-      });
+      final store = IsarService.instance.store;
+      await store.isarSettings.put('appLanguage', locale.value.languageCode);
     } catch (e) {
       debugPrint('保存语言设置失败: $e');
     }

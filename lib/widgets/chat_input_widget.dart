@@ -28,6 +28,9 @@ import '../services/file_tool_service.dart';
 import '../services/feature_toggle_service.dart';
 import '../utils/snackbar_utils.dart';
 import '../l10n/app_localizations.dart';
+import '../storage/isar_service.dart';
+import '../storage/file_storage.dart';
+import '../models/chat/contract_info.dart';
 import 'attachment_list_widget.dart';
 import 'scheduled_task_dialog.dart';
 
@@ -1543,20 +1546,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 合同正向关键词（文件名命中任一即通过）
     const fileNameKeywords = ['合同', '协议', '契约', '合约', '合同书', '协议书'];
 
-    // 非合同文件名排除词（文件名包含这些词的，排除）
+    // 非合同文件名排除词
     const excludeFileNameKeywords = [
-      '说明',
-      '证明',
-      '告知',
-      '通知',
-      '清单',
-      '目录',
-      '附件',
-      '附表',
-      '模板',
-      '空白',
-      '范本',
-      '草稿',
+      '说明', '证明', '告知', '通知', '清单', '目录',
+      '附件', '附表', '模板', '空白', '范本', '草稿',
     ];
 
     // 第二轮筛选
@@ -1564,7 +1557,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     for (final file in allWordFiles) {
       final fileName = p.basenameWithoutExtension(file.path);
 
-      // 先检查是否命中排除词
       bool excluded = false;
       for (final keyword in excludeFileNameKeywords) {
         if (fileName.contains(keyword)) {
@@ -1575,7 +1567,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       }
       if (excluded) continue;
 
-      // 再检查文件名是否包含合同正向关键词
       bool fileNameMatch = false;
       for (final keyword in fileNameKeywords) {
         if (fileName.contains(keyword)) {
@@ -1590,8 +1581,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         continue;
       }
 
-      // 文件名不匹配，读取内容做更严格判定：
-      // 必须同时命中「强特征词」+「佐证词」
+      // 文件名不匹配，读取内容做更严格判定
       bool contentMatch = false;
       try {
         final ext = p.extension(file.path).toLowerCase();
@@ -1619,7 +1609,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         }
 
         if (fileContent != null && fileContent.isNotEmpty) {
-          // 强特征词：合同/协议等明确表示合同属性的词
           const strongKeywords = ['合同', '协议', '契约', '合约'];
           bool hasStrongKeyword = false;
           for (final kw in strongKeywords) {
@@ -1630,7 +1619,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           }
 
           if (hasStrongKeyword) {
-            // 佐证词：公章、签署、违约责任等合同常见字段
             const evidenceKeywords = [
               '公章', '违约', '盖章', '甲方', '乙方', '签署',
               '签章', '法定代表', '条款', '违约责任',
@@ -1662,7 +1650,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     debugPrint('📄 合同解析：筛选后 ${files.length} 个文件');
 
-    // 将文件添加为附件，然后发送解析提示词
+    // 将文件添加为附件，然后发送解析提示词（走正常聊天流程）
     _sendingInProgress = true;
 
     try {
@@ -1670,7 +1658,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final platformFiles = <PlatformFile>[];
       for (final file in files) {
         final stat = await file.stat();
-        if (stat.size > 50 * 1024 * 1024) continue; // 跳过超大文件
+        if (stat.size > 50 * 1024 * 1024) continue;
         platformFiles.add(
           PlatformFile(
             name: p.basename(file.path),
@@ -1709,8 +1697,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         debugPrint('📄 部分附件处理超时，继续发送');
       }
 
-      // 设置解析提示词到输入框并发送
-      _inputController.text = AppLocalizations.of(context)!.parseContractPrompt;
+      // 设置新提示词到输入框
+      _inputController.text = _buildContractParsePrompt();
       _inputController.selection = TextSelection.collapsed(
         offset: _inputController.text.length,
       );
@@ -1718,13 +1706,113 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         _hasText = true;
       });
 
-      // 直接调用发送（绕过 _sendMessage 中的空消息检查）
+      // 标记：响应完成后需要解析 JSON 写入 business.md
+      _contractParsePending = true;
+
+      // 走正常发送流程
       await _doSendMessage(_inputController.text.trim());
       _sendingInProgress = false;
     } catch (e) {
       debugPrint('合同解析出错: $e');
       _sendingInProgress = false;
+      _contractParsePending = false;
     }
+  }
+
+  /// 构建合同解析提示词（发送到聊天中）
+  String _buildContractParsePrompt() {
+    return '请分析以上合同文件，提取每份合同的关键信息。'
+        '请严格按以下 JSON 格式输出（只输出 JSON，不要输出其他解释文字）：\n'
+        '```json\n'
+        '[\n'
+        '  {\n'
+        '    "name": "合同名称",\n'
+        '    "contractType": "合同类型",\n'
+        '    "parties": [{"role": "甲方", "name": "名称", "contact": "联系方式"}],\n'
+        '    "startDate": "起始日期 YYYY-MM-DD",\n'
+        '    "endDate": "结束日期 YYYY-MM-DD",\n'
+        '    "signingDate": "签订日期 YYYY-MM-DD",\n'
+        '    "paymentClause": "收支条款",\n'
+        '    "paymentSchedule": "支付计划",\n'
+        '    "breachClause": "违约条款",\n'
+        '    "liabilityClause": "违约责任"\n'
+        '  }\n'
+        ']\n'
+        '```\n'
+        '注意：未提及的字段设为 null，日期格式为 YYYY-MM-DD，签署方角色用中文。';
+  }
+
+  /// 从 LLM 响应中提取合同 JSON
+  List<ContractInfo> _extractContractsFromResponse(String response) {
+    try {
+      // 尝试提取 markdown 代码块中的 JSON
+      final codeBlockMatch = RegExp(
+        r'```(?:json)?\s*([\s\S]*?)\s*```',
+      ).firstMatch(response);
+
+      String jsonStr;
+      if (codeBlockMatch != null) {
+        jsonStr = codeBlockMatch.group(1)!.trim();
+      } else {
+        // 尝试直接找到 JSON 数组
+        final arrayMatch = RegExp(r'\[[\s\S]*\]').firstMatch(response);
+        if (arrayMatch != null) {
+          jsonStr = arrayMatch.group(0)!;
+        } else {
+          debugPrint('📄 无法从响应中提取 JSON');
+          return [];
+        }
+      }
+
+      final List<dynamic> jsonList = jsonDecode(jsonStr);
+      return jsonList
+          .map((item) {
+            try {
+              return ContractInfo.fromJson(item as Map<String, dynamic>);
+            } catch (e) {
+              debugPrint('📄 解析单个合同失败: $e');
+              return null;
+            }
+          })
+          .whereType<ContractInfo>()
+          .toList();
+    } catch (e) {
+      debugPrint('📄 解析合同 JSON 失败: $e');
+      return [];
+    }
+  }
+
+  /// 合同解析响应完成后：解析 JSON 并写入 business.md
+  Future<void> _onContractParseComplete(String accumulatedContent) async {
+    _contractParsePending = false;
+
+    final contracts = _extractContractsFromResponse(accumulatedContent);
+    if (contracts.isEmpty) {
+      debugPrint('📄 合同解析：未能从响应中提取合同信息');
+      return;
+    }
+
+    final sessionId = sessionController.currentSession.value?.sessionId;
+    if (sessionId == null) return;
+
+    // 写入 business.md
+    final mdContent = StringBuffer();
+    mdContent.writeln('# 合约要点');
+    mdContent.writeln();
+    for (final c in contracts) {
+      mdContent.write(c.toMarkdown());
+    }
+    await SessionFileStore.writeBusiness(sessionId, mdContent.toString());
+
+    // 同步更新会话
+    final updatedSession = sessionController.currentSession.value;
+    if (updatedSession != null && updatedSession.sessionId == sessionId) {
+      await sessionController.updateSession(
+        updatedSession.copyWith(contracts: contracts),
+      );
+    }
+
+    debugPrint('📄 合同解析完成：已写入 ${contracts.length} 份合同到 business.md');
   }
 
   /// 构建记忆轮数配置按钮
@@ -3118,6 +3206,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   bool _sendingInProgress = false; // 本地防重入锁
+  bool _contractParsePending = false; // 合同解析标记：响应完成后写入 business.md
 
   /// 发送消息的主要方法
   Future<void> _sendMessage() async {
@@ -3478,6 +3567,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         _streamingMessageIds.remove(botMessageId);
       });
       widget.onStreamingChanged?.call(_streamingMessageIds);
+
+      // 合同解析响应完成后：解析 JSON 写入 business.md
+      if (_contractParsePending && accumulatedContent.isNotEmpty) {
+        _onContractParseComplete(accumulatedContent);
+      }
     } catch (e) {
       rethrow;
     } finally {

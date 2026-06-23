@@ -698,7 +698,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get parseContractPrompt =>
-      'Please parse the following contract files. For each contract, extract and organize the following information:\n1. Contract Type\n2. Income/Expense Clauses\n3. Payment Schedule\n4. Breach Clauses\n5. Liability for Breach\n6. Contract Start Date\n7. Contract End Date\n\nPlease output each contract one by one in a clear format.';
+      'The following are document files in the working directory. Please first determine which files are actual contract documents (not attachments, descriptions, or other non-contract files). Then, only for files confirmed as contracts, extract and organize the following information:\n1. Contract Type\n2. Income/Expense Clauses\n3. Payment Schedule\n4. Breach Clauses\n5. Liability for Breach\n6. Contract Start Date\n7. Contract End Date\n\nPlease output each contract one by one, and explain which files were determined as non-contract and why, in a clear format.';
 
   @override
   String nRounds(Object n) {

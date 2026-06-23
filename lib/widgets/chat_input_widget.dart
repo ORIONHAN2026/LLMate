@@ -1520,37 +1520,121 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       return;
     }
 
-    // 支持的合同文件扩展名
-    const supportedExtensions = [
-      '.pdf',
-      '.doc',
-      '.docx',
-      '.txt',
-      '.md',
-      '.xls',
-      '.xlsx',
-      '.png',
-      '.jpg',
-      '.jpeg',
-      '.webp',
-    ];
+    // 合同解析：第一轮筛选 - 只选择 Word 文件
+    const wordExtensions = ['.doc', '.docx'];
 
-    final files = <File>[];
+    final allWordFiles = <File>[];
     await for (final entity in dir.list(recursive: false)) {
       if (entity is File) {
         final ext = p.extension(entity.path).toLowerCase();
-        if (supportedExtensions.contains(ext)) {
-          files.add(entity);
+        if (wordExtensions.contains(ext)) {
+          allWordFiles.add(entity);
         }
       }
     }
 
-    if (files.isEmpty) {
-      SnackBarUtils.showInfo(context, '工作目录下未找到合同文件');
+    if (allWordFiles.isEmpty) {
+      SnackBarUtils.showInfo(context, '工作目录下未找到 Word 文件');
       return;
     }
 
-    debugPrint('📄 合同解析：找到 ${files.length} 个文件');
+    debugPrint('📄 合同解析：找到 ${allWordFiles.length} 个 Word 文件，开始关键词筛选...');
+
+    // 合同关键词列表
+    const contractKeywords = [
+      '协议',
+      '合同',
+      '公章',
+      '违约',
+      '盖章',
+      '甲方',
+      '乙方',
+      '签署',
+      '签章',
+      '法定代表',
+      '条款',
+      '契约',
+      '合约',
+      '违约责任',
+      '合同书',
+      '协议书',
+    ];
+
+    // 第二轮筛选：检查文件名或文件内容是否包含合同关键词
+    final files = <File>[];
+    for (final file in allWordFiles) {
+      final fileName = p.basenameWithoutExtension(file.path);
+
+      // 先检查文件名
+      bool fileNameMatch = false;
+      for (final keyword in contractKeywords) {
+        if (fileName.contains(keyword)) {
+          fileNameMatch = true;
+          break;
+        }
+      }
+
+      if (fileNameMatch) {
+        files.add(file);
+        debugPrint('📄 文件名匹配: ${p.basename(file.path)}');
+        continue;
+      }
+
+      // 文件名不匹配，尝试读取内容检查
+      bool contentMatch = false;
+      try {
+        final ext = p.extension(file.path).toLowerCase();
+        String? fileContent;
+
+        if (ext == '.docx') {
+          final result = await WordToolService.readDocument(
+            arguments: {'filePath': file.path},
+            callId: 'contract_scan_${file.hashCode}',
+          );
+          fileContent = _extractToolResultContent(result);
+        } else if (ext == '.doc') {
+          // .doc 是二进制格式，尝试以文本方式读取（可能包含可读片段）
+          try {
+            final bytes = await file.readAsBytes();
+            // 从二进制中提取可读文本片段
+            final buffer = StringBuffer();
+            for (final byte in bytes) {
+              if (byte >= 32 && byte <= 126 || byte >= 128) {
+                buffer.writeCharCode(byte);
+              }
+            }
+            fileContent = buffer.toString();
+          } catch (_) {
+            fileContent = null;
+          }
+        }
+
+        if (fileContent != null && fileContent.isNotEmpty) {
+          for (final keyword in contractKeywords) {
+            if (fileContent.contains(keyword)) {
+              contentMatch = true;
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('📄 读取文件内容失败: ${file.path}, $e');
+      }
+
+      if (contentMatch) {
+        files.add(file);
+        debugPrint('📄 内容匹配: ${p.basename(file.path)}');
+      } else {
+        debugPrint('📄 跳过（未匹配关键词）: ${p.basename(file.path)}');
+      }
+    }
+
+    if (files.isEmpty) {
+      SnackBarUtils.showInfo(context, '工作目录下未找到包含合同关键词的 Word 文件');
+      return;
+    }
+
+    debugPrint('📄 合同解析：筛选后 ${files.length} 个文件');
 
     // 将文件添加为附件，然后发送解析提示词
     _sendingInProgress = true;

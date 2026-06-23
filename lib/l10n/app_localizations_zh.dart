@@ -691,7 +691,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get parseContractPrompt =>
-      '请解析以下合同文件的内容。对每份合同文件，请提取并整理以下信息：\n1. 合同类型\n2. 收支条款\n3. 收支计划\n4. 违约条款\n5. 违约责任\n6. 合同起始时间\n7. 合同结束时间\n\n请按合同逐一输出，格式清晰。';
+      '以下是工作目录中的文档文件，请先判断哪些文件是合同正文（而非附件、说明或其他非合同文件），然后仅对确认为合同正文的文件，提取并整理以下信息：\n1. 合同类型\n2. 收支条款\n3. 收支计划\n4. 违约条款\n5. 违约责任\n6. 合同起始时间\n7. 合同结束时间\n\n请按合同逐一输出，并说明哪些文件被判定为非合同文件及原因，格式清晰。';
 
   @override
   String nRounds(Object n) {

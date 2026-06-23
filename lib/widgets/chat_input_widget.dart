@@ -1540,34 +1540,44 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     debugPrint('📄 合同解析：找到 ${allWordFiles.length} 个 Word 文件，开始关键词筛选...');
 
-    // 合同关键词列表
-    const contractKeywords = [
-      '协议',
-      '合同',
-      '公章',
-      '违约',
-      '盖章',
-      '甲方',
-      '乙方',
-      '签署',
-      '签章',
-      '法定代表',
-      '条款',
-      '契约',
-      '合约',
-      '违约责任',
-      '合同书',
-      '协议书',
+    // 合同正向关键词（文件名命中任一即通过）
+    const fileNameKeywords = ['合同', '协议', '契约', '合约', '合同书', '协议书'];
+
+    // 非合同文件名排除词（文件名包含这些词的，排除）
+    const excludeFileNameKeywords = [
+      '说明',
+      '证明',
+      '告知',
+      '通知',
+      '清单',
+      '目录',
+      '附件',
+      '附表',
+      '模板',
+      '空白',
+      '范本',
+      '草稿',
     ];
 
-    // 第二轮筛选：检查文件名或文件内容是否包含合同关键词
+    // 第二轮筛选
     final files = <File>[];
     for (final file in allWordFiles) {
       final fileName = p.basenameWithoutExtension(file.path);
 
-      // 先检查文件名
+      // 先检查是否命中排除词
+      bool excluded = false;
+      for (final keyword in excludeFileNameKeywords) {
+        if (fileName.contains(keyword)) {
+          excluded = true;
+          debugPrint('📄 文件名命中排除词"$keyword"，跳过: ${p.basename(file.path)}');
+          break;
+        }
+      }
+      if (excluded) continue;
+
+      // 再检查文件名是否包含合同正向关键词
       bool fileNameMatch = false;
-      for (final keyword in contractKeywords) {
+      for (final keyword in fileNameKeywords) {
         if (fileName.contains(keyword)) {
           fileNameMatch = true;
           break;
@@ -1580,7 +1590,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         continue;
       }
 
-      // 文件名不匹配，尝试读取内容检查
+      // 文件名不匹配，读取内容做更严格判定：
+      // 必须同时命中「强特征词」+「佐证词」
       bool contentMatch = false;
       try {
         final ext = p.extension(file.path).toLowerCase();
@@ -1593,10 +1604,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           );
           fileContent = _extractToolResultContent(result);
         } else if (ext == '.doc') {
-          // .doc 是二进制格式，尝试以文本方式读取（可能包含可读片段）
           try {
             final bytes = await file.readAsBytes();
-            // 从二进制中提取可读文本片段
             final buffer = StringBuffer();
             for (final byte in bytes) {
               if (byte >= 32 && byte <= 126 || byte >= 128) {
@@ -1610,10 +1619,27 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         }
 
         if (fileContent != null && fileContent.isNotEmpty) {
-          for (final keyword in contractKeywords) {
-            if (fileContent.contains(keyword)) {
-              contentMatch = true;
+          // 强特征词：合同/协议等明确表示合同属性的词
+          const strongKeywords = ['合同', '协议', '契约', '合约'];
+          bool hasStrongKeyword = false;
+          for (final kw in strongKeywords) {
+            if (fileContent.contains(kw)) {
+              hasStrongKeyword = true;
               break;
+            }
+          }
+
+          if (hasStrongKeyword) {
+            // 佐证词：公章、签署、违约责任等合同常见字段
+            const evidenceKeywords = [
+              '公章', '违约', '盖章', '甲方', '乙方', '签署',
+              '签章', '法定代表', '条款', '违约责任',
+            ];
+            for (final kw in evidenceKeywords) {
+              if (fileContent.contains(kw)) {
+                contentMatch = true;
+                break;
+              }
             }
           }
         }
@@ -1623,9 +1649,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       if (contentMatch) {
         files.add(file);
-        debugPrint('📄 内容匹配: ${p.basename(file.path)}');
+        debugPrint('📄 内容匹配（强特征+佐证）: ${p.basename(file.path)}');
       } else {
-        debugPrint('📄 跳过（未匹配关键词）: ${p.basename(file.path)}');
+        debugPrint('📄 跳过（未通过内容严格判定）: ${p.basename(file.path)}');
       }
     }
 

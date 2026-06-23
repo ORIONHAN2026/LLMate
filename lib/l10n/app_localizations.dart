@@ -1410,6 +1410,30 @@ abstract class AppLocalizations {
   /// **'Working directory cleared'**
   String get workingDirCleared;
 
+  /// No description provided for @noWorkingDir.
+  ///
+  /// In en, this message translates to:
+  /// **'Please set the contract file directory first'**
+  String get noWorkingDir;
+
+  /// No description provided for @parseContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Parse Contract'**
+  String get parseContract;
+
+  /// No description provided for @parseContractHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Parse contract files in working directory'**
+  String get parseContractHint;
+
+  /// No description provided for @parseContractPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please parse the following contract files. For each contract, extract and organize the following information:\n1. Contract Type\n2. Income/Expense Clauses\n3. Payment Schedule\n4. Breach Clauses\n5. Liability for Breach\n6. Contract Start Date\n7. Contract End Date\n\nPlease output each contract one by one in a clear format.'**
+  String get parseContractPrompt;
+
   /// No description provided for @nRounds.
   ///
   /// In en, this message translates to:
@@ -2855,6 +2879,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Version'**
   String get versionLabel;
+
+  /// No description provided for @workModeSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Work Mode'**
+  String get workModeSettings;
+
+  /// No description provided for @workModeBusiness.
+  ///
+  /// In en, this message translates to:
+  /// **'Business'**
+  String get workModeBusiness;
+
+  /// No description provided for @workModeBusinessDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Business negotiation, contract management, strategy'**
+  String get workModeBusinessDesc;
+
+  /// No description provided for @workModeFinance.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get workModeFinance;
+
+  /// No description provided for @workModeFinanceDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial analysis, tax planning, cost accounting'**
+  String get workModeFinanceDesc;
+
+  /// No description provided for @workModeLegal.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get workModeLegal;
+
+  /// No description provided for @workModeLegalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal drafting, compliance review, risk assessment'**
+  String get workModeLegalDesc;
+
+  /// No description provided for @workModeMarketing.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketing'**
+  String get workModeMarketing;
+
+  /// No description provided for @workModeMarketingDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketing planning, brand promotion, competitive analysis'**
+  String get workModeMarketingDesc;
 }
 
 class _AppLocalizationsDelegate

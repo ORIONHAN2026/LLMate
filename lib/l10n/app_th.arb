@@ -458,5 +458,14 @@
   "businessConsultantDesc": "ผู้เชี่ยวชาญด้านการจัดการธุรกิจและกลยุทธ์",
   "psychologist": "นักจิตวิทยา",
   "psychologistDesc": "ที่ปรึกษาสุขภาพจิตมืออาชีพ",
-  "versionLabel": "รุ่น"
+  "versionLabel": "รุ่น",
+  "workModeSettings": "Work Mode",
+  "workModeBusiness": "Business",
+  "workModeBusinessDesc": "Business negotiation, contract management, strategy",
+  "workModeFinance": "Finance",
+  "workModeFinanceDesc": "Financial analysis, tax planning, cost accounting",
+  "workModeLegal": "Legal",
+  "workModeLegalDesc": "Legal drafting, compliance review, risk assessment",
+  "workModeMarketing": "Marketing",
+  "workModeMarketingDesc": "Marketing planning, brand promotion, competitive analysis"
 }

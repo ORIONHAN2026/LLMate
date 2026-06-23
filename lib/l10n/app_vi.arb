@@ -458,5 +458,14 @@
   "businessConsultantDesc": "Chuyên gia quản lý doanh nghiệp và chiến lược",
   "psychologist": "Nhà tâm lý học",
   "psychologistDesc": "Tư vấn sức khỏe tâm thần chuyên nghiệp",
-  "versionLabel": "Phiên bản"
+  "versionLabel": "Phiên bản",
+  "workModeSettings": "Work Mode",
+  "workModeBusiness": "Business",
+  "workModeBusinessDesc": "Business negotiation, contract management, strategy",
+  "workModeFinance": "Finance",
+  "workModeFinanceDesc": "Financial analysis, tax planning, cost accounting",
+  "workModeLegal": "Legal",
+  "workModeLegalDesc": "Legal drafting, compliance review, risk assessment",
+  "workModeMarketing": "Marketing",
+  "workModeMarketingDesc": "Marketing planning, brand promotion, competitive analysis"
 }

@@ -681,6 +681,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get workingDirCleared => '工作目录已清除';
 
   @override
+  String get noWorkingDir => '请先设置合同文件所在目录';
+
+  @override
+  String get parseContract => '解析合同';
+
+  @override
+  String get parseContractHint => '解析工作目录下的合同文件';
+
+  @override
+  String get parseContractPrompt =>
+      '请解析以下合同文件的内容。对每份合同文件，请提取并整理以下信息：\n1. 合同类型\n2. 收支条款\n3. 收支计划\n4. 违约条款\n5. 违约责任\n6. 合同起始时间\n7. 合同结束时间\n\n请按合同逐一输出，格式清晰。';
+
+  @override
   String nRounds(Object n) {
     return '$n轮';
   }
@@ -1497,4 +1510,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get versionLabel => '版本';
+
+  @override
+  String get workModeSettings => '工作模式';
+
+  @override
+  String get workModeBusiness => '商务';
+
+  @override
+  String get workModeBusinessDesc => '面向商务谈判、合同管理、商业策略等场景';
+
+  @override
+  String get workModeFinance => '财务';
+
+  @override
+  String get workModeFinanceDesc => '面向财务报表分析、税务筹划、成本核算等场景';
+
+  @override
+  String get workModeLegal => '法务';
+
+  @override
+  String get workModeLegalDesc => '面向法律文书起草、合规审查、风险评估等场景';
+
+  @override
+  String get workModeMarketing => '市场';
+
+  @override
+  String get workModeMarketingDesc => '面向市场营销策划、品牌推广、竞品分析等场景';
 }

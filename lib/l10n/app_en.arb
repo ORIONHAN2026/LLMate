@@ -218,6 +218,10 @@
   "setWorkingDirHint": "Set working directory (default save location)",
   "workingDirSet": "Working directory set",
   "workingDirCleared": "Working directory cleared",
+  "noWorkingDir": "Please set the contract file directory first",
+  "parseContract": "Parse Contract",
+  "parseContractHint": "Parse contract files in working directory",
+  "parseContractPrompt": "Please parse the following contract files. For each contract, extract and organize the following information:\n1. Contract Type\n2. Income/Expense Clauses\n3. Payment Schedule\n4. Breach Clauses\n5. Liability for Breach\n6. Contract Start Date\n7. Contract End Date\n\nPlease output each contract one by one in a clear format.",
   "nRounds": "{n} rounds",
   "memoryConfigTooltip": "Memory config: Keep last {label} conversations",
   "closeMemory": "Close Memory",
@@ -461,5 +465,14 @@
   "businessConsultantDesc": "Business management and strategy expert",
   "psychologist": "Psychologist",
   "psychologistDesc": "Professional mental health consultant",
-  "versionLabel": "Version"
+  "versionLabel": "Version",
+  "workModeSettings": "Work Mode",
+  "workModeBusiness": "Business",
+  "workModeBusinessDesc": "Business negotiation, contract management, strategy",
+  "workModeFinance": "Finance",
+  "workModeFinanceDesc": "Financial analysis, tax planning, cost accounting",
+  "workModeLegal": "Legal",
+  "workModeLegalDesc": "Legal drafting, compliance review, risk assessment",
+  "workModeMarketing": "Marketing",
+  "workModeMarketingDesc": "Marketing planning, brand promotion, competitive analysis"
 }

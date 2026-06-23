@@ -681,6 +681,19 @@ class AppLocalizationsVi extends AppLocalizations {
   String get workingDirCleared => '工作目录已清除';
 
   @override
+  String get noWorkingDir => 'Please set the contract file directory first';
+
+  @override
+  String get parseContract => 'Parse Contract';
+
+  @override
+  String get parseContractHint => 'Parse contract files in working directory';
+
+  @override
+  String get parseContractPrompt =>
+      'Please parse the following contract files. For each contract, extract and organize the following information:\n1. Contract Type\n2. Income/Expense Clauses\n3. Payment Schedule\n4. Breach Clauses\n5. Liability for Breach\n6. Contract Start Date\n7. Contract End Date\n\nPlease output each contract one by one in a clear format.';
+
+  @override
   String nRounds(Object n) {
     return '$n轮';
   }
@@ -1508,4 +1521,35 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get versionLabel => 'Phiên bản';
+
+  @override
+  String get workModeSettings => 'Work Mode';
+
+  @override
+  String get workModeBusiness => 'Business';
+
+  @override
+  String get workModeBusinessDesc =>
+      'Business negotiation, contract management, strategy';
+
+  @override
+  String get workModeFinance => 'Finance';
+
+  @override
+  String get workModeFinanceDesc =>
+      'Financial analysis, tax planning, cost accounting';
+
+  @override
+  String get workModeLegal => 'Legal';
+
+  @override
+  String get workModeLegalDesc =>
+      'Legal drafting, compliance review, risk assessment';
+
+  @override
+  String get workModeMarketing => 'Marketing';
+
+  @override
+  String get workModeMarketingDesc =>
+      'Marketing planning, brand promotion, competitive analysis';
 }

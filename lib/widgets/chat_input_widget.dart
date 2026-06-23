@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 
 import '../controllers/session_controller.dart';
 import '../controllers/mcp_controller.dart';
+import '../controllers/work_mode_controller.dart';
 import '../models/bigmodel/models.dart';
 import '../framework/llm_framework.dart';
 import '../controllers/model_controller.dart';
@@ -78,6 +79,7 @@ class ChatInputWidget extends StatefulWidget {
 
 class _ChatInputWidgetState extends State<ChatInputWidget> {
   final sessionController = Get.find<SessionController>();
+  final workModeController = Get.find<WorkModeController>();
 
   // 输入控制器和焦点
   late final TextEditingController _inputController;
@@ -1082,7 +1084,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 style: const TextStyle(fontSize: 14),
                 cursorHeight: 16, // 设置光标高度与文字大小匹配
                 decoration: InputDecoration(
-                  hintText: widget.hintText.isNotEmpty ? widget.hintText : l10n.inputHint,
+                  hintText:
+                      widget.hintText.isNotEmpty
+                          ? widget.hintText
+                          : l10n.inputHint,
                   hintStyle: TextStyle(
                     color: Theme.of(
                       context,
@@ -1115,35 +1120,44 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                      _buildInputAttachToggle(),
-                      const SizedBox(width: 8),
-                      _buildDeepThinkToggle(),
-                      const SizedBox(width: 8),
-                      _buildMcpToolsToggle(),
-                      const SizedBox(width: 8),
+                          _buildInputAttachToggle(),
+                          const SizedBox(width: 8),
+                          _buildDeepThinkToggle(),
+                          const SizedBox(width: 8),
+                          _buildMcpToolsToggle(),
+                          const SizedBox(width: 8),
 
-                      _buildSkillToggle(),
-                      const SizedBox(width: 8),
-                      if (FeatureToggleService().isMemoryConfigEnabled) ...[
-                        _buildMemoryToggle(),
-                        const SizedBox(width: 8),
-                      ],
-                      if (FeatureToggleService().isScheduledTaskEnabled) ...[
-                        _buildScheduledTaskToggle(),
-                        const SizedBox(width: 8),
-                      ],
-                      _buildWorkDirectoryToggle(),
-                      const SizedBox(width: 8),
-                      _buildCleanHistoryToggle(),
-                      // Container(
-                      //   height: 16,
-                      //   width: 1,
-                      //   color: Theme.of(context).dividerColor,
-                      //   margin: const EdgeInsets.symmetric(horizontal: 2),
-                      // ),
-                      ],
+                          _buildSkillToggle(),
+                          const SizedBox(width: 8),
+                          if (FeatureToggleService().isMemoryConfigEnabled) ...[
+                            _buildMemoryToggle(),
+                            const SizedBox(width: 8),
+                          ],
+                          if (FeatureToggleService()
+                              .isScheduledTaskEnabled) ...[
+                            _buildScheduledTaskToggle(),
+                            const SizedBox(width: 8),
+                          ],
+                          _buildWorkDirectoryToggle(),
+                          if (workModeController.workMode.value ==
+                                  WorkMode.business &&
+                              sessionController
+                                      .currentSession
+                                      .value
+                                      ?.workDirectory !=
+                                  null)
+                            _buildParseContractButton(),
+                          const SizedBox(width: 8),
+                          _buildCleanHistoryToggle(),
+                          // Container(
+                          //   height: 16,
+                          //   width: 1,
+                          //   color: Theme.of(context).dividerColor,
+                          //   margin: const EdgeInsets.symmetric(horizontal: 2),
+                          // ),
+                        ],
+                      ),
                     ),
-                  ),
                   ),
                   // 右侧发送/停止按钮
                   Container(
@@ -1192,7 +1206,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     } else if (processingAttachments.isNotEmpty) {
       // 有附件正在处理时显示处理中状态
       return Tooltip(
-        message: AppLocalizations.of(context)!.waitingAttachments(processingAttachments.length),
+        message: AppLocalizations.of(
+          context,
+        )!.waitingAttachments(processingAttachments.length),
         child: Container(
           width: 16,
           height: 16,
@@ -1268,7 +1284,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final isDeepThink = currentSession?.deepThink ?? false;
 
     return Tooltip(
-      message: isDeepThink ? AppLocalizations.of(context)!.deepThinkEnabled : AppLocalizations.of(context)!.deepThinkDisabled,
+      message:
+          isDeepThink
+              ? AppLocalizations.of(context)!.deepThinkEnabled
+              : AppLocalizations.of(context)!.deepThinkDisabled,
       child: GestureDetector(
         onTap:
             _isSending
@@ -1331,10 +1350,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     final workDir = currentSession?.workDirectory;
     final hasWorkDir = workDir != null && workDir.isNotEmpty;
-    final displayText = hasWorkDir ? p.basename(workDir) : AppLocalizations.of(context)!.workingDirectoryLabel;
+    final displayText =
+        hasWorkDir
+            ? p.basename(workDir)
+            : AppLocalizations.of(context)!.workingDirectoryLabel;
 
     return Tooltip(
-      message: hasWorkDir ? AppLocalizations.of(context)!.workingDirectoryPath(workDir) : AppLocalizations.of(context)!.setWorkingDirHint,
+      message:
+          hasWorkDir
+              ? AppLocalizations.of(context)!.workingDirectoryPath(workDir)
+              : AppLocalizations.of(context)!.setWorkingDirHint,
       child: GestureDetector(
         onTap: _isSending ? null : _showWorkDirectoryPicker,
         onLongPress: hasWorkDir && !_isSending ? _clearWorkDirectory : null,
@@ -1356,10 +1381,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     _isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
                         : hasWorkDir
                         ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -1373,10 +1402,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     fontWeight: hasWorkDir ? FontWeight.w700 : FontWeight.w500,
                     color:
                         _isSending
-                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3)
                             : hasWorkDir
                             ? Theme.of(context).colorScheme.onSurface
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ),
@@ -1398,10 +1431,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     if (result != null && mounted) {
+      final isBusinessMode =
+          workModeController.workMode.value == WorkMode.business;
+      // 商务模式：设置工作目录时自动将会话名称改为目录名
+      final dirName = p.basename(result);
       sessionController.updateSession(
-        currentSession.copyWith(workDirectory: result),
+        currentSession.copyWith(
+          workDirectory: result,
+          title: isBusinessMode ? dirName : null,
+        ),
       );
-      SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.workingDirSet);
+      SnackBarUtils.showSuccess(
+        context,
+        AppLocalizations.of(context)!.workingDirSet,
+      );
     }
   }
 
@@ -1413,7 +1456,165 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     sessionController.updateSession(
       currentSession.copyWith(clearWorkDirectory: true),
     );
-    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.workingDirCleared);
+    SnackBarUtils.showSuccess(
+      context,
+      AppLocalizations.of(context)!.workingDirCleared,
+    );
+  }
+
+  /// 商务模式：构建合同解析按钮
+  Widget _buildParseContractButton() {
+    return GestureDetector(
+      onTap: _isSending ? null : _parseContracts,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              CupertinoIcons.doc_text_search,
+              size: 13,
+              color:
+                  _isSending
+                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                      : Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              AppLocalizations.of(context)!.parseContract,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color:
+                    _isSending
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
+                        : Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 商务模式：解析工作目录下的合同文件
+  Future<void> _parseContracts() async {
+    if (_isSending || _sendingInProgress) return;
+
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
+    final workDir = currentSession.workDirectory;
+    if (workDir == null || workDir.trim().isEmpty) return;
+
+    // 扫描工作目录下的合同文件
+    final dir = Directory(workDir);
+    if (!await dir.exists()) {
+      SnackBarUtils.showError(
+        context,
+        AppLocalizations.of(context)!.workingDirectoryPath(workDir),
+      );
+      return;
+    }
+
+    // 支持的合同文件扩展名
+    const supportedExtensions = [
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.txt',
+      '.md',
+      '.xls',
+      '.xlsx',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.webp',
+    ];
+
+    final files = <File>[];
+    await for (final entity in dir.list(recursive: false)) {
+      if (entity is File) {
+        final ext = p.extension(entity.path).toLowerCase();
+        if (supportedExtensions.contains(ext)) {
+          files.add(entity);
+        }
+      }
+    }
+
+    if (files.isEmpty) {
+      SnackBarUtils.showInfo(context, '工作目录下未找到合同文件');
+      return;
+    }
+
+    debugPrint('📄 合同解析：找到 ${files.length} 个文件');
+
+    // 将文件添加为附件，然后发送解析提示词
+    _sendingInProgress = true;
+
+    try {
+      // 将文件转换为 PlatformFile 列表
+      final platformFiles = <PlatformFile>[];
+      for (final file in files) {
+        final stat = await file.stat();
+        if (stat.size > 50 * 1024 * 1024) continue; // 跳过超大文件
+        platformFiles.add(
+          PlatformFile(
+            name: p.basename(file.path),
+            path: file.path,
+            size: stat.size,
+          ),
+        );
+      }
+
+      if (platformFiles.isEmpty) {
+        _sendingInProgress = false;
+        return;
+      }
+
+      // 添加文件附件
+      await _addMultipleAttachments(platformFiles, 'document');
+
+      // 轮询等待所有附件处理完成（最多等待 60 秒）
+      final attachmentNames = platformFiles.map((f) => f.name).toSet();
+      bool allProcessed = false;
+      for (int i = 0; i < 120; i++) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        final currentAttachments =
+            sessionController.currentSession.value?.attachments ?? [];
+        final pending = currentAttachments.where(
+          (a) => attachmentNames.contains(a.name) && a.content == null,
+        );
+        if (pending.isEmpty) {
+          allProcessed = true;
+          break;
+        }
+        debugPrint('📄 等待附件处理... 剩余 ${pending.length} 个');
+      }
+
+      if (!allProcessed) {
+        debugPrint('📄 部分附件处理超时，继续发送');
+      }
+
+      // 设置解析提示词到输入框并发送
+      _inputController.text = AppLocalizations.of(context)!.parseContractPrompt;
+      _inputController.selection = TextSelection.collapsed(
+        offset: _inputController.text.length,
+      );
+      setState(() {
+        _hasText = true;
+      });
+
+      // 直接调用发送（绕过 _sendMessage 中的空消息检查）
+      await _doSendMessage(_inputController.text.trim());
+      _sendingInProgress = false;
+    } catch (e) {
+      debugPrint('合同解析出错: $e');
+      _sendingInProgress = false;
+    }
   }
 
   /// 构建记忆轮数配置按钮
@@ -1421,7 +1622,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     final rounds = currentSession?.memoryRounds ?? 20;
     final hasMemory = rounds > 0;
-    final label = rounds == 0 ? AppLocalizations.of(context)!.noMemory : AppLocalizations.of(context)!.nRounds(rounds);
+    final label =
+        rounds == 0
+            ? AppLocalizations.of(context)!.noMemory
+            : AppLocalizations.of(context)!.nRounds(rounds);
 
     return Tooltip(
       message: AppLocalizations.of(context)!.memoryConfigTooltip(label),
@@ -1437,10 +1641,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     _isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
                         : hasMemory
                         ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 4),
               Text(
@@ -1452,10 +1660,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   fontWeight: hasMemory ? FontWeight.w700 : FontWeight.w500,
                   color:
                       _isSending
-                          ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                          ? Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.3)
                           : hasMemory
                           ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ],
@@ -1470,10 +1682,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     final task = currentSession?.scheduledTask;
     final hasTask = task != null;
-    final label = hasTask ? task.humanReadable : AppLocalizations.of(context)!.scheduledTaskLabel;
+    final label =
+        hasTask
+            ? task.humanReadable
+            : AppLocalizations.of(context)!.scheduledTaskLabel;
 
     return Tooltip(
-      message: hasTask ? '${AppLocalizations.of(context)!.scheduledLabelColon}: ${task.humanReadable}' : AppLocalizations.of(context)!.setScheduledMessage,
+      message:
+          hasTask
+              ? '${AppLocalizations.of(context)!.scheduledLabelColon}: ${task.humanReadable}'
+              : AppLocalizations.of(context)!.setScheduledMessage,
       child: GestureDetector(
         onTap: _isSending ? null : () => ScheduledTaskDialog.show(context),
         child: Container(
@@ -1486,10 +1704,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     _isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
                         : hasTask
                         ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -1503,10 +1725,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     fontWeight: hasTask ? FontWeight.w700 : FontWeight.w500,
                     color:
                         _isSending
-                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3)
                             : hasTask
                             ? Theme.of(context).colorScheme.onSurface
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ),
@@ -1523,14 +1749,46 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentRounds = currentSession?.memoryRounds ?? 20;
 
     final options = <({int rounds, String label, String tag})>[
-      (rounds: 0, label: AppLocalizations.of(context)!.closeMemory, tag: AppLocalizations.of(context)!.noContext),
-      (rounds: 1, label: AppLocalizations.of(context)!.keepXRounds(1), tag: AppLocalizations.of(context)!.lastXRounds(1)),
-      (rounds: 3, label: AppLocalizations.of(context)!.keepXRounds(3), tag: AppLocalizations.of(context)!.lastXRounds(3)),
-      (rounds: 5, label: AppLocalizations.of(context)!.keepXRounds(5), tag: AppLocalizations.of(context)!.lastXRounds(5)),
-      (rounds: 10, label: AppLocalizations.of(context)!.keepXRounds(10), tag: AppLocalizations.of(context)!.lastXRounds(10)),
-      (rounds: 20, label: AppLocalizations.of(context)!.keepXRounds(20), tag: AppLocalizations.of(context)!.defaultMemory),
-      (rounds: 50, label: AppLocalizations.of(context)!.keepXRounds(50), tag: AppLocalizations.of(context)!.longConversation),
-      (rounds: 100, label: AppLocalizations.of(context)!.keepXRounds(100), tag: AppLocalizations.of(context)!.veryLongConversation),
+      (
+        rounds: 0,
+        label: AppLocalizations.of(context)!.closeMemory,
+        tag: AppLocalizations.of(context)!.noContext,
+      ),
+      (
+        rounds: 1,
+        label: AppLocalizations.of(context)!.keepXRounds(1),
+        tag: AppLocalizations.of(context)!.lastXRounds(1),
+      ),
+      (
+        rounds: 3,
+        label: AppLocalizations.of(context)!.keepXRounds(3),
+        tag: AppLocalizations.of(context)!.lastXRounds(3),
+      ),
+      (
+        rounds: 5,
+        label: AppLocalizations.of(context)!.keepXRounds(5),
+        tag: AppLocalizations.of(context)!.lastXRounds(5),
+      ),
+      (
+        rounds: 10,
+        label: AppLocalizations.of(context)!.keepXRounds(10),
+        tag: AppLocalizations.of(context)!.lastXRounds(10),
+      ),
+      (
+        rounds: 20,
+        label: AppLocalizations.of(context)!.keepXRounds(20),
+        tag: AppLocalizations.of(context)!.defaultMemory,
+      ),
+      (
+        rounds: 50,
+        label: AppLocalizations.of(context)!.keepXRounds(50),
+        tag: AppLocalizations.of(context)!.longConversation,
+      ),
+      (
+        rounds: 100,
+        label: AppLocalizations.of(context)!.keepXRounds(100),
+        tag: AppLocalizations.of(context)!.veryLongConversation,
+      ),
     ];
 
     final searchController = TextEditingController();
@@ -1576,7 +1834,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(24),
                                   child: Text(
-                                    AppLocalizations.of(context)!.noMatchingResults,
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.noMatchingResults,
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Theme.of(
@@ -1633,7 +1893,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     sessionController.updateSession(updated);
 
     if (mounted) {
-      final label = rounds == 0 ? AppLocalizations.of(context)!.memoryClosed : AppLocalizations.of(context)!.memoryConfigSet(rounds);
+      final label =
+          rounds == 0
+              ? AppLocalizations.of(context)!.memoryClosed
+              : AppLocalizations.of(context)!.memoryConfigSet(rounds);
       SnackBarUtils.showInfo(context, label);
     }
   }
@@ -1671,10 +1934,19 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
     final displayText =
-        hasSelectedService ? mcp.name : (hasMcpServices ? AppLocalizations.of(context)!.selectMcpTool : AppLocalizations.of(context)!.noMcpTool);
+        hasSelectedService
+            ? mcp.name
+            : (hasMcpServices
+                ? AppLocalizations.of(context)!.selectMcpTool
+                : AppLocalizations.of(context)!.noMcpTool);
 
     return Tooltip(
-      message: hasSelectedService ? AppLocalizations.of(context)!.viewMcpToolDetail : (hasMcpServices ? AppLocalizations.of(context)!.clickToSelectMcpTool : AppLocalizations.of(context)!.noMcpToolConfigured),
+      message:
+          hasSelectedService
+              ? AppLocalizations.of(context)!.viewMcpToolDetail
+              : (hasMcpServices
+                  ? AppLocalizations.of(context)!.clickToSelectMcpTool
+                  : AppLocalizations.of(context)!.noMcpToolConfigured),
       child: GestureDetector(
         onTap:
             hasMcpServices && !_isSending
@@ -1692,12 +1964,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     _isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
                         : hasSelectedService
                         ? Theme.of(context).colorScheme.onSurface
                         : hasMcpServices
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6)
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -1708,15 +1986,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
-                    fontWeight: hasSelectedService ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight:
+                        hasSelectedService ? FontWeight.w700 : FontWeight.w500,
                     color:
                         _isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                        : hasSelectedService
-                        ? Theme.of(context).colorScheme.onSurface
-                        : hasMcpServices
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3)
+                            : hasSelectedService
+                            ? Theme.of(context).colorScheme.onSurface
+                            : hasMcpServices
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6)
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3),
                   ),
                 ),
               ),
@@ -1732,14 +2017,21 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     final hasMcpOrSkill =
         currentSession?.mcp != null || currentSession?.skill != null;
-    final hasConnectPrompt = currentSession?.connectPrompt != null &&
+    final hasConnectPrompt =
+        currentSession?.connectPrompt != null &&
         currentSession!.connectPrompt!.isNotEmpty;
 
     return Tooltip(
       message:
           hasConnectPrompt
-              ? AppLocalizations.of(context)!.toolWorkflowDescLabel(currentSession.connectPrompt!.length > 20 ? '${currentSession.connectPrompt!.substring(0, 20)}...' : currentSession.connectPrompt!)
-              : (hasMcpOrSkill ? AppLocalizations.of(context)!.clickToDesignWorkflow : AppLocalizations.of(context)!.needMcpOrSkillFirst),
+              ? AppLocalizations.of(context)!.toolWorkflowDescLabel(
+                currentSession.connectPrompt!.length > 20
+                    ? '${currentSession.connectPrompt!.substring(0, 20)}...'
+                    : currentSession.connectPrompt!,
+              )
+              : (hasMcpOrSkill
+                  ? AppLocalizations.of(context)!.clickToDesignWorkflow
+                  : AppLocalizations.of(context)!.needMcpOrSkillFirst),
       child: GestureDetector(
         onTap:
             hasMcpOrSkill && !_isSending
@@ -1843,7 +2135,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              AppLocalizations.of(context)!.toolWorkflowDescTitle,
+                              AppLocalizations.of(
+                                context,
+                              )!.toolWorkflowDescTitle,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -1862,10 +2156,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 ),
                                 minSize: 0,
                                 borderRadius: BorderRadius.circular(6),
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.1),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.1),
                                 onPressed: () {
                                   controller.clear();
                                   setDialogState(() {});
@@ -1898,7 +2191,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                           decoration: InputDecoration(
-                            hintText: AppLocalizations.of(context)!.enterToolWorkflowDesc,
+                            hintText:
+                                AppLocalizations.of(
+                                  context,
+                                )!.enterToolWorkflowDesc,
                             hintStyle: TextStyle(
                               fontSize: 14,
                               color: Theme.of(
@@ -1973,9 +2269,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             borderRadius: BorderRadius.circular(6),
                             color: Theme.of(context).primaryColor,
                             onPressed: () {
-                              Navigator.of(dialogContext).pop(
-                                controller.text.trim(),
-                              );
+                              Navigator.of(
+                                dialogContext,
+                              ).pop(controller.text.trim());
                             },
                             child: Text(
                               AppLocalizations.of(context)!.confirm,
@@ -2019,7 +2315,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
-        prompt.isEmpty ? AppLocalizations.of(context)!.relationDescCleared : AppLocalizations.of(context)!.relationDescSaved,
+        prompt.isEmpty
+            ? AppLocalizations.of(context)!.relationDescCleared
+            : AppLocalizations.of(context)!.relationDescSaved,
       );
     }
   }
@@ -2032,7 +2330,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：技能名）
     final displayText =
-        activeSkill != null ? activeSkill.name : (hasSkills ? AppLocalizations.of(context)!.selectSkill : AppLocalizations.of(context)!.noAvailableSkill);
+        activeSkill != null
+            ? activeSkill.name
+            : (hasSkills
+                ? AppLocalizations.of(context)!.selectSkill
+                : AppLocalizations.of(context)!.noAvailableSkill);
 
     final hasSelectedSkill = activeSkill != null;
 
@@ -2053,7 +2355,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       message:
           activeSkill != null
               ? AppLocalizations.of(context)!.currentSkill(activeSkill.name)
-              : (hasSkills ? AppLocalizations.of(context)!.clickToSelectSkill : AppLocalizations.of(context)!.noSelectableSkill),
+              : (hasSkills
+                  ? AppLocalizations.of(context)!.clickToSelectSkill
+                  : AppLocalizations.of(context)!.noSelectableSkill),
       child: GestureDetector(
         onTap:
             hasSkills && !_isSending
@@ -2077,13 +2381,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: hasSelectedSkill ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight:
+                          hasSelectedSkill ? FontWeight.w700 : FontWeight.w500,
                       color:
                           _isSending
-                          ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                          : hasSelectedSkill
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              ? Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.3)
+                              : hasSelectedSkill
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ),
@@ -2246,7 +2555,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final mcpServices = mcpc.configs.toList();
 
     if (mcpServices.isEmpty) {
-      SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.noMcpServiceConfigured);
+      SnackBarUtils.showInfo(
+        context,
+        AppLocalizations.of(context)!.noMcpServiceConfigured,
+      );
       return;
     }
 
@@ -2278,7 +2590,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       return s.name.toLowerCase().contains(query) ||
                           (s.url?.toLowerCase().contains(query) ?? false) ||
                           (s.command?.toLowerCase().contains(query) ?? false) ||
-                          (s.args?.any((a) => a.toLowerCase().contains(query)) ?? false);
+                          (s.args?.any(
+                                (a) => a.toLowerCase().contains(query),
+                              ) ??
+                              false);
                     }).toList();
 
                 final clearCount =
@@ -2306,7 +2621,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(24),
                                   child: Text(
-                                    AppLocalizations.of(context)!.noMatchingResults,
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.noMatchingResults,
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Theme.of(
@@ -2325,8 +2642,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 itemBuilder: (context, index) {
                                   if (clearCount > 0 && index == 0) {
                                     return _buildCommandItem(
-                                      title: AppLocalizations.of(context)!.clearMcpService,
-                                      tag: AppLocalizations.of(context)!.unbindAction,
+                                      title:
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.clearMcpService,
+                                      tag:
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.unbindAction,
                                       isClearAction: true,
                                       onTap: () {
                                         Navigator.of(dialogContext).pop();
@@ -2345,9 +2668,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                         service.description?.isNotEmpty == true
                                             ? service.description
                                             : service.url?.isNotEmpty == true
-                                                ? service.url
-                                                : '${service.command ?? ''} ${service.args?.join(' ') ?? ''}',
-                                    tag: toolCount > 0 ? AppLocalizations.of(context)!.xTools(toolCount) : null,
+                                            ? service.url
+                                            : '${service.command ?? ''} ${service.args?.join(' ') ?? ''}',
+                                    tag:
+                                        toolCount > 0
+                                            ? AppLocalizations.of(
+                                              context,
+                                            )!.xTools(toolCount)
+                                            : null,
                                     isSelected: isSelected,
                                     onTap: () {
                                       Navigator.of(dialogContext).pop();
@@ -2386,7 +2714,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     // 如果会话名是默认的"新对话"，自动改为 MCP 服务名
-    if (service != null && updatedSession.name == AppLocalizations.of(context)!.newSession) {
+    if (service != null &&
+        updatedSession.name == AppLocalizations.of(context)!.newSession) {
       updatedSession = updatedSession.copyWith(title: service.name);
     }
 
@@ -2394,7 +2723,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     if (mounted) {
       if (service != null) {
-        SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.mcpServiceSelected(service.name));
+        SnackBarUtils.showInfo(
+          context,
+          AppLocalizations.of(context)!.mcpServiceSelected(service.name),
+        );
         // MCP 懒连接：不在选择时预初始化，等 LLM 返回工具调用时再按需连接
       } else {
         // 关闭 MCP 时清理客户端
@@ -2402,7 +2734,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         if (oldServiceName != null) {
           McpService.closeClient(oldServiceName);
         }
-        SnackBarUtils.showInfo(context, AppLocalizations.of(context)!.mcpToolsDisabled);
+        SnackBarUtils.showInfo(
+          context,
+          AppLocalizations.of(context)!.mcpToolsDisabled,
+        );
       }
     }
   }
@@ -2490,7 +2825,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                               decoration: InputDecoration(
-                                hintText: AppLocalizations.of(context)!.searchSkills,
+                                hintText:
+                                    AppLocalizations.of(context)!.searchSkills,
                                 border: InputBorder.none,
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(
@@ -2536,14 +2872,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     if (mounted) {
                                       SnackBarUtils.showSuccess(
                                         context,
-                                        AppLocalizations.of(context)!.skillCreatedSelected(skillName),
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.skillCreatedSelected(skillName),
                                       );
                                     }
                                   } catch (e) {
                                     if (mounted) {
                                       SnackBarUtils.showError(
                                         context,
-                                        AppLocalizations.of(context)!.createSkillFailed(e.toString()),
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.createSkillFailed(e.toString()),
                                       );
                                     }
                                   }
@@ -2567,7 +2907,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(24),
                                   child: Text(
-                                    AppLocalizations.of(context)!.noMatchingResults,
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.noMatchingResults,
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Theme.of(
@@ -2586,7 +2928,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 itemBuilder: (context, index) {
                                   if (clearCount > 0 && index == 0) {
                                     return _buildCommandItem(
-                                      title: AppLocalizations.of(context)!.clearSkillSelection,
+                                      title:
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.clearSkillSelection,
                                       isClearAction: true,
                                       onTap: () {
                                         Navigator.of(dialogContext).pop();
@@ -2596,7 +2941,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   }
                                   final skillIndex = index - clearCount;
                                   final skill = filtered[skillIndex];
-                                  final isSelected = currentSkillId == skill.skillId;
+                                  final isSelected =
+                                      currentSkillId == skill.skillId;
                                   return _buildCommandItem(
                                     title: skill.name,
                                     subtitle: skill.description,
@@ -2644,7 +2990,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     // 如果会话名是默认的"新对话"，自动改为技能名
-    if (selectedSkill != null && updatedSession.name == AppLocalizations.of(context)!.newSession) {
+    if (selectedSkill != null &&
+        updatedSession.name == AppLocalizations.of(context)!.newSession) {
       updatedSession = updatedSession.copyWith(title: selectedSkill.name);
     }
 
@@ -2653,7 +3000,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (mounted) {
       SnackBarUtils.showInfo(
         context,
-        selectedSkill != null ? AppLocalizations.of(context)!.skillSelected(selectedSkill.name) : AppLocalizations.of(context)!.skillCleared,
+        selectedSkill != null
+            ? AppLocalizations.of(context)!.skillSelected(selectedSkill.name)
+            : AppLocalizations.of(context)!.skillCleared,
       );
     }
   }
@@ -2666,29 +3015,31 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (_sendingInProgress) return;
     _sendingInProgress = true;
 
-    final text = _inputController.text.trim();
-    debugPrint('发送消息: $text');
+    try {
+      final text = _inputController.text.trim();
+      debugPrint('发送消息: $text');
 
-    // 防止发送空消息（没有文本且没有附件）或重复发送
-    if ((text.isEmpty && _currentAttachments.isEmpty) || _isSending) {
+      // 防止发送空消息（没有文本且没有附件）或重复发送
+      if ((text.isEmpty && _currentAttachments.isEmpty) || _isSending) {
+        return;
+      }
+
+      // 检查是否有附件正在处理中
+      final processingAttachments =
+          _currentAttachments
+              .where((attachment) => attachment.content == null)
+              .toList();
+
+      if (processingAttachments.isNotEmpty) {
+        // 有附件正在处理中，不发送消息，发送按钮状态已显示处理中
+        return;
+      }
+
+      // 直接发送消息，MCP工具调用将在AI响应过程中处理
+      await _doSendMessage(text);
+    } finally {
       _sendingInProgress = false;
-      return;
     }
-
-    // 检查是否有附件正在处理中
-    final processingAttachments =
-        _currentAttachments
-            .where((attachment) => attachment.content == null)
-            .toList();
-
-    if (processingAttachments.isNotEmpty) {
-      // 有附件正在处理中，不发送消息，发送按钮状态已显示处理中
-      _sendingInProgress = false;
-      return;
-    }
-
-    // 直接发送消息，MCP工具调用将在AI响应过程中处理
-    await _doSendMessage(text);
   }
 
   /// 实际执行发送消息的方法
@@ -2787,6 +3138,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final modelId = updatedSession.chatModel?.modelId ?? "";
       if (modelId.isEmpty) {
         throw (AppLocalizations.of(context)!.noModelBound);
+      }
+      // 商务模式下：未设置工作目录时，先在对话中插入提示气泡
+      final isBusinessMode =
+          workModeController.workMode.value == WorkMode.business;
+      final workDir = sessionController.currentSession.value?.workDirectory;
+      if (isBusinessMode && (workDir == null || workDir.trim().isEmpty)) {
+        print("没有设置目录");
+        _showWorkDirRequiredError();
+        return;
       }
 
       await _generateAIResponse(updatedSession, userMessage);
@@ -3043,8 +3403,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   // 旧的指令关键词判断函数已移除，统一改为基于最终输出结构判断
 
-
-
   /// 估算文本的token数量
   /// 这是一个简单的估算方法，实际的token计算可能更复杂
   int _estimateTokenCount(String text) {
@@ -3081,7 +3439,33 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return chineseTokens + englishTokens + punctuationTokens;
   }
 
+  /// 商务模式下：工作目录未设置时，在对话中显示错误气泡提醒
+  void _showWorkDirRequiredError() {
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
 
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final errorMessage = ChatMessage(
+      msgId: timestamp.toString(),
+      role: MessageRole.bot,
+      content: AppLocalizations.of(context)!.noWorkingDir,
+      timestamp: DateTime.now(),
+      sessionId: currentSession.sessionId,
+      isError: true,
+    );
+
+    widget.messageKeys[errorMessage.msgId] = GlobalKey();
+
+    final updatedMessages = List<ChatMessage>.from(currentSession.messages)
+      ..add(errorMessage);
+
+    sessionController.updateSession(
+      currentSession.copyWith(messages: updatedMessages, isSending: false),
+    );
+    setState(() {});
+
+    _scrollToBottom();
+  }
 
   /// 处理发送错误
   void _handleSendError(dynamic error) {
@@ -3091,7 +3475,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final errorMessage = ChatMessage(
         msgId: timestamp.toString(),
         role: MessageRole.bot,
-        content: AppLocalizations.of(context)!.serviceUnavailable(error.toString()),
+        content: AppLocalizations.of(
+          context,
+        )!.serviceUnavailable(error.toString()),
         timestamp: DateTime.now(),
         sessionId: currentSession.sessionId,
         isError: true,
@@ -3188,7 +3574,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Text(AppLocalizations.of(context)!.clear, style: const TextStyle(fontSize: 14)),
+              child: Text(
+                AppLocalizations.of(context)!.clear,
+                style: const TextStyle(fontSize: 14),
+              ),
             ),
           ],
         );
@@ -3223,7 +3612,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 显示成功提示
     if (mounted) {
-      SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.historyCleared);
+      SnackBarUtils.showSuccess(
+        context,
+        AppLocalizations.of(context)!.historyCleared,
+      );
     }
 
     // 强制滚动到底部
@@ -3292,30 +3684,53 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                               await Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
-                                                  builder: (_) => SkillEditPage(skill: skill),
+                                                  builder:
+                                                      (_) => SkillEditPage(
+                                                        skill: skill,
+                                                      ),
                                                 ),
                                               );
                                               // 编辑返回后刷新技能数据
                                               await SkillService.loadSkills();
-                                              final updatedSkill = SkillService.getSkillById(skill.skillId);
-                                              if (updatedSkill != null && mounted) {
-                                                final currentSession = sessionController.currentSession.value;
-                                                if (currentSession != null) {
-                                                  final refreshedSession = currentSession.copyWith(
-                                                    skill: updatedSkill,
+                                              final updatedSkill =
+                                                  SkillService.getSkillById(
+                                                    skill.skillId,
                                                   );
-                                                  sessionController.updateSession(refreshedSession);
+                                              if (updatedSkill != null &&
+                                                  mounted) {
+                                                final currentSession =
+                                                    sessionController
+                                                        .currentSession
+                                                        .value;
+                                                if (currentSession != null) {
+                                                  final refreshedSession =
+                                                      currentSession.copyWith(
+                                                        skill: updatedSkill,
+                                                      );
+                                                  sessionController
+                                                      .updateSession(
+                                                        refreshedSession,
+                                                      );
                                                   setState(() {});
                                                 }
                                               }
                                             },
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                             child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
                                               child: Icon(
                                                 CupertinoIcons.pencil,
                                                 size: 14,
-                                                color: Theme.of(ctx).colorScheme.onSurface,
+                                                color:
+                                                    Theme.of(
+                                                      ctx,
+                                                    ).colorScheme.onSurface,
                                               ),
                                             ),
                                           ),
@@ -3326,7 +3741,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     Text(
                                       skill.description.isNotEmpty
                                           ? skill.description
-                                          : AppLocalizations.of(context)!.folderPath(skill.skillId),
+                                          : AppLocalizations.of(
+                                            context,
+                                          )!.folderPath(skill.skillId),
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Theme.of(context)
@@ -3347,7 +3764,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           // 工具列表
                           if (hasTools) ...[
                             Text(
-                              AppLocalizations.of(context)!.toolList(tools.length),
+                              AppLocalizations.of(
+                                context,
+                              )!.toolList(tools.length),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -3358,46 +3777,50 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             Wrap(
                               spacing: 6,
                               runSpacing: 4,
-                              children: tools.take(50).map((t) {
-                                final label = t.description.isNotEmpty
-                                    ? '${t.name}: ${t.description}'
-                                    : t.name;
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary
-                                          .withOpacity(0.15),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    label,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
+                              children:
+                                  tools.take(50).map((t) {
+                                    final label =
+                                        t.description.isNotEmpty
+                                            ? '${t.name}: ${t.description}'
+                                            : t.name;
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary.withOpacity(0.08),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.15),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        label,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
                             ),
                             if (tools.length > 50)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  AppLocalizations.of(context)!.moreXTools(tools.length - 50),
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.moreXTools(tools.length - 50),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey[500],
@@ -3426,7 +3849,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF5F5F5),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFE0E0E0)),
+                                border: Border.all(
+                                  color: const Color(0xFFE0E0E0),
+                                ),
                               ),
                               child: Text(
                                 skill.prompt,
@@ -3478,14 +3903,26 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                       const Spacer(),
                                       GestureDetector(
                                         onTap: () {
-                                          Clipboard.setData(ClipboardData(
-                                            text: const JsonEncoder.withIndent('  ')
-                                                .convert(skill.toJson()),
-                                          ));
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          Clipboard.setData(
+                                            ClipboardData(
+                                              text:
+                                                  const JsonEncoder.withIndent(
+                                                    '  ',
+                                                  ).convert(skill.toJson()),
+                                            ),
+                                          );
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
-                                              content: Text(AppLocalizations.of(context)!.jsonCopied),
-                                              duration: const Duration(seconds: 1),
+                                              content: Text(
+                                                AppLocalizations.of(
+                                                  context,
+                                                )!.jsonCopied,
+                                              ),
+                                              duration: const Duration(
+                                                seconds: 1,
+                                              ),
                                             ),
                                           );
                                         },
@@ -3506,8 +3943,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   child: SingleChildScrollView(
                                     scrollDirection: Axis.horizontal,
                                     child: Text(
-                                      const JsonEncoder.withIndent('  ')
-                                          .convert(skill.toJson()),
+                                      const JsonEncoder.withIndent(
+                                        '  ',
+                                      ).convert(skill.toJson()),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontFamily: 'monospace',
@@ -3597,7 +4035,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                                 .colorScheme
                                                 .primary
                                                 .withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                           ),
                                           child: Text(
                                             _getMcpTypeLabel(mutableService),
@@ -3605,7 +4045,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                               fontSize: 10,
                                               fontWeight: FontWeight.w600,
                                               color:
-                                                  Theme.of(context).colorScheme.primary,
+                                                  Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary,
                                             ),
                                           ),
                                         ),
@@ -3613,7 +4055,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      mutableService.description?.isNotEmpty == true
+                                      mutableService.description?.isNotEmpty ==
+                                              true
                                           ? mutableService.description!
                                           : _buildMcpSubtitle(mutableService),
                                       style: TextStyle(
@@ -3638,11 +4081,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             Row(
                               children: [
                                 Text(
-                                  AppLocalizations.of(context)!.toolList(tools.length),
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.toolList(tools.length),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 const Spacer(),
@@ -3653,17 +4099,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                           await McpService.refreshServiceTools(
                                             mutableService,
                                           );
-                                      final updatedService = mutableService.copyWith(
-                                        description:
-                                            McpService.getCachedConfig(
-                                              mutableService.mcpId,
-                                            )?.description,
-                                        tools: newTools,
-                                        lastUpdated: DateTime.now(),
-                                        prompt: McpService.buildMcpPrompt(
-                                          mutableService.copyWith(tools: newTools),
-                                        ),
-                                      );
+                                      final updatedService = mutableService
+                                          .copyWith(
+                                            description:
+                                                McpService.getCachedConfig(
+                                                  mutableService.mcpId,
+                                                )?.description,
+                                            tools: newTools,
+                                            lastUpdated: DateTime.now(),
+                                            prompt: McpService.buildMcpPrompt(
+                                              mutableService.copyWith(
+                                                tools: newTools,
+                                              ),
+                                            ),
+                                          );
                                       await mcpc.updateService(
                                         mutableService.mcpId,
                                         updatedService,
@@ -3672,13 +4121,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                       setSheetState(() {});
                                       SnackBarUtils.showSuccess(
                                         ctx,
-                                        AppLocalizations.of(context)!.toolsRefreshed(newTools.length),
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.toolsRefreshed(newTools.length),
                                       );
                                     } catch (e) {
                                       if (ctx.mounted) {
                                         SnackBarUtils.showError(
                                           ctx,
-                                          AppLocalizations.of(context)!.refreshFailed(e.toString().substring(0, e.toString().length.clamp(0, 80))),
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.refreshFailed(
+                                            e.toString().substring(
+                                              0,
+                                              e.toString().length.clamp(0, 80),
+                                            ),
+                                          ),
                                         );
                                       }
                                     }
@@ -3689,14 +4147,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                       Icon(
                                         CupertinoIcons.refresh,
                                         size: 13,
-                                        color: Theme.of(context).colorScheme.primary,
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        AppLocalizations.of(context)!.refreshAction,
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.refreshAction,
                                         style: TextStyle(
                                           fontSize: 11,
-                                          color: Theme.of(context).colorScheme.primary,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
                                         ),
                                       ),
                                     ],
@@ -3720,10 +4186,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                         vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withOpacity(0.08),
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary.withOpacity(0.08),
                                         borderRadius: BorderRadius.circular(4),
                                         border: Border.all(
                                           color: Theme.of(context)
@@ -3736,7 +4201,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                         label,
                                         style: TextStyle(
                                           fontSize: 11,
-                                          color: Theme.of(context).colorScheme.primary,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -3747,7 +4215,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  AppLocalizations.of(context)!.moreXTools(tools.length - 50),
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.moreXTools(tools.length - 50),
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.grey[500],
@@ -3770,17 +4240,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                         await McpService.refreshServiceTools(
                                           mutableService,
                                         );
-                                    final updatedService = mutableService.copyWith(
-                                      description:
-                                          McpService.getCachedConfig(
-                                            mutableService.mcpId,
-                                          )?.description,
-                                      tools: newTools,
-                                      lastUpdated: DateTime.now(),
-                                      prompt: McpService.buildMcpPrompt(
-                                        mutableService.copyWith(tools: newTools),
-                                      ),
-                                    );
+                                    final updatedService = mutableService
+                                        .copyWith(
+                                          description:
+                                              McpService.getCachedConfig(
+                                                mutableService.mcpId,
+                                              )?.description,
+                                          tools: newTools,
+                                          lastUpdated: DateTime.now(),
+                                          prompt: McpService.buildMcpPrompt(
+                                            mutableService.copyWith(
+                                              tools: newTools,
+                                            ),
+                                          ),
+                                        );
                                     await mcpc.updateService(
                                       mutableService.mcpId,
                                       updatedService,
@@ -3789,13 +4262,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     setSheetState(() {});
                                     SnackBarUtils.showSuccess(
                                       ctx,
-                                      AppLocalizations.of(context)!.toolsFetched(newTools.length),
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.toolsFetched(newTools.length),
                                     );
                                   } catch (e) {
                                     if (ctx.mounted) {
                                       SnackBarUtils.showError(
                                         ctx,
-                                        AppLocalizations.of(context)!.fetchFailed(e.toString().substring(0, e.toString().length.clamp(0, 80))),
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.fetchFailed(
+                                          e.toString().substring(
+                                            0,
+                                            e.toString().length.clamp(0, 80),
+                                          ),
+                                        ),
                                       );
                                     }
                                   }
@@ -3804,9 +4286,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   CupertinoIcons.arrow_down_to_line_alt,
                                   size: 15,
                                 ),
-                                label: Text(AppLocalizations.of(context)!.fetchTools),
+                                label: Text(
+                                  AppLocalizations.of(context)!.fetchTools,
+                                ),
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
                                 ),
                               ),
                             ),
@@ -3850,14 +4336,28 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                       const Spacer(),
                                       GestureDetector(
                                         onTap: () {
-                                          Clipboard.setData(ClipboardData(
-                                            text: const JsonEncoder.withIndent('  ')
-                                                .convert(mutableService.toJson()),
-                                          ));
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          Clipboard.setData(
+                                            ClipboardData(
+                                              text:
+                                                  const JsonEncoder.withIndent(
+                                                    '  ',
+                                                  ).convert(
+                                                    mutableService.toJson(),
+                                                  ),
+                                            ),
+                                          );
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
-                                              content: Text(AppLocalizations.of(context)!.jsonCopied),
-                                              duration: const Duration(seconds: 1),
+                                              content: Text(
+                                                AppLocalizations.of(
+                                                  context,
+                                                )!.jsonCopied,
+                                              ),
+                                              duration: const Duration(
+                                                seconds: 1,
+                                              ),
                                             ),
                                           );
                                         },
@@ -3878,8 +4378,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   child: SingleChildScrollView(
                                     scrollDirection: Axis.horizontal,
                                     child: Text(
-                                      const JsonEncoder.withIndent('  ')
-                                          .convert(mutableService.toJson()),
+                                      const JsonEncoder.withIndent(
+                                        '  ',
+                                      ).convert(mutableService.toJson()),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontFamily: 'monospace',

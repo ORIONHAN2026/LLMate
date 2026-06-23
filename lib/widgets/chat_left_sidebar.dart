@@ -1,5 +1,6 @@
 import 'package:llmwork/controllers/session_controller.dart';
 import 'package:llmwork/controllers/theme_controller.dart';
+import 'package:llmwork/controllers/work_mode_controller.dart';
 import 'package:llmwork/l10n/app_localizations.dart';
 import 'package:llmwork/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
@@ -41,6 +42,7 @@ class _SessionItemState extends State<_SessionItem>
   late AnimationController _loadingAnimationController;
   late Animation<double> _loadingAnimation;
   final sessionController = Get.find<SessionController>();
+  final workModeController = Get.find<WorkModeController>();
   List<ChatSession> get chatSessions => sessionController.sessions;
   late TextEditingController _nameController;
   late FocusNode _nameFocusNode;
@@ -322,11 +324,14 @@ class _SessionItemState extends State<_SessionItem>
 
   // 构建名称显示组件
   Widget _buildNameDisplay() {
+    final isBusinessMode = workModeController.workMode.value == WorkMode.business;
     return GestureDetector(
-      onDoubleTap: () {
-        // 阻止事件冒泡到外层InkWell
-        _startEditing();
-      },
+      onDoubleTap: isBusinessMode
+          ? null // 商务模式下禁止编辑会话名称
+          : () {
+              // 阻止事件冒泡到外层InkWell
+              _startEditing();
+            },
       child: Text(
         widget.session.name,
         style: TextStyle(

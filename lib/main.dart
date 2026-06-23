@@ -9,6 +9,7 @@ import 'controllers/session_controller.dart';
 import 'controllers/theme_controller.dart';
 import 'controllers/locale_controller.dart';
 import 'controllers/mcp_controller.dart';
+import 'controllers/work_mode_controller.dart';
 import 'pages/home.dart';
 import 'pages/loading_page.dart';
 import 'services/scheduled_task_service.dart';
@@ -73,6 +74,9 @@ void main() async {
 
   // 初始化 LocaleController（语言设置）
   Get.put(LocaleController());
+
+  // 初始化 WorkModeController（工作模式）
+  Get.put(WorkModeController());
 
   runApp(const MyApp());
 }

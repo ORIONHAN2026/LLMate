@@ -205,7 +205,7 @@ class OpenAiProvider extends BaseLlmProvider {
     String buffer = '';
 
     await for (final chunk in stream) {
-      buffer += utf8.decode(chunk);
+      buffer += utf8.decode(chunk, allowMalformed: true);
       final lines = buffer.split('\n');
       buffer = lines.removeLast();
 

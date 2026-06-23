@@ -1721,17 +1721,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   /// 构建合同解析提示词（发送到聊天中）
   String _buildContractParsePrompt() {
-    return '请分析以上合同文件，提取每份合同的关键信息。'
-        '请严格按以下 JSON 格式输出（只输出 JSON，不要输出其他解释文字）：\n'
+    return '请分析以上合同文件，完成以下两部分输出：\n\n'
+        '**第一部分：合同概要**（用正常的中文描述，方便阅读）\n'
+        '对每份合同，列出：合同名称、类型、签署方、期限、金额、付款方式、违约条款等关键信息。\n\n'
+        '**第二部分：结构化数据**（放在 JSON 代码块中，供程序解析）\n'
+        '在回复末尾，用 ```json 代码块输出以下格式的 JSON 数组：\n'
         '```json\n'
         '[\n'
         '  {\n'
         '    "name": "合同名称",\n'
         '    "contractType": "合同类型",\n'
-        '    "parties": [{"role": "甲方", "name": "名称", "contact": "联系方式"}],\n'
-        '    "startDate": "起始日期 YYYY-MM-DD",\n'
-        '    "endDate": "结束日期 YYYY-MM-DD",\n'
-        '    "signingDate": "签订日期 YYYY-MM-DD",\n'
+        '    "parties": [{"role": "甲方", "name": "名称"}],\n'
+        '    "startDate": "YYYY-MM-DD",\n'
+        '    "endDate": "YYYY-MM-DD",\n'
+        '    "signingDate": "YYYY-MM-DD",\n'
         '    "paymentClause": "收支条款",\n'
         '    "paymentSchedule": "支付计划",\n'
         '    "breachClause": "违约条款",\n'
@@ -1739,7 +1742,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         '  }\n'
         ']\n'
         '```\n'
-        '注意：未提及的字段设为 null，日期格式为 YYYY-MM-DD，签署方角色用中文。';
+        '未提及的字段设为 null。';
   }
 
   /// 从 LLM 响应中提取合同 JSON
@@ -1764,21 +1767,83 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         }
       }
 
-      final List<dynamic> jsonList = jsonDecode(jsonStr);
-      return jsonList
-          .map((item) {
-            try {
-              return ContractInfo.fromJson(item as Map<String, dynamic>);
-            } catch (e) {
-              debugPrint('📄 解析单个合同失败: $e');
-              return null;
-            }
-          })
-          .whereType<ContractInfo>()
-          .toList();
+      // 尝试解析完整 JSON
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonStr);
+        return _parseContractList(jsonList);
+      } catch (_) {
+        // JSON 可能被截断，尝试修复后解析
+        debugPrint('📄 JSON 解析失败，尝试修复截断...');
+        final fixed = _fixTruncatedJson(jsonStr);
+        if (fixed != null) {
+          try {
+            final List<dynamic> jsonList = jsonDecode(fixed);
+            return _parseContractList(jsonList);
+          } catch (_) {}
+        }
+        return [];
+      }
     } catch (e) {
       debugPrint('📄 解析合同 JSON 失败: $e');
       return [];
+    }
+  }
+
+  List<ContractInfo> _parseContractList(List<dynamic> jsonList) {
+    return jsonList
+        .map((item) {
+          try {
+            return ContractInfo.fromJson(item as Map<String, dynamic>);
+          } catch (e) {
+            debugPrint('📄 解析单个合同失败: $e');
+            return null;
+          }
+        })
+        .whereType<ContractInfo>()
+        .toList();
+  }
+
+  /// 尝试修复被截断的 JSON（补全缺失的括号）
+  String? _fixTruncatedJson(String json) {
+    try {
+      // 补全缺失的 } 和 ]
+      var fixed = json.trimRight();
+      // 计算未闭合的括号
+      int openBraces = 0, openBrackets = 0;
+      bool inString = false;
+      bool escape = false;
+      for (int i = 0; i < fixed.length; i++) {
+        final c = fixed[i];
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (c == '\\') {
+          escape = true;
+          continue;
+        }
+        if (c == '"') {
+          inString = !inString;
+          continue;
+        }
+        if (inString) continue;
+        if (c == '{') openBraces++;
+        if (c == '}') openBraces--;
+        if (c == '[') openBrackets++;
+        if (c == ']') openBrackets--;
+      }
+      // 补全
+      while (openBraces > 0) {
+        fixed += '}';
+        openBraces--;
+      }
+      while (openBrackets > 0) {
+        fixed += ']';
+        openBrackets--;
+      }
+      return fixed;
+    } catch (_) {
+      return null;
     }
   }
 

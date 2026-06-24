@@ -44,7 +44,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   bool _isSidebarCollapsed = false; // 侧边栏折叠状态
   double _sidebarWidth = 280.0; // 左侧边栏宽度，可调整
   bool _isRightSidebarCollapsed = true; // 右侧边栏折叠状态（默认隐藏）
-  double _rightSidebarWidth = 260.0; // 右侧边栏宽度
+  double _rightSidebarWidth = 520.0; // 右侧边栏宽度
   bool _isResizeHandleHovered = false; // 拖动条悬停状态
   bool _isRightResizeHandleHovered = false; // 右侧拖动条悬停状态
   // 中间聊天区域的最小可视宽度，避免被两侧面板挤压得太窄

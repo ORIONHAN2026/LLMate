@@ -6,6 +6,8 @@ import '../../models/chat/chat_message.dart';
 import '../../models/chat/chat_attachment.dart';
 import '../../services/system_tool_service.dart';
 import '../../services/skill_service.dart';
+import '../../controllers/work_mode_controller.dart';
+import '../../storage/storage_paths.dart';
 import 'common/message_builder.dart';
 import 'common/system_prompts.dart';
 
@@ -202,6 +204,22 @@ abstract class BaseLlmProvider {
         'role': 'system',
         'content': CommonSystemPrompts.workDirectory(_workDir!),
       });
+    }
+
+    // 1f2. 商务模式提示词
+    if (session != null) {
+      try {
+        final workModeCtrl = Get.find<WorkModeController>();
+        if (workModeCtrl.workMode.value == WorkMode.business) {
+          final workDir = session.workDirectory ?? '';
+          if (workDir.isNotEmpty) {
+            messages.add({
+              'role': 'system',
+              'content': CommonSystemPrompts.businessMode(workDir),
+            });
+          }
+        }
+      } catch (_) {}
     }
 
     // 1g. 记忆上下文

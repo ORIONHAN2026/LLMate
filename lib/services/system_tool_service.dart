@@ -1,14 +1,18 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:path/path.dart' as p;
 
 import '../controllers/session_controller.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/contract_info.dart';
+import '../storage/storage_paths.dart';
 import 'node_tool_service.dart';
 import 'ocr_tool_service.dart';
 import 'python_tool_service.dart';
+import 'file_tool_service.dart';
 
 class SystemToolDefinition {
   final String name;
@@ -33,6 +37,12 @@ class SystemToolService {
   static const String pythonExecuteTool = 'python_execute';
   static const String ocrExtractTool = 'ocr_extract';
   static const String contractInspectTool = 'contract_inspect';
+  static const String fileReadTool = 'file_read';
+  static const String fileWriteTool = 'file_write';
+  static const String contractContentUpdateTool = 'contract_content_update';
+  static const String contractProcessUpdateTool = 'contract_process_update';
+  static const String contractDisgussUpdateTool = 'contract_disguss_update';
+  static const String wordModifyTool = 'word_modify';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -189,6 +199,110 @@ class SystemToolService {
         'required': ['action', 'contractName'],
       },
     ),
+    SystemToolDefinition(
+      name: fileReadTool,
+      description:
+          '读取文本文件内容（代码、Markdown、配置等）。支持常见编程语言和配置文件格式。'
+          '返回文件内容、行数、大小等信息。仅限读取工作目录下的文件。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要读取的文件完整路径。必须是工作目录下的文件。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
+    SystemToolDefinition(
+      name: fileWriteTool,
+      description:
+          '写入/创建文本文件。支持常见编程语言和配置文件格式。'
+          '会保留文件原有格式（包括字体、缩进等）。仅限操作工作目录下的文件。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要写入的文件完整路径。必须是工作目录下的文件。',
+          },
+          'content': {
+            'type': 'string',
+            'description': '要写入的文件内容。保留原始格式，不要添加额外的格式化。',
+          },
+        },
+        'required': ['filePath', 'content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: contractContentUpdateTool,
+      description:
+          '更新合同要点文件（contract_content.md）。直接写入完整的合同要点内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的合同要点完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: contractProcessUpdateTool,
+      description:
+          '更新合同履约跟踪文件（contract_process.md）。直接写入完整的履约跟踪内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的合同履约跟踪完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: contractDisgussUpdateTool,
+      description:
+          '更新合同争议记录文件（contract_disguss.md）。直接写入完整的争议记录内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的合同争议记录完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: wordModifyTool,
+      description:
+          '修改 Word 文档（.docx）。使用 Python 脚本修改文档内容，保留原有格式（字体、样式、表格等）。'
+          '支持替换文本、修改段落、更新表格等操作。文件路径必须是工作目录下的文件。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要修改的 Word 文档完整路径（.docx 格式）。',
+          },
+          'script': {
+            'type': 'string',
+            'description': 'Python 脚本内容，用于修改文档。脚本中使用 docx 库操作文档。',
+          },
+        },
+        'required': ['filePath', 'script'],
+      },
+    ),
   ];
 
   static List<SystemToolDefinition> get tools => List.unmodifiable(_tools);
@@ -239,6 +353,41 @@ class SystemToolService {
       case contractInspectTool:
         return _executeContractInspect(
           session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case fileReadTool:
+        return FileToolService.execute(
+          action: 'read',
+          arguments: arguments,
+          callId: callId,
+        );
+      case fileWriteTool:
+        return FileToolService.execute(
+          action: 'write',
+          arguments: arguments,
+          callId: callId,
+        );
+      case contractContentUpdateTool:
+        return _executeContractContentUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case contractProcessUpdateTool:
+        return _executeContractProcessUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case contractDisgussUpdateTool:
+        return _executeContractDisgussUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case wordModifyTool:
+        return _executeWordModify(
           arguments: arguments,
           callId: callId,
         );
@@ -396,6 +545,162 @@ class SystemToolService {
       'result': message,
       'isError': true,
     };
+  }
+
+  /// 执行合同要点更新
+  static Future<Map<String, dynamic>> _executeContractContentUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final filePath = StoragePaths.contractContentFile(session.sessionId);
+      await StoragePaths.ensureSessionDir(session.sessionId);
+      await File(filePath).writeAsString(content);
+
+      debugPrint('📄 合同要点已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': contractContentUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '合同要点已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '合同要点更新失败: $e');
+    }
+  }
+
+  /// 执行合同履约跟踪更新
+  static Future<Map<String, dynamic>> _executeContractProcessUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final filePath = StoragePaths.contractProcessFile(session.sessionId);
+      await StoragePaths.ensureSessionDir(session.sessionId);
+      await File(filePath).writeAsString(content);
+
+      debugPrint('📄 合同履约跟踪已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': contractProcessUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '合同履约跟踪已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '合同履约跟踪更新失败: $e');
+    }
+  }
+
+  /// 执行合同争议记录更新
+  static Future<Map<String, dynamic>> _executeContractDisgussUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final filePath = StoragePaths.contractDisgussFile(session.sessionId);
+      await StoragePaths.ensureSessionDir(session.sessionId);
+      await File(filePath).writeAsString(content);
+
+      debugPrint('📄 合同争议记录已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': contractDisgussUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '合同争议记录已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '合同争议记录更新失败: $e');
+    }
+  }
+
+  /// 执行 Word 文档修改
+  static Future<Map<String, dynamic>> _executeWordModify({
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final filePath = arguments['filePath'] as String? ?? '';
+      final script = arguments['script'] as String? ?? '';
+
+      if (filePath.isEmpty) {
+        return _errorResult(callId, arguments, 'filePath 参数不能为空');
+      }
+      if (script.isEmpty) {
+        return _errorResult(callId, arguments, 'script 参数不能为空');
+      }
+
+      // 构建 Python 脚本，使用 python-docx 库修改文档
+      final fullScript = '''
+import sys
+sys.path.insert(0, '.')
+
+try:
+    from docx import Document
+except ImportError:
+    import subprocess
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'python-docx'])
+    from docx import Document
+
+# 加载文档
+doc = Document("$filePath")
+
+# 用户脚本
+$script
+
+# 保存文档
+doc.save("$filePath")
+print("文档修改成功: $filePath")
+''';
+
+      // 使用 PythonToolService 执行脚本
+      final result = await PythonToolService.execute(
+        arguments: {
+          'script': fullScript,
+          'requirements': ['python-docx'],
+        },
+        callId: callId,
+      );
+
+      return result;
+    } catch (e) {
+      return _errorResult(callId, arguments, 'Word 文档修改失败: $e');
+    }
   }
 
 }

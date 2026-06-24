@@ -103,6 +103,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   // 预判是否为本次发送的文档整理类任务（避免多次判定不一致）
   // 移除原先的 _pendingOrganizeDoc 预判逻辑，改为仅依据最终 AI 回复内容判定是否保存整理文档
 
+  // @文件提及相关状态
+  bool _showFileMention = false;
+  String _fileMentionFilter = '';
+  int _fileMentionAtOffset = 0;
+  OverlayEntry? _fileMentionOverlayEntry;
+  final GlobalKey _inputFieldKey = GlobalKey();
+  List<FileSystemEntity> _workDirFiles = [];
+  bool _hasFileMention = false; // 是否有文件引用（用于修订模式）
+
   // 监听器
   late final StreamSubscription _sessionSubscription;
   Timer? _textChangeTimer;
@@ -114,6 +123,274 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 获取当前会话的附件列表
   List<ChatAttachment> get _currentAttachments =>
       sessionController.currentSession.value?.attachments ?? [];
+
+  // ── @文件提及相关方法 ──
+
+  /// 检测输入中的 @ 并显示文件选择列表
+  void _checkForFileMention() {
+    final text = _inputController.text;
+    final cursorPos = _inputController.selection.baseOffset;
+
+    if (cursorPos < 0) {
+      _hideFileMentionOverlay();
+      return;
+    }
+
+    int atPos = -1;
+    for (int i = cursorPos - 1; i >= 0; i--) {
+      final ch = text[i];
+      if (ch == '@') {
+        atPos = i;
+        break;
+      } else if (ch == ' ' || ch == '\n' || ch == '\r') {
+        break;
+      }
+    }
+
+    if (atPos >= 0) {
+      final filter = text.substring(atPos + 1, cursorPos);
+      if (filter.contains(' ') || filter.contains('\n')) {
+        _hideFileMentionOverlay();
+        return;
+      }
+      _fileMentionFilter = filter;
+      _fileMentionAtOffset = atPos;
+      _loadWorkDirFiles();
+    } else {
+      _hideFileMentionOverlay();
+    }
+  }
+
+  /// 加载工作目录下的文件列表
+  Future<void> _loadWorkDirFiles() async {
+    final currentSession = sessionController.currentSession.value;
+    final workDir = currentSession?.workDirectory;
+    
+    if (workDir == null || workDir.trim().isEmpty) {
+      setState(() {
+        _workDirFiles = [];
+        _showFileMention = false;
+      });
+      return;
+    }
+
+    try {
+      final dir = Directory(workDir);
+      if (!await dir.exists()) {
+        setState(() {
+          _workDirFiles = [];
+          _showFileMention = false;
+        });
+        return;
+      }
+
+      // 递归获取所有文件（排除隐藏文件和常见忽略目录）
+      final files = <FileSystemEntity>[];
+      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+        if (entity is File) {
+          final relativePath = entity.path.substring(workDir.length + 1);
+          // 跳过隐藏文件和常见忽略目录
+          if (relativePath.startsWith('.') || 
+              relativePath.contains('/.') ||
+              relativePath.contains('node_modules') ||
+              relativePath.contains('.git') ||
+              relativePath.contains('build') ||
+              relativePath.contains('.dart_tool')) {
+            continue;
+          }
+          files.add(entity);
+        }
+      }
+
+      setState(() {
+        _workDirFiles = files;
+        _showFileMention = true;
+      });
+      _updateFileMentionOverlay();
+    } catch (e) {
+      debugPrint('加载工作目录文件失败: $e');
+      setState(() {
+        _workDirFiles = [];
+        _showFileMention = false;
+      });
+    }
+  }
+
+  /// 过滤文件列表
+  List<FileSystemEntity> _getFilteredFiles() {
+    if (_fileMentionFilter.isEmpty) return _workDirFiles;
+    
+    final filter = _fileMentionFilter.toLowerCase();
+    return _workDirFiles.where((file) {
+      final fileName = file.path.split('/').last.toLowerCase();
+      final relativePath = file.path.substring(
+        (sessionController.currentSession.value?.workDirectory?.length ?? 0) + 1
+      ).toLowerCase();
+      return fileName.contains(filter) || relativePath.contains(filter);
+    }).toList();
+  }
+
+  /// 插入文件引用到输入框
+  void _insertFileMention(String filePath) {
+    final text = _inputController.text;
+    final currentCursor = _inputController.selection.baseOffset;
+    
+    final workDir = sessionController.currentSession.value?.workDirectory ?? '';
+    final relativePath = filePath.startsWith(workDir) 
+        ? filePath.substring(workDir.length + 1)
+        : filePath;
+    
+    final insertText = '@$relativePath ';
+    
+    final before = text.substring(0, _fileMentionAtOffset);
+    final after = text.substring(currentCursor);
+    final newText = '$before$insertText$after';
+    
+    _inputController.text = newText;
+    final newCursorPos = _fileMentionAtOffset + insertText.length;
+    _inputController.selection = TextSelection.collapsed(offset: newCursorPos);
+    
+    _hideFileMentionOverlay();
+    setState(() {
+      _showFileMention = false;
+      _hasFileMention = true; // 标记有文件引用，启用修订模式
+    });
+  }
+
+  /// 显示文件提及弹出层
+  void _updateFileMentionOverlay() {
+    _hideFileMentionOverlay();
+    
+    final filtered = _getFilteredFiles();
+    if (filtered.isEmpty) return;
+
+    final overlay = Overlay.of(context);
+    final entry = OverlayEntry(builder: (ctx) => _buildFileMentionPopup());
+    _fileMentionOverlayEntry = entry;
+    overlay.insert(entry);
+  }
+
+  /// 隐藏文件提及弹出层
+  void _hideFileMentionOverlay() {
+    _fileMentionOverlayEntry?.remove();
+    _fileMentionOverlayEntry = null;
+  }
+
+  /// 构建文件提及弹出层
+  Widget _buildFileMentionPopup() {
+    final filtered = _getFilteredFiles();
+    final workDir = sessionController.currentSession.value?.workDirectory ?? '';
+    
+    return Positioned(
+      left: 20,
+      right: 20,
+      bottom: 120, // 在输入框上方显示
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(24),
+        color: Theme.of(context).colorScheme.surface,
+        child: Container(
+          constraints: const BoxConstraints(maxHeight: 240),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Theme.of(context).dividerColor, width: 1),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 搜索提示
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).dividerColor,
+                      width: 0.5,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.search,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '选择工作目录下的文件',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 文件列表
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: filtered.length > 8 ? 8 : filtered.length,
+                  itemBuilder: (context, index) {
+                    final file = filtered[index];
+                    final relativePath = file.path.substring(workDir.length + 1);
+                    final fileName = file.path.split('/').last;
+                    
+                    return InkWell(
+                      onTap: () => _insertFileMention(file.path),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Row(
+                          children: [
+                            Icon(
+                              CupertinoIcons.doc,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    fileName,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (relativePath != fileName)
+                                    Text(
+                                      relativePath,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -173,6 +450,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     _inputController.removeListener(_onTextChanged);
     widget.scrollController.removeListener(_onScrollChanged);
     _sessionSubscription.cancel(); // 先取消监听，阻止后续 setState
+    _hideFileMentionOverlay();
     // 关闭所有 MCP 客户端连接（在 dispose controller 之前）
     McpService.closeAllClients();
     _inputController.dispose();
@@ -279,6 +557,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (hasText != _hasText) {
       setState(() {
         _hasText = hasText;
+      });
+    }
+
+    // 检测 @ 文件提及相关输入
+    _checkForFileMention();
+    
+    // 检查是否还有文件引用
+    final text = _inputController.text;
+    final hasAtMention = text.contains('@') && _showFileMention;
+    if (_hasFileMention && !hasAtMention && text.trim().isEmpty) {
+      setState(() {
+        _hasFileMention = false;
       });
     }
 
@@ -1142,14 +1432,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             const SizedBox(width: 8),
                           ],
                           _buildWorkDirectoryToggle(),
-                          if (workModeController.workMode.value ==
-                                  WorkMode.business &&
-                              sessionController
-                                      .currentSession
-                                      .value
-                                      ?.workDirectory !=
-                                  null)
-                            _buildParseContractButton(),
                           const SizedBox(width: 8),
                           _buildCleanHistoryToggle(),
                           // Container(
@@ -1448,6 +1730,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         context,
         AppLocalizations.of(context)!.workingDirSet,
       );
+
+      // 商务模式：选择目录后自动解析合同
+      if (isBusinessMode) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        _parseContracts();
+      }
     }
   }
 
@@ -1462,45 +1750,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     SnackBarUtils.showSuccess(
       context,
       AppLocalizations.of(context)!.workingDirCleared,
-    );
-  }
-
-  /// 商务模式：构建合同解析按钮
-  Widget _buildParseContractButton() {
-    return GestureDetector(
-      onTap: _isSending ? null : _parseContracts,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              CupertinoIcons.doc_text_search,
-              size: 13,
-              color:
-                  _isSending
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                      : Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 3),
-            Text(
-              AppLocalizations.of(context)!.parseContract,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color:
-                    _isSending
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
-                        : Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -3353,11 +3602,23 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 生成唯一的时间戳ID
     final timestamp = DateTime.now().millisecondsSinceEpoch;
 
+    // 如果有文件引用，添加修订模式指令
+    String messageContent = text;
+    if (_hasFileMention) {
+      messageContent = '【修订模式】$text\n\n'
+          '注意：你正在修改文件，请务必保留文件的原始格式（包括字体、缩进、换行等），'
+          '只修改内容部分，不要添加额外的格式化或改变文件结构。';
+      // 重置修订模式标记
+      setState(() {
+        _hasFileMention = false;
+      });
+    }
+
     // 创建用户消息对象，只包含已成功处理的附件
     final userMessage = ChatMessage(
       msgId: '${timestamp}_user',
       role: MessageRole.user,
-      content: text,
+      content: messageContent,
       timestamp: DateTime.now(),
       sessionId: updateSession.sessionId,
       attachments: List<ChatAttachment>.from(validAttachments), // 只包含已处理的附件

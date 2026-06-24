@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:llmwork/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import '../controllers/session_controller.dart';
 import '../controllers/work_mode_controller.dart';
@@ -11,6 +12,8 @@ import '../models/chat/chat_message.dart';
 import '../models/chat/content_block.dart';
 import '../models/chat/artifact_entry.dart';
 import '../models/chat/contract_info.dart';
+import '../storage/isar_service.dart';
+import '../storage/file_storage.dart';
 
 /// 右侧边栏 — 显示当前会话的记忆内容和文件列表
 class ChatRightSidebar extends StatefulWidget {
@@ -30,26 +33,29 @@ class ChatRightSidebar extends StatefulWidget {
 }
 
 class _ChatRightSidebarState extends State<ChatRightSidebar>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final sessionController = Get.find<SessionController>();
   final workModeController = Get.find<WorkModeController>();
-  late TabController _tabController;
+  TabController? _tabController;
 
   /// 记录展开的目录产物 ID
   final Set<String> _expandedDirs = {};
 
-  /// 当前 tab 数量（商务模式3个，其他2个）
-  int get _tabCount => workModeController.workMode.value == WorkMode.business ? 3 : 2;
+  int _getTabCount() =>
+      workModeController.workMode.value == WorkMode.business ? 4 : 1;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: _tabCount, vsync: this);
+  TabController _getTabController() {
+    final count = _getTabCount();
+    if (_tabController == null || _tabController!.length != count) {
+      _tabController?.dispose();
+      _tabController = TabController(length: count, vsync: this);
+    }
+    return _tabController!;
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -65,24 +71,22 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       final contracts = session?.contracts ?? const [];
 
       // 动态调整 tab 数量
-      final currentTabCount = isBusiness ? 3 : 2;
-      if (_tabController.length != currentTabCount) {
-        _tabController.dispose();
-        _tabController = TabController(length: currentTabCount, vsync: this);
-      }
+      final currentTabCount = isBusiness ? 4 : 1;
 
       final tabChildren = <Widget>[
         // Tab 0: 文件列表
         _buildFilesContent(context, messages),
-        // Tab 1: 会话记忆
-        compressedMemory == null && memory.isEmpty
-            ? _buildEmptyState(context)
-            : _buildMemoryContent(context, compressedMemory, memory),
       ];
 
       if (isBusiness) {
-        // Tab 2: 合约要点（仅商务模式）
+        // Tab 1: 合约要点（仅商务模式）
         tabChildren.add(_buildContractPointsContent(context, contracts));
+        // Tab 2: 合同履约
+        tabChildren.add(_buildContractFileContent(
+          context, session?.sessionId ?? '', 'contract_process.md', '合同履约'));
+        // Tab 3: 合同争议
+        tabChildren.add(_buildContractFileContent(
+          context, session?.sessionId ?? '', 'contract_disguss.md', '合同争议'));
       }
 
       return Container(
@@ -95,7 +99,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
             // 内容区域
             Expanded(
               child: TabBarView(
-                controller: _tabController,
+                controller: _getTabController(),
                 children: tabChildren,
               ),
             ),
@@ -108,10 +112,11 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   Widget _buildTabBar(BuildContext context, bool isBusiness) {
     final tabs = <Tab>[
       Tab(text: AppLocalizations.of(context)!.files),
-      Tab(text: AppLocalizations.of(context)!.memory),
     ];
     if (isBusiness) {
       tabs.add(Tab(text: AppLocalizations.of(context)!.contractPoints));
+      tabs.add(const Tab(text: '合同履约'));
+      tabs.add(const Tab(text: '合同争议'));
     }
 
     return Container(
@@ -122,7 +127,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         ),
       ),
       child: TabBar(
-        controller: _tabController,
+        controller: _getTabController(),
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         unselectedLabelStyle: const TextStyle(
           fontSize: 12,
@@ -333,9 +338,10 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
 
   /// 文件列表内容 — 从消息中提取文件路径，智能分组为目录/单文件产物
   Widget _buildFilesContent(BuildContext context, List<ChatMessage> messages) {
-    final artifacts = _extractArtifactsFromMessages(messages);
+    final session = sessionController.currentSession.value;
+    final workDir = session?.workDirectory;
 
-    if (artifacts.isEmpty) {
+    if (workDir == null || workDir.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -343,32 +349,26 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                CupertinoIcons.doc,
+                CupertinoIcons.folder,
                 size: 32,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
               ),
               const SizedBox(height: 12),
               Text(
-                AppLocalizations.of(context)!.noFiles,
+                '未设置工作目录',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.35),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                AppLocalizations.of(context)!.whenAiCreatesFiles,
+                '请先在输入框中设置工作目录',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
                   height: 1.5,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.25),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
                 ),
               ),
             ],
@@ -377,20 +377,164 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionTitle(
-            context,
-            '${AppLocalizations.of(context)!.sessionFiles} (${_totalFileCount(artifacts)})',
+    return FutureBuilder<List<FileSystemEntity>>(
+      future: _listWorkDirFiles(workDir),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        }
+
+        final files = snapshot.data ?? [];
+
+        if (files.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    CupertinoIcons.doc,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    AppLocalizations.of(context)!.noFiles,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle(
+                context,
+                '${AppLocalizations.of(context)!.sessionFiles} (${files.length})',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                workDir,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              ...files.map((f) => _buildWorkFileItem(context, f)),
+            ],
           ),
-          const SizedBox(height: 8),
-          ...artifacts.map((a) => _buildArtifactItem(context, a)),
-        ],
+        );
+      },
+    );
+  }
+
+  /// 列出工作目录下的文件（不递归）
+  Future<List<FileSystemEntity>> _listWorkDirFiles(String workDir) async {
+    try {
+      final dir = Directory(workDir);
+      if (!await dir.exists()) return [];
+      final list = await dir.list(recursive: false).toList();
+      // 只保留文件，按名称排序
+      list.sort((a, b) => a.path.compareTo(b.path));
+      return list;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// 工作目录下的单个文件条目
+  Widget _buildWorkFileItem(BuildContext context, FileSystemEntity entity) {
+    final isDir = entity is Directory;
+    final name = entity.uri.pathSegments.last;
+    final icon = isDir ? CupertinoIcons.folder : _getFileIcon(name);
+
+    return InkWell(
+      onTap: () {
+        // 打开文件或目录
+        Process.run('open', [entity.path]);
+      },
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  /// 根据文件扩展名返回图标
+  IconData _getFileIcon(String name) {
+    final ext = name.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'docx':
+      case 'doc':
+        return CupertinoIcons.doc_text;
+      case 'xlsx':
+      case 'xls':
+      case 'csv':
+        return CupertinoIcons.doc_text;
+      case 'pdf':
+        return CupertinoIcons.doc_text;
+      case 'pptx':
+      case 'ppt':
+        return CupertinoIcons.doc_text;
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+      case 'gif':
+      case 'webp':
+        return CupertinoIcons.photo;
+      case 'md':
+      case 'txt':
+        return CupertinoIcons.doc_plaintext;
+      case 'json':
+      case 'yaml':
+      case 'yml':
+        return CupertinoIcons.doc;
+      case 'dart':
+      case 'js':
+      case 'ts':
+      case 'py':
+      case 'java':
+        return CupertinoIcons.device_laptop;
+      default:
+        return CupertinoIcons.doc;
+    }
   }
 
   /// 从所有消息中提取文件路径，返回分组后的 ArtifactEntry 列表
@@ -816,6 +960,141 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     );
   }
 
+  /// 合同履约/争议 — 从 markdown 文件读取内容展示
+  Widget _buildContractFileContent(
+    BuildContext context,
+    String sessionId,
+    String fileName,
+    String title,
+  ) {
+    if (sessionId.isEmpty) {
+      return _buildContractFileEmpty(context, title);
+    }
+
+    return FutureBuilder<String?>(
+      future: _loadContractFile(sessionId, fileName),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        }
+
+        final content = snapshot.data;
+        if (content == null || content.trim().isEmpty) {
+          return _buildContractFileEmpty(context, title);
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle(context, title),
+              const SizedBox(height: 8),
+              MarkdownBody(
+                data: content.trim(),
+                selectable: true,
+                styleSheet: MarkdownStyleSheet(
+                  p: TextStyle(
+                    fontSize: 13,
+                    height: 1.7,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  h1: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  h2: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  h3: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  listBullet: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  code: TextStyle(
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  codeblockDecoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  codeblockPadding: const EdgeInsets.all(12),
+                  blockquote: TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  blockquoteDecoration: BoxDecoration(
+                    border: Border(left: BorderSide(color: Colors.grey[400]!, width: 4)),
+                  ),
+                  horizontalRuleDecoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<String?> _loadContractFile(String sessionId, String fileName) async {
+    final path = '${StoragePaths.sessionDir(sessionId)}/$fileName';
+    return FileStorage.readText(path);
+  }
+
+  Widget _buildContractFileEmpty(BuildContext context, String title) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.article_outlined,
+              size: 32,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '暂无$title记录',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '在对话中提及相关信息时会自动记录',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.5,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// 单个合同卡片
   Widget _buildContractCard(BuildContext context, ContractInfo contract) {
     final loc = AppLocalizations.of(context)!;
@@ -829,14 +1108,6 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-          width: 0.5,
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -846,14 +1117,14 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
               Icon(
                 CupertinoIcons.doc_plaintext,
                 size: 14,
-                color: Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   contract.name,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),

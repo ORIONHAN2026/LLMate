@@ -164,21 +164,6 @@ class SessionController extends GetxController {
         await SessionFileStore.writeMcp(
             updatedSession.sessionId, updatedSession.mcp!.toFullJson());
       }
-
-      // === 6. 持久化合约要点到 business.md ===
-      if (updatedSession.contracts != null && updatedSession.contracts!.isNotEmpty) {
-        final mdContent = StringBuffer();
-        mdContent.writeln('# 合约要点');
-        mdContent.writeln();
-        for (final c in updatedSession.contracts!) {
-          mdContent.write(c.toMarkdown());
-        }
-        await SessionFileStore.writeBusiness(
-            updatedSession.sessionId, mdContent.toString());
-      } else {
-        await SessionFileStore.writeBusiness(
-            updatedSession.sessionId, '');
-      }
     } catch (e) {
       debugPrint('合并持久化失败: $e');
     }

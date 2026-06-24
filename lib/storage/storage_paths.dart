@@ -59,6 +59,18 @@ class StoragePaths {
   static String businessFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'business.md');
 
+  /// ~/.llmwork/chats/{sessionId}/contract_content.md（合同要点）
+  static String contractContentFile(String sessionId) =>
+      p.join(sessionDir(sessionId), 'contract_content.md');
+
+  /// ~/.llmwork/chats/{sessionId}/contract_process.md（合同履约跟踪）
+  static String contractProcessFile(String sessionId) =>
+      p.join(sessionDir(sessionId), 'contract_process.md');
+
+  /// ~/.llmwork/chats/{sessionId}/contract_disguss.md（合同争议记录）
+  static String contractDisgussFile(String sessionId) =>
+      p.join(sessionDir(sessionId), 'contract_disguss.md');
+
   /// 确保根目录存在
   static Future<void> ensureRoot() async {
     await Directory(root).create(recursive: true);

@@ -41,6 +41,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   /// 记录展开的目录产物 ID
   final Set<String> _expandedDirs = {};
 
+  /// 缓存发送期间的构建结果
+  Widget? _cachedTabChildren;
+
   int _getTabCount() =>
       workModeController.workMode.value == WorkMode.business ? 4 : 1;
 
@@ -54,6 +57,22 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   }
 
   @override
+  void initState() {
+    super.initState();
+    // 监听会话变化，当发送状态结束时清除缓存
+    ever(sessionController.currentSession, (session) {
+      if (session != null && !(session.isSending ?? false)) {
+        // 发送结束，清除缓存以便下次重建
+        if (_cachedTabChildren != null) {
+          setState(() {
+            _cachedTabChildren = null;
+          });
+        }
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _tabController?.dispose();
     super.dispose();
@@ -63,11 +82,18 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   Widget build(BuildContext context) {
     return Obx(() {
       final session = sessionController.currentSession.value;
+      final isSending = session?.isSending ?? false;
+      final isBusiness =
+          workModeController.workMode.value == WorkMode.business;
+
+      // 如果正在发送消息，使用缓存的数据，不重新构建
+      if (isSending && _cachedTabChildren != null) {
+        return _cachedTabChildren!;
+      }
+
       final compressedMemory = session?.compressedMemory;
       final memory = session?.memory ?? [];
       final messages = session?.messages ?? const [];
-      final isBusiness =
-          workModeController.workMode.value == WorkMode.business;
       final contracts = session?.contracts ?? const [];
 
       // 动态调整 tab 数量
@@ -89,7 +115,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
           context, session?.sessionId ?? '', 'contract_disguss.md', '合同争议'));
       }
 
-      return Container(
+      final result = Container(
         color: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,6 +132,11 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
           ],
         ),
       );
+
+      // 缓存构建结果
+      _cachedTabChildren = result;
+
+      return result;
     });
   }
 

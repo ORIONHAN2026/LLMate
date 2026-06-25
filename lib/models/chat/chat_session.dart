@@ -25,6 +25,9 @@ class ChatSession {
 
   // === 会话级功能配置 ===
 
+  /// 工作模式：conversation（对话模式）或 business（商务模式）
+  final String workMode;
+
   /// 工作目录：会话产生的文件默认保存到此目录
   final String? workDirectory;
 
@@ -91,7 +94,8 @@ class ChatSession {
     this.scrollPosition = 0.0,
     this.lastSelectedDirectory,
     this.workDirectory,
-    this.memoryRounds = 20,
+    this.workMode = 'conversation',
+    this.memoryRounds = 100,
     this.deepThink = false,
     this.connectPrompt,
     this.sessionQuickCommands = const [],
@@ -149,6 +153,7 @@ class ChatSession {
     String? lastSelectedDirectory,
     String? workDirectory,
     bool clearWorkDirectory = false,
+    String? workMode,
     Mcp? mcp,
     bool clearMcp = false,
     Skill? skill,
@@ -225,6 +230,7 @@ class ChatSession {
           lastSelectedDirectory ?? this.lastSelectedDirectory,
       workDirectory:
           clearWorkDirectory ? null : (workDirectory ?? this.workDirectory),
+      workMode: workMode ?? this.workMode,
       mcp: resolvedMcp,
       skill: resolvedSkill,
       modelId: resolvedModelId,
@@ -285,7 +291,8 @@ class ChatSession {
       scrollPosition: (json['scrollPosition'] as num?)?.toDouble() ?? 0.0,
       lastSelectedDirectory: json['lastSelectedDirectory'],
       workDirectory: json['workDirectory'],
-      memoryRounds: json['memoryRounds'] as int? ?? 20,
+      workMode: json['workMode'] as String? ?? 'conversation',
+      memoryRounds: json['memoryRounds'] as int? ?? 100,
       deepThink: json['deepThink'] as bool? ?? false,
       connectPrompt: json['connectPrompt'] as String?,
       sessionQuickCommands:
@@ -333,6 +340,7 @@ class ChatSession {
       'scrollPosition': scrollPosition,
       'lastSelectedDirectory': lastSelectedDirectory,
       if (workDirectory != null) 'workDirectory': workDirectory,
+      'workMode': workMode,
       'memoryRounds': memoryRounds,
       'deepThink': deepThink,
       if (connectPrompt != null) 'connectPrompt': connectPrompt,

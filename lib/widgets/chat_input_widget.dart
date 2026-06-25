@@ -25,6 +25,7 @@ import '../services/pdf_tool_service.dart';
 import '../services/ppt_tool_service.dart';
 import '../services/image_tool_service.dart';
 import '../services/file_tool_service.dart';
+import '../services/paddle_ocr_service.dart';
 import '../services/feature_toggle_service.dart';
 import '../utils/snackbar_utils.dart';
 import '../l10n/app_localizations.dart';
@@ -1415,6 +1416,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         children: [
                           _buildInputAttachToggle(),
                           const SizedBox(width: 8),
+                          _buildWorkModeToggle(),
+                          const SizedBox(width: 8),
                           _buildDeepThinkToggle(),
                           const SizedBox(width: 8),
                           _buildMcpToolsToggle(),
@@ -1422,10 +1425,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
                           _buildSkillToggle(),
                           const SizedBox(width: 8),
-                          if (FeatureToggleService().isMemoryConfigEnabled) ...[
-                            _buildMemoryToggle(),
-                            const SizedBox(width: 8),
-                          ],
                           if (FeatureToggleService()
                               .isScheduledTaskEnabled) ...[
                             _buildScheduledTaskToggle(),
@@ -1630,6 +1629,84 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
+  /// 构建工作模式按钮（仅显示，不可点击切换）
+  Widget _buildWorkModeToggle() {
+    final currentSession = sessionController.currentSession.value;
+    final workMode = currentSession?.workMode ?? 'conversation';
+    final hasWorkDir = currentSession?.workDirectory != null && 
+        currentSession!.workDirectory!.isNotEmpty;
+
+    // 根据模式显示不同的图标和文字
+    IconData icon;
+    String label;
+    String tooltip;
+    
+    switch (workMode) {
+      case 'contract':
+        icon = CupertinoIcons.doc_plaintext;
+        label = '合同';
+        tooltip = '合同模式（自动检测）';
+        break;
+      case 'invoice':
+        icon = CupertinoIcons.doc_text;
+        label = '发票';
+        tooltip = '发票模式（自动检测）';
+        break;
+      default:
+        icon = CupertinoIcons.chat_bubble;
+        label = '对话';
+        tooltip = '对话模式';
+    }
+
+    final isActive = workMode != 'conversation';
+
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color:
+                  !hasWorkDir
+                      ? Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.3)
+                      : isActive
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color:
+                    !hasWorkDir
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
+                        : isActive
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// 构建工作目录按钮
   Widget _buildWorkDirectoryToggle() {
     final currentSession = sessionController.currentSession.value;
@@ -1716,14 +1793,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     if (result != null && mounted) {
-      final isBusinessMode =
-          workModeController.workMode.value == WorkMode.business;
-      // 商务模式：设置工作目录时自动将会话名称改为目录名
+      // 检测目录中是否有合同文件或发票文件
+      final fileType = await _detectFileType(result);
+      
+      // 设置工作目录和工作模式
       final dirName = p.basename(result);
       sessionController.updateSession(
         currentSession.copyWith(
           workDirectory: result,
-          title: isBusinessMode ? dirName : null,
+          workMode: fileType,
+          title: fileType == 'contract' ? dirName : null,
         ),
       );
       SnackBarUtils.showSuccess(
@@ -1731,11 +1810,51 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         AppLocalizations.of(context)!.workingDirSet,
       );
 
-      // 商务模式：选择目录后自动解析合同
-      if (isBusinessMode) {
+      // 合同模式：选择目录后自动解析合同
+      if (fileType == 'contract') {
         await Future.delayed(const Duration(milliseconds: 300));
         _parseContracts();
       }
+    }
+  }
+
+  /// 检测目录中的文件类型（仅通过文件名关键词）
+  Future<String> _detectFileType(String dirPath) async {
+    try {
+      final dir = Directory(dirPath);
+      if (!await dir.exists()) return 'conversation';
+      
+      // 合同文件名关键词
+      const contractKeywords = ['合同', '协议', '契约', '合约', '合同书', '协议书'];
+      // 发票文件名关键词
+      const invoiceKeywords = ['发票', 'invoice', '收据', 'receipt', '开票', '报销', '费用'];
+      
+      await for (final entity in dir.list(recursive: false)) {
+        if (entity is File) {
+          final fileName = p.basename(entity.path).toLowerCase();
+          
+          // 检测发票关键词（优先级高）
+          for (final keyword in invoiceKeywords) {
+            if (fileName.contains(keyword)) {
+              debugPrint('✅ 检测到发票文件: ${entity.path}');
+              return 'invoice';
+            }
+          }
+          
+          // 检测合同关键词
+          for (final keyword in contractKeywords) {
+            if (fileName.contains(keyword)) {
+              debugPrint('✅ 检测到合同文件: ${entity.path}');
+              return 'contract';
+            }
+          }
+        }
+      }
+      
+      return 'conversation';
+    } catch (e) {
+      debugPrint('文件类型检测失败: $e');
+      return 'conversation';
     }
   }
 
@@ -2129,66 +2248,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     debugPrint('📄 合同解析完成：已写入 ${contracts.length} 份合同到 business.md');
   }
 
-  /// 构建记忆轮数配置按钮
-  Widget _buildMemoryToggle() {
-    final currentSession = sessionController.currentSession.value;
-    final rounds = currentSession?.memoryRounds ?? 20;
-    final hasMemory = rounds > 0;
-    final label =
-        rounds == 0
-            ? AppLocalizations.of(context)!.noMemory
-            : AppLocalizations.of(context)!.nRounds(rounds);
-
-    return Tooltip(
-      message: AppLocalizations.of(context)!.memoryConfigTooltip(label),
-      child: GestureDetector(
-        onTap: _isSending ? null : _showMemoryConfigDialog,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                CupertinoIcons.clock,
-                size: 13,
-                color:
-                    _isSending
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
-                        : hasMemory
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: hasMemory ? FontWeight.w700 : FontWeight.w500,
-                  color:
-                      _isSending
-                          ? Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.3)
-                          : hasMemory
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   /// 构建定时任务按钮
   Widget _buildScheduledTaskToggle() {
     final currentSession = sessionController.currentSession.value;
@@ -2253,164 +2312,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         ),
       ),
     );
-  }
-
-  /// 显示记忆配置弹窗（仿命令面板风格）
-  void _showMemoryConfigDialog() {
-    final currentSession = sessionController.currentSession.value;
-    final currentRounds = currentSession?.memoryRounds ?? 20;
-
-    final options = <({int rounds, String label, String tag})>[
-      (
-        rounds: 0,
-        label: AppLocalizations.of(context)!.closeMemory,
-        tag: AppLocalizations.of(context)!.noContext,
-      ),
-      (
-        rounds: 1,
-        label: AppLocalizations.of(context)!.keepXRounds(1),
-        tag: AppLocalizations.of(context)!.lastXRounds(1),
-      ),
-      (
-        rounds: 3,
-        label: AppLocalizations.of(context)!.keepXRounds(3),
-        tag: AppLocalizations.of(context)!.lastXRounds(3),
-      ),
-      (
-        rounds: 5,
-        label: AppLocalizations.of(context)!.keepXRounds(5),
-        tag: AppLocalizations.of(context)!.lastXRounds(5),
-      ),
-      (
-        rounds: 10,
-        label: AppLocalizations.of(context)!.keepXRounds(10),
-        tag: AppLocalizations.of(context)!.lastXRounds(10),
-      ),
-      (
-        rounds: 20,
-        label: AppLocalizations.of(context)!.keepXRounds(20),
-        tag: AppLocalizations.of(context)!.defaultMemory,
-      ),
-      (
-        rounds: 50,
-        label: AppLocalizations.of(context)!.keepXRounds(50),
-        tag: AppLocalizations.of(context)!.longConversation,
-      ),
-      (
-        rounds: 100,
-        label: AppLocalizations.of(context)!.keepXRounds(100),
-        tag: AppLocalizations.of(context)!.veryLongConversation,
-      ),
-    ];
-
-    final searchController = TextEditingController();
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.15),
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          elevation: 8,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 40,
-            vertical: 120,
-          ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 480),
-            child: StatefulBuilder(
-              builder: (context, setDialogState) {
-                final query = searchController.text.trim().toLowerCase();
-                final filtered =
-                    options.where((o) {
-                      if (query.isEmpty) return true;
-                      return o.label.toLowerCase().contains(query) ||
-                          o.tag.toLowerCase().contains(query) ||
-                          o.rounds.toString().contains(query);
-                    }).toList();
-
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildCommandPaletteSearchBar(
-                      controller: searchController,
-                      title: AppLocalizations.of(context)!.memoryConfig,
-                      onChanged: () => setDialogState(() {}),
-                    ),
-                    Flexible(
-                      child:
-                          filtered.isEmpty
-                              ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(24),
-                                  child: Text(
-                                    AppLocalizations.of(
-                                      context,
-                                    )!.noMatchingResults,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withOpacity(0.4),
-                                    ),
-                                  ),
-                                ),
-                              )
-                              : ListView.builder(
-                                shrinkWrap: true,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                ),
-                                itemCount: filtered.length,
-                                itemBuilder: (context, index) {
-                                  final option = filtered[index];
-                                  final isSelected =
-                                      option.rounds == currentRounds;
-                                  return _buildCommandItem(
-                                    title: option.label,
-                                    tag: isSelected ? null : option.tag,
-                                    isSelected: isSelected,
-                                    onTap: () {
-                                      Navigator.of(dialogContext).pop();
-                                      _applyMemoryConfig(option.rounds);
-                                    },
-                                  );
-                                },
-                              ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-    ).then((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        try {
-          searchController.dispose();
-        } catch (_) {}
-      });
-    });
-  }
-
-  /// 应用记忆配置
-  void _applyMemoryConfig(int rounds) {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final updated = currentSession.copyWith(memoryRounds: rounds);
-    sessionController.updateSession(updated);
-
-    if (mounted) {
-      final label =
-          rounds == 0
-              ? AppLocalizations.of(context)!.memoryClosed
-              : AppLocalizations.of(context)!.memoryConfigSet(rounds);
-      SnackBarUtils.showInfo(context, label);
-    }
   }
 
   /// 构建输入框功能按钮

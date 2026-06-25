@@ -207,19 +207,20 @@ abstract class BaseLlmProvider {
     }
 
     // 1f2. 商务模式提示词
-    if (session != null) {
-      try {
-        final workModeCtrl = Get.find<WorkModeController>();
-        if (workModeCtrl.workMode.value == WorkMode.business) {
-          final workDir = session.workDirectory ?? '';
-          if (workDir.isNotEmpty) {
-            messages.add({
-              'role': 'system',
-              'content': CommonSystemPrompts.businessMode(workDir),
-            });
-          }
-        }
-      } catch (_) {}
+    // 根据会话的 workMode 字段注入对应模式提示词
+    if (session != null && session.workDirectory != null && session.workDirectory!.isNotEmpty) {
+      final workDir = session.workDirectory!;
+      if (session.workMode == 'contract') {
+        messages.add({
+          'role': 'system',
+          'content': CommonSystemPrompts.contractMode(workDir),
+        });
+      } else if (session.workMode == 'invoice') {
+        messages.add({
+          'role': 'system',
+          'content': CommonSystemPrompts.invoiceMode(workDir),
+        });
+      }
     }
 
     // 1g. 记忆上下文

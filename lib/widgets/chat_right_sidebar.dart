@@ -7,13 +7,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import '../controllers/session_controller.dart';
-import '../controllers/work_mode_controller.dart';
 import '../models/chat/chat_message.dart';
 import '../models/chat/content_block.dart';
 import '../models/chat/artifact_entry.dart';
 import '../models/chat/contract_info.dart';
 import '../storage/isar_service.dart';
 import '../storage/file_storage.dart';
+import 'contract_sidebar.dart';
+import 'invoice_sidebar.dart';
+
+/// 文件树节点
+class _FileTreeNode {
+  final String name;
+  final String fullPath;
+  final bool isDirectory;
+  final List<_FileTreeNode> children = [];
+  bool isExpanded;
+
+  _FileTreeNode({
+    required this.name,
+    required this.fullPath,
+    required this.isDirectory,
+    this.isExpanded = false,
+  });
+}
 
 /// 右侧边栏 — 显示当前会话的记忆内容和文件列表
 class ChatRightSidebar extends StatefulWidget {
@@ -35,7 +52,6 @@ class ChatRightSidebar extends StatefulWidget {
 class _ChatRightSidebarState extends State<ChatRightSidebar>
     with TickerProviderStateMixin {
   final sessionController = Get.find<SessionController>();
-  final workModeController = Get.find<WorkModeController>();
   TabController? _tabController;
 
   /// 记录展开的目录产物 ID
@@ -44,8 +60,36 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   /// 缓存发送期间的构建结果
   Widget? _cachedTabChildren;
 
-  int _getTabCount() =>
-      workModeController.workMode.value == WorkMode.business ? 4 : 1;
+  /// 获取当前会话的工作模式
+  String _getWorkMode() {
+    return sessionController.currentSession.value?.workMode ?? 'conversation';
+  }
+
+  /// 获取当前模式的 Tab 数量
+  int _getTabCount() {
+    final mode = _getWorkMode();
+    switch (mode) {
+      case 'contract':
+        return ContractSidebar.tabCount;
+      case 'invoice':
+        return InvoiceSidebar.tabCount;
+      default:
+        return 1;
+    }
+  }
+
+  /// 获取当前模式的 Tab 标题
+  List<String> _getTabTitles() {
+    final mode = _getWorkMode();
+    switch (mode) {
+      case 'contract':
+        return ContractSidebar.getTabTitles();
+      case 'invoice':
+        return InvoiceSidebar.getTabTitles();
+      default:
+        return ['文件列表'];
+    }
+  }
 
   TabController _getTabController() {
     final count = _getTabCount();
@@ -83,36 +127,35 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     return Obx(() {
       final session = sessionController.currentSession.value;
       final isSending = session?.isSending ?? false;
-      final isBusiness =
-          workModeController.workMode.value == WorkMode.business;
+      final workMode = session?.workMode ?? 'conversation';
+      final isSpecialMode = workMode == 'contract' || workMode == 'invoice';
 
       // 如果正在发送消息，使用缓存的数据，不重新构建
       if (isSending && _cachedTabChildren != null) {
         return _cachedTabChildren!;
       }
 
-      final compressedMemory = session?.compressedMemory;
-      final memory = session?.memory ?? [];
       final messages = session?.messages ?? const [];
-      final contracts = session?.contracts ?? const [];
+      final contracts = session?.contracts ?? [];
+      final sessionId = session?.sessionId ?? '';
 
       // 动态调整 tab 数量
-      final currentTabCount = isBusiness ? 4 : 1;
+      final currentTabCount = _getTabCount();
 
       final tabChildren = <Widget>[
         // Tab 0: 文件列表
         _buildFilesContent(context, messages),
       ];
 
-      if (isBusiness) {
-        // Tab 1: 合约要点（仅商务模式）
-        tabChildren.add(_buildContractPointsContent(context, contracts));
-        // Tab 2: 合同履约
-        tabChildren.add(_buildContractFileContent(
-          context, session?.sessionId ?? '', 'contract_process.md', '合同履约'));
-        // Tab 3: 合同争议
-        tabChildren.add(_buildContractFileContent(
-          context, session?.sessionId ?? '', 'contract_disguss.md', '合同争议'));
+      // 根据模式添加对应的 Tab 内容
+      if (workMode == 'contract') {
+        for (int i = 1; i < ContractSidebar.tabCount; i++) {
+          tabChildren.add(ContractSidebar.buildTabContent(context, i, sessionId, contracts));
+        }
+      } else if (workMode == 'invoice') {
+        for (int i = 1; i < InvoiceSidebar.tabCount; i++) {
+          tabChildren.add(InvoiceSidebar.buildTabContent(context, i, sessionId));
+        }
       }
 
       final result = Container(
@@ -120,8 +163,8 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 顶部Tab栏（下划线与聊天主窗口顶部栏对齐）
-            _buildTabBar(context, isBusiness),
+            // 顶部Tab栏
+            _buildTabBar(context, isSpecialMode),
             // 内容区域
             Expanded(
               child: TabBarView(
@@ -140,15 +183,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     });
   }
 
-  Widget _buildTabBar(BuildContext context, bool isBusiness) {
-    final tabs = <Tab>[
-      Tab(text: AppLocalizations.of(context)!.files),
-    ];
-    if (isBusiness) {
-      tabs.add(Tab(text: AppLocalizations.of(context)!.contractPoints));
-      tabs.add(const Tab(text: '合同履约'));
-      tabs.add(const Tab(text: '合同争议'));
-    }
+  Widget _buildTabBar(BuildContext context, bool isSpecialMode) {
+    final tabTitles = _getTabTitles();
+    final tabs = tabTitles.map((title) => Tab(text: title)).toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -443,6 +480,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
           );
         }
 
+        // 构建文件树
+        final tree = _buildFileTree(files, workDir);
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -463,7 +503,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 8),
-              ...files.map((f) => _buildWorkFileItem(context, f)),
+              ..._buildTreeWidgets(context, tree, workDir),
             ],
           ),
         );
@@ -471,53 +511,155 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     );
   }
 
-  /// 列出工作目录下的文件（不递归）
+  /// 列出工作目录下的文件（递归）
   Future<List<FileSystemEntity>> _listWorkDirFiles(String workDir) async {
     try {
       final dir = Directory(workDir);
       if (!await dir.exists()) return [];
-      final list = await dir.list(recursive: false).toList();
-      // 只保留文件，按名称排序
-      list.sort((a, b) => a.path.compareTo(b.path));
-      return list;
+      final list = await dir.list(recursive: true).toList();
+      // 过滤掉隐藏文件和常见忽略目录
+      final filtered = list.where((entity) {
+        final relativePath = entity.path.substring(workDir.length + 1);
+        // 跳过隐藏文件和常见忽略目录
+        if (relativePath.startsWith('.') || 
+            relativePath.contains('/.') ||
+            relativePath.contains('node_modules') ||
+            relativePath.contains('.git') ||
+            relativePath.contains('build') ||
+            relativePath.contains('.dart_tool')) {
+          return false;
+        }
+        return true;
+      }).toList();
+      // 按路径排序
+      filtered.sort((a, b) => a.path.compareTo(b.path));
+      return filtered;
     } catch (_) {
       return [];
     }
   }
 
-  /// 工作目录下的单个文件条目
-  Widget _buildWorkFileItem(BuildContext context, FileSystemEntity entity) {
-    final isDir = entity is Directory;
-    final name = entity.uri.pathSegments.last;
-    final icon = isDir ? CupertinoIcons.folder : _getFileIcon(name);
+  /// 构建文件树
+  List<_FileTreeNode> _buildFileTree(List<FileSystemEntity> files, String workDir) {
+    final Map<String, _FileTreeNode> dirMap = {};
+    final List<_FileTreeNode> roots = [];
+
+    for (final entity in files) {
+      final relativePath = entity.path.substring(workDir.length + 1);
+      final parts = relativePath.split('/');
+      
+      // 处理目录
+      String currentPath = workDir;
+      _FileTreeNode? parentDir;
+      
+      for (int i = 0; i < parts.length - 1; i++) {
+        currentPath = '$currentPath/${parts[i]}';
+        if (!dirMap.containsKey(currentPath)) {
+          final dirNode = _FileTreeNode(
+            name: parts[i],
+            fullPath: currentPath,
+            isDirectory: true,
+            isExpanded: true, // 默认展开
+          );
+          dirMap[currentPath] = dirNode;
+          
+          if (parentDir == null) {
+            roots.add(dirNode);
+          } else {
+            parentDir.children.add(dirNode);
+          }
+        }
+        parentDir = dirMap[currentPath]!;
+      }
+      
+      // 处理文件
+      final fileName = parts.last;
+      final fileNode = _FileTreeNode(
+        name: fileName,
+        fullPath: entity.path,
+        isDirectory: false,
+      );
+      
+      if (parentDir == null) {
+        roots.add(fileNode);
+      } else {
+        parentDir.children.add(fileNode);
+      }
+    }
+
+    return roots;
+  }
+
+  /// 构建树形 Widget 列表
+  List<Widget> _buildTreeWidgets(BuildContext context, List<_FileTreeNode> nodes, String workDir, {int depth = 0}) {
+    final widgets = <Widget>[];
+    
+    for (final node in nodes) {
+      widgets.add(_buildTreeNodeWidget(context, node, workDir, depth));
+      
+      if (node.isDirectory && node.isExpanded && node.children.isNotEmpty) {
+        widgets.addAll(_buildTreeWidgets(context, node.children, workDir, depth: depth + 1));
+      }
+    }
+    
+    return widgets;
+  }
+
+  /// 构建单个树节点 Widget
+  Widget _buildTreeNodeWidget(BuildContext context, _FileTreeNode node, String workDir, int depth) {
+    final isDir = node.isDirectory;
+    final icon = isDir 
+        ? (node.isExpanded ? CupertinoIcons.folder_open : CupertinoIcons.folder)
+        : _getFileIcon(node.name);
+    
+    // 计算缩进
+    final indent = depth * 16.0;
 
     return InkWell(
       onTap: () {
-        // 打开文件或目录
-        Process.run('open', [entity.path]);
+        if (isDir) {
+          setState(() {
+            node.isExpanded = !node.isExpanded;
+          });
+        } else {
+          // 打开文件
+          Process.run('open', [node.fullPath]);
+        }
       },
       borderRadius: BorderRadius.circular(6),
       child: Container(
         margin: const EdgeInsets.only(bottom: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: EdgeInsets.only(left: 8 + indent, right: 8, top: 6, bottom: 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
           children: [
+            if (isDir)
+              Icon(
+                node.isExpanded 
+                    ? CupertinoIcons.chevron_down 
+                    : CupertinoIcons.chevron_right,
+                size: 10,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+            if (isDir) const SizedBox(width: 4),
             Icon(
               icon,
               size: 14,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+              color: isDir 
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                name,
+                node.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
+                  fontWeight: isDir ? FontWeight.w500 : FontWeight.normal,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -1263,22 +1405,20 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             color: Theme.of(
               context,
-            ).colorScheme.onSurface.withValues(alpha: 0.4),
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
         const SizedBox(height: 2),
         Text(
           value,
           style: TextStyle(
-            fontSize: 11,
-            height: 1.45,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.7),
+            fontSize: 13,
+            height: 1.5,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -1290,9 +1430,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     return Text(
       label,
       style: TextStyle(
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
       ),
     );
   }
@@ -1320,7 +1460,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
             child: Text(
               party.role,
               style: TextStyle(
-                fontSize: 9,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.tertiary,
               ),
@@ -1351,21 +1491,19 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             color: Theme.of(
               context,
-            ).colorScheme.onSurface.withValues(alpha: 0.4),
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
         const SizedBox(width: 6),
         Text(
           date,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.7),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],

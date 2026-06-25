@@ -11,6 +11,7 @@ import '../models/chat/contract_info.dart';
 import '../storage/storage_paths.dart';
 import 'node_tool_service.dart';
 import 'ocr_tool_service.dart';
+import 'paddle_ocr_service.dart';
 import 'python_tool_service.dart';
 import 'file_tool_service.dart';
 
@@ -43,6 +44,11 @@ class SystemToolService {
   static const String contractProcessUpdateTool = 'contract_process_update';
   static const String contractDisgussUpdateTool = 'contract_disguss_update';
   static const String wordModifyTool = 'word_modify';
+  static const String noteUpdateTool = 'note_update';
+  static const String invoiceSummaryUpdateTool = 'invoice_summary_update';
+  static const String invoiceDetailUpdateTool = 'invoice_detail_update';
+  static const String reimbursementUpdateTool = 'reimbursement_update';
+  static const String paddleOcrTool = 'paddle_ocr';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -303,6 +309,92 @@ class SystemToolService {
         'required': ['filePath', 'script'],
       },
     ),
+    SystemToolDefinition(
+      name: noteUpdateTool,
+      description:
+          '更新备忘录文件（note.md）。直接写入完整的备忘录内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。仅在备忘录会话模式下使用。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的备忘录完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: invoiceSummaryUpdateTool,
+      description:
+          '更新发票汇总文件（invoice_summary.md）。直接写入完整的发票汇总内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。仅在发票模式下使用。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的发票汇总完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: invoiceDetailUpdateTool,
+      description:
+          '更新发票明细文件（invoice_detail.md）。直接写入完整的发票明细内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。仅在发票模式下使用。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的发票明细完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: reimbursementUpdateTool,
+      description:
+          '更新报销记录文件（reimbursement.md）。直接写入完整的报销记录内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。仅在发票模式下使用。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的报销记录完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: paddleOcrTool,
+      description:
+          '使用 PaddleOCR 对图片执行文字识别（OCR）。支持中英文混合识别，准确率高。'
+          '可用于扫描发票、合同、收据等图片文件，提取其中的文字内容。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要识别的图片文件完整路径（支持 PNG/JPEG/BMP/TIFF 等格式）。',
+          },
+          'lang': {
+            'type': 'string',
+            'description':
+                'OCR 语言代码。默认 "ch"（中文，自动包含英文）。'
+                '常用值: "ch"（中英混合）、"en"（英文）。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
   ];
 
   static List<SystemToolDefinition> get tools => List.unmodifiable(_tools);
@@ -388,6 +480,35 @@ class SystemToolService {
         );
       case wordModifyTool:
         return _executeWordModify(
+          arguments: arguments,
+          callId: callId,
+        );
+      case noteUpdateTool:
+        return _executeNoteUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case invoiceSummaryUpdateTool:
+        return _executeInvoiceSummaryUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case invoiceDetailUpdateTool:
+        return _executeInvoiceDetailUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case reimbursementUpdateTool:
+        return _executeReimbursementUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case paddleOcrTool:
+        return PaddleOcrService.execute(
           arguments: arguments,
           callId: callId,
         );
@@ -700,6 +821,142 @@ print("文档修改成功: $filePath")
       return result;
     } catch (e) {
       return _errorResult(callId, arguments, 'Word 文档修改失败: $e');
+    }
+  }
+
+  /// 执行备忘录更新
+  static Future<Map<String, dynamic>> _executeNoteUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final filePath = StoragePaths.noteFile(session.sessionId);
+      await StoragePaths.ensureSessionDir(session.sessionId);
+      await File(filePath).writeAsString(content);
+
+      debugPrint('📝 备忘录已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': noteUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '备忘录已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '备忘录更新失败: $e');
+    }
+  }
+
+  /// 执行发票汇总更新
+  static Future<Map<String, dynamic>> _executeInvoiceSummaryUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final filePath = StoragePaths.invoiceSummaryFile(session.sessionId);
+      await StoragePaths.ensureSessionDir(session.sessionId);
+      await File(filePath).writeAsString(content);
+
+      debugPrint('🧾 发票汇总已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': invoiceSummaryUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '发票汇总已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '发票汇总更新失败: $e');
+    }
+  }
+
+  /// 执行发票明细更新
+  static Future<Map<String, dynamic>> _executeInvoiceDetailUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final filePath = StoragePaths.invoiceDetailFile(session.sessionId);
+      await StoragePaths.ensureSessionDir(session.sessionId);
+      await File(filePath).writeAsString(content);
+
+      debugPrint('🧾 发票明细已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': invoiceDetailUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '发票明细已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '发票明细更新失败: $e');
+    }
+  }
+
+  /// 执行报销记录更新
+  static Future<Map<String, dynamic>> _executeReimbursementUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final filePath = StoragePaths.reimbursementFile(session.sessionId);
+      await StoragePaths.ensureSessionDir(session.sessionId);
+      await File(filePath).writeAsString(content);
+
+      debugPrint('🧾 报销记录已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': reimbursementUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '报销记录已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '报销记录更新失败: $e');
     }
   }
 

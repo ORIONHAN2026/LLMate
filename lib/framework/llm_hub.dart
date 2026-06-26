@@ -111,7 +111,7 @@ class LlmClient {
       }
     }
 
-    var messages = _provider.buildMessages(
+    var messages = await _provider.buildMessages(
       userMessage: userMessage,
       session: _session,
     );
@@ -360,6 +360,7 @@ class LlmClient {
     List<Map<String, dynamic>>? toolCalls,
     required String sessionId,
     required String modelName,
+    List<Map<String, dynamic>>? requestTools,
   }) async {
     try {
       final dir = Directory(p.join(_projectRoot, _logDir));
@@ -379,6 +380,7 @@ class LlmClient {
         'model': modelName,
         'request': {
           'messages': requestMessages,
+          if (requestTools != null && requestTools.isNotEmpty) 'tools': requestTools,
         },
         'response': {
           if (responseThink != null && responseThink.isNotEmpty)

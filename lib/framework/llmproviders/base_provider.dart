@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
@@ -115,11 +117,13 @@ abstract class BaseLlmProvider {
   /// 根据会话设置更新 provider 状态
   void applySessionSettings(ChatSession session) {
     _thinkEnabled = session.deepThink;
-    _workDir =
-        (session.workDirectory != null &&
-                session.workDirectory!.trim().isNotEmpty)
-            ? session.workDirectory!.trim()
-            : null;
+    // workDirectory 优先使用用户选择的，如果没有则默认为会话目录
+    if (session.workDirectory != null &&
+        session.workDirectory!.trim().isNotEmpty) {
+      _workDir = session.workDirectory!.trim();
+    } else {
+      _workDir = StoragePaths.sessionDir(session.sessionId);
+    }
   }
 
   /// 子类可重写此方法处理配置
@@ -163,10 +167,10 @@ abstract class BaseLlmProvider {
   /// 技能提示词 → 深度思考 → 工具信息 → 历史消息 → 用户消息 →
   /// 模型设置覆盖。
   /// 子类可覆写以自定义消息构建策略。
-  List<Map<String, dynamic>> buildMessages({
+  Future<List<Map<String, dynamic>>> buildMessages({
     required ChatMessage userMessage,
     ChatSession? session,
-  }) {
+  }) async {
     var messages = <Map<String, dynamic>>[];
     final m = model;
 
@@ -206,19 +210,42 @@ abstract class BaseLlmProvider {
       });
     }
 
-    // 1f2. 商务模式提示词
+    // 模式提示题
     // 根据会话的 workMode 字段注入对应模式提示词
-    if (session != null && session.workDirectory != null && session.workDirectory!.isNotEmpty) {
-      final workDir = session.workDirectory!;
+    if (session != null) {
+      // 获取实际的工作目录（优先使用用户选择的，否则使用会话目录）
+      final effectiveWorkDir =
+          (session.workDirectory != null && session.workDirectory!.isNotEmpty)
+              ? session.workDirectory!
+              : StoragePaths.sessionDir(session.sessionId);
+
+      final sessionDir = StoragePaths.sessionDir(session.sessionId);
+
       if (session.workMode == 'contract') {
         messages.add({
           'role': 'system',
-          'content': CommonSystemPrompts.contractMode(workDir),
+          'content': CommonSystemPrompts.contractMode(
+            effectiveWorkDir,
+            sessionDir,
+          ),
         });
       } else if (session.workMode == 'invoice') {
         messages.add({
           'role': 'system',
-          'content': CommonSystemPrompts.invoiceMode(workDir),
+          'content': CommonSystemPrompts.invoiceMode(
+            effectiveWorkDir,
+            sessionDir,
+          ),
+        });
+      } else if (session.workMode == 'chatroom') {
+        final roleContexts = await _loadRoleContexts(session.sessionId);
+        messages.add({
+          'role': 'system',
+          'content': CommonSystemPrompts.chatroomMode(
+            effectiveWorkDir,
+            sessionDir,
+            roleContexts,
+          ),
         });
       }
     }
@@ -279,20 +306,43 @@ abstract class BaseLlmProvider {
     return buf.toString();
   }
 
+  /// 加载聊天室模式的所有角色上下文
+  static Future<List<String>> _loadRoleContexts(String sessionId) async {
+    final rolesDirPath = StoragePaths.rolesDir(sessionId);
+    final dir = Directory(rolesDirPath);
+
+    if (!await dir.exists()) return [];
+
+    final contexts = <String>[];
+    await for (final entity in dir.list(recursive: false)) {
+      if (entity is File && entity.path.endsWith('.md')) {
+        try {
+          final content = await File(entity.path).readAsString();
+          if (content.trim().isNotEmpty) {
+            contexts.add(content.trim());
+          }
+        } catch (_) {}
+      }
+    }
+
+    return contexts;
+  }
+
   /// 构建 OpenAI 兼容的请求体
   ///
   /// 首次请求传 [userMessage]，内部调用 [buildMessages] 自动组装。
   /// 工具回调时传 [messages] 使用预构建消息。
   /// 子类（anthropic/gemini/ollama）可覆写以适配各自的 API 格式。
-  Map<String, dynamic> buildRequestData({
+  Future<Map<String, dynamic>> buildRequestData({
     ChatMessage? userMessage,
     List<Map<String, dynamic>>? messages,
     required bool stream,
     ChatSession? session,
     Map<String, dynamic>? extra,
-  }) {
+  }) async {
     final msgs =
-        messages ?? buildMessages(userMessage: userMessage!, session: session);
+        messages ??
+        await buildMessages(userMessage: userMessage!, session: session);
 
     final data = <String, dynamic>{
       'model': model!.model,
@@ -305,11 +355,14 @@ abstract class BaseLlmProvider {
     if (session != null) {
       var tools = buildTools(session);
 
-      // 根据用户输入分词，过滤不相关的工具
-      // final userText = _extractUserText(userMessage, msgs);
-      // if (userText.isNotEmpty && tools.length > 1) {
-      //   tools = _filterToolsByUserInput(userText, tools);
-      // }
+      if (kDebugMode) {
+        debugPrint(
+          '🔧 buildTools: workMode=${session.workMode}, tools count=${tools.length}',
+        );
+        for (final t in tools) {
+          debugPrint('   - ${t['function']?['name']}');
+        }
+      }
 
       if (tools.isNotEmpty) {
         data['tools'] = tools;
@@ -343,8 +396,11 @@ abstract class BaseLlmProvider {
   /// 构建可用工具列表（OpenAI function-calling 格式）
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
     final allTools = <Map<String, dynamic>>[];
-    // 系统内置工具始终可用（包括 DWG 读取等专用工具）
-    allTools.addAll(SystemToolService.buildOpenAIToolsFormat());
+    // 根据会话模式加载对应的系统工具
+    final workMode = session?.workMode ?? 'conversation';
+    allTools.addAll(
+      SystemToolService.buildOpenAIToolsFormat(workMode: workMode),
+    );
     // MCP 服务工具（直接使用 session.mcp.tools）
     final mcp = session?.mcp;
     if (mcp != null && mcp.tools != null && mcp.tools!.isNotEmpty) {

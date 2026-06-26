@@ -9,7 +9,7 @@ import '../../utils/model_icon_utils.dart';
 /// 聊天模型数据结构
 class ChatModel {
   final String modelId; // 唯一标识符
-  final String name;
+  final String name; // 模型显示名称
   final String model; // API调用时使用的模型名称
   final String? type; // 'local', 'online'
   final String? platform; // 平台展示名称，如：阿里云百炼、DeepSeek、OpenAI等

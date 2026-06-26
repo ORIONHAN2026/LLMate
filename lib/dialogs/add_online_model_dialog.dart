@@ -1336,6 +1336,15 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     if (_currentStep < 3) {
       setState(() {
         _currentStep++;
+        // 转到最终步骤时，设置模型名称默认值为 provider/model
+        if (_currentStep == 3) {
+          final providerName = _resolveProviderPlatformName(_selectedProvider);
+          final modelName = _selectedOnlineModel;
+          if (_modelNameController.text.isEmpty) {
+            _modelNameController.text = '$providerName/$modelName';
+            _customModelName = '$providerName/$modelName';
+          }
+        }
       });
     } else {
       // 完成创建

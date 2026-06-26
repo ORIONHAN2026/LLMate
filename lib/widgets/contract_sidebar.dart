@@ -19,12 +19,12 @@ class ContractSidebar {
   static int get tabCount => 5;
 
   /// 构建指定 Tab 的内容
-  static Widget buildTabContent(BuildContext context, int index, String sessionId, List<ContractInfo> contracts) {
+  static Widget buildTabContent(BuildContext context, int index, String sessionId) {
     switch (index) {
       case 0:
         return _buildFilesTab(context);
       case 1:
-        return _buildContractPointsTab(context, contracts);
+        return _buildContractPointsTab(context, sessionId);
       case 2:
         return _buildContractFileTab(context, sessionId, 'contract_process.md', '合同履约');
       case 3:
@@ -41,22 +41,74 @@ class ContractSidebar {
     return const SizedBox.shrink();
   }
 
-  /// 合约要点 Tab
-  static Widget _buildContractPointsTab(BuildContext context, List<ContractInfo> contracts) {
-    if (contracts.isEmpty) {
+  /// 合约要点 Tab（从文件读取）
+  static Widget _buildContractPointsTab(BuildContext context, String sessionId) {
+    if (sessionId.isEmpty) {
       return _buildEmptyState(context, '暂无合约要点', '在对话中解析合同后会自动记录');
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionTitle(context, '合约要点 (${contracts.length})'),
-          const SizedBox(height: 8),
-          ...contracts.map((c) => _buildContractCard(context, c)),
-        ],
-      ),
+    return FutureBuilder<String?>(
+      future: _loadFile(sessionId, 'contract_content.md'),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        }
+
+        final content = snapshot.data;
+        if (content == null || content.trim().isEmpty) {
+          return _buildEmptyState(context, '暂无合约要点', '在对话中解析合同后会自动记录');
+        }
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle(context, '合约要点'),
+              const SizedBox(height: 8),
+              MarkdownBody(
+                data: content.trim(),
+                selectable: true,
+                styleSheet: MarkdownStyleSheet(
+                  p: TextStyle(
+                    fontSize: 13,
+                    height: 1.7,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  h1: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  h2: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  h3: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  listBullet: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  tableBody: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  tableHead: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

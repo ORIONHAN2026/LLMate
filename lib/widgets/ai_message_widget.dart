@@ -1597,38 +1597,55 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       animation: _toolIndicatorAnimation,
       builder: (context, child) {
         final opacity = isCalling ? _toolIndicatorAnimation.value : 0.3;
-        return Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color:
-                isCalling
-                    ? const Color.fromARGB(
-                      255,
-                      0,
-                      100,
-                      0,
-                    ).withValues(alpha: opacity)
-                    : Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: opacity),
-            shape: BoxShape.circle,
-            boxShadow:
-                isCalling
-                    ? [
-                      BoxShadow(
-                        color: const Color.fromARGB(
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color:
+                    isCalling
+                        ? const Color.fromARGB(
                           255,
                           0,
                           100,
                           0,
-                        ).withValues(alpha: opacity * 0.5),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                    : null,
-          ),
+                        ).withValues(alpha: opacity)
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: opacity),
+                shape: BoxShape.circle,
+                boxShadow:
+                    isCalling
+                        ? [
+                          BoxShadow(
+                            color: const Color.fromARGB(
+                              255,
+                              0,
+                              100,
+                              0,
+                            ).withValues(alpha: opacity * 0.5),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                        : null,
+              ),
+            ),
+            if (isCalling) ...[
+              const SizedBox(width: 6),
+              Text(
+                '正在执行工具',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ],
         );
       },
     );

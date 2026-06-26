@@ -87,6 +87,14 @@ class StoragePaths {
   static String reimbursementFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'reimbursement.md');
 
+  /// ~/.llmwork/chats/{sessionId}/roles/（角色目录）
+  static String rolesDir(String sessionId) =>
+      p.join(sessionDir(sessionId), 'roles');
+
+  /// 获取角色文件路径
+  static String roleFile(String sessionId, String roleName) =>
+      p.join(rolesDir(sessionId), '$roleName.md');
+
   /// 确保根目录存在
   static Future<void> ensureRoot() async {
     await Directory(root).create(recursive: true);

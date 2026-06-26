@@ -1629,12 +1629,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建工作模式按钮（仅显示，不可点击切换）
+  /// 构建工作模式按钮（支持手动切换对话/聊天室模式）
   Widget _buildWorkModeToggle() {
     final currentSession = sessionController.currentSession.value;
     final workMode = currentSession?.workMode ?? 'conversation';
-    final hasWorkDir = currentSession?.workDirectory != null && 
-        currentSession!.workDirectory!.isNotEmpty;
+    final isLocked = workMode == 'contract' || workMode == 'invoice';
 
     // 根据模式显示不同的图标和文字
     IconData icon;
@@ -1645,52 +1644,48 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       case 'contract':
         icon = CupertinoIcons.doc_plaintext;
         label = '合同';
-        tooltip = '合同模式（自动检测）';
+        tooltip = '合同模式（自动检测，不可切换）';
         break;
       case 'invoice':
         icon = CupertinoIcons.doc_text;
         label = '发票';
-        tooltip = '发票模式（自动检测）';
+        tooltip = '发票模式（自动检测，不可切换）';
+        break;
+      case 'chatroom':
+        icon = CupertinoIcons.person_2;
+        label = '聊天室';
+        tooltip = '聊天室模式（点击切换为对话模式）';
         break;
       default:
         icon = CupertinoIcons.chat_bubble;
         label = '对话';
-        tooltip = '对话模式';
+        tooltip = '对话模式（点击切换为聊天室模式）';
     }
 
     final isActive = workMode != 'conversation';
 
     return Tooltip(
       message: tooltip,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 13,
-              color:
-                  !hasWorkDir
-                      ? Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.3)
-                      : isActive
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+      child: GestureDetector(
+        // 合同/发票模式不可点击，对话/聊天室模式可点击切换
+        onTap: _isSending || isLocked ? null : () {
+          if (currentSession != null) {
+            final newMode = workMode == 'chatroom' ? 'conversation' : 'chatroom';
+            sessionController.updateSession(
+              currentSession.copyWith(workMode: newMode),
+            );
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 13,
                 color:
-                    !hasWorkDir
+                    _isSending || isLocked
                         ? Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.3)
@@ -1700,14 +1695,34 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           context,
                         ).colorScheme.onSurface.withOpacity(0.6),
               ),
-            ),
-          ],
+              const SizedBox(width: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  color:
+                      _isSending || isLocked
+                          ? Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.3)
+                          : isActive
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /// 构建工作目录按钮
+  /// 构建工作目录按钮（选定后不可更改）
   Widget _buildWorkDirectoryToggle() {
     final currentSession = sessionController.currentSession.value;
     final workDir = currentSession?.workDirectory;
@@ -1720,16 +1735,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return Tooltip(
       message:
           hasWorkDir
-              ? AppLocalizations.of(context)!.workingDirectoryPath(workDir)
+              ? '已锁定：${workDir ?? ""}（双击打开）'
               : AppLocalizations.of(context)!.setWorkingDirHint,
       child: GestureDetector(
-        onTap: _isSending ? null : _showWorkDirectoryPicker,
-        onLongPress: hasWorkDir && !_isSending ? _clearWorkDirectory : null,
+        // 已选定工作目录后不可点击更改
+        onTap: hasWorkDir ? null : _showWorkDirectoryPicker,
         onDoubleTap:
             hasWorkDir && !_isSending
                 ? () {
                   try {
-                    Process.run('open', [workDir]);
+                    Process.run('open', [workDir!]);
                   } catch (_) {}
                 }
                 : null,
@@ -2089,28 +2104,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   /// 构建合同解析提示词（发送到聊天中）
   String _buildContractParsePrompt() {
-    return '请分析以上合同文件，完成以下两部分输出：\n\n'
-        '**第一部分：合同概要**（用正常的中文描述，方便阅读）\n'
-        '对每份合同，列出：合同名称、类型、签署方、期限、金额、付款方式、违约条款等关键信息。\n\n'
-        '**第二部分：结构化数据**（放在 JSON 代码块中，供程序解析）\n'
-        '在回复末尾，用 ```json 代码块输出以下格式的 JSON 数组：\n'
-        '```json\n'
-        '[\n'
-        '  {\n'
-        '    "name": "合同名称",\n'
-        '    "contractType": "合同类型",\n'
-        '    "parties": [{"role": "甲方", "name": "名称"}],\n'
-        '    "startDate": "YYYY-MM-DD",\n'
-        '    "endDate": "YYYY-MM-DD",\n'
-        '    "signingDate": "YYYY-MM-DD",\n'
-        '    "paymentClause": "收支条款",\n'
-        '    "paymentSchedule": "支付计划",\n'
-        '    "breachClause": "违约条款",\n'
-        '    "liabilityClause": "违约责任"\n'
-        '  }\n'
-        ']\n'
-        '```\n'
-        '未提及的字段设为 null。';
+    return '请分析以上合同文件，提取关键信息，然后使用专用工具写入对应文件：\n\n'
+        '**1. 合同要点** → 调用 `contract_content_update` 工具\n'
+        '   包含：合同名称、类型、签署方、期限、金额、收支条款、支付计划、违约条款、违约责任\n\n'
+        '**2. 合同履约跟踪** → 调用 `contract_process_update` 工具\n'
+        '   包含：合同状态（进行中）、履约进度、初始付款记录等\n\n'
+        '**3. 合同争议记录** → 调用 `contract_disguss_update` 工具\n'
+        '   如无争议，写入初始状态（争议状态：无）\n\n'
+        '⚠️ 必须使用专用工具写入文件，不要只在回复中输出内容。';
   }
 
   /// 从 LLM 响应中提取合同 JSON
@@ -3565,15 +3566,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       if (modelId.isEmpty) {
         throw (AppLocalizations.of(context)!.noModelBound);
       }
-      // 商务模式下：未设置工作目录时，先在对话中插入提示气泡
-      final isBusinessMode =
-          workModeController.workMode.value == WorkMode.business;
-      final workDir = sessionController.currentSession.value?.workDirectory;
-      if (isBusinessMode && (workDir == null || workDir.trim().isEmpty)) {
-        print("没有设置目录");
-        _showWorkDirRequiredError();
-        return;
-      }
 
       await _generateAIResponse(updatedSession, userMessage);
     } catch (e) {
@@ -3868,34 +3860,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final punctuationTokens = (punctuation / 2).ceil(); // 标点2符号≈1token
 
     return chineseTokens + englishTokens + punctuationTokens;
-  }
-
-  /// 商务模式下：工作目录未设置时，在对话中显示错误气泡提醒
-  void _showWorkDirRequiredError() {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final errorMessage = ChatMessage(
-      msgId: timestamp.toString(),
-      role: MessageRole.bot,
-      content: AppLocalizations.of(context)!.noWorkingDir,
-      timestamp: DateTime.now(),
-      sessionId: currentSession.sessionId,
-      isError: true,
-    );
-
-    widget.messageKeys[errorMessage.msgId] = GlobalKey();
-
-    final updatedMessages = List<ChatMessage>.from(currentSession.messages)
-      ..add(errorMessage);
-
-    sessionController.updateSession(
-      currentSession.copyWith(messages: updatedMessages, isSending: false),
-    );
-    setState(() {});
-
-    _scrollToBottom();
   }
 
   /// 处理发送错误

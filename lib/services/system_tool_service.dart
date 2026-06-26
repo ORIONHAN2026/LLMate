@@ -49,6 +49,9 @@ class SystemToolService {
   static const String invoiceDetailUpdateTool = 'invoice_detail_update';
   static const String reimbursementUpdateTool = 'reimbursement_update';
   static const String paddleOcrTool = 'paddle_ocr';
+  static const String roleCreateTool = 'role_create';
+  static const String roleUpdateTool = 'role_update';
+  static const String roleDeleteTool = 'role_delete';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -258,141 +261,61 @@ class SystemToolService {
       },
     ),
     SystemToolDefinition(
-      name: contractProcessUpdateTool,
+      name: roleCreateTool,
       description:
-          '更新合同履约跟踪文件（contract_process.md）。直接写入完整的履约跟踪内容，无需指定文件路径。'
-          '文件会自动保存到当前会话的工作目录下。',
+          '创建新角色。角色描述以 .md 文件形式保存，包含角色名称、性格、背景、说话风格等信息。'
+          '在聊天室模式下，AI可以根据对话场景选择合适的角色进行回复。',
       parameters: {
         'type': 'object',
         'properties': {
+          'roleName': {
+            'type': 'string',
+            'description': '角色名称（英文，用于文件名）。',
+          },
+          'displayName': {
+            'type': 'string',
+            'description': '角色显示名称（中文，用于界面显示）。',
+          },
           'content': {
             'type': 'string',
-            'description': '要写入的合同履约跟踪完整内容（Markdown 格式）。',
+            'description': '角色描述内容（Markdown 格式），包含：性格、背景、说话风格、知识领域等。',
           },
         },
-        'required': ['content'],
+        'required': ['roleName', 'displayName', 'content'],
       },
     ),
     SystemToolDefinition(
-      name: contractDisgussUpdateTool,
+      name: roleUpdateTool,
       description:
-          '更新合同争议记录文件（contract_disguss.md）。直接写入完整的争议记录内容，无需指定文件路径。'
-          '文件会自动保存到当前会话的工作目录下。',
+          '更新已有角色的描述内容。',
       parameters: {
         'type': 'object',
         'properties': {
+          'roleName': {
+            'type': 'string',
+            'description': '要更新的角色名称（英文，文件名）。',
+          },
           'content': {
             'type': 'string',
-            'description': '要写入的合同争议记录完整内容（Markdown 格式）。',
+            'description': '更新后的角色描述内容。',
           },
         },
-        'required': ['content'],
+        'required': ['roleName', 'content'],
       },
     ),
     SystemToolDefinition(
-      name: wordModifyTool,
+      name: roleDeleteTool,
       description:
-          '修改 Word 文档（.docx）。使用 Python 脚本修改文档内容，保留原有格式（字体、样式、表格等）。'
-          '支持替换文本、修改段落、更新表格等操作。文件路径必须是工作目录下的文件。',
+          '删除指定角色。',
       parameters: {
         'type': 'object',
         'properties': {
-          'filePath': {
+          'roleName': {
             'type': 'string',
-            'description': '要修改的 Word 文档完整路径（.docx 格式）。',
-          },
-          'script': {
-            'type': 'string',
-            'description': 'Python 脚本内容，用于修改文档。脚本中使用 docx 库操作文档。',
+            'description': '要删除的角色名称（英文，文件名）。',
           },
         },
-        'required': ['filePath', 'script'],
-      },
-    ),
-    SystemToolDefinition(
-      name: noteUpdateTool,
-      description:
-          '更新备忘录文件（note.md）。直接写入完整的备忘录内容，无需指定文件路径。'
-          '文件会自动保存到当前会话的工作目录下。仅在备忘录会话模式下使用。',
-      parameters: {
-        'type': 'object',
-        'properties': {
-          'content': {
-            'type': 'string',
-            'description': '要写入的备忘录完整内容（Markdown 格式）。',
-          },
-        },
-        'required': ['content'],
-      },
-    ),
-    SystemToolDefinition(
-      name: invoiceSummaryUpdateTool,
-      description:
-          '更新发票汇总文件（invoice_summary.md）。直接写入完整的发票汇总内容，无需指定文件路径。'
-          '文件会自动保存到当前会话的工作目录下。仅在发票模式下使用。',
-      parameters: {
-        'type': 'object',
-        'properties': {
-          'content': {
-            'type': 'string',
-            'description': '要写入的发票汇总完整内容（Markdown 格式）。',
-          },
-        },
-        'required': ['content'],
-      },
-    ),
-    SystemToolDefinition(
-      name: invoiceDetailUpdateTool,
-      description:
-          '更新发票明细文件（invoice_detail.md）。直接写入完整的发票明细内容，无需指定文件路径。'
-          '文件会自动保存到当前会话的工作目录下。仅在发票模式下使用。',
-      parameters: {
-        'type': 'object',
-        'properties': {
-          'content': {
-            'type': 'string',
-            'description': '要写入的发票明细完整内容（Markdown 格式）。',
-          },
-        },
-        'required': ['content'],
-      },
-    ),
-    SystemToolDefinition(
-      name: reimbursementUpdateTool,
-      description:
-          '更新报销记录文件（reimbursement.md）。直接写入完整的报销记录内容，无需指定文件路径。'
-          '文件会自动保存到当前会话的工作目录下。仅在发票模式下使用。',
-      parameters: {
-        'type': 'object',
-        'properties': {
-          'content': {
-            'type': 'string',
-            'description': '要写入的报销记录完整内容（Markdown 格式）。',
-          },
-        },
-        'required': ['content'],
-      },
-    ),
-    SystemToolDefinition(
-      name: paddleOcrTool,
-      description:
-          '使用 PaddleOCR 对图片执行文字识别（OCR）。支持中英文混合识别，准确率高。'
-          '可用于扫描发票、合同、收据等图片文件，提取其中的文字内容。',
-      parameters: {
-        'type': 'object',
-        'properties': {
-          'filePath': {
-            'type': 'string',
-            'description': '要识别的图片文件完整路径（支持 PNG/JPEG/BMP/TIFF 等格式）。',
-          },
-          'lang': {
-            'type': 'string',
-            'description':
-                'OCR 语言代码。默认 "ch"（中文，自动包含英文）。'
-                '常用值: "ch"（中英混合）、"en"（英文）。',
-          },
-        },
-        'required': ['filePath'],
+        'required': ['roleName'],
       },
     ),
   ];
@@ -401,9 +324,53 @@ class SystemToolService {
 
   static bool hasTool(String name) => _tools.any((tool) => tool.name == name);
 
+  /// 基础工具（所有模式都可用）
+  static const _baseToolNames = {
+    nodeExecuteTool, pythonExecuteTool, ocrExtractTool,
+    fileReadTool, fileWriteTool, wordModifyTool, paddleOcrTool,
+  };
+
+  /// 合同模式专属工具
+  static const _contractToolNames = {
+    contractInspectTool, contractContentUpdateTool,
+    contractProcessUpdateTool, contractDisgussUpdateTool, noteUpdateTool,
+  };
+
+  /// 发票模式专属工具
+  static const _invoiceToolNames = {
+    invoiceSummaryUpdateTool, invoiceDetailUpdateTool,
+    reimbursementUpdateTool, noteUpdateTool,
+  };
+
+  /// 聊天室模式专属工具
+  static const _chatroomToolNames = {
+    roleCreateTool, roleUpdateTool, roleDeleteTool, noteUpdateTool,
+  };
+
+  /// 根据会话模式获取工具列表
+  static List<SystemToolDefinition> getToolsByMode(String workMode) {
+    final allowedNames = <String>{..._baseToolNames};
+    
+    switch (workMode) {
+      case 'contract':
+        allowedNames.addAll(_contractToolNames);
+        break;
+      case 'invoice':
+        allowedNames.addAll(_invoiceToolNames);
+        break;
+      case 'chatroom':
+        allowedNames.addAll(_chatroomToolNames);
+        break;
+      // conversation 模式只保留基础工具
+    }
+    
+    return _tools.where((tool) => allowedNames.contains(tool.name)).toList();
+  }
+
   /// 构建 OpenAI tools 格式，用于向 LLM 声明可用工具
-  static List<Map<String, dynamic>> buildOpenAIToolsFormat() {
-    return _tools.map((tool) {
+  static List<Map<String, dynamic>> buildOpenAIToolsFormat({String? workMode}) {
+    final toolList = workMode != null ? getToolsByMode(workMode) : _tools;
+    return toolList.map((tool) {
       return {
         'type': 'function',
         'function': {
@@ -503,6 +470,24 @@ class SystemToolService {
         );
       case reimbursementUpdateTool:
         return _executeReimbursementUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case roleCreateTool:
+        return _executeRoleCreate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case roleUpdateTool:
+        return _executeRoleUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case roleDeleteTool:
+        return _executeRoleDelete(
           session: session,
           arguments: arguments,
           callId: callId,
@@ -923,6 +908,141 @@ print("文档修改成功: $filePath")
       };
     } catch (e) {
       return _errorResult(callId, arguments, '发票明细更新失败: $e');
+    }
+  }
+
+  /// 执行角色创建
+  static Future<Map<String, dynamic>> _executeRoleCreate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final roleName = arguments['roleName'] as String? ?? '';
+      final displayName = arguments['displayName'] as String? ?? '';
+      final content = arguments['content'] as String? ?? '';
+      
+      if (roleName.isEmpty) {
+        return _errorResult(callId, arguments, 'roleName 参数不能为空');
+      }
+      if (displayName.isEmpty) {
+        return _errorResult(callId, arguments, 'displayName 参数不能为空');
+      }
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final rolesDirPath = StoragePaths.rolesDir(session.sessionId);
+      await StoragePaths.ensureSessionDir(session.sessionId);
+      await Directory(rolesDirPath).create(recursive: true);
+
+      // 写入角色文件，文件头包含显示名称
+      final fileContent = '# $displayName\n\n$content';
+      final filePath = StoragePaths.roleFile(session.sessionId, roleName);
+      await File(filePath).writeAsString(fileContent);
+
+      debugPrint('🎭 角色已创建: $filePath');
+
+      return {
+        'id': callId,
+        'name': roleCreateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'roleName': roleName,
+          'displayName': displayName,
+          'message': '角色 "$displayName" 已创建',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '角色创建失败: $e');
+    }
+  }
+
+  /// 执行角色更新
+  static Future<Map<String, dynamic>> _executeRoleUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final roleName = arguments['roleName'] as String? ?? '';
+      final content = arguments['content'] as String? ?? '';
+      
+      if (roleName.isEmpty) {
+        return _errorResult(callId, arguments, 'roleName 参数不能为空');
+      }
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final filePath = StoragePaths.roleFile(session.sessionId, roleName);
+      if (!await File(filePath).exists()) {
+        return _errorResult(callId, arguments, '角色 "$roleName" 不存在');
+      }
+
+      // 读取原文件获取显示名称
+      final existingContent = await File(filePath).readAsString();
+      final displayNameMatch = RegExp(r'^# (.+)$', multiLine: true).firstMatch(existingContent);
+      final displayName = displayNameMatch?.group(1) ?? roleName;
+
+      final fileContent = '# $displayName\n\n$content';
+      await File(filePath).writeAsString(fileContent);
+
+      debugPrint('🎭 角色已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': roleUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '角色 "$displayName" 已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '角色更新失败: $e');
+    }
+  }
+
+  /// 执行角色删除
+  static Future<Map<String, dynamic>> _executeRoleDelete({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final roleName = arguments['roleName'] as String? ?? '';
+      
+      if (roleName.isEmpty) {
+        return _errorResult(callId, arguments, 'roleName 参数不能为空');
+      }
+
+      final filePath = StoragePaths.roleFile(session.sessionId, roleName);
+      if (!await File(filePath).exists()) {
+        return _errorResult(callId, arguments, '角色 "$roleName" 不存在');
+      }
+
+      await File(filePath).delete();
+
+      debugPrint('🎭 角色已删除: $filePath');
+
+      return {
+        'id': callId,
+        'name': roleDeleteTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'message': '角色 "$roleName" 已删除',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '角色删除失败: $e');
     }
   }
 

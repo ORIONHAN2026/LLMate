@@ -39,8 +39,8 @@ class ModelIconUtils {
       if (p.contains('minimax')) {
         return 'assets/icons/yuanbao-color.webp';
       }
-      if (p.contains('xiaomi') || p.contains('小米') || p.contains('milm')) {
-        return 'assets/icons/yuanbao-color.webp';
+      if (p.contains('xiaomi') || p.contains('小米') || p.contains('milm') || p.contains('mimo')) {
+        return 'assets/icons/xiaomi.webp';
       }
     }
 

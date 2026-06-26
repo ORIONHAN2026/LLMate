@@ -96,7 +96,7 @@ class ChatMessage {
       pairedMsgId: json['pairedMessageId'],
       toolName: json['toolName'],
       toolCallId: json['toolCallId'],
-      isToolCalling: json['isToolCalling'] ?? false,
+      isToolCalling: false, // 重启后强制重置为非执行状态
       generationStartTime:
           json['generationStartTime'] != null
               ? DateTime.tryParse(json['generationStartTime'])

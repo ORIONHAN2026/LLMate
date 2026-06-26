@@ -44,11 +44,11 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   bool _isSidebarCollapsed = false; // 侧边栏折叠状态
   double _sidebarWidth = 280.0; // 左侧边栏宽度，可调整
   bool _isRightSidebarCollapsed = true; // 右侧边栏折叠状态（默认隐藏）
-  double _rightSidebarWidth = 520.0; // 右侧边栏宽度
+  double _rightSidebarWidth = 440.0; // 右侧边栏宽度
   bool _isResizeHandleHovered = false; // 拖动条悬停状态
   bool _isRightResizeHandleHovered = false; // 右侧拖动条悬停状态
   // 中间聊天区域的最小可视宽度，避免被两侧面板挤压得太窄
-  static const double _minChatAreaWidth = 520.0;
+  static const double _minChatAreaWidth = 700.0;
 
   // 从 ChatInputWidget 获取的状态
   bool _autoScrollEnabled = true; // 是否启用自动滚动
@@ -795,16 +795,16 @@ Thanks!
         onPanUpdate: (details) {
           final screenWidth = MediaQuery.of(context).size.width;
           double proposed = (_rightSidebarWidth - details.delta.dx).clamp(
-            200.0,
-            400.0,
+            320.0,
+            600.0,
           );
           // 确保左侧和聊天区有足够空间
           final leftWidth = _isSidebarCollapsed ? 0 : _sidebarWidth;
           final remaining = screenWidth - leftWidth - proposed;
           if (remaining < _minChatAreaWidth) {
             proposed = (screenWidth - leftWidth - _minChatAreaWidth).clamp(
-              200.0,
-              400.0,
+              320.0,
+              600.0,
             );
           }
           setState(() => _rightSidebarWidth = proposed);

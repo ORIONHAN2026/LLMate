@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
+import 'package:path/path.dart' as p;
 import '../controllers/session_controller.dart';
 import '../models/chat/chat_message.dart';
 import '../models/chat/content_block.dart';
@@ -15,6 +16,7 @@ import '../storage/isar_service.dart';
 import '../storage/file_storage.dart';
 import 'contract_sidebar.dart';
 import 'invoice_sidebar.dart';
+import 'chatroom_sidebar.dart';
 
 /// 文件树节点
 class _FileTreeNode {
@@ -73,6 +75,8 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         return ContractSidebar.tabCount;
       case 'invoice':
         return InvoiceSidebar.tabCount;
+      case 'chatroom':
+        return ChatroomSidebar.tabCount;
       default:
         return 1;
     }
@@ -86,6 +90,8 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         return ContractSidebar.getTabTitles();
       case 'invoice':
         return InvoiceSidebar.getTabTitles();
+      case 'chatroom':
+        return ChatroomSidebar.getTabTitles();
       default:
         return ['文件列表'];
     }
@@ -93,24 +99,38 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
 
   TabController _getTabController() {
     final count = _getTabCount();
-    if (_tabController == null || _tabController!.length != count) {
+    final currentMode = _getWorkMode();
+
+    // 模式变化或数量不匹配时重建 TabController
+    if (_tabController == null || _tabController!.length != count || _lastTabMode != currentMode) {
       _tabController?.dispose();
       _tabController = TabController(length: count, vsync: this);
+      _lastTabMode = currentMode;
     }
     return _tabController!;
   }
 
+  String _lastTabMode = '';
+
+  String _lastWorkMode = 'conversation';
+
   @override
   void initState() {
     super.initState();
-    // 监听会话变化，当发送状态结束时清除缓存
+    // 监听会话变化，当发送状态结束或模式变化时清除缓存
     ever(sessionController.currentSession, (session) {
-      if (session != null && !(session.isSending ?? false)) {
-        // 发送结束，清除缓存以便下次重建
-        if (_cachedTabChildren != null) {
-          setState(() {
-            _cachedTabChildren = null;
-          });
+      if (session != null) {
+        final currentMode = session.workMode ?? 'conversation';
+        final isSending = session.isSending ?? false;
+
+        // 模式变化或发送结束时清除缓存
+        if (currentMode != _lastWorkMode || !isSending) {
+          _lastWorkMode = currentMode;
+          if (_cachedTabChildren != null) {
+            setState(() {
+              _cachedTabChildren = null;
+            });
+          }
         }
       }
     });
@@ -128,7 +148,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       final session = sessionController.currentSession.value;
       final isSending = session?.isSending ?? false;
       final workMode = session?.workMode ?? 'conversation';
-      final isSpecialMode = workMode == 'contract' || workMode == 'invoice';
+      final isSpecialMode = workMode == 'contract' || workMode == 'invoice' || workMode == 'chatroom';
 
       // 如果正在发送消息，使用缓存的数据，不重新构建
       if (isSending && _cachedTabChildren != null) {
@@ -136,7 +156,6 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       }
 
       final messages = session?.messages ?? const [];
-      final contracts = session?.contracts ?? [];
       final sessionId = session?.sessionId ?? '';
 
       // 动态调整 tab 数量
@@ -150,11 +169,15 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       // 根据模式添加对应的 Tab 内容
       if (workMode == 'contract') {
         for (int i = 1; i < ContractSidebar.tabCount; i++) {
-          tabChildren.add(ContractSidebar.buildTabContent(context, i, sessionId, contracts));
+          tabChildren.add(ContractSidebar.buildTabContent(context, i, sessionId));
         }
       } else if (workMode == 'invoice') {
         for (int i = 1; i < InvoiceSidebar.tabCount; i++) {
           tabChildren.add(InvoiceSidebar.buildTabContent(context, i, sessionId));
+        }
+      } else if (workMode == 'chatroom') {
+        for (int i = 1; i < ChatroomSidebar.tabCount; i++) {
+          tabChildren.add(ChatroomSidebar.buildTabContent(context, i, sessionId));
         }
       }
 
@@ -446,7 +469,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     }
 
     return FutureBuilder<List<FileSystemEntity>>(
-      future: _listWorkDirFiles(workDir),
+      future: _listWorkDirFiles(_resolveDirPath(workDir)),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -481,7 +504,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         }
 
         // 构建文件树
-        final tree = _buildFileTree(files, workDir);
+        final tree = _buildFileTree(files, _resolveDirPath(workDir));
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(12),
@@ -511,15 +534,24 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     );
   }
 
+  /// 获取实际的目录路径（如果是文件则返回父目录）
+  String _resolveDirPath(String workDir) {
+    if (FileSystemEntity.isFileSync(workDir)) {
+      return p.dirname(workDir);
+    }
+    return workDir;
+  }
+
   /// 列出工作目录下的文件（递归）
   Future<List<FileSystemEntity>> _listWorkDirFiles(String workDir) async {
     try {
-      final dir = Directory(workDir);
+      final dirPath = _resolveDirPath(workDir);
+      final dir = Directory(dirPath);
       if (!await dir.exists()) return [];
       final list = await dir.list(recursive: true).toList();
       // 过滤掉隐藏文件和常见忽略目录
       final filtered = list.where((entity) {
-        final relativePath = entity.path.substring(workDir.length + 1);
+        final relativePath = entity.path.substring(dirPath.length + 1);
         // 跳过隐藏文件和常见忽略目录
         if (relativePath.startsWith('.') || 
             relativePath.contains('/.') ||

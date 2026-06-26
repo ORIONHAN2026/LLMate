@@ -206,16 +206,16 @@ final List<Map<String, dynamic>> onlineProviders = [
     ],
   },
   {
-    'name': '小米',
-    'id': 'xiaomi',
+    'name': 'Mimo',
+    'id': 'xiaomi_mimo',
     'protocol': 'openai',
     'icon': CupertinoIcons.device_phone_portrait,
-    'description': '小米大模型服务',
+    'description': '小米Mimo大模型服务',
     'color': const Color(0xFFFF6900),
-    'defaultUrl': 'https://api.xiaomi.com/v1',
+    'defaultUrl': 'https://api.xiaomimimo.com/v1',
     'models': [
-      {'id': 'mi-llm-pro', 'name': 'MiLM-Pro', 'specs': '高性能 • 多任务 • 深度推理'},
-      {'id': 'mi-llm-lite', 'name': 'MiLM-Lite', 'specs': '轻量快速 • 高性价比 • 日常对话'},
+      {'id': 'mimo-v2.5-pro', 'name': 'Mimo-V2.5-Pro', 'specs': '1M上下文 • 思考模式 • 结构化输出'},
+      {'id': 'mimo-v2.5-lite', 'name': 'Mimo-V2.5-Lite', 'specs': '轻量快速 • 高性价比 • 日常对话'},
     ],
   },
 ];

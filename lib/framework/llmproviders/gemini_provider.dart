@@ -86,7 +86,7 @@ class GeminiProvider extends BaseLlmProvider {
   }) async* {
     if (model == null) throw StateError('Gemini 提供商未配置');
     try {
-      final requestMessages = buildMessages(userMessage: userMessage, session: session);
+      final requestMessages = await buildMessages(userMessage: userMessage, session: session);
       final requestData = _buildGeminiRequestData(messages: requestMessages, session: session);
 
       if (kDebugMode) {

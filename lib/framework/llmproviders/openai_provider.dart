@@ -123,7 +123,7 @@ class OpenAiProvider extends BaseLlmProvider {
     final responseToolCalls = <String>[];
 
     try {
-      final requestData = buildRequestData(
+      final requestData = await buildRequestData(
         userMessage: userMessage,
         messages: messages,
         stream: true,
@@ -175,7 +175,7 @@ class OpenAiProvider extends BaseLlmProvider {
   }) async {
     if (model == null) throw StateError('$providerName 提供商未配置');
     try {
-      final requestData = buildRequestData(
+      final requestData = await buildRequestData(
         userMessage: userMessage,
         messages: messages,
         stream: false,

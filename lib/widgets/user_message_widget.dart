@@ -6,7 +6,7 @@ import 'package:llmwork/l10n/app_localizations.dart';
 import 'package:llmwork/models/bigmodel/models.dart';
 import 'package:llmwork/utils/snackbar_utils.dart';
 import 'package:llmwork/utils/responsive_utils.dart';
-import 'package:llmwork/framework/llm_hub.dart';
+import 'package:llmwork/framework/llm_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';

@@ -1,16 +1,19 @@
-// LLM Hub 框架导出文件
-// 大模型统一调用框架
+// LLM 框架导出文件
 
-// 核心框架
-export 'llm_hub.dart';
+// 核心客户端
+export 'llm_client.dart';
 
-// 基础抽象类
-export 'llmproviders/base_provider.dart';
+// OpenAI 兼容协议 Provider
+export 'openai_provider.dart';
 
-// 协议提供商实现
-// OpenAI 兼容协议（OpenAI、DeepSeek、阿里云百炼、智谱AI、ModelScope、Ollama）
-export 'llmproviders/openai_provider.dart';
-// Anthropic 协议
-export 'llmproviders/anthropic_provider.dart';
-// Gemini 协议
-export 'llmproviders/gemini_provider.dart';
+// 工作模式策略
+export 'modes/work_mode_strategy.dart';
+export 'modes/work_mode_factory.dart';
+export 'modes/conversation_mode.dart';
+export 'modes/contract_mode.dart';
+export 'modes/invoice_mode.dart';
+export 'modes/chatroom_mode.dart';
+
+// 公共工具
+export 'common/message_builder.dart';
+export 'common/system_prompts.dart';

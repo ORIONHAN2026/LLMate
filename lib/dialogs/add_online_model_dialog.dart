@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 import '../models/bigmodel/model_data.dart';
 import '../models/bigmodel/chat_model.dart';
-import '../models/chat/chat_message.dart';
-import '../framework/llm_hub.dart';
+import '../models/chat/chat_session.dart';
+import '../framework/openai_provider.dart';
 
 class AddOnlineModelDialog extends StatefulWidget {
   const AddOnlineModelDialog({super.key});
@@ -1902,15 +1902,17 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       );
       print(tempModel.toJson());
 
-      // 使用 LLM Hub 创建 provider 进行测试
-      final provider = LlmHub.createProvider(tempModel);
+      // 使用 OpenAiProvider 进行测试
+      final provider = OpenAiProvider();
+      provider.configure(tempModel);
 
-      // 创建测试消息
-      final testMessage = ChatMessage(
-        msgId: 'test_msg_${DateTime.now().millisecondsSinceEpoch}',
-        role: MessageRole.user,
-        content: '你好',
-        timestamp: DateTime.now(),
+      // 构建测试会话（用于 buildRequestData）
+      final testSession = ChatSession(
+        sessionId: 'test_session',
+        name: 'Test',
+        createdAt: DateTime.now(),
+        messages: [],
+        chatModel: tempModel,
       );
 
       // 使用流式响应进行测试
@@ -1918,8 +1920,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       bool hasReceived = false;
 
       await for (final chunkMap in provider.sendMessageStream(
-        userMessage: testMessage,
-        session: null,
+        messages: [
+          {'role': 'user', 'content': '你好'},
+        ],
+        session: testSession,
       ).timeout(const Duration(seconds: 10))) {
         hasReceived = true;
 

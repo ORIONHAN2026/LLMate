@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../framework/llm_hub.dart';
+import '../framework/llm_client.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/memory_turn.dart';
 

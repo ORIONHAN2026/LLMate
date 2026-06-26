@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:mcp_client/mcp_client.dart';
-import '../framework/llmproviders/base_provider.dart';
+import '../framework/modes/mode_utils.dart';
 import '../models/chat/chat_session.dart';
 import 'mcp_service.dart';
 import 'system_tool_service.dart';
@@ -28,7 +28,7 @@ class ToolExecutionResult {
 /// - MCP 工具：通过 MCP 客户端执行
 /// - 其他工具：尝试 MCP，不可用时返回错误
 ///
-/// 注意：工具调用解析由 [BaseLlmProvider] 负责，本服务只执行已解析的工具。
+/// 注意：工具调用解析由 OpenAiProvider 负责，本服务只执行已解析的工具。
 class ToolExecutionService {
   /// Shell 命令执行超时（秒）
   static const _execTimeoutSeconds = 30;
@@ -110,7 +110,7 @@ class ToolExecutionService {
     required String callId,
   }) async {
     // 还原被转义的工具名（OpenAI function calling 不允许函数名含点号等特殊字符）
-    final resolvedName = BaseLlmProvider.resolveOriginalToolName(toolName);
+    final resolvedName = resolveOriginalToolName(toolName);
 
     // ── 系统内置工具 ──
     if (SystemToolService.hasTool(resolvedName)) {

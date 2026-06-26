@@ -8,7 +8,7 @@ import '../models/chat/mcp_config.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../controllers/mcp_controller.dart';
 import '../controllers/model_controller.dart';
-import '../framework/llm_hub.dart';
+import '../framework/openai_provider.dart';
 
 /// MCP工具调用结果
 class McpToolResult {
@@ -382,7 +382,8 @@ class McpService {
 
       // 使用最后添加的模型
       final ChatModel model = modelController.models.last;
-      final provider = LlmHub.createProvider(model);
+      final provider = OpenAiProvider();
+      provider.configure(model);
 
       // 构建工具信息摘要
       final toolSummary = StringBuffer();
@@ -409,12 +410,23 @@ ${toolSummary.toString()}
       debugPrint('🤖 [MCP-Summarize] 调用 LLM 总结服务: $serverName');
       debugPrint('   模型: ${model.name} (${model.platform})');
 
+      final tempSession = ChatSession(
+        sessionId: 'mcp_summarize',
+        name: 'MCP Summarize',
+        createdAt: DateTime.now(),
+        messages: [],
+        chatModel: model,
+      );
+
       final messages = [
         {'role': 'user', 'content': prompt},
       ];
 
       final buffer = StringBuffer();
-      final stream = provider.sendMessageStreamWithMessages(messages);
+      final stream = provider.sendMessageStream(
+        messages: messages,
+        session: tempSession,
+      );
 
       await for (final chunk in stream) {
         final content = chunk['content'] ?? '';
@@ -1239,7 +1251,7 @@ ${toolSummary.toString()}
   }
 
   // ──────────────────────────────────────────────
-  // 工具调用解析 / 剥离 已迁移到 BaseLlmProvider.parseToolCalls()
+  // 工具调用解析 / 剥离 已迁移到 LlmClient
   // ──────────────────────────────────────────────
 
   /// 检查会话是否有可用的MCP工具

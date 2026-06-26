@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import '../models/bigmodel/chat_model.dart';
@@ -11,68 +10,24 @@ import '../models/chat/memory_turn.dart';
 import '../services/tool_execution_service.dart';
 import '../services/memory_compressor.dart';
 import '../controllers/session_controller.dart';
-import 'llmproviders/base_provider.dart';
-import 'llmproviders/openai_provider.dart';
-import 'llmproviders/anthropic_provider.dart';
-import 'llmproviders/gemini_provider.dart';
+import 'openai_provider.dart';
+import 'common/message_builder.dart';
+import 'modes/work_mode_strategy.dart';
+import 'modes/work_mode_factory.dart';
 
-/// LLM Hub - provider 注册中心
+/// LLM 客户端
 ///
-/// 按协议标准注册 provider，而非按厂商：
-/// - OpenAI 兼容协议：OpenAI、DeepSeek、阿里云百炼、智谱AI、ModelScope、Ollama
-/// - Anthropic 协议：Claude
-/// - Gemini 协议：Google Gemini
-class LlmHub {
-  final Map<String, BaseLlmProvider> _providers = {};
-
-  LlmHub._internal() {
-    _initializeProviders();
-  }
-  static final LlmHub _instance = LlmHub._internal();
-  static LlmHub get instance => _instance;
-  factory LlmHub() => _instance;
-
-  void _initializeProviders() {
-    // ── OpenAI 兼容协议 ──
-    // 所有 OpenAI 兼容的 provider 共享同一个协议入口
-    _providers['openai'] = OpenAiProvider(
-      displayName: 'OpenAI Compatible',
-    );
-
-    // ── Anthropic 协议 ──
-    _providers['anthropic'] = AnthropicProvider();
-
-    // ── Gemini 协议 ──
-    _providers['gemini'] = GeminiProvider();
-  }
-
-  /// 解析 provider — 按 protocol 字段路由
-  static BaseLlmProvider _resolve(ChatModel model) {
-    final key = model.protocol?.toLowerCase();
-    if (key == null) throw UnsupportedError('模型未配置协议');
-    final p = instance._providers[key];
-    if (p == null) throw UnsupportedError('不支持的协议: $key');
-    return p;
-  }
-
-  /// 创建并配置 provider（用于直接调用 provider API 的场景）
-  static BaseLlmProvider createProvider(ChatModel model) {
-    final p = _resolve(model);
-    p.configure(model);
-    return p;
-  }
-}
-
+/// 负责协调 OpenAiProvider（网络层）和 WorkModeStrategy（消息/工具组装）。
 class LlmClient {
   ChatSession _session;
-  final BaseLlmProvider _provider;
+  final OpenAiProvider _provider;
+  final WorkModeStrategy _strategy;
   bool _cancelled = false;
-
-  // ── 构造 ──
 
   LlmClient(ChatSession session)
     : _session = session,
-      _provider = LlmHub._resolve(session.chatModel!) {
+      _provider = OpenAiProvider(),
+      _strategy = createWorkModeStrategy(session.workMode) {
     _provider.configure(session.chatModel!);
     _provider.applySessionSettings(session);
   }
@@ -85,14 +40,14 @@ class LlmClient {
 
   Future<bool> validateConfiguration() => _provider.validateConfiguration();
 
-  String buildSystemPrompt({ChatSession? session}) =>
-      _provider.buildSystemPrompt(session);
+  String buildSystemPrompt({ChatSession? session}) {
+    return MessageBuilder.buildSystemPrompt(
+      model: model,
+      session: session,
+    );
+  }
 
   /// 发送消息并获取流式响应（递归处理 MCP 工具调用，直到无工具调用为止）
-  /// chunk: {content,think,tool,toolcall}
-  ///   tool: 'true'/'false' 布尔状态标记，表示是否正在执行工具
-  ///   toolcall: 工具调用的具体内容（函数名、参数、执行结果）
-  // ignore: non_constant_identifier_names
   Stream<Map<String, dynamic>> LLMChat(ChatMessage userMessage) async* {
     _cancelled = false;
     bool doneReceived = false;
@@ -111,12 +66,14 @@ class LlmClient {
       }
     }
 
-    var messages = await _provider.buildMessages(
+    var messages = await _strategy.buildMessages(
+      model: model,
       userMessage: userMessage,
       session: _session,
     );
 
-    // 保存请求报文快照（深拷贝，避免后续 tool 消息追加污染日志）
+    final tools = _strategy.buildTools(_session);
+
     final requestSnapshot = List<Map<String, dynamic>>.from(
       messages.map((m) => Map<String, dynamic>.from(m)),
     );
@@ -132,30 +89,27 @@ class LlmClient {
       }
     }
 
-    // 累积完整响应用于记忆捕获 & 日志
     final responseBuffer = StringBuffer();
     final thinkBuffer = StringBuffer();
     final toolCallLog = <Map<String, dynamic>>[];
 
-    // 循环：LLM 返回工具调用后追加结果并重发，直到无工具调用或检测到重复调用
     int toolIteration = 0;
 
     while (true) {
-      // 用于累积本轮 assistant 流中的 content 文本，作为工具调用消息的 content。
       String loopAccContent = '';
       final nativeToolCallDeltas = <int, Map<String, dynamic>>{};
       List<Map<String, dynamic>>? completedTextToolCalls;
-      final announcedToolNames = <int, String>{}; // 已公布的函数名，按 index
+      final announcedToolNames = <int, String>{};
 
-      final stream = _provider.sendMessageStreamWithMessages(
-        messages,
+      final stream = _provider.sendMessageStream(
+        messages: messages,
         session: _session,
+        tools: tools,
       );
       await for (final chunk in stream) {
         if (_cancelled) return;
         final tc = chunk['toolcall'];
         if (tc != null && tc.isNotEmpty) {
-          // 收到工具调用，通知 UI 显示"正在执行工具"
           yield {'tool': 'true'};
           final parsed = _parseToolCallChunk(tc);
           if (parsed != null && parsed.isNotEmpty) {
@@ -167,7 +121,6 @@ class LlmClient {
             );
             if (isNativeDelta) {
               _mergeNativeToolCallDeltas(nativeToolCallDeltas, parsed);
-              // 实时产出工具调用信息给 UI
               yield {
                 'toolcall': _buildToolCallProgress(parsed, announcedToolNames),
               };
@@ -182,7 +135,7 @@ class LlmClient {
         final c = chunk['content'] ?? '';
         if (c.isNotEmpty) {
           loopAccContent += c;
-          responseBuffer.write(c); // 累积响应内容
+          responseBuffer.write(c);
           if (kDebugMode) debugPrint('📤 [LLMChat] content: $c');
           yield {'content': c};
         }
@@ -197,19 +150,15 @@ class LlmClient {
         final done = chunk['done'] ?? '';
         if (done == 'true') {
           doneReceived = true;
-          // 不在这里 yield done — 等工具调用全部处理完后再发
         }
       }
 
-      // 无工具调用或已取消 → 结束
       final parsedCalls =
           completedTextToolCalls ??
           _finalizeNativeToolCalls(nativeToolCallDeltas);
 
       if (_cancelled || parsedCalls.isEmpty) {
-        // ========== 请求日志写入 ==========
         if (!_cancelled) {
-          // 不 await，异步写日志不阻塞 UI
           _writeRequestLog(
             requestMessages: requestSnapshot,
             responseContent: responseBuffer.toString(),
@@ -219,13 +168,11 @@ class LlmClient {
             modelName: _session.chatModel?.model ?? 'unknown',
           );
         }
-        // ========== 记忆累积 & 压缩（必须在 done 之前处理，避免接收端 break 后丢失） ==========
         if (!_cancelled && responseBuffer.isNotEmpty) {
-          // 累积到会话级记忆并检查压缩
           final memoryUpdatedSession = await accumulateMemory(
             userMessage.content,
             responseBuffer.toString(),
-            null, // sessionController 由 caller 处理
+            null,
           );
           if (memoryUpdatedSession != null) {
             yield {
@@ -233,7 +180,6 @@ class LlmClient {
             };
           }
         }
-        // 所有工具调用处理完毕，此时才发送 done 信号
         if (doneReceived) {
           yield {'done': 'true'};
         }
@@ -248,10 +194,8 @@ class LlmClient {
         debugPrint('🔄 [LLMChat] 工具调用第 $toolIteration 轮: $toolNames');
       }
 
-      // 从累积文本中剥离工具调用标签，得到干净的正文内容
       final cleanContent = _stripToolCallTags(loopAccContent);
 
-      // 统一工具执行（MCP 工具 + Skill 内置工具）
       final toolResult = await ToolExecutionService.executeToolCalls(
         session: _session,
         toolCalls: parsedCalls,
@@ -273,7 +217,6 @@ class LlmClient {
         final ok = !(er?['isError'] == true);
         final resultText = er?['result'] ?? '';
 
-        // 记录到工具调用日志
         toolCallLog.add({
           'name': name,
           'arguments': args,
@@ -303,10 +246,8 @@ class LlmClient {
         yield {'toolcall': buf.toString().trim()};
       }
 
-      // 工具执行完毕，通知 UI 隐藏"正在执行工具"
       yield {'tool': 'false'};
 
-      // 追加 assistant(tool_calls) 消息
       messages.add({
         'role': 'assistant',
         'content':
@@ -327,7 +268,6 @@ class LlmClient {
             }).toList(),
       });
 
-      // 追加 tool_result 消息
       for (final r in toolResult.executionResults) {
         messages.add({
           'role': 'tool',
@@ -335,24 +275,20 @@ class LlmClient {
           'content': r['isError'] == true ? '错误: ${r['result']}' : r['result'],
         });
       }
-      // 循环继续 → LLM 可能再次返回工具调用
     }
   }
 
   Stream<Map<String, String?>> sendMessageStreamWithMessages(
     List<Map<String, dynamic>> messages,
-  ) => _provider.sendMessageStreamWithMessages(messages, session: _session);
+  ) => _provider.sendMessageStream(messages: messages, session: _session);
 
   void cancel() => _cancelled = true;
 
   // ======================== 请求日志 ========================
 
-  /// 日志目录名
-  /// 项目日志目录（硬编码为代码仓库路径）
   static const _projectRoot = '/Users/orion/Documents/Flutter/llmchat';
   static const _logDir = 'log_request';
 
-  /// 将当前轮次的请求报文和回复写入本地日志文件
   static Future<void> _writeRequestLog({
     required List<Map<String, dynamic>> requestMessages,
     required String responseContent,
@@ -380,13 +316,15 @@ class LlmClient {
         'model': modelName,
         'request': {
           'messages': requestMessages,
-          if (requestTools != null && requestTools.isNotEmpty) 'tools': requestTools,
+          if (requestTools != null && requestTools.isNotEmpty)
+            'tools': requestTools,
         },
         'response': {
           if (responseThink != null && responseThink.isNotEmpty)
             'think': responseThink,
           'content': responseContent,
-          if (toolCalls != null && toolCalls.isNotEmpty) 'tool_calls': toolCalls,
+          if (toolCalls != null && toolCalls.isNotEmpty)
+            'tool_calls': toolCalls,
         },
       };
 
@@ -401,111 +339,36 @@ class LlmClient {
 
   static String _pad(int n) => n.toString().padLeft(2, '0');
 
-  // ==================== 工具调用解析等 ====================
+  // ==================== 压缩请求 ====================
+
   Future<String?> sendCompressRequest(String prompt) async {
     try {
-      final model = _session.chatModel;
-      if (model == null) return null;
-
-      final protocol = model.protocol?.toLowerCase() ?? '';
-
-      if (protocol == 'openai') {
-        // OpenAI 兼容 provider：绕过 sendMessage 的 json_object 约束
-        return await _sendOpenAICompatPlainRequest(prompt, model);
-      } else {
-        // Anthropic / Gemini / Ollama：sendMessage 无 JSON 格式约束，可正常使用
-        final response = await _provider.sendMessage(
-          userMessage: ChatMessage(
-            msgId: 'compress_${DateTime.now().millisecondsSinceEpoch}',
-            role: MessageRole.user,
-            content: prompt,
-            timestamp: DateTime.now(),
-            sessionId: _session.sessionId,
-          ),
-          session: _session,
-        );
-        return response;
-      }
+      final response = await _provider.sendMessage(
+        userMessage: ChatMessage(
+          msgId: 'compress_${DateTime.now().millisecondsSinceEpoch}',
+          role: MessageRole.user,
+          content: prompt,
+          timestamp: DateTime.now(),
+          sessionId: _session.sessionId,
+        ),
+        session: _session,
+      );
+      return response;
     } catch (e) {
       if (kDebugMode) debugPrint('🧠 压缩请求失败: $e');
       return null;
     }
   }
 
-  /// 为 OpenAI 兼容 API 发送纯文本请求（无 response_format 约束）
-  Future<String?> _sendOpenAICompatPlainRequest(
-    String prompt,
-    ChatModel model,
-  ) async {
-    if (model.apiUrl == null) return null;
+  // ==================== 记忆累积 ====================
 
-    final dio = Dio();
-    dio.options.connectTimeout = const Duration(milliseconds: 30000);
-    dio.options.receiveTimeout = const Duration(minutes: 5);
-    dio.options.sendTimeout = const Duration(minutes: 5);
-
-    final requestData = <String, dynamic>{
-      'model': model.model,
-      'messages': [
-        {'role': 'user', 'content': prompt},
-      ],
-      'stream': false,
-      'max_tokens': 4000,
-      'temperature': 0.3,
-    };
-
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
-    if (model.apiKey != null && model.apiKey!.isNotEmpty) {
-      headers['Authorization'] = 'Bearer ${model.apiKey}';
-    }
-
-    final response = await dio.post(
-      model.apiUrl!,
-      options: Options(headers: headers),
-      data: requestData,
-    );
-
-    if (response.statusCode == 200 && response.data != null) {
-      final data = response.data as Map<String, dynamic>;
-      final choices = data['choices'] as List?;
-      if (choices != null && choices.isNotEmpty) {
-        final message = choices[0]['message'];
-        if (message != null && message['content'] != null) {
-          return message['content'] as String;
-        }
-      }
-    }
-
-    if (kDebugMode) {
-      debugPrint(
-        '🧠 压缩请求异常: status=${response.statusCode}, '
-        'body=${response.data?.toString().substring(0, 200)}',
-      );
-    }
-    return null;
-  }
-
-  /// 累积对话记忆并在达到阈值时触发压缩
-  ///
-  /// 逻辑：
-  /// 1. 将本轮 user/assistant 消息添加到 [ChatSession.memory]
-  /// 2. 检查记忆轮数是否达到 [ChatSession.memoryRounds] 阈值
-  /// 3. 达到阈值时，调用 LLM 压缩 memory + compressedMemory，生成新的压缩摘要
-  /// 4. 压缩成功后，更新 compressedMemory 并清空 memory（重新累积）
-  /// 5. 未达到阈值时，只更新 memory
-  ///
-  /// 返回更新后的 ChatSession（如果记忆有变化），否则返回 null
   Future<ChatSession?> accumulateMemory(
     String userText,
     String assistantText,
     SessionController? sessionController,
   ) async {
-    // 禁用记忆压缩
     if (_session.memoryRounds <= 0) return null;
 
-    // 添加本轮对话到记忆
     final now = DateTime.now();
     final updatedMemory = List<MemoryTurn>.from(_session.memory)
       ..add(MemoryTurn(role: 'user', content: userText, timestamp: now))
@@ -517,7 +380,6 @@ class LlmClient {
 
     final rounds = MemoryTurn.roundCount(updatedMemory);
 
-    // 达到压缩阈值，触发 LLM 压缩
     if (rounds >= _session.memoryRounds) {
       if (kDebugMode) {
         debugPrint(
@@ -525,7 +387,6 @@ class LlmClient {
         );
       }
 
-      // 异步压缩（不阻塞）
       final compressed = await MemoryCompressor.compress(
         session: _session,
         compressedMemory: _session.compressedMemory,
@@ -535,18 +396,18 @@ class LlmClient {
       if (compressed != null) {
         _session = _session.copyWith(
           compressedMemory: compressed,
-          memory: [], // 清空原始记忆
+          memory: [],
         );
         return _session;
       }
     }
 
-    // 不需要压缩，只更新记忆
     _session = _session.copyWith(memory: updatedMemory);
     return _session;
   }
 
-  /// 将工具结果 JSON 中的文件路径替换为 Markdown 链接
+  // ==================== 工具调用解析 ====================
+
   static String _linkifyFilePaths(String resultText) {
     try {
       final decoded = jsonDecode(resultText);

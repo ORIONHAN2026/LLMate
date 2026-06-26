@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../controllers/session_controller.dart';
-import '../framework/llm_hub.dart';
+import '../framework/llm_client.dart';
 import '../models/chat/chat_message.dart';
 import '../models/chat/chat_session.dart';
 import '../models/chat/scheduled_task.dart';

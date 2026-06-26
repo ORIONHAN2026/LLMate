@@ -176,7 +176,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
           tabChildren.add(InvoiceSidebar.buildTabContent(context, i, sessionId));
         }
       } else if (workMode == 'chatroom') {
-        for (int i = 1; i < ChatroomSidebar.tabCount; i++) {
+        for (int i = 0; i < ChatroomSidebar.tabCount; i++) {
           tabChildren.add(ChatroomSidebar.buildTabContent(context, i, sessionId));
         }
       }

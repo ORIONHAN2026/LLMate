@@ -9,13 +9,22 @@ import '../storage/file_storage.dart';
 
 /// 聊天室模式右侧边栏内容
 class ChatroomSidebar {
-  /// 获取聊天室模式的 Tab 标题列表
-  static List<String> getTabTitles() {
-    return ['角色列表', '备忘录'];
+  /// 刷新计数器，用于强制 FutureBuilder 重新加载
+  static int _refreshCounter = 0;
+
+  /// 触发刷新
+  static void refresh() {
+    _refreshCounter++;
   }
 
-  /// 获取 Tab 数量
-  static int get tabCount => 2;
+  /// 获取聊天室模式的 Tab 标题列表
+  /// 注意：Tab 0 是文件列表（由 chat_right_sidebar 提供），这里只返回额外的 tab 标题
+  static List<String> getTabTitles() {
+    return ['文件列表', '角色列表', '备忘录'];
+  }
+
+  /// 获取 Tab 数量（含文件列表）
+  static int get tabCount => 3;
 
   /// 构建指定 Tab 的内容
   static Widget buildTabContent(BuildContext context, int index, String sessionId) {
@@ -36,6 +45,7 @@ class ChatroomSidebar {
     }
 
     return FutureBuilder<List<_RoleInfo>>(
+      key: ValueKey('roles_${sessionId}_$_refreshCounter'),
       future: _loadRoles(sessionId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {

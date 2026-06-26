@@ -61,9 +61,9 @@ class ConversationMode extends WorkModeStrategy {
   @override
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
     final allTools = <Map<String, dynamic>>[];
-    allTools.addAll(
-      SystemToolService.buildOpenAIToolsFormat(workMode: modeName),
-    );
+    // 基础工具
+    allTools.addAll(SystemToolService.buildOpenAIToolsFormat());
+    // MCP + Skill 工具
     allTools.addAll(buildMcpTools(session));
     allTools.addAll(buildSkillTools(session));
     return allTools;

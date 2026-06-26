@@ -26,7 +26,6 @@ class InvoiceMode extends WorkModeStrategy {
     final effectiveWorkDir = getEffectiveWorkDir(session);
     final sessionDir = StoragePaths.sessionDir(session.sessionId);
 
-    // 1. 通用系统提示词
     messages.addAll(buildBaseSystemMessages(
       model: model,
       session: session,
@@ -34,24 +33,20 @@ class InvoiceMode extends WorkModeStrategy {
       workDir: effectiveWorkDir,
     ));
 
-    // 2. 发票模式专用提示词
     messages.add({
       'role': 'system',
       'content': CommonSystemPrompts.invoiceMode(effectiveWorkDir, sessionDir),
     });
 
-    // 3. 记忆上下文
     final memoryCtx = buildMemoryContext(session);
     if (memoryCtx.isNotEmpty) {
       messages.add({'role': 'system', 'content': memoryCtx});
     }
 
-    // 4. 历史消息
     if (session.messages.isNotEmpty) {
       appendHistoryMessages(messages, session, userMessage);
     }
 
-    // 5. 核心规则 + 语言
     messages.add({'role': 'system', 'content': CommonSystemPrompts.coreRules});
     messages.add({
       'role': 'system',
@@ -60,7 +55,6 @@ class InvoiceMode extends WorkModeStrategy {
       ),
     });
 
-    // 6. 用户消息
     messages.add({'role': 'user', 'content': buildUserContent(userMessage)});
 
     return messages;
@@ -69,9 +63,71 @@ class InvoiceMode extends WorkModeStrategy {
   @override
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
     final allTools = <Map<String, dynamic>>[];
-    allTools.addAll(
-      SystemToolService.buildOpenAIToolsFormat(workMode: modeName),
-    );
+
+    // 基础工具
+    allTools.addAll(SystemToolService.buildOpenAIToolsFormat());
+
+    // 发票模式专属工具
+    allTools.addAll([
+      {
+        'type': 'function',
+        'function': {
+          'name': 'invoice_summary_update',
+          'description': '更新发票汇总文件（invoice_summary.md）。直接写入完整的发票汇总内容，无需指定文件路径。文件会自动保存到当前会话的工作目录下。',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'content': {'type': 'string', 'description': '要写入的发票汇总完整内容（Markdown 格式）。'},
+            },
+            'required': ['content'],
+          },
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'invoice_detail_update',
+          'description': '更新发票明细文件（invoice_detail.md）。直接写入完整的发票明细内容，无需指定文件路径。文件会自动保存到当前会话的工作目录下。',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'content': {'type': 'string', 'description': '要写入的发票明细完整内容（Markdown 格式）。'},
+            },
+            'required': ['content'],
+          },
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'reimbursement_update',
+          'description': '更新报销记录文件（reimbursement.md）。直接写入完整的报销记录内容，无需指定文件路径。文件会自动保存到当前会话的工作目录下。',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'content': {'type': 'string', 'description': '要写入的报销记录完整内容（Markdown 格式）。'},
+            },
+            'required': ['content'],
+          },
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'note_update',
+          'description': '更新备忘录文件（note.md）。直接写入完整的备忘录内容，无需指定文件路径。文件会自动保存到当前会话的工作目录下。',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'content': {'type': 'string', 'description': '要写入的备忘录完整内容（Markdown 格式）。'},
+            },
+            'required': ['content'],
+          },
+        },
+      },
+    ]);
+
+    // MCP + Skill 工具
     allTools.addAll(buildMcpTools(session));
     allTools.addAll(buildSkillTools(session));
     return allTools;

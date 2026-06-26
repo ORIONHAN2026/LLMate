@@ -261,6 +261,136 @@ class SystemToolService {
       },
     ),
     SystemToolDefinition(
+      name: contractProcessUpdateTool,
+      description:
+          '更新合同履约跟踪文件（contract_process.md）。直接写入完整的履约跟踪内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的合同履约跟踪完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: contractDisgussUpdateTool,
+      description:
+          '更新合同争议记录文件（contract_disguss.md）。直接写入完整的争议记录内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的合同争议记录完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: noteUpdateTool,
+      description:
+          '更新备忘录文件（note.md）。直接写入完整的备忘录内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的备忘录完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: wordModifyTool,
+      description:
+          '修改 Word 文档内容。支持修改文档中的文本、表格等内容。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要修改的 Word 文档完整路径。',
+          },
+          'content': {
+            'type': 'string',
+            'description': '修改后的内容（Markdown 格式）。',
+          },
+        },
+        'required': ['filePath', 'content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: paddleOcrTool,
+      description:
+          '使用 PaddleOCR 对图片执行文字识别，提取图片中的文字内容。支持中英文混合识别。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'filePath': {
+            'type': 'string',
+            'description': '要识别的图片文件完整路径（支持 PNG/JPEG/BMP/TIFF 等格式）。',
+          },
+        },
+        'required': ['filePath'],
+      },
+    ),
+    SystemToolDefinition(
+      name: invoiceSummaryUpdateTool,
+      description:
+          '更新发票汇总文件（invoice_summary.md）。直接写入完整的发票汇总内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的发票汇总完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: invoiceDetailUpdateTool,
+      description:
+          '更新发票明细文件（invoice_detail.md）。直接写入完整的发票明细内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的发票明细完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: reimbursementUpdateTool,
+      description:
+          '更新报销记录文件（reimbursement.md）。直接写入完整的报销记录内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的报销记录完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
       name: roleCreateTool,
       description:
           '创建新角色。角色描述以 .md 文件形式保存，包含角色名称、性格、背景、说话风格等信息。'
@@ -330,47 +460,10 @@ class SystemToolService {
     fileReadTool, fileWriteTool, wordModifyTool, paddleOcrTool,
   };
 
-  /// 合同模式专属工具
-  static const _contractToolNames = {
-    contractInspectTool, contractContentUpdateTool,
-    contractProcessUpdateTool, contractDisgussUpdateTool, noteUpdateTool,
-  };
-
-  /// 发票模式专属工具
-  static const _invoiceToolNames = {
-    invoiceSummaryUpdateTool, invoiceDetailUpdateTool,
-    reimbursementUpdateTool, noteUpdateTool,
-  };
-
-  /// 聊天室模式专属工具
-  static const _chatroomToolNames = {
-    roleCreateTool, roleUpdateTool, roleDeleteTool, noteUpdateTool,
-  };
-
-  /// 根据会话模式获取工具列表
-  static List<SystemToolDefinition> getToolsByMode(String workMode) {
-    final allowedNames = <String>{..._baseToolNames};
-    
-    switch (workMode) {
-      case 'contract':
-        allowedNames.addAll(_contractToolNames);
-        break;
-      case 'invoice':
-        allowedNames.addAll(_invoiceToolNames);
-        break;
-      case 'chatroom':
-        allowedNames.addAll(_chatroomToolNames);
-        break;
-      // conversation 模式只保留基础工具
-    }
-    
-    return _tools.where((tool) => allowedNames.contains(tool.name)).toList();
-  }
-
-  /// 构建 OpenAI tools 格式，用于向 LLM 声明可用工具
-  static List<Map<String, dynamic>> buildOpenAIToolsFormat({String? workMode}) {
-    final toolList = workMode != null ? getToolsByMode(workMode) : _tools;
-    return toolList.map((tool) {
+  /// 构建基础工具的 OpenAI tools 格式
+  static List<Map<String, dynamic>> buildOpenAIToolsFormat() {
+    final baseTools = _tools.where((tool) => _baseToolNames.contains(tool.name)).toList();
+    return baseTools.map((tool) {
       return {
         'type': 'function',
         'function': {

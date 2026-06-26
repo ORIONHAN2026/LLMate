@@ -26,7 +26,6 @@ class ChatroomMode extends WorkModeStrategy {
     final effectiveWorkDir = getEffectiveWorkDir(session);
     final sessionDir = StoragePaths.sessionDir(session.sessionId);
 
-    // 1. 通用系统提示词
     messages.addAll(buildBaseSystemMessages(
       model: model,
       session: session,
@@ -34,7 +33,6 @@ class ChatroomMode extends WorkModeStrategy {
       workDir: effectiveWorkDir,
     ));
 
-    // 2. 聊天室模式专用提示词（含角色上下文加载）
     final roleContexts = await loadRoleContexts(session.sessionId);
     messages.add({
       'role': 'system',
@@ -45,18 +43,15 @@ class ChatroomMode extends WorkModeStrategy {
       ),
     });
 
-    // 3. 记忆上下文
     final memoryCtx = buildMemoryContext(session);
     if (memoryCtx.isNotEmpty) {
       messages.add({'role': 'system', 'content': memoryCtx});
     }
 
-    // 4. 历史消息
     if (session.messages.isNotEmpty) {
       appendHistoryMessages(messages, session, userMessage);
     }
 
-    // 5. 核心规则 + 语言
     messages.add({'role': 'system', 'content': CommonSystemPrompts.coreRules});
     messages.add({
       'role': 'system',
@@ -65,7 +60,6 @@ class ChatroomMode extends WorkModeStrategy {
       ),
     });
 
-    // 6. 用户消息
     messages.add({'role': 'user', 'content': buildUserContent(userMessage)});
 
     return messages;
@@ -74,9 +68,74 @@ class ChatroomMode extends WorkModeStrategy {
   @override
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
     final allTools = <Map<String, dynamic>>[];
-    allTools.addAll(
-      SystemToolService.buildOpenAIToolsFormat(workMode: modeName),
-    );
+
+    // 基础工具
+    allTools.addAll(SystemToolService.buildOpenAIToolsFormat());
+
+    // 聊天室模式专属工具
+    allTools.addAll([
+      {
+        'type': 'function',
+        'function': {
+          'name': 'role_create',
+          'description': '创建新角色。角色描述以 .md 文件形式保存，包含角色名称、性格、背景、说话风格等信息。在聊天室模式下，AI可以根据对话场景选择合适的角色进行回复。',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'roleName': {'type': 'string', 'description': '角色名称（英文，用于文件名）。'},
+              'displayName': {'type': 'string', 'description': '角色显示名称（中文，用于界面显示）。'},
+              'content': {'type': 'string', 'description': '角色描述内容（Markdown 格式），包含：性格、背景、说话风格、知识领域等。'},
+            },
+            'required': ['roleName', 'displayName', 'content'],
+          },
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'role_update',
+          'description': '更新已有角色的描述内容。',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'roleName': {'type': 'string', 'description': '要更新的角色名称（英文，文件名）。'},
+              'content': {'type': 'string', 'description': '更新后的角色描述内容。'},
+            },
+            'required': ['roleName', 'content'],
+          },
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'role_delete',
+          'description': '删除指定角色。',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'roleName': {'type': 'string', 'description': '要删除的角色名称（英文，文件名）。'},
+            },
+            'required': ['roleName'],
+          },
+        },
+      },
+      {
+        'type': 'function',
+        'function': {
+          'name': 'note_update',
+          'description': '更新备忘录文件（note.md）。直接写入完整的备忘录内容，无需指定文件路径。文件会自动保存到当前会话的工作目录下。',
+          'parameters': {
+            'type': 'object',
+            'properties': {
+              'content': {'type': 'string', 'description': '要写入的备忘录完整内容（Markdown 格式）。'},
+            },
+            'required': ['content'],
+          },
+        },
+      },
+    ]);
+
+    // MCP + Skill 工具
     allTools.addAll(buildMcpTools(session));
     allTools.addAll(buildSkillTools(session));
     return allTools;

@@ -78,12 +78,12 @@ class ChatroomMode extends WorkModeStrategy {
         'type': 'function',
         'function': {
           'name': 'role_create',
-          'description': '创建新角色。角色描述以 .md 文件形式保存，包含角色名称、性格、背景、说话风格等信息。在聊天室模式下，AI可以根据对话场景选择合适的角色进行回复。',
+          'description': '创建新角色。角色描述以 .md 文件形式保存，包含角色名称、性格、背景、说话风格等信息。在聊天室模式下，AI可以根据对话场景选择合适的角色进行回复。displayName 必须以一个合适的 emoji 开头，根据角色性格/身份选择。',
           'parameters': {
             'type': 'object',
             'properties': {
               'roleName': {'type': 'string', 'description': '角色名称（英文，用于文件名）。'},
-              'displayName': {'type': 'string', 'description': '角色显示名称（中文，用于界面显示）。'},
+              'displayName': {'type': 'string', 'description': '角色显示名称，必须以 emoji 开头（如：🧙 邓布利多、🧑‍💻 小明）。'},
               'content': {'type': 'string', 'description': '角色描述内容（Markdown 格式），包含：性格、背景、说话风格、知识领域等。'},
             },
             'required': ['roleName', 'displayName', 'content'],

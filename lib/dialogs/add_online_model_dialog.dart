@@ -455,16 +455,16 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     switch (providerId) {
       case 'deepseek':
         return 'assets/icons/deepseek-color.webp';
-      case 'chatgpt':
+      case 'openai':
         return 'assets/icons/openai.webp';
-      case 'gemini':
+      case 'google':
         return 'assets/icons/gemini-color.webp';
-      case 'aliyun':
+      case 'qwen':
         return 'assets/icons/qwen-color.webp';
       case 'tencent':
-        return 'assets/icons/yuanbao-color.webp';
-      case 'xiaomi':
-        return 'assets/icons/yuanbao-color.webp';
+        return 'assets/icons/tencent-color.webp';
+      case 'xiaomi_mimo':
+        return 'assets/icons/xiaomi.webp';
       default:
         return null;
     }

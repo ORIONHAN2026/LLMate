@@ -52,6 +52,7 @@ class SystemToolService {
   static const String roleCreateTool = 'role_create';
   static const String roleUpdateTool = 'role_update';
   static const String roleDeleteTool = 'role_delete';
+  static const String mindmapUpdateTool = 'mindmap_update';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -394,7 +395,7 @@ class SystemToolService {
       name: roleCreateTool,
       description:
           '创建新角色。角色描述以 .md 文件形式保存，包含角色名称、性格、背景、说话风格等信息。'
-          '在聊天室模式下，AI可以根据对话场景选择合适的角色进行回复。',
+          '在聊天室模式下，AI可以根据对话场景选择合适的角色进行回复。displayName 必须以一个合适的 emoji 开头。',
       parameters: {
         'type': 'object',
         'properties': {
@@ -404,7 +405,7 @@ class SystemToolService {
           },
           'displayName': {
             'type': 'string',
-            'description': '角色显示名称（中文，用于界面显示）。',
+            'description': '角色显示名称，必须以 emoji 开头（如：🧙 邓布利多、🧑‍💻 小明）。',
           },
           'content': {
             'type': 'string',
@@ -446,6 +447,22 @@ class SystemToolService {
           },
         },
         'required': ['roleName'],
+      },
+    ),
+    SystemToolDefinition(
+      name: mindmapUpdateTool,
+      description:
+          '更新脑图文件（mindmap.md）。使用 JSON 格式存储脑图数据，支持多层嵌套节点。'
+          '直接写入完整的脑图 JSON 内容，无需指定文件路径。文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '脑图 JSON 数据。格式：{"title":"主题","children":[{"title":"分支","children":[{"title":"子节点"}]}]}',
+          },
+        },
+        'required': ['content'],
       },
     ),
   ];
@@ -581,6 +598,12 @@ class SystemToolService {
         );
       case roleDeleteTool:
         return _executeRoleDelete(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case mindmapUpdateTool:
+        return _executeMindmapUpdate(
           session: session,
           arguments: arguments,
           callId: callId,
@@ -1170,6 +1193,50 @@ print("文档修改成功: $filePath")
       };
     } catch (e) {
       return _errorResult(callId, arguments, '报销记录更新失败: $e');
+    }
+  }
+
+  /// 执行脑图更新
+  static Future<Map<String, dynamic>> _executeMindmapUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      // 验证 JSON 格式
+      try {
+        final decoded = jsonDecode(content);
+        if (decoded is! Map) {
+          return _errorResult(callId, arguments, 'content 必须是 JSON 对象格式');
+        }
+      } catch (e) {
+        return _errorResult(callId, arguments, 'content 不是有效的 JSON: $e');
+      }
+
+      final filePath = '${StoragePaths.sessionDir(session.sessionId)}/mindmap.md';
+      await StoragePaths.ensureSessionDir(session.sessionId);
+      await File(filePath).writeAsString(content);
+
+      debugPrint('🧠 脑图已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': mindmapUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '脑图已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '脑图更新失败: $e');
     }
   }
 

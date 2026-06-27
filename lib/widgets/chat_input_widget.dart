@@ -81,6 +81,17 @@ class ChatInputWidget extends StatefulWidget {
   State<ChatInputWidget> createState() => _ChatInputWidgetState();
 }
 
+/// 模式选择项
+class _ModeItem {
+  final String id;
+  final IconData icon;
+  final String label;
+  final String desc;
+  final bool locked;
+
+  const _ModeItem(this.id, this.icon, this.label, this.desc, {this.locked = false});
+}
+
 class _ChatInputWidgetState extends State<ChatInputWidget> {
   final sessionController = Get.find<SessionController>();
   final workModeController = Get.find<WorkModeController>();
@@ -96,6 +107,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   // 消息发送相关状态
   final Set<String> _streamingMessageIds = {};
+
+  // 模式按钮 GlobalKey
+  final GlobalKey _modeButtonKey = GlobalKey();
   final Map<String, Duration> _thinkingTimes = {};
 
   // 模型相关数据
@@ -1344,18 +1358,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 附件展示区域
-            AttachmentListWidget(
-              attachments: _currentAttachments,
-              onRemoveAttachment: _removeAttachment,
-            ),
-            if (_currentAttachments.isNotEmpty)
-              Container(
-                height: 1,
-                color: Theme.of(context).dividerColor,
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-              ),
-            // 输入框
+            // 输入框（附件显示在输入框下方）
             RawKeyboardListener(
               focusNode: FocusNode(),
               onKey: (RawKeyEvent event) {
@@ -1400,6 +1403,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 minLines: 1, // 最少显示1行
               ),
             ),
+            // 内联附件展示区域（在输入框和按钮之间）
+            if (_currentAttachments.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _currentAttachments.map((attachment) {
+                    return _buildInlineAttachmentChip(attachment);
+                  }).toList(),
+                ),
+              ),
             // 功能按钮组
             Container(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
@@ -1455,6 +1470,157 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         ),
       ),
     );
+  }
+
+  /// 构建内联附件 chip（显示在输入框内）
+  Widget _buildInlineAttachmentChip(ChatAttachment attachment) {
+    final iconData = _getAttachmentIcon(attachment.type);
+    final iconColor = _getAttachmentIconColor(attachment.type);
+    final isProcessing = attachment.content == null;
+    final hasError = attachment.content == 'ERROR_PROCESSING';
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 200, minWidth: 80),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).dividerColor,
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 文件图标
+            Icon(iconData, size: 14, color: iconColor),
+            const SizedBox(width: 8),
+            // 文件信息
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    attachment.name,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (attachment.size != null)
+                        Text(
+                          _formatFileSize(attachment.size!),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                        ),
+                      if (isProcessing) ...[
+                        const SizedBox(width: 4),
+                        SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.orange[600]!,
+                            ),
+                          ),
+                        ),
+                      ] else if (hasError) ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.error_outline, size: 10, color: Colors.red[600]),
+                      ] else ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.check_circle, size: 10, color: Colors.green[600]),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 4),
+            // 删除按钮
+            GestureDetector(
+              onTap: () => _removeAttachment(attachment),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.close,
+                  size: 10,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 根据附件类型获取图标
+  IconData _getAttachmentIcon(String type) {
+    switch (type) {
+      case 'image':
+        return CupertinoIcons.photo;
+      case 'document':
+      case 'text':
+        return CupertinoIcons.doc_text;
+      case 'code':
+        return CupertinoIcons.textformat;
+      case 'office':
+        return CupertinoIcons.doc;
+      case 'web':
+        return CupertinoIcons.globe;
+      case 'folder':
+        return CupertinoIcons.folder;
+      default:
+        return CupertinoIcons.doc;
+    }
+  }
+
+  /// 根据附件类型获取图标颜色
+  Color _getAttachmentIconColor(String type) {
+    switch (type) {
+      case 'image':
+        return Colors.blue;
+      case 'document':
+      case 'text':
+        return Colors.green;
+      case 'code':
+        return Colors.purple;
+      case 'office':
+        return Colors.indigo;
+      case 'web':
+        return Colors.orange;
+      case 'folder':
+        return Colors.amber;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// 格式化文件大小
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '${bytes}B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
   }
 
   /// 构建发送/停止按钮
@@ -1629,7 +1795,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建工作模式按钮（支持手动切换对话/聊天室模式）
+  /// 构建工作模式按钮（点击弹出选择菜单）
   Widget _buildWorkModeToggle() {
     final currentSession = sessionController.currentSession.value;
     final workMode = currentSession?.workMode ?? 'conversation';
@@ -1638,116 +1804,215 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 根据模式显示不同的图标和文字
     IconData icon;
     String label;
-    String tooltip;
     
     switch (workMode) {
       case 'contract':
         icon = CupertinoIcons.doc_plaintext;
         label = '合同';
-        tooltip = '合同模式（自动检测，不可切换）';
         break;
       case 'invoice':
         icon = CupertinoIcons.doc_text;
         label = '发票';
-        tooltip = '发票模式（自动检测，不可切换）';
         break;
       case 'chatroom':
         icon = CupertinoIcons.person_2;
         label = '聊天室';
-        tooltip = '聊天室模式（点击切换为对话模式）';
+        break;
+      case 'creative':
+        icon = CupertinoIcons.lightbulb;
+        label = '创意';
         break;
       default:
         icon = CupertinoIcons.chat_bubble;
         label = '对话';
-        tooltip = '对话模式（点击切换为聊天室模式）';
     }
 
     final isActive = workMode != 'conversation';
 
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        // 合同/发票模式不可点击，对话/聊天室模式可点击切换
-        onTap: _isSending || isLocked ? null : () {
-          if (currentSession != null) {
-            final newMode = workMode == 'chatroom' ? 'conversation' : 'chatroom';
-            sessionController.updateSession(
-              currentSession.copyWith(workMode: newMode),
-            );
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 13,
-                color:
-                    _isSending || isLocked
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
-                        : isActive
+    return GestureDetector(
+      key: _modeButtonKey,
+      onTap: _isSending || isLocked ? null : () => _showModePicker(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: _isSending || isLocked
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                  : isActive
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: _isSending || isLocked
+                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                    : isActive
                         ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color:
-                      _isSending || isLocked
-                          ? Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.3)
-                          : isActive
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              CupertinoIcons.chevron_up,
+              size: 10,
+              color: _isSending || isLocked
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// 构建工作目录按钮（选定后不可更改）
+  /// 显示模式选择菜单（在按钮上方弹出）
+  void _showModePicker() {
+    final currentSession = sessionController.currentSession.value;
+    if (currentSession == null) return;
+
+    final currentMode = currentSession.workMode ?? 'conversation';
+
+    // 获取按钮位置
+    final RenderBox? button =
+        _modeButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+
+    if (button == null) return;
+
+    final Offset buttonPosition = button.localToGlobal(
+      Offset.zero,
+      ancestor: overlay,
+    );
+
+    // 菜单在按钮上方弹出
+    final position = RelativeRect.fromRect(
+      Rect.fromLTWH(
+        buttonPosition.dx,
+        buttonPosition.dy - 180, // 向上偏移
+        button.size.width,
+        0,
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final modes = <_ModeItem>[
+      _ModeItem('conversation', CupertinoIcons.chat_bubble, '对话', '通用对话模式'),
+      _ModeItem('chatroom', CupertinoIcons.person_2, '聊天室', '多角色对话模式'),
+      _ModeItem('creative', CupertinoIcons.lightbulb, '创意', '创意写作与脑图'),
+    ];
+
+    // 如果当前是合同/发票模式，也显示在列表中（不可选）
+    if (currentMode == 'contract') {
+      modes.insert(0, _ModeItem('contract', CupertinoIcons.doc_plaintext, '合同', '合同分析模式', locked: true));
+    }
+    if (currentMode == 'invoice') {
+      modes.insert(0, _ModeItem('invoice', CupertinoIcons.doc_text, '发票', '发票管理模式', locked: true));
+    }
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 8,
+      color: Theme.of(context).scaffoldBackgroundColor,
+      constraints: const BoxConstraints(minWidth: 160),
+      items: modes.map((mode) => PopupMenuItem<String>(
+        value: mode.id,
+        enabled: !mode.locked && mode.id != currentMode,
+        height: 40,
+        child: Row(
+          children: [
+            Icon(
+              mode.icon,
+              size: 16,
+              color: mode.locked
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                  : mode.id == currentMode
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                mode.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: mode.id == currentMode ? FontWeight.w600 : FontWeight.w400,
+                  color: mode.locked
+                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            if (mode.id == currentMode)
+              Icon(
+                Icons.check,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              )
+            else if (mode.locked)
+              Icon(
+                Icons.lock_outline,
+                size: 14,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+              ),
+          ],
+        ),
+      )).toList(),
+    ).then((selectedId) {
+      if (selectedId != null && selectedId != currentMode) {
+        sessionController.updateSession(
+          currentSession.copyWith(workMode: selectedId),
+        );
+      }
+    });
+  }
+
+  /// 构建工作目录按钮（合同/发票模式锁定，其他模式可修改）
   Widget _buildWorkDirectoryToggle() {
     final currentSession = sessionController.currentSession.value;
+    final workMode = currentSession?.workMode ?? 'conversation';
     final workDir = currentSession?.workDirectory;
     final hasWorkDir = workDir != null && workDir.isNotEmpty;
-    final displayText =
-        hasWorkDir
-            ? p.basename(workDir)
-            : AppLocalizations.of(context)!.workingDirectoryLabel;
+    final isLocked = workMode == 'contract' || workMode == 'invoice';
+    final displayText = hasWorkDir
+        ? p.basename(workDir)
+        : AppLocalizations.of(context)!.workingDirectoryLabel;
 
     return Tooltip(
-      message:
-          hasWorkDir
-              ? '已锁定：${workDir ?? ""}（双击打开）'
+      message: isLocked
+          ? '已锁定：${workDir ?? ""}（合同/发票模式不可修改）'
+          : hasWorkDir
+              ? '双击打开，长按修改'
               : AppLocalizations.of(context)!.setWorkingDirHint,
       child: GestureDetector(
-        // 已选定工作目录后不可点击更改
-        onTap: hasWorkDir ? null : _showWorkDirectoryPicker,
-        onDoubleTap:
-            hasWorkDir && !_isSending
-                ? () {
-                  try {
-                    Process.run('open', [workDir!]);
-                  } catch (_) {}
-                }
-                : null,
+        // 合同/发票模式不可点击；其他模式单击选择，双击打开
+        onTap: _isSending || isLocked
+            ? null
+            : hasWorkDir
+                ? null
+                : _showWorkDirectoryPicker,
+        onLongPress: _isSending || isLocked || !hasWorkDir
+            ? null
+            : () => _showWorkDirectoryPicker(),
+        onDoubleTap: hasWorkDir && !_isSending
+            ? () {
+                try {
+                  Process.run('open', [workDir!]);
+                } catch (_) {}
+              }
+            : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
@@ -1756,16 +2021,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               Icon(
                 CupertinoIcons.folder,
                 size: 13,
-                color:
-                    _isSending
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
-                        : hasWorkDir
+                color: _isSending
+                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                    : hasWorkDir
                         ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -1777,16 +2037,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: hasWorkDir ? FontWeight.w700 : FontWeight.w500,
-                    color:
-                        _isSending
-                            ? Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.3)
-                            : hasWorkDir
+                    color: _isSending
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        : hasWorkDir
                             ? Theme.of(context).colorScheme.onSurface
-                            : Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
+                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ),

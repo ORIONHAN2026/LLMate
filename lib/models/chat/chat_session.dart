@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:llmwork/models/bigmodel/chat_model.dart';
 import 'package:llmwork/models/chat/mcp_config.dart';
 import 'package:llmwork/models/chat/skill.dart';
@@ -9,6 +10,60 @@ import 'chat_setting.dart';
 import 'scheduled_task.dart';
 import 'memory_turn.dart';
 import 'contract_info.dart';
+
+const List<String> kSessionEmojis = [
+  // 表情
+  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊',
+  '😇', '🥰', '😍', '🤩', '😘', '😗', '😋', '😛', '😜', '🤪',
+  '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🫡', '🤐', '🤨', '😐',
+  '😑', '😶', '🫥', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔',
+  '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🥵', '🥶',
+  '😎', '🤓', '🧐', '😕', '😟', '🙁', '😮', '😯', '😲', '😳',
+  // 手势
+  '👍', '👎', '👏', '🙌', '🫶', '🤝', '💪', '✌️', '🤞', '🤟',
+  '🤙', '👋', '🖐️', '✋', '🖖', '🫰', '👊', '✊', '🤛', '🤜',
+  // 物品
+  '💡', '🔦', '🕯️', '📱', '💻', '🖥️', '⌨️', '🖱️', '📷', '🎥',
+  '📡', '🔑', '🔒', '🔓', '📦', '📫', '✏️', '🖊️', '📝', '📌',
+  // 科技
+  '🚀', '🛸', '⚡', '💎', '🤖', '👾', '🎮', '🎯', '🧩', '🎲',
+  // 自然
+  '🌍', '🌎', '🌏', '🌙', '⭐', '🌟', '✨', '💫', '🌈', '☀️',
+  '🌤️', '⛅', '🌥️', '🌧️', '⛈️', '❄️', '🔥', '💧', '🌊', '🍀',
+  // 植物
+  '🌸', '🌺', '🌻', '🌹', '🌷', '🌱', '🌿', '🍃', '🍂', '🍁',
+  // 动物
+  '🦊', '🐱', '🐶', '🐻', '🐼', '🐨', '🦁', '🐯', '🐮', '🐷',
+  '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇',
+  '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜',
+  '🐢', '🐍', '🦎', '🐙',   '🦑', '🦐', '🦀', '🐬', '🐳', '🐋',
+  '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🐘', '🦏', '🐪', '🐫',
+  // 食物
+  '🍕', '🍔', '🍟', '🌭', '🍿', '🧀', '🥚', '🍳', '🥞', '🥓',
+  '🥩', '🍗', '🍖', '🌮', '🌯', '🥙', '🥗', '🍣', '🍱', '🍜',
+  '🍝', '🍛', '🍲', '🥘', '🥟', '🍦', '🍩', '🎂', '🍰', '🧁',
+  '🥧', '🍫', '🍬', '🍭', '☕', '🍵', '🥤', '🍺', '🍷', '🥂',
+  // 运动
+  '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸',
+  '🥊', '🥋', '🎿', '🛹', '🏄', '🏊', '🚴', '🏋️', '🥇', '🏆',
+  // 乐器
+  '🎸', '🎹', '🎷', '🎺', '🎻', '🥁', '🪗', '🪘', '🎵', '🎶',
+  // 艺术
+  '🎨', '🖼️', '🎭', '🎪', '🎬', '🎤', '🎧', '🎼', '📸', '🎞️',
+  // 交通
+  '🚗', '🚕', '🚌', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚',
+  '✈️', '🛩️', '🚁', '⛵', '🚂', '🚊', '🚉', '🏠', '🏰', '🗼',
+  // 符号
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
+  '❤️‍🔥', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟',
+  '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️',
+  '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🩷',
+  '🩵', '🩶', '🔶', '🔷', '🔸', '🔹', '💠', '🔘', '🏁', '🚩',
+];
+
+String randomEmoji() {
+  return kSessionEmojis[math.Random().nextInt(kSessionEmojis.length)];
+}
 
 // 聊天会话类
 class ChatSession {
@@ -69,6 +124,9 @@ class ChatSession {
   /// 绑定的技能ID
   final String? skillId;
 
+  /// 会话头像 emoji
+  final String emoji;
+
   /// 运行时动态解析的模型对象（不持久化，由 modelId 解析而来）
   final ChatModel? chatModel;
   final List<ChatMessage> messages;
@@ -103,9 +161,11 @@ class ChatSession {
     this.memory = const [],
     this.compressedMemory,
     this.contracts,
+    String? emoji,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcpId = mcpId ?? mcp?.mcpId,
-       skillId = skillId ?? skill?.skillId;
+       skillId = skillId ?? skill?.skillId,
+       emoji = emoji ?? randomEmoji();
 
   // 获取会话的预览文本
   String get previewText {
@@ -173,6 +233,7 @@ class ChatSession {
     bool clearCompressedMemory = false,
     List<ContractInfo>? contracts,
     bool clearContracts = false,
+    String? emoji,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -249,6 +310,7 @@ class ChatSession {
           clearCompressedMemory ? null : (compressedMemory ?? this.compressedMemory),
       contracts:
           clearContracts ? null : (contracts ?? this.contracts),
+      emoji: emoji ?? this.emoji,
     );
   }
 
@@ -322,6 +384,7 @@ class ChatSession {
       chatModel: chatModel,
       mcp: parsedMcp,
       skill: skill,
+      emoji: json['emoji'] as String?,
     );
   }
 
@@ -357,6 +420,7 @@ class ChatSession {
       'chatModel': chatModel?.toMap(),
       if (mcp != null) 'mcp': mcp!.toJson(),
       if (skill != null) 'skill': skill!.toJson(),
+      'emoji': emoji,
     };
   }
 

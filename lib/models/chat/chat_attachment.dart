@@ -12,6 +12,10 @@ class ChatAttachment {
   final String? base64Data;
   /// 图片 MIME 类型（如 image/png），配合 base64Data 使用
   final String? mimeType;
+  /// OSS 上传后的访问 URL
+  final String? ossUrl;
+  /// OSS 存储的 key
+  final String? ossKey;
 
   ChatAttachment({
     required this.id,
@@ -24,6 +28,8 @@ class ChatAttachment {
     required this.createdAt,
     this.base64Data,
     this.mimeType,
+    this.ossUrl,
+    this.ossKey,
   });
 
   // 创建副本
@@ -38,6 +44,8 @@ class ChatAttachment {
     DateTime? createdAt,
     String? base64Data,
     String? mimeType,
+    String? ossUrl,
+    String? ossKey,
   }) {
     return ChatAttachment(
       id: id ?? this.id,
@@ -50,6 +58,8 @@ class ChatAttachment {
       createdAt: createdAt ?? this.createdAt,
       base64Data: base64Data ?? this.base64Data,
       mimeType: mimeType ?? this.mimeType,
+      ossUrl: ossUrl ?? this.ossUrl,
+      ossKey: ossKey ?? this.ossKey,
     );
   }
 
@@ -69,6 +79,8 @@ class ChatAttachment {
               : DateTime.now(),
       base64Data: json['base64Data'],
       mimeType: json['mimeType'],
+      ossUrl: json['ossUrl'],
+      ossKey: json['ossKey'],
     );
   }
 
@@ -82,8 +94,11 @@ class ChatAttachment {
       'content': content,
       'size': size,
       'createdAt': createdAt.toIso8601String(),
-      'base64Data': base64Data,
+      // 不序列化 base64Data 以避免 JSON 膨胀，仅在运行时使用
+      // 'base64Data': base64Data,
       'mimeType': mimeType,
+      if (ossUrl != null) 'ossUrl': ossUrl,
+      if (ossKey != null) 'ossKey': ossKey,
     };
   }
 }

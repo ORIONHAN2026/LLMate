@@ -8,11 +8,15 @@ export 'openai_provider.dart';
 
 // 工作模式策略
 export 'modes/work_mode_strategy.dart';
+export 'modes/work_mode_sidebar.dart';
 export 'modes/work_mode_factory.dart';
+export 'modes/mode_sidebars.dart';
+export 'modes/mode_utils.dart';
 export 'modes/conversation_mode.dart';
 export 'modes/contract_mode.dart';
 export 'modes/invoice_mode.dart';
 export 'modes/chatroom_mode.dart';
+export 'modes/creative_mode.dart';
 
 // 公共工具
 export 'common/message_builder.dart';

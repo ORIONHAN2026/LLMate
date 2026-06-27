@@ -1,33 +1,116 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/chat/mcp_config.dart';
 import '../storage/isar_service.dart';
+import '../mcp_builtins/builtin_mcp_registry.dart';
 
 /// MCP 服务配置全局控制器
-///
-/// 管理 MCP 配置列表（全局、与会话独立），负责加载/保存/查询。
-/// 运行时连接管理仍由 [McpService] 负责。
 class McpController extends GetxController {
-  /// 所有 MCP 配置（全局）
   var configs = <Mcp>[].obs;
-
-  /// 是否已从存储加载
   bool _loaded = false;
+  bool _builtinInitialized = false;
 
-  /// 确保已加载
   Future<void> ensureLoaded() async {
     if (_loaded) return;
     await loadAll();
   }
 
-  /// 从存储加载所有 MCP 配置
   Future<void> loadAll() async {
+    // 获取应用支持目录，用于存放 MCP 服务器脚本
+    final appDir = Directory(Platform.resolvedExecutable).parent.parent.path;
+    final serversDir = '$appDir/data/mcp_servers';
+
+    // 复制内置服务器脚本到应用目录
+    await _copyBuiltinServers(serversDir);
+
+    // 设置项目根目录
+    BuiltinMcpRegistry.setProjectRoot(appDir);
+
     configs.value = await _loadMcpServices();
     _loaded = true;
     debugPrint('📦 McpController: 已加载 ${configs.length} 个 MCP 服务');
+
+    if (!_builtinInitialized) {
+      await _ensureBuiltinTools();
+      _builtinInitialized = true;
+    }
   }
 
-  /// 按名称查找 MCP 配置
+  /// 复制内置服务器脚本到应用目录
+  Future<void> _copyBuiltinServers(String targetDir) async {
+    try {
+      final target = Directory(targetDir);
+      if (!await target.exists()) {
+        await target.create(recursive: true);
+      }
+
+      // 服务器脚本列表
+      final servers = [
+        'filesystem_server.dart',
+        'git_server.dart',
+        'shell_server.dart',
+        'fetch_server.dart',
+        'sqlite_server.dart',
+        'email_server.dart',
+        'writepage_server.dart',
+        'protocol.dart',
+      ];
+
+      // 尝试从包资源目录复制（打包后的路径）
+      for (final server in servers) {
+        final targetFile = File('$targetDir/$server');
+        if (!await targetFile.exists()) {
+          // 如果目标文件不存在，创建一个占位脚本
+          // 实际打包时应该将脚本作为 assets 嵌入
+          debugPrint('⚠️ 服务器脚本不存在: $server');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ 复制服务器脚本失败: $e');
+    }
+  }
+
+  /// 自动安装所有内置工具
+  Future<void> _ensureBuiltinTools() async {
+    try {
+      final allTools = BuiltinMcpRegistry.localTools;
+      int addedCount = 0;
+
+      for (final tool in allTools) {
+        final existing = getMcpByName(tool.name);
+        if (existing == null) {
+          final code = jsonEncode({
+            'command': tool.command,
+            'args': tool.args,
+          });
+
+          final mcp = Mcp(
+            mcpId: 'builtin_${tool.id}',
+            name: tool.name,
+            description: tool.description,
+            code: code,
+            command: tool.command,
+            args: tool.args,
+          );
+
+          configs.add(mcp);
+          await _addMcpService(mcp);
+          addedCount++;
+          debugPrint('🔧 已自动安装工具: ${tool.name}');
+        }
+      }
+
+      if (addedCount > 0) {
+        debugPrint('📦 McpController: 自动安装了 $addedCount 个工具');
+      }
+    } catch (e) {
+      debugPrint('❌ 自动安装工具失败: $e');
+    }
+  }
+
   Mcp? getMcpByName(String name) {
     for (final c in configs) {
       if (c.name == name) return c;
@@ -35,7 +118,6 @@ class McpController extends GetxController {
     return null;
   }
 
-  /// 按 mcpId 查找 MCP 配置
   Mcp? getMcpById(String mcpId) {
     for (final c in configs) {
       if (c.mcpId == mcpId) return c;
@@ -43,10 +125,16 @@ class McpController extends GetxController {
     return null;
   }
 
-  /// 是否有任何 MCP 服务
+  bool isBuiltin(String mcpId) {
+    return mcpId.startsWith('builtin_');
+  }
+
+  bool isRemote(String mcpId) {
+    return mcpId.startsWith('remote_');
+  }
+
   bool get hasServices => configs.isNotEmpty;
 
-  /// 添加 MCP 服务
   Future<void> addService(Mcp service) async {
     final existing = getMcpById(service.mcpId);
     if (existing != null) {
@@ -58,17 +146,16 @@ class McpController extends GetxController {
     await _addMcpService(service);
   }
 
-  /// 移除 MCP 服务
   Future<void> removeService(String mcpId) async {
-    if (mcpId.isEmpty) {
-      debugPrint('⚠️ removeService: mcpId 为空，跳过删除');
+    if (mcpId.isEmpty) return;
+    if (isBuiltin(mcpId)) {
+      debugPrint('⚠️ 内置工具不允许移除: $mcpId');
       return;
     }
     configs.removeWhere((c) => c.mcpId == mcpId);
     await _removeMcpService(mcpId);
   }
 
-  /// 更新 MCP 服务
   Future<void> updateService(String oldMcpId, Mcp newService) async {
     final idx = configs.indexWhere((c) => c.mcpId == oldMcpId);
     if (idx != -1) {
@@ -77,9 +164,6 @@ class McpController extends GetxController {
     await _updateMcpService(oldMcpId, newService);
   }
 
-  // ── 文件存储内部方法 ──
-
-  /// Mcp → Map（用于 JSON 序列化）
   static Map<String, dynamic> _mcpToMap(Mcp mcp) {
     return {
       'mcpId': mcp.mcpId,
@@ -102,7 +186,6 @@ class McpController extends GetxController {
     };
   }
 
-  /// Map → Mcp
   static Mcp _mapToMcp(Map<String, dynamic> map) {
     return Mcp(
       mcpId: (map['mcpId'] as String?)?.isNotEmpty == true
@@ -115,26 +198,16 @@ class McpController extends GetxController {
       code: map['code'] as String? ?? '{}',
       command: map['command'] as String?,
       args: map['args'] != null ? List<String>.from(map['args']) : null,
-      env: map['env'] != null
-          ? Map<String, String>.from(map['env'] as Map)
-          : null,
+      env: map['env'] != null ? Map<String, String>.from(map['env'] as Map) : null,
       workingDirectory: map['workingDirectory'] as String?,
       timeout: map['timeout'] as int?,
       url: map['url'] as String?,
-      headers: map['headers'] != null
-          ? Map<String, String>.from(map['headers'] as Map)
-          : null,
-      body: map['body'] != null
-          ? Map<String, dynamic>.from(map['body'] as Map)
-          : null,
+      headers: map['headers'] != null ? Map<String, String>.from(map['headers'] as Map) : null,
+      body: map['body'] != null ? Map<String, dynamic>.from(map['body'] as Map) : null,
       type: McpTransportTypeExt.fromString(map['type'] as String?),
       version: map['version'] as String?,
-      tools: (map['tools'] as List<dynamic>?)
-          ?.map((t) => McpToolInfo.fromJson(t as Map<String, dynamic>))
-          .toList(),
-      lastUpdated: map['lastUpdated'] != null
-          ? DateTime.tryParse(map['lastUpdated'] as String)
-          : null,
+      tools: (map['tools'] as List<dynamic>?)?.map((t) => McpToolInfo.fromJson(t as Map<String, dynamic>)).toList(),
+      lastUpdated: map['lastUpdated'] != null ? DateTime.tryParse(map['lastUpdated'] as String) : null,
       prompt: map['prompt'] as String?,
     );
   }

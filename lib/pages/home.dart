@@ -42,7 +42,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   final GlobalKey _settingsButtonKey = GlobalKey(); // 设置按钮的key
   final GlobalKey _modelSelectorKey = GlobalKey(); // 模型选择器的key
   bool _isSidebarCollapsed = false; // 侧边栏折叠状态
-  double _sidebarWidth = 280.0; // 左侧边栏宽度，可调整
+  double _sidebarWidth = 200.0; // 左侧边栏宽度，可调整
   bool _isRightSidebarCollapsed = true; // 右侧边栏折叠状态（默认隐藏）
   double _rightSidebarWidth = 440.0; // 右侧边栏宽度
   bool _isResizeHandleHovered = false; // 拖动条悬停状态
@@ -426,7 +426,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               builder: (context) {
                 return Positioned(
                   left: () {
-                    final leftSidebarWidth = _isSidebarCollapsed ? 0 : 280;
+                    final leftSidebarWidth = _isSidebarCollapsed ? 0 : _sidebarWidth;
                     final screenWidth = MediaQuery.of(context).size.width;
                     final chatAreaWidth = screenWidth - leftSidebarWidth;
                     // 按钮居中于整个对话区域

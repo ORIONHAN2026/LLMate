@@ -137,27 +137,30 @@ class _SessionItemState extends State<_SessionItem>
               _isEditing
                   ? null
                   : () => widget.onSessionSwitch(widget.session), // 编辑模式下禁用会话切换
-          child: Padding(
+            child: Padding(
             padding: const EdgeInsets.all(6),
             child: Row(
               children: [
-                // 模型图标
-                Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
+                // Emoji 头像
+                GestureDetector(
+                  onTap: () => _showEmojiPicker(context),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: widget.isSelected
+                          ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                          : Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: widget.session.isSending
+                        ? _buildLoadingIcon()
+                        : Text(
+                            widget.session.emoji,
+                            style: const TextStyle(fontSize: 16),
+                          ),
                   ),
-                  child:
-                      widget.session.isSending
-                          ? _buildLoadingIcon()
-                          : (widget.session.chatModel?.buildIconWidget(
-                                widget.isSelected,
-                              ) ??
-                              _buildModelIconWidget(
-                                widget.session.modelName,
-                                widget.isSelected,
-                              )),
                 ),
                 const SizedBox(width: 6),
                 // 对话信息
@@ -416,6 +419,66 @@ class _SessionItemState extends State<_SessionItem>
       // 恢复原始名称
       _nameController.text = widget.session.name;
     }
+  }
+
+  void _showEmojiPicker(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.newSession,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: kSessionEmojis.map((emoji) {
+                    final isSelected = widget.session.emoji == emoji;
+                    return GestureDetector(
+                      onTap: () {
+                        final updatedSession = widget.session.copyWith(emoji: emoji);
+                        sessionController.updateSession(updatedSession);
+                        Navigator.of(context).pop();
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: isSelected
+                              ? Border.all(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 1.5,
+                                )
+                              : null,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 

@@ -28,7 +28,7 @@ class ModelIconUtils {
         return 'assets/icons/qwen-color.webp';
       }
       if (p.contains('hunyuan') || p.contains('混元') || p.contains('腾讯')) {
-        return 'assets/icons/yuanbao-color.webp';
+        return 'assets/icons/tencent-color.webp';
       }
       if (p.contains('glm') || p.contains('智谱') || p.contains('zhipu')) {
         return 'assets/icons/yuanbao-color.webp';
@@ -74,7 +74,7 @@ class ModelIconUtils {
         return 'assets/icons/qwen-color.webp';
       }
       if (name.contains('hunyuan') || name.contains('混元')) {
-        return 'assets/icons/yuanbao-color.webp';
+        return 'assets/icons/tencent-color.webp';
       }
       if (name.contains('glm') || name.contains('zhipu') || name.contains('智谱')) {
         return 'assets/icons/yuanbao-color.webp';

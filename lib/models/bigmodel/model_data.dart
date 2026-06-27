@@ -187,22 +187,42 @@ final List<Map<String, dynamic>> onlineProviders = [
     ],
   },
   {
-    'name': '腾讯云',
+    'name': '腾讯云TokenHub',
     'id': 'tencent',
     'protocol': 'openai',
     'icon': CupertinoIcons.cloud,
-    'description': '腾讯云混元大模型服务',
+    'description': '腾讯云TokenHub大模型服务',
     'color': const Color(0xFF00A4FF),
     'defaultUrl': 'https://api.hunyuan.cloud.tencent.com/v1',
     'models': [
-      {'id': 'hunyuan-turbos-latest', 'name': 'Hunyuan Turbo', 'specs': '最新版 • 高性能 • 多功能'},
-      {'id': 'hunyuan-pro-latest', 'name': 'Hunyuan Pro', 'specs': '最新版 • 强推理 • 复杂任务'},
-      {'id': 'hunyuan-standard-latest', 'name': 'Hunyuan Standard', 'specs': '最新版 • 均衡型 • 成本优化'},
-      {'id': 'hunyuan-lite-latest', 'name': 'Hunyuan Lite', 'specs': '最新版 • 轻量快速 • 高性价比'},
-      {'id': 'hunyuan-code-latest', 'name': 'Hunyuan Code', 'specs': '最新版 • 代码生成 • 编程助手'},
-      {'id': 'hunyuan-roleplay-latest', 'name': 'Hunyuan RolePlay', 'specs': '最新版 • 角色扮演 • 对话创作'},
-      {'id': 'hunyuan-functioncall-latest', 'name': 'Hunyuan FunctionCall', 'specs': '最新版 • 函数调用 • Agent工具'},
-      {'id': 'hunyuan-vision-latest', 'name': 'Hunyuan Vision', 'specs': '最新版 • 视觉理解 • 图像识别'},
+      // ===== 推荐模型 =====
+      {'id': 'hy3-preview', 'name': 'Hy3 Preview', 'specs': '256k上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '256k', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      {'id': 'deepseek-v4-flash', 'name': 'DeepSeek-V4-Flash', 'specs': '1M上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '1M', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      {'id': 'deepseek-v4-pro', 'name': 'DeepSeek-V4-Pro', 'specs': '1M上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '1M', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      // ===== 混元系列 =====
+      {'id': 'hunyuan-role-latest', 'name': 'Hunyuan Role', 'specs': '32k上下文 • 角色扮演 • 对话创作', 'context': '32k', 'thinking': false, 'fc': false, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
+      {'id': 'hy-mt2-pro', 'name': 'Hy-MT2-Pro', 'specs': '8k上下文 • 翻译旗舰 • 专业领域', 'context': '8k', 'thinking': false, 'fc': false, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
+      {'id': 'hy-mt2-plus', 'name': 'Hy-MT2-Plus', 'specs': '8k上下文 • 翻译模型 • 指令遵循', 'context': '8k', 'thinking': false, 'fc': false, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
+      {'id': 'hy-mt2-lite', 'name': 'Hy-MT2-Lite', 'specs': '8k上下文 • 翻译轻量 • 快速响应', 'context': '8k', 'thinking': false, 'fc': false, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
+      // ===== DeepSeek 系列 =====
+      {'id': 'deepseek-v3.2', 'name': 'DeepSeek-V3.2', 'specs': '128k上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '128k', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      // ===== GLM 系列 =====
+      {'id': 'glm-5.2', 'name': 'GLM-5.2', 'specs': '1M上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '1M', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      {'id': 'glm-5.1', 'name': 'GLM-5.1', 'specs': '200k上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '200k', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      {'id': 'glm-5v-turbo', 'name': 'GLM-5V-Turbo', 'specs': '200k上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '200k', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      {'id': 'glm-5-turbo', 'name': 'GLM-5-Turbo', 'specs': '200k上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '200k', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      {'id': 'glm-5', 'name': 'GLM-5', 'specs': '200k上下文 • 深度思考 • Function Calling', 'context': '200k', 'thinking': true, 'fc': true, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
+      // ===== Kimi 系列 =====
+      {'id': 'kimi-k2.7-code', 'name': 'Kimi-K2.7-Code', 'specs': '256k上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '256k', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      {'id': 'kimi-k2.6', 'name': 'Kimi-K2.6', 'specs': '256k上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '256k', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      {'id': 'kimi-k2.5', 'name': 'Kimi-K2.5', 'specs': '256k上下文 • 深度思考 • 结构化输出 • Function Calling', 'context': '256k', 'thinking': true, 'fc': true, 'tools': true, 'structuredOutput': true, 'batchCalling': false},
+      // ===== MiniMax 系列 =====
+      {'id': 'minimax-m3', 'name': 'MiniMax-M3', 'specs': '1M上下文 • 深度思考 • Function Calling', 'context': '1M', 'thinking': true, 'fc': true, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
+      {'id': 'minimax-m2.7', 'name': 'MiniMax-M2.7', 'specs': '200k上下文 • 深度思考 • Function Calling', 'context': '200k', 'thinking': true, 'fc': true, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
+      {'id': 'minimax-m2.5', 'name': 'MiniMax-M2.5', 'specs': '200k上下文 • 深度思考 • Function Calling', 'context': '200k', 'thinking': true, 'fc': true, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
+      // ===== Qwen 系列 =====
+      {'id': 'qwen3.5-flash', 'name': 'Qwen3.5-Flash', 'specs': '991k上下文 • 深度思考 • Function Calling', 'context': '991k', 'thinking': true, 'fc': true, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
+      {'id': 'qwen3.5-plus', 'name': 'Qwen3.5-Plus', 'specs': '991k上下文 • 深度思考 • Function Calling', 'context': '991k', 'thinking': true, 'fc': true, 'tools': false, 'structuredOutput': false, 'batchCalling': false},
     ],
   },
   {

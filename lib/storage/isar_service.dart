@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 import 'storage_paths.dart';
 import 'file_storage.dart';
@@ -268,55 +270,89 @@ class MessageStore {
 // ══════════════════════════════════════════════════════════
 
 class McpStore {
-  List<Map<String, dynamic>> _cache = [];
+  Map<String, Map<String, dynamic>> _cache = {};
   bool _loaded = false;
 
   Future<List<Map<String, dynamic>>> findAll() async {
     if (!_loaded) await _load();
-    return List.unmodifiable(_cache);
+    return List.unmodifiable(_cache.values);
   }
 
   Future<Map<String, dynamic>?> getByMcpId(String mcpId) async {
     if (!_loaded) await _load();
-    try {
-      return _cache.firstWhere((m) => m['mcpId'] == mcpId);
-    } catch (_) {
-      return null;
-    }
+    return _cache[mcpId];
   }
 
   Future<void> put(Map<String, dynamic> mcp) async {
     if (!_loaded) await _load();
     final mid = mcp['mcpId'] as String;
-    final idx = _cache.indexWhere((m) => m['mcpId'] == mid);
-    if (idx >= 0) {
-      _cache[idx] = mcp;
-    } else {
-      _cache.add(mcp);
-    }
-    await _save();
+    _cache[mid] = mcp;
+    await _saveOne(mid, mcp);
   }
 
   Future<void> delete(String mcpId) async {
     if (!_loaded) await _load();
-    _cache.removeWhere((m) => m['mcpId'] == mcpId);
-    await _save();
+    _cache.remove(mcpId);
+    await _deleteOne(mcpId);
   }
 
   Future<void> clear() async {
-    _cache = [];
+    _cache = {};
     _loaded = true;
-    await _save();
+    await _clearAll();
   }
 
   Future<void> _load() async {
-    final data = await FileStorage.readJsonList(StoragePaths.mcpFile);
-    _cache = data?.cast<Map<String, dynamic>>() ?? [];
+    await StoragePaths.ensureMcpsDir();
+    final dir = Directory(StoragePaths.mcpsDir);
+    _cache = {};
+
+    if (await dir.exists()) {
+      final files = await dir.list().where((e) => e.path.endsWith('.json')).toList();
+      for (final file in files) {
+        try {
+          final data = await FileStorage.readJson(file.path);
+          if (data != null) {
+            final mcpId = data['mcpId'] as String?;
+            if (mcpId != null && mcpId.isNotEmpty) {
+              // 检查是否有无效的 builtin:// URL，如果有则删除旧文件
+              final url = data['url'] as String?;
+              if (url != null && url.startsWith('builtin://')) {
+                // 旧格式，删除文件，下次会重新创建
+                await file.delete();
+                continue;
+              }
+              _cache[mcpId] = data;
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ 加载 MCP 文件失败: ${file.path}, $e');
+        }
+      }
+    }
     _loaded = true;
   }
 
-  Future<void> _save() async {
-    await FileStorage.writeJsonList(StoragePaths.mcpFile, _cache);
+  Future<void> _saveOne(String mcpId, Map<String, dynamic> data) async {
+    await StoragePaths.ensureMcpsDir();
+    // 使用 mcpId 作为文件名
+    final file = File(p.join(StoragePaths.mcpsDir, '$mcpId.json'));
+    await FileStorage.writeJson(file.path, data);
+  }
+
+  Future<void> _deleteOne(String mcpId) async {
+    final file = File(p.join(StoragePaths.mcpsDir, '$mcpId.json'));
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
+
+  Future<void> _clearAll() async {
+    final dir = Directory(StoragePaths.mcpsDir);
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
+    await StoragePaths.ensureMcpsDir();
   }
 }
 

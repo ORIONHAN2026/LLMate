@@ -66,6 +66,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
   List<Mcp> _services = [];
   bool _isLoading = true;
   final GlobalKey _marketplaceButtonKey = GlobalKey();
+  int _currentTab = 0; // 0: 已安装, 1: MCP市场
 
   @override
   void initState() {
@@ -123,10 +124,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    final content =
-        _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _buildServiceGrid();
+    final content = _buildTabContent();
 
     if (widget.embedded) {
       // 通知父页面 AppBar actions
@@ -170,35 +168,6 @@ class _McpManagementPageState extends State<McpManagementPage> {
         ),
         actions: [
           IconButton(
-            tooltip: AppLocalizations.of(context)!.addCustomConnector,
-            onPressed: () {
-              showCustomAddMcpDialog(
-                context,
-                onConfigReady: (config) {
-                  showCustomAddProgressDialog(
-                    context,
-                    config,
-                    onSuccess: (finalConfig, toolCount) async {
-                      final mcpc = Get.find<McpController>();
-                      await mcpc.ensureLoaded();
-                      if (!mcpc.configs.any(
-                        (s) => s.name == finalConfig.name,
-                      )) {
-                        await mcpc.addService(finalConfig);
-                      }
-                      _loadServices();
-                    },
-                  );
-                },
-              );
-            },
-            icon: Icon(
-              CupertinoIcons.add,
-              size: 16,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            ),
-          ),
-          IconButton(
             key: _marketplaceButtonKey,
             tooltip: AppLocalizations.of(context)!.marketplace,
             onPressed: () => _showMarketplaceDialog(),
@@ -215,57 +184,78 @@ class _McpManagementPageState extends State<McpManagementPage> {
     );
   }
 
-  List<Widget> _buildActions() {
-    return [
-      Transform.translate(
-        offset: const Offset(0, -5),
-        child: IconButton(
-          visualDensity: VisualDensity.compact,
-          tooltip: AppLocalizations.of(context)!.addCustomConnector,
-          onPressed: () {
-            showCustomAddMcpDialog(
-              context,
-              onConfigReady: (config) {
-                showCustomAddProgressDialog(
-                  context,
-                  config,
-                  onSuccess: (finalConfig, toolCount) async {
-                    final mcpc = Get.find<McpController>();
-                    await mcpc.ensureLoaded();
-                    if (!mcpc.configs.any((s) => s.name == finalConfig.name)) {
-                      await mcpc.addService(finalConfig);
-                    }
-                    _loadServices();
-                  },
-                );
-              },
-            );
-          },
-          icon: Icon(
-            CupertinoIcons.add,
-            size: 16,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+  Widget _buildTabContent() {
+    return Column(
+      children: [
+        // 顶部 Tab 切换
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              _buildTabButton(0, '已安装', CupertinoIcons.checkmark_circle_fill),
+              const SizedBox(width: 12),
+              _buildTabButton(1, 'MCP 市场', CupertinoIcons.bag_fill),
+            ],
           ),
         ),
-      ),
-      Transform.translate(
-        offset: const Offset(0, -5),
-        child: IconButton(
-          visualDensity: VisualDensity.compact,
-          key: _marketplaceButtonKey,
-          tooltip: AppLocalizations.of(context)!.marketplace,
-          onPressed: () => _showMarketplaceDialog(),
-          icon: Icon(
-            CupertinoIcons.bag,
-            size: 16,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-          ),
+
+        // Tab 内容
+        Expanded(
+          child: _currentTab == 0 ? _buildInstalledTab() : _buildMarketTab(),
         ),
-      ),
-    ];
+      ],
+    );
   }
 
-  Widget _buildServiceGrid() {
+  Widget _buildTabButton(int index, String label, IconData icon) {
+    final isSelected = _currentTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentTab = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey[500],
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstalledTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (_services.isEmpty) {
       return Center(
         child: Column(
@@ -282,9 +272,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withOpacity(0.45),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
               ),
             ),
             const SizedBox(height: 6),
@@ -292,9 +280,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
               AppLocalizations.of(context)!.clickToEnterMarketplace,
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withOpacity(0.35),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
               ),
             ),
           ],
@@ -331,6 +317,29 @@ class _McpManagementPageState extends State<McpManagementPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildMarketTab() {
+    return McpMarketplacePage(embedded: true);
+  }
+
+  List<Widget> _buildActions() {
+    return [
+      Transform.translate(
+        offset: const Offset(0, -5),
+        child: IconButton(
+          visualDensity: VisualDensity.compact,
+          key: _marketplaceButtonKey,
+          tooltip: AppLocalizations.of(context)!.marketplace,
+          onPressed: () => _showMarketplaceDialog(),
+          icon: Icon(
+            CupertinoIcons.bag,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+      ),
+    ];
   }
 
   String _getTypeLabel(Mcp service) => getTypeLabel(service);
@@ -401,6 +410,11 @@ class _McpManagementPageState extends State<McpManagementPage> {
   }
 
   void _showAddedServiceDetail(Mcp service) {
+    final jsonCtrl = TextEditingController(
+      text: _buildConfigJson(service),
+    );
+    String? parseError;
+
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -419,364 +433,431 @@ class _McpManagementPageState extends State<McpManagementPage> {
                 return ConstrainedBox(
                   constraints: BoxConstraints(
                     maxWidth: 700,
-                    maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.8,
                   ),
                   child: Material(
                     color: Theme.of(ctx).colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // 头部
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 可滚动内容区
+                        Flexible(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 头部
+                                Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            service.name,
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  service.name,
+                                                  style: const TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                      .withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  _getTypeLabel(service),
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Theme.of(context).colorScheme.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            _getTypeLabel(service),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            service.description?.isNotEmpty == true
+                                                ? service.description!
+                                                : _buildSubtitle(service),
                                             style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w600,
-                                              color:
-                                                  Theme.of(
-                                                    context,
-                                                  ).colorScheme.primary,
+                                              fontSize: 13,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withOpacity(0.6),
                                             ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      service.description?.isNotEmpty == true
-                                          ? service.description!
-                                          : _buildSubtitle(service),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.6),
+                                        ],
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
+                                const SizedBox(height: 16),
 
-                          // 工具列表
-                          if (hasTools) ...[
-                            Row(
-                              children: [
-                                Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.toolList(tools.length),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                                const Spacer(),
-                                GestureDetector(
-                                  onTap: () async {
-                                    try {
-                                      final newTools =
-                                          await McpService.refreshServiceTools(
-                                            service,
-                                          );
-                                      final updatedService = service.copyWith(
-                                        description:
-                                            McpService.getCachedConfig(
-                                              service.mcpId,
-                                            )?.description,
-                                        tools: newTools,
-                                        lastUpdated: DateTime.now(),
-                                        prompt: McpService.buildMcpPrompt(
-                                          service.copyWith(tools: newTools),
-                                        ),
-                                      );
-                                      await Get.find<McpController>()
-                                          .updateService(
-                                            service.mcpId,
-                                            updatedService,
-                                          );
-                                      service = updatedService;
-                                      setSheetState(() {});
-                                      if (ctx.mounted) {
-                                        await _loadServices();
-                                      }
-                                      SnackBarUtils.showSuccess(
-                                        ctx,
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.toolsRefreshed(newTools.length),
-                                      );
-                                    } catch (e) {
-                                      if (ctx.mounted) {
-                                        SnackBarUtils.showError(
-                                          ctx,
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.refreshFailed(
-                                            e.toString().substring(
-                                              0,
-                                              e.toString().length.clamp(0, 80),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                // 工具列表
+                                if (hasTools) ...[
+                                  Row(
                                     children: [
-                                      Icon(
-                                        CupertinoIcons.refresh,
-                                        size: 13,
-                                        color:
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                      ),
-                                      const SizedBox(width: 4),
                                       Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.refreshAction,
+                                        AppLocalizations.of(context)!.toolList(tools.length),
                                         style: TextStyle(
-                                          fontSize: 11,
-                                          color:
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.primary,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(context).colorScheme.onSurface,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      GestureDetector(
+                                        onTap: () async {
+                                          try {
+                                            final newTools = await McpService.refreshServiceTools(service);
+                                            final updatedService = service.copyWith(
+                                              description:
+                                                  McpService.getCachedConfig(service.mcpId)?.description,
+                                              tools: newTools,
+                                              lastUpdated: DateTime.now(),
+                                              prompt: McpService.buildMcpPrompt(
+                                                service.copyWith(tools: newTools),
+                                              ),
+                                            );
+                                            await Get.find<McpController>().updateService(
+                                              service.mcpId,
+                                              updatedService,
+                                            );
+                                            service = updatedService;
+                                            jsonCtrl.text = _buildConfigJson(service);
+                                            setSheetState(() {});
+                                            if (ctx.mounted) {
+                                              await _loadServices();
+                                            }
+                                            SnackBarUtils.showSuccess(
+                                              ctx,
+                                              AppLocalizations.of(context)!.toolsRefreshed(newTools.length),
+                                            );
+                                          } catch (e) {
+                                            if (ctx.mounted) {
+                                              SnackBarUtils.showError(
+                                                ctx,
+                                                AppLocalizations.of(context)!.refreshFailed(
+                                                  e.toString().substring(0, e.toString().length.clamp(0, 80)),
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              CupertinoIcons.refresh,
+                                              size: 13,
+                                              color: Theme.of(context).colorScheme.primary,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              AppLocalizations.of(context)!.refreshAction,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Theme.of(context).colorScheme.primary,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: tools.take(50).map((t) {
+                                      final label = t.description.isNotEmpty
+                                          ? AppLocalizations.of(context)!.toolNameDesc(t.name, t.description)
+                                          : t.name;
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(
+                                            color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          label,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Theme.of(context).colorScheme.primary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  if (tools.length > 50)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        AppLocalizations.of(context)!.moreXTools(tools.length - 50),
+                                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                                      ),
+                                    ),
+                                  const SizedBox(height: 6),
+                                  const Divider(),
+                                  const SizedBox(height: 12),
+                                ],
+
+                                // 未获取工具时的获取按钮
+                                if (!hasTools) ...[
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () async {
+                                        try {
+                                          final newTools = await McpService.refreshServiceTools(service);
+                                          final updatedService = service.copyWith(
+                                            description:
+                                                McpService.getCachedConfig(service.mcpId)?.description,
+                                            tools: newTools,
+                                            lastUpdated: DateTime.now(),
+                                            prompt: McpService.buildMcpPrompt(
+                                              service.copyWith(tools: newTools),
+                                            ),
+                                          );
+                                          await Get.find<McpController>().updateService(
+                                            service.mcpId,
+                                            updatedService,
+                                          );
+                                          service = updatedService;
+                                          jsonCtrl.text = _buildConfigJson(service);
+                                          setSheetState(() {});
+                                          if (ctx.mounted) {
+                                            await _loadServices();
+                                          }
+                                          SnackBarUtils.showSuccess(
+                                            ctx,
+                                            '已获取 ${newTools.length} 个工具',
+                                          );
+                                        } catch (e) {
+                                          if (ctx.mounted) {
+                                            SnackBarUtils.showError(
+                                              ctx,
+                                              '获取失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
+                                            );
+                                          }
+                                        }
+                                      },
+                                      icon: const Icon(CupertinoIcons.arrow_down_to_line_alt, size: 15),
+                                      label: Text(AppLocalizations.of(context)!.fetchTools),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+
+                                // 可编辑 JSON 配置
+                                Text(
+                                  AppLocalizations.of(context)!.jsonConfig,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
                                 ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: TextField(
+                                    controller: jsonCtrl,
+                                    maxLines: 12,
+                                    minLines: 6,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontFamily: 'monospace',
+                                      color: Theme.of(ctx).colorScheme.onSurface,
+                                      height: 1.5,
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'MCP 配置 JSON',
+                                      hintStyle: TextStyle(
+                                        fontSize: 11,
+                                        color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.3),
+                                      ),
+                                      border: const OutlineInputBorder(
+                                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      contentPadding: const EdgeInsets.all(10),
+                                      isDense: true,
+                                    ),
+                                    keyboardType: TextInputType.multiline,
+                                    onChanged: (_) {
+                                      if (parseError != null) {
+                                        setSheetState(() => parseError = null);
+                                      }
+                                    },
+                                  ),
+                                ),
+                                if (parseError != null) ...[
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(ctx).colorScheme.error.withOpacity(0.08),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: Theme.of(ctx).colorScheme.error.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      parseError!,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Theme.of(ctx).colorScheme.error,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children:
-                                  tools.take(50).map((t) {
-                                    final label =
-                                        t.description.isNotEmpty
-                                            ? AppLocalizations.of(
-                                              context,
-                                            )!.toolNameDesc(
-                                              t.name,
-                                              t.description,
-                                            )
-                                            : t.name;
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
+                          ),
+                        ),
+
+                        // 底部按钮区
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(
+                                color: Theme.of(context).dividerColor.withOpacity(0.3),
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              // 左侧：内置工具显示标签，非内置显示移除按钮
+                              if (Get.find<McpController>().isBuiltin(service.mcpId))
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons.lock_fill,
+                                        size: 12,
+                                        color: Theme.of(context).colorScheme.primary,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary.withOpacity(0.08),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withOpacity(0.15),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        label,
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '内置工具',
                                         style: TextStyle(
                                           fontSize: 11,
-                                          color:
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.primary,
-                                          fontWeight: FontWeight.w500,
+                                          color: Theme.of(context).colorScheme.primary,
                                         ),
                                       ),
-                                    );
-                                  }).toList(),
-                            ),
-                            if (tools.length > 50)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.moreXTools(tools.length - 50),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[500],
+                                    ],
+                                  ),
+                                )
+                              else
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    _confirmRemoveService(service);
+                                  },
+                                  icon: const Icon(CupertinoIcons.delete, size: 14),
+                                  label: Text(AppLocalizations.of(context)!.removeServiceLabel),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Theme.of(context).colorScheme.error,
+                                    side: BorderSide(
+                                      color: Theme.of(context).colorScheme.error,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   ),
                                 ),
-                              ),
-                            const SizedBox(height: 6),
-                            const Divider(),
-                            const SizedBox(height: 12),
-                          ],
-
-                          // 未获取工具时的获取按钮
-                          if (!hasTools) ...[
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
+                              const Spacer(),
+                              // 右侧确认修改按钮
+                              FilledButton.icon(
                                 onPressed: () async {
+                                  final jsonText = jsonCtrl.text.trim();
                                   try {
-                                    final newTools =
-                                        await McpService.refreshServiceTools(
-                                          service,
-                                        );
-                                    final updatedService = service.copyWith(
-                                      description:
-                                          McpService.getCachedConfig(
-                                            service.mcpId,
-                                          )?.description,
-                                      tools: newTools,
-                                      lastUpdated: DateTime.now(),
-                                      prompt: McpService.buildMcpPrompt(
-                                        service.copyWith(tools: newTools),
-                                      ),
-                                    );
-                                    await Get.find<McpController>()
-                                        .updateService(
-                                          service.mcpId,
-                                          updatedService,
-                                        );
-                                    service = updatedService;
-                                    setSheetState(() {});
-                                    if (ctx.mounted) {
-                                      await _loadServices();
-                                    }
-                                    SnackBarUtils.showSuccess(
-                                      ctx,
-                                      '已获取 ${newTools.length} 个工具',
-                                    );
-                                  } catch (e) {
-                                    if (ctx.mounted) {
-                                      SnackBarUtils.showError(
-                                        ctx,
-                                        '获取失败: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}',
-                                      );
-                                    }
+                                    jsonDecode(jsonText);
+                                  } on FormatException catch (e) {
+                                    setSheetState(() {
+                                      parseError = 'JSON 格式错误: ${e.message}';
+                                    });
+                                    return;
+                                  }
+
+                                  final newConfig = _parseMcpFromJson(jsonText);
+                                  if (newConfig == null) {
+                                    setSheetState(() {
+                                      parseError = '不支持的配置格式';
+                                    });
+                                    return;
+                                  }
+
+                                  // 更新配置（保留原 ID、工具等信息）
+                                  final updatedService = newConfig.copyWith(
+                                    mcpId: service.mcpId,
+                                    name: service.name,
+                                    description: service.description,
+                                    tools: service.tools,
+                                    version: service.version,
+                                    lastUpdated: DateTime.now(),
+                                    prompt: service.prompt,
+                                  );
+
+                                  await Get.find<McpController>().updateService(
+                                    service.mcpId,
+                                    updatedService,
+                                  );
+
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                    await _loadServices();
+                                    SnackBarUtils.showSuccess(context, '配置已更新: ${service.name}');
                                   }
                                 },
-                                icon: const Icon(
-                                  CupertinoIcons.arrow_down_to_line_alt,
-                                  size: 15,
-                                ),
-                                label: Text(
-                                  AppLocalizations.of(context)!.fetchTools,
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                  ),
+                                icon: const Icon(CupertinoIcons.checkmark, size: 14),
+                                label: const Text('确认修改'),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  textStyle: const TextStyle(fontSize: 12),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-
-                          // JSON 配置
-                          Text(
-                            AppLocalizations.of(context)!.jsonConfig,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E1E),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _buildConfigJson(service),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontFamily: 'monospace',
-                                color: Color(0xFFD4D4D4),
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          // 删除按钮
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                _confirmRemoveService(service);
-                              },
-                              icon: const Icon(CupertinoIcons.delete, size: 16),
-                              label: Text(
-                                AppLocalizations.of(
-                                  context,
-                                )!.removeServiceLabel,
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor:
-                                    Theme.of(context).colorScheme.error,
-                                side: BorderSide(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -791,18 +872,88 @@ class _McpManagementPageState extends State<McpManagementPage> {
   String _buildSubtitle(Mcp service) => buildSubtitle(service);
 
   String _buildConfigJson(Mcp service) {
-    // 优先展示原始配置脚本（code），否则用完整 JSON
-    if (service.code != null && service.code!.isNotEmpty) {
+    // 构建包含 env 字段的完整配置
+    final config = <String, dynamic>{};
+    
+    // 解析 code 字段
+    if (service.code.isNotEmpty) {
       try {
-        // 格式化 JSON 方便阅读
-        return const JsonEncoder.withIndent('  ').convert(
-          jsonDecode(service.code!) as Map<String, dynamic>,
-        );
+        config.addAll(jsonDecode(service.code) as Map<String, dynamic>);
       } catch (_) {
-        return service.code!;
+        // code 解析失败，使用基础字段
+        if (service.command != null) config['command'] = service.command;
+        if (service.args != null) config['args'] = service.args;
       }
+    } else {
+      if (service.command != null) config['command'] = service.command;
+      if (service.args != null) config['args'] = service.args;
     }
-    return const JsonEncoder.withIndent('  ').convert(service.toFullJson());
+    
+    // 添加 env 字段（如果有）
+    if (service.env != null && service.env!.isNotEmpty) {
+      config['env'] = service.env;
+    }
+    
+    return const JsonEncoder.withIndent('  ').convert(config);
+  }
+
+  /// 从用户输入的 JSON 文本解析并构建 Mcp 配置
+  static Mcp? _parseMcpFromJson(String jsonText) {
+    try {
+      final json = jsonDecode(jsonText) as Map<String, dynamic>;
+
+      Map<String, dynamic> serviceJson = json;
+      final mcpServers = json['mcpServers'] as Map<String, dynamic>?;
+      if (mcpServers != null && mcpServers.isNotEmpty) {
+        if (mcpServers.containsKey('url') ||
+            mcpServers.containsKey('type') ||
+            mcpServers.containsKey('command')) {
+          serviceJson = mcpServers;
+        } else {
+          serviceJson = mcpServers.entries.first.value as Map<String, dynamic>;
+        }
+      }
+
+      final hasUrl =
+          serviceJson['url'] is String && (serviceJson['url'] as String).isNotEmpty;
+      if (hasUrl) {
+        final typeVal = serviceJson['type'] as String?;
+        if (typeVal == null || typeVal.isEmpty) {
+          serviceJson['type'] = 'http';
+        } else if (typeVal != 'sse' &&
+            typeVal != 'http' &&
+            typeVal != 'streamableHttp') {
+          return null;
+        }
+      }
+
+      final code = jsonEncode(serviceJson);
+      return Mcp(
+        mcpId: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
+        name: 'mcp_${DateTime.now().millisecondsSinceEpoch}',
+        code: code,
+        command: serviceJson['command'] as String?,
+        args: (serviceJson['args'] as List<dynamic>?)?.cast<String>(),
+        url: serviceJson['url'] as String?,
+        headers: serviceJson['headers'] != null
+            ? Map<String, String>.from(serviceJson['headers'])
+            : null,
+        body: serviceJson['body'] != null
+            ? Map<String, dynamic>.from(serviceJson['body'] as Map)
+            : null,
+        env: serviceJson['env'] != null
+            ? Map<String, String>.from(serviceJson['env'])
+            : null,
+        workingDirectory: serviceJson['workingDirectory'] as String?,
+        type: hasUrl
+            ? McpTransportTypeExt.fromString(serviceJson['type'] as String?)
+            : null,
+      );
+    } on FormatException {
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   void _showMarketplaceDialog() {

@@ -139,29 +139,40 @@ dynamic buildUserContent(ChatMessage userMessage) {
     return userMessage.content;
   }
 
+  // 检查是否有图片附件（支持 base64 或 OSS URL）
   final hasImageAttachment = userMessage.attachments.any(
     (a) =>
-        a.type == 'image' && a.base64Data != null && a.base64Data!.isNotEmpty,
+        a.type == 'image' &&
+        ((a.base64Data != null && a.base64Data!.isNotEmpty) ||
+         (a.ossUrl != null && a.ossUrl!.isNotEmpty)),
   );
 
   if (hasImageAttachment) {
     final parts = <Map<String, dynamic>>[];
     for (final a in userMessage.attachments) {
-      if (a.type == 'image' &&
-          a.base64Data != null &&
-          a.base64Data!.isNotEmpty) {
-        final dataUri =
-            'data:${a.mimeType ?? "image/png"};base64,${a.base64Data}';
-        parts.add({
-          'type': 'image_url',
-          'image_url': {'url': dataUri},
-        });
-        if (a.content != null && a.content!.isNotEmpty) {
-          final path =
-              (a.filePath != null && a.filePath!.isNotEmpty)
-                  ? a.filePath!
-                  : a.name;
-          parts.add({'type': 'text', 'text': '[图片: $path] ${a.content}'});
+      if (a.type == 'image') {
+        // 优先使用 OSS URL，其次使用 base64
+        String? imageUrl;
+        if (a.ossUrl != null && a.ossUrl!.isNotEmpty) {
+          imageUrl = a.ossUrl;
+        } else if (a.base64Data != null && a.base64Data!.isNotEmpty) {
+          imageUrl = 'data:${a.mimeType ?? "image/png"};base64,${a.base64Data}';
+        }
+
+        if (imageUrl != null) {
+          parts.add({
+            'type': 'image_url',
+            'image_url': {'url': imageUrl},
+          });
+          if (a.content != null && a.content!.isNotEmpty) {
+            final path =
+                (a.filePath != null && a.filePath!.isNotEmpty)
+                    ? a.filePath!
+                    : a.name;
+            parts.add({'type': 'text', 'text': '[图片: $path] ${a.content}'});
+          }
+        } else {
+          parts.add({'type': 'text', 'text': _buildAttachmentInfo(a)});
         }
       } else {
         parts.add({'type': 'text', 'text': _buildAttachmentInfo(a)});
@@ -193,6 +204,11 @@ String _buildAttachmentInfo(ChatAttachment a) {
     buf.write(', 大小: ${_formatFileSize(a.size!)}');
   }
   buf.write(']\n');
+
+  // 如果有 OSS URL，添加链接信息
+  if (a.ossUrl != null && a.ossUrl!.isNotEmpty) {
+    buf.write('[文件链接: ${a.ossUrl}]\n');
+  }
 
   if (a.content == null || a.content!.isEmpty) {
     buf.write('[文件处理中...]');

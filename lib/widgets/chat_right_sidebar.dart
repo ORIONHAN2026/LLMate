@@ -14,9 +14,8 @@ import '../models/chat/artifact_entry.dart';
 import '../models/chat/contract_info.dart';
 import '../storage/isar_service.dart';
 import '../storage/file_storage.dart';
-import 'contract_sidebar.dart';
-import 'invoice_sidebar.dart';
-import 'chatroom_sidebar.dart';
+import '../framework/modes/mode_sidebars.dart';
+import '../framework/modes/work_mode_sidebar.dart';
 
 /// 文件树节点
 class _FileTreeNode {
@@ -67,35 +66,16 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     return sessionController.currentSession.value?.workMode ?? 'conversation';
   }
 
-  /// 获取当前模式的 Tab 数量
-  int _getTabCount() {
-    final mode = _getWorkMode();
-    switch (mode) {
-      case 'contract':
-        return ContractSidebar.tabCount;
-      case 'invoice':
-        return InvoiceSidebar.tabCount;
-      case 'chatroom':
-        return ChatroomSidebar.tabCount;
-      default:
-        return 1;
-    }
+  /// 获取当前模式的侧边栏策略
+  WorkModeSidebar _getSidebar() {
+    return getSidebarByMode(_getWorkMode());
   }
 
+  /// 获取当前模式的 Tab 数量
+  int _getTabCount() => _getSidebar().tabCount;
+
   /// 获取当前模式的 Tab 标题
-  List<String> _getTabTitles() {
-    final mode = _getWorkMode();
-    switch (mode) {
-      case 'contract':
-        return ContractSidebar.getTabTitles();
-      case 'invoice':
-        return InvoiceSidebar.getTabTitles();
-      case 'chatroom':
-        return ChatroomSidebar.getTabTitles();
-      default:
-        return ['文件列表'];
-    }
-  }
+  List<String> _getTabTitles() => _getSidebar().tabTitles;
 
   TabController _getTabController() {
     final count = _getTabCount();
@@ -147,8 +127,6 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     return Obx(() {
       final session = sessionController.currentSession.value;
       final isSending = session?.isSending ?? false;
-      final workMode = session?.workMode ?? 'conversation';
-      final isSpecialMode = workMode == 'contract' || workMode == 'invoice' || workMode == 'chatroom';
 
       // 如果正在发送消息，使用缓存的数据，不重新构建
       if (isSending && _cachedTabChildren != null) {
@@ -166,19 +144,10 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         _buildFilesContent(context, messages),
       ];
 
-      // 根据模式添加对应的 Tab 内容
-      if (workMode == 'contract') {
-        for (int i = 1; i < ContractSidebar.tabCount; i++) {
-          tabChildren.add(ContractSidebar.buildTabContent(context, i, sessionId));
-        }
-      } else if (workMode == 'invoice') {
-        for (int i = 1; i < InvoiceSidebar.tabCount; i++) {
-          tabChildren.add(InvoiceSidebar.buildTabContent(context, i, sessionId));
-        }
-      } else if (workMode == 'chatroom') {
-        for (int i = 0; i < ChatroomSidebar.tabCount; i++) {
-          tabChildren.add(ChatroomSidebar.buildTabContent(context, i, sessionId));
-        }
+      // 从策略获取模式专属 Tab 内容（跳过 index 0，文件列表已添加）
+      final sidebar = _getSidebar();
+      for (int i = 1; i < sidebar.tabCount; i++) {
+        tabChildren.add(sidebar.buildTabContent(context, i, sessionId));
       }
 
       final result = Container(
@@ -187,7 +156,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 顶部Tab栏
-            _buildTabBar(context, isSpecialMode),
+            _buildTabBar(context),
             // 内容区域
             Expanded(
               child: TabBarView(
@@ -206,7 +175,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     });
   }
 
-  Widget _buildTabBar(BuildContext context, bool isSpecialMode) {
+  Widget _buildTabBar(BuildContext context) {
     final tabTitles = _getTabTitles();
     final tabs = tabTitles.map((title) => Tab(text: title)).toList();
 

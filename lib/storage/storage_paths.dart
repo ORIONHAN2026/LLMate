@@ -17,11 +17,11 @@ class StoragePaths {
   /// ~/.llmwork/
   static String get root => p.join(home, '.llmwork');
 
+  /// ~/.llmwork/mcps/
+  static String get mcpsDir => p.join(root, 'mcps');
+
   /// ~/.llmwork/models.json
   static String get modelsFile => p.join(root, 'models.json');
-
-  /// ~/.llmwork/mcp.json
-  static String get mcpFile => p.join(root, 'mcp.json');
 
   /// ~/.llmwork/settings.json
   static String get settingsFile => p.join(root, 'settings.json');
@@ -98,6 +98,11 @@ class StoragePaths {
   /// 确保根目录存在
   static Future<void> ensureRoot() async {
     await Directory(root).create(recursive: true);
+  }
+
+  /// 确保 MCPs 目录存在
+  static Future<void> ensureMcpsDir() async {
+    await Directory(mcpsDir).create(recursive: true);
   }
 
   /// 确保会话目录存在

@@ -30,8 +30,10 @@ class ChatroomSidebar {
   static Widget buildTabContent(BuildContext context, int index, String sessionId) {
     switch (index) {
       case 0:
-        return _buildRolesTab(context, sessionId);
+        return const SizedBox.shrink(); // 文件列表（由 chat_right_sidebar 提供）
       case 1:
+        return _buildRolesTab(context, sessionId);
+      case 2:
         return _buildNoteTab(context, sessionId);
       default:
         return const SizedBox.shrink();
@@ -227,6 +229,12 @@ class ChatroomSidebar {
 
   /// 角色卡片
   static Widget _buildRoleCard(BuildContext context, _RoleInfo role) {
+    // 从 displayName 提取 emoji（第一个字符）
+    final emoji = role.displayName.isNotEmpty ? role.displayName.characters.first : '';
+    final nameWithoutEmoji = role.displayName.length > 1
+        ? role.displayName.substring(1).trim()
+        : role.displayName;
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
@@ -244,15 +252,14 @@ class ChatroomSidebar {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.person,
-                size: 16,
-                color: Theme.of(context).colorScheme.primary,
+              Text(
+                emoji,
+                style: const TextStyle(fontSize: 18),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  role.displayName,
+                  nameWithoutEmoji,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

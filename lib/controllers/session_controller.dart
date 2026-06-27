@@ -471,6 +471,7 @@ class SessionController extends GetxController {
       'compressedMemory': session.compressedMemory,
       'attachments':
           session.attachments.map((a) => a.toJson()).toList(),
+      'emoji': session.emoji,
     };
   }
 
@@ -542,6 +543,7 @@ class SessionController extends GetxController {
       scheduledTask: scheduledTask,
       compressedMemory: entity['compressedMemory'] as String?,
       contracts: await _loadContracts(entity['sessionId'] as String? ?? ''),
+      emoji: entity['emoji'] as String?,
     );
   }
 

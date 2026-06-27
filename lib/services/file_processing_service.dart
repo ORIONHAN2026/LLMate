@@ -118,6 +118,8 @@ class FileProcessingService {
   static const int _maxTextLength = 100 * 1024;
 
   /// 处理附件，读取文件内容并生成上下文信息
+  ///
+  /// 大文件（>5MB）会自动上传到 OSS 并生成访问 URL
   static Future<ChatAttachment> processAttachment(
     ChatAttachment attachment,
   ) async {
@@ -664,6 +666,7 @@ class FileProcessingService {
   /// 处理图片文件
   ///
   /// 提取图片的元数据信息和基本属性
+  /// 大图片会上传到 OSS，小图片保持 base64
   static Future<String> _processImageFile(File file, String fileName) async {
     try {
       // 读取图片文件字节

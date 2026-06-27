@@ -13,7 +13,14 @@ import '../utils/mcp_json_parser.dart';
 import '../utils/snackbar_utils.dart';
 
 class McpManagementPage extends StatefulWidget {
-  const McpManagementPage({super.key});
+  final bool embedded;
+  final Function(List<Widget>)? onActionsChanged;
+
+  const McpManagementPage({
+    super.key,
+    this.embedded = false,
+    this.onActionsChanged,
+  });
 
   @override
   State<McpManagementPage> createState() => _McpManagementPageState();
@@ -42,6 +49,14 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final body = _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _buildContent();
+
+    if (widget.embedded) {
+      return body;
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -61,10 +76,15 @@ class _McpManagementPageState extends State<McpManagementPage> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildServiceList(),
+      body: body,
     );
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return _buildServiceList();
   }
 
   Widget _buildServiceList() {
@@ -370,7 +390,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
         headers: serverConfig['headers'] != null
             ? Map<String, String>.from(serverConfig['headers'] as Map)
             : null,
-        type: serverConfig['url'] != null ? McpTransportType.sse : null,
+        // 不设置 type，让连接时自动检测（先 SSE 后 HTTP）
       );
       await mcpc.addService(mcp, serverJson: serverJson);
 

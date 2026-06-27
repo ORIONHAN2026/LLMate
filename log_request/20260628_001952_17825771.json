@@ -1,0 +1,98 @@
+{
+  "timestamp": "2026-06-28T00:19:52.271666",
+  "sessionId": "1782577168592",
+  "model": "deepseek-v4-flash",
+  "request": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 📂 工作目录\n当前工作目录：`/Users/orion/Documents/大都会-通联`\n\n⚠️ **注意：工作目录是用来读取用户文件的，不是用来保存会话数据的。**\n\n### 文件操作规则\n1. **读取用户文件**：使用 `file_read` 工具读取工作目录下的文件\n2. **修改用户文件**：使用 `file_write` 工具修改用户指定的文件\n3. **格式保留**：修改文件时必须保留原有格式，包括字体、缩进、换行等\n4. **仅限工作目录**：读取和修改用户文件时，仅限工作目录下的文件\n\n### ⚠️ 重要：会话数据文件存储在会话目录，不在工作目录\n合同要点、履约跟踪、争议记录、备忘录、角色等会话数据，必须使用专用工具（如 contract_content_update）写入，这些工具会自动保存到会话目录（~/.llmwork/chats/会话ID/），**不要**写入工作目录。"
+      },
+      {
+        "role": "system",
+        "content": "## 📋 合同模式\n\n### 🔴 两个目录（必须严格区分）\n\n1. **工作目录** = `/Users/orion/Documents/大都会-通联`\n   - 存放用户的原始合同文件（Word等）\n   - 只能用 `file_read` 读取这里的内容\n   - ❌ 禁止在这里创建/写入任何文件\n\n2. **会话目录** = `/Users/orion/.llmwork/chats/1782577168592`\n   - 存放合同分析结果\n   - 使用专用工具写入这里\n\n### 🔴 操作流程\n\n步骤1：读取工作目录下的合同文件\n```\nfile_read({\"filePath\": \"/Users/orion/Documents/大都会-通联/xxx.docx\"})\n```\n\n步骤2：分析合同内容\n\n步骤3：调用专用工具写入会话目录\n```\ncontract_content_update({\"content\": \"合同要点Markdown内容\"})\ncontract_process_update({\"content\": \"履约跟踪Markdown内容\"})\ncontract_disguss_update({\"content\": \"争议记录Markdown内容\"})\n```\n\n### 🔴 禁止事项\n\n- ❌ 禁止使用 file_write 写入合同数据\n- ❌ 禁止使用 bash/cat 命令写入文件\n- ❌ 禁止将 contract_content.md 等文件保存到工作目录\n- ❌ 禁止只输出内容而不调用工具\n\n### 工具用途\n\n| 工具 | 用途 | 写入位置 |\n|------|------|----------|\n| `file_read` | 读取工作目录文件 | 只读 |\n| `contract_content_update` | 合同要点 | `/Users/orion/.llmwork/chats/1782577168592` |\n| `contract_process_update` | 合同履约 | `/Users/orion/.llmwork/chats/1782577168592` |\n| `contract_disguss_update` | 合同争议 | `/Users/orion/.llmwork/chats/1782577168592` |\n| `note_update` | 备忘录 | `/Users/orion/.llmwork/chats/1782577168592` |\n\n### ⚠️ 严格格式要求\n\n**必须严格按照以下固定模板写入，不得更改章节结构、标题文字或顺序。**\n\n---\n\n#### 合同要点内容格式\n\n```markdown\n# 合同要点\n\n## {合同名称}\n\n| 字段 | 内容 |\n|------|------|\n| 合同类型 | {类型} |\n| 签署方 | {甲方名称}（甲方）、{乙方名称}（乙方） |\n| 合同起始 | {YYYY-MM-DD 或 待确认} |\n| 合同结束 | {YYYY-MM-DD 或 待确认} |\n| 签订日期 | {YYYY-MM-DD 或 待确认} |\n| 合同金额 | {金额及说明} |\n\n### 收支条款\n{收支条款内容}\n\n### 支付计划\n{支付计划内容}\n\n### 违约条款\n{违约条款内容}\n\n### 违约责任\n{违约责任内容}\n\n---\n\n（如有更多合同，按同样格式追加）\n```\n\n---\n\n#### 合同履约跟踪内容格式\n\n```markdown\n# 合同履约跟踪\n\n## {合同名称}\n\n### 基本信息\n| 字段 | 内容 |\n|------|------|\n| 合同状态 | {进行中/已完成/已终止} |\n| 履约进度 | {进度描述，如 60%} |\n\n### 付款记录\n| 日期 | 金额 | 状态 | 备注 |\n|------|------|------|------|\n| {YYYY-MM-DD} | {金额} | {已付/待付} | {备注} |\n\n### 交付记录\n| 日期 | 交付物 | 验收状态 | 备注 |\n|------|--------|----------|------|\n| {YYYY-MM-DD} | {交付物名称} | {已验收/待验收} | {备注} |\n\n---\n\n（如有更多合同，按同样格式追加）\n```\n\n---\n\n#### 合同争议记录内容格式\n\n**无争议时**（初始状态）：\n\n```markdown\n# 合同争议记录\n\n## {合同名称}\n\n| 字段 | 内容 |\n|------|------|\n| 争议状态 | 无 |\n```\n\n**有争议时**：\n\n```markdown\n# 合同争议记录\n\n## {合同名称}\n\n### 争议摘要\n| 字段 | 内容 |\n|------|------|\n| 争议状态 | {待解决/协商中/已解决/已升级} |\n| 发现日期 | {YYYY-MM-DD} |\n| 严重程度 | {低/中/高/紧急} |\n\n### 争议详情\n{详细描述争议内容、原因、影响}\n\n### 处理进展\n| 日期 | 操作 | 结果 |\n|------|------|------|\n| {YYYY-MM-DD} | {采取的措施} | {当前结果} |\n\n---\n\n（如有更多争议，按同样格式追加）\n```\n\n---\n\n### 写入规则\n\n1. **使用专用工具写入**：调用 `contract_content_update`、`contract_process_update`、`contract_disguss_update` 工具\n2. **完整内容**：每次调用必须提供完整的文件内容，不要只写部分内容\n3. **保持格式一致**：严格使用上述表格和标题结构，不要用其他格式替代\n4. **保留格式**：写入时保留 Markdown 格式，包括表格、标题、列表等\n\n### ⚠️ 重要提醒\n\n1. **分析合同后必须写入文件**：不要只在回复中输出内容，必须调用专用工具写入\n2. **不要询问用户文件是否存在**：直接调用专用工具写入即可，工具会自动处理文件创建和更新\n3. **不要使用 bash 命令**：如 `cat >` 等，必须使用专用工具\n4. **写入后不要重复确认**：工具返回成功即表示文件已更新，无需再次读取确认\n5. **回复中告知结果**：写入完成后，在回复中简要告知用户已写入的文件和关键信息\n"
+      },
+      {
+        "role": "system",
+        "content": "## ⚡ 核心规则\n\n1. **工具优先**：回答需要文件内容、目录结构、代码片段或数据时，必须先调用工具获取。严禁在未调用工具的情况下编造文件名、路径、代码内容或数据。\n2. **操作验证**：声称完成了任何操作（修改文件、执行命令等），必须确实通过工具执行过。严禁假装执行。\n3. **诚实回应**：如果无法获取需要的信息，直接说\"无法确定\"，不要编造。区分事实（工具返回的）与推测。\n4. **静默执行**：直接调用工具并返回结果，无需向用户解释你正在使用什么工具。不要将内部工具作为功能特性向用户介绍。\n5. **过期数据**：不要依赖历史对话中看到过的数据，每次都重新通过工具获取最新内容。\n\n一句话：没调用工具就不准呈现数据，没执行操作就不准说已完成。"
+      },
+      {
+        "role": "system",
+        "content": "You MUST respond in Chinese (Simplified). Code, variable names, and URLs can remain in their original language."
+      },
+      {
+        "role": "user",
+        "content": "我刚设置了工作目录，当前处于合同模式。请帮我检查一下目录中已有的文件，介绍当前的工作状态和你可以提供的帮助。"
+      }
+    ]
+  },
+  "response": {
+    "content": "好的，我先检查工作目录中的文件情况。现在让我看看已有的几个.md文件的内容，了解当前状态。现在我来读取核心合同文件的内容，了解合同详情。让我用 python 来读取 Word 文档内容。python-docx 已安装，让我读取 Word 合同文件。好的，我已经全面了解了工作目录中的文件情况。以下是我的工作报告：\n\n---\n\n## 📂 工作目录概况\n\n**目录**：`/Users/orion/Documents/大都会-通联`\n\n### 合同文件\n| 文件 | 说明 |\n|------|------|\n| ✅ **Metro大都会APP支付宝渠道活动营销管理费合同.docx** | 主合同，已完整读取（含税款¥30,000） |\n| 📄 用印单_20260507.docx | 用印申请单 |\n| 📄 关于不使用电子签章的说明.docx + .pdf | 签章说明 |\n| 📄 附件1 事实依据-资产公司呈批件.pdf | 附件资料 |\n| 📄 附件2 价格依据-情况说明.docx + .pdf | 价格依据 |\n\n### 已有分析文件（当前会话配套目录中）\n| 文件 | 状态 |\n|------|------|\n| 📋 合同要点 | ⚠️ 尚未创建（需写入会话目录） |\n| 📋 合同履约跟踪 | ✅ 已存在（进行中/待启动） |\n| 📋 合同争议记录 | ✅ 已存在（无争议） |\n\n---\n\n## 📋 合同要点摘要\n\n| 字段 | 内容 |\n|------|------|\n| **合同名称** | Metro大都会APP支付宝渠道活动营销管理费合同 |\n| **甲方（合作方）** | 通卡联城（上海）网络科技有限公司 |\n| **乙方（渠道方）** | 上海申通地铁资产经营管理有限公司 |\n| **合同金额** | ¥30,000（含税，税率6%） |\n| **活动时间** | 自签订之日起至 **2026年12月31日** |\n| **付款方式** | 活动完成→验收合格→收到发票后7日内一次性支付 |\n| **争议管辖** | 乙方住所地人民法院 |\n\n---\n\n## 💡 我可以提供的帮助\n\n在**合同模式**下，我可以为您做以下事情：\n\n### 1️⃣ 合同要点梳理\n- 将已读取的合同内容整理为**结构化合同要点**，写入会话目录\n- 包括：合同基本信息、收支条款、支付计划、违约条款、违约责任等\n\n### 2️⃣ 合同履约跟踪\n- 更新**履约进度**（当前为\"待启动\"）\n- 记录付款和交付状态\n\n### 3️⃣ 合同争议记录\n- 当前无争议，如需记录可更新\n\n### 4️⃣ 备忘录\n- 记录会议纪要、待办事项等\n\n### 5️⃣ 分析其他文件\n- 阅读其他合同文件或附件（用印单、价格依据说明等）\n\n---\n\n**请问您想先处理哪项工作？** 比如：\n- 将这份 **Metro大都会合同** 的要点正式写入合同分析文件？\n- 更新履约跟踪状态？\n- 查看附件中的用印单或价格依据文件？",
+    "tool_calls": [
+      {
+        "name": "node_execute",
+        "arguments": {
+          "script": "const fs = require('fs');\nconst path = '/Users/orion/Documents/大都会-通联';\nconst items = fs.readdirSync(items, { withFileTypes: true });\nitems.forEach(item => {\n  const fullPath = path + '/' + item.name;\n  const stat = fs.statSync(fullPath);\n  console.log(`${item.isDirectory() ? '[目录]' : '[文件]'} ${item.name} (${(stat.size/1024).toFixed(1)} KB)`);\n});\n"
+        },
+        "success": false,
+        "result": "[eval]:3\nconst items = fs.readdirSync(items, { withFileTypes: true });\n                             ^\n\nReferenceError: Cannot access 'items' before initialization\n    at [eval]:3:30\n    at runScriptInThisContext (node:internal/vm:219:10)\n    at node:internal/process/execution:451:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:449:60)\n    at evalFunction (node:internal/process/execution:283:30)\n    at evalTypeScript (node:internal/process/execution:295:3)\n    at node:internal/main/eval_string:71:3\n\nNode.js v24.14.0"
+      },
+      {
+        "name": "node_execute",
+        "arguments": {
+          "script": "const fs = require('fs');\nconst path = '/Users/orion/Documents/大都会-通联';\nconst items = fs.readdirSync(path, { withFileTypes: true });\nitems.forEach(item => {\n  const fullPath = path + '/' + item.name;\n  const stat = fs.statSync(fullPath);\n  console.log(`${item.isDirectory() ? '[目录]' : '[文件]'} ${item.name} (${(stat.size/1024).toFixed(1)} KB)`);\n});\n"
+        },
+        "success": true,
+        "result": "[文件] .DS_Store (8.0 KB)\n[目录] .llmwork (0.1 KB)\n[文件] Metro大都会APP支付宝渠道活动营销管理费合同.docx (18.3 KB)\n[文件] ~$庄市星河广告有限公司.docx (0.2 KB)\n[目录] 会话截图 (0.1 KB)\n[文件] 关于不使用电子签章的说明.docx (15.5 KB)\n[文件] 关于不使用电子签章的说明.pdf (1201.6 KB)\n[文件] 合同争议记录.md (0.1 KB)\n[文件] 合同履约跟踪.md (0.6 KB)\n[目录] 未命名文件夹 (0.1 KB)\n[文件] 用印单_20260507.docx (16.3 KB)\n[文件] 附件 2.价格依据-情况说明.docx (11.9 KB)\n[文件] 附件 2.价格依据-情况说明.pdf (1485.1 KB)\n[文件] 附件1  事实依据-资产公司呈批件.pdf (229.3 KB)"
+      },
+      {
+        "name": "file_read",
+        "arguments": {
+          "filePath": "/Users/orion/Documents/大都会-通联/合同争议记录.md"
+        },
+        "success": true,
+        "result": "{\"filePath\":\"/Users/orion/Documents/大都会-通联/合同争议记录.md\",\"fileName\":\"合同争议记录.md\",\"extension\":\".md\",\"size\":145,\"lineCount\":8,\"content\":\"# 合同争议记录\\n\\n## Metro大都会APP支付宝渠道活动营销管理费合同\\n\\n| 字段 | 内容 |\\n|------|------|\\n| 争议状态 | 无 |\\n\",\"message\":\"已读取 /Users/orion/Documents/大都会-通联/合同争议记录.md（8 行，145 B）\"}"
+      },
+      {
+        "name": "file_read",
+        "arguments": {
+          "filePath": "/Users/orion/Documents/大都会-通联/合同履约跟踪.md"
+        },
+        "success": true,
+        "result": "{\"filePath\":\"/Users/orion/Documents/大都会-通联/合同履约跟踪.md\",\"fileName\":\"合同履约跟踪.md\",\"extension\":\".md\",\"size\":628,\"lineCount\":20,\"content\":\"# 合同履约跟踪\\n\\n## Metro大都会APP支付宝渠道活动营销管理费合同\\n\\n### 基本信息\\n| 字段 | 内容 |\\n|------|------|\\n| 合同状态 | 进行中 |\\n| 履约进度 | 待启动 |\\n\\n### 付款记录\\n| 日期 | 金额 | 状态 | 备注 |\\n|------|------|------|------|\\n| 待确认 | ¥30,000 | 待付 | 全部活动完成、验收合格并收到发票后7日内一次性支付 |\\n\\n### 交付记录\\n| 日期 | 交付物 | 验收状态 | 备注 |\\n|------|--------|----------|------|\\n| 待确认 | 活动方案及活动执行成果 | 待验收 | 甲方须按双方确定的活动方案在乙方渠道内开展活动 |\\n\",\"message\":\"已读取 /Users/orion/Documents/大都会-通联/合同履约跟踪.md（20 行，628 B）\"}"
+      },
+      {
+        "name": "file_read",
+        "arguments": {
+          "filePath": "/Users/orion/Documents/大都会-通联/Metro大都会APP支付宝渠道活动营销管理费合同.docx"
+        },
+        "success": false,
+        "result": "不支持的文件类型: .docx，支持: .dart, .java, .kt, .swift, .py, .js, .ts, .tsx, .jsx, .c, .cpp, .h, .hpp, .cs, .go, .rs, .rb, .php, .sh, .lua, .r, .sql, .html, .css, .scss, .less, .xml, .svg, .vue, .svelte, .json, .yaml, .yml, .toml, .ini, .cfg, .conf, .env, .properties, .gradle, .cmake, .md, .txt, .log, .csv, .tsv, .mdx, .rmd"
+      },
+      {
+        "name": "python_execute",
+        "arguments": {
+          "script": "import subprocess\nresult = subprocess.run(['pip', 'list', '--format=columns'], capture_output=True, text=True)\nprint(result.stdout[:2000])\n"
+        },
+        "success": false,
+        "result": "Traceback (most recent call last):\n  File \"<string>\", line 2, in <module>\n  File \"/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py\", line 505, in run\n    with Popen(*popenargs, **kwargs) as process:\n  File \"/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py\", line 951, in __init__\n    self._execute_child(args, executable, preexec_fn, close_fds,\n  File \"/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py\", line 1821, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nFileNotFoundError: [Errno 2] No such file or directory: 'pip'"
+      },
+      {
+        "name": "python_execute",
+        "arguments": {
+          "script": "import subprocess\n# Check what python is available\nresult = subprocess.run(['which', 'python3'], capture_output=True, text=True)\nprint(\"python3:\", result.stdout, result.stderr)\n\nresult2 = subprocess.run(['python3', '-m', 'pip', 'list', '--format=columns'], capture_output=True, text=True)\nprint(result2.stdout[:2000])\nprint(\"STDERR:\", result2.stderr[:500])\n"
+        },
+        "success": true,
+        "result": "python3: /usr/bin/python3\n \nPackage               Version\n--------------------- ------------\naiohappyeyeballs      2.6.1\naiohttp               3.13.5\naiosignal             1.4.0\naistudio-sdk          0.3.8\naltgraph              0.17.2\nannotated-doc         0.0.4\nannotated-types       0.7.0\nanyio                 4.12.1\nasync-timeout         5.0.1\nattrs                 26.1.0\nbce-python-sdk        0.9.72\nbeautifulsoup4        4.14.3\ncertifi               2026.2.25\ncffi                  2.0.0\nchardet               5.2.0\ncharset-normalizer    3.4.7\nclick                 8.1.8\ncoloredlogs           15.0.1\ncolorlog              6.10.1\ncrc32c                2.8\ncryptography          46.0.7\ndeep-translator       1.11.4\ndefusedxml            0.7.1\ndistro                1.9.0\net_xmlfile            2.0.0\nexceptiongroup        1.3.1\nezdxf                 1.4.2\nfilelock              3.19.1\nflatbuffers           25.12.19\nfonttools             4.60.2\nfrozenlist            1.8.0\nfsspec                2025.10.0\nfuture                0.18.2\ngreenlet              3.2.5\nh11                   0.16.0\nhf-xet                1.5.1\nhttpcore              1.0.9\nhttpx                 0.28.1\nhuggingface_hub       1.8.0\nhumanfriendly         10.0\nidna                  3.11\nimagesize             1.5.0\njiter                 0.15.0\nlxml                  6.0.4\nmacholib              1.15.2\nmarkdown-it-py        3.0.0\nmdurl                 0.1.2\nmodelscope            1.37.1\nmpmath                1.3.0\nmultidict             6.7.1\nnetworkx              3.2.1\nnumpy                 2.0.2\nonnxruntime           1.19.2\nopenai                2.44.0\nopencv-contrib-python 4.10.0.84\nopencv-python         4.13.0.92\nopenpyxl              3.1.5\nopt-einsum            3.3.0\npackaging             26.2\npaddleocr             3.7.0\npaddlepaddle          3.3.1\npaddlex               3.7.2\npandas                2.3.3\npdfminer.six          20251107\npdfplumber            0.11.8\npillow                11.3.0\npip                 ...(truncated)"
+      },
+      {
+        "name": "python_execute",
+        "arguments": {
+          "script": "from docx import Document\n\ndoc = Document('/Users/orion/Documents/大都会-通联/Metro大都会APP支付宝渠道活动营销管理费合同.docx')\n\n# Read paragraphs\nprint(\"=== 段落内容 ===\")\nfor i, para in enumerate(doc.paragraphs):\n    if para.text.strip():\n        print(f\"[P{i}] {para.text.strip()}\")\n\n# Read tables\nprint(\"\\n=== 表格内容 ===\")\nfor ti, table in enumerate(doc.tables):\n    print(f\"\\n--- 表格 {ti+1} ---\")\n    for ri, row in enumerate(table.rows):\n        cells = [cell.text.strip() for cell in row.cells]\n        print(f\"  行{ri}: {' | '.join(cells)}\")\n"
+        },
+        "success": true,
+        "result": "=== 段落内容 ===\n[P2] Metro大都会APP支付宝渠道活动营销管理费合同\n[P11] 甲方（合作方）：通卡联城（上海）网络科技有限公司\n[P12] 乙方（渠道方）：上海申通地铁资产经营管理有限公司\n[P14] 签订地点：上海市徐汇区\n[P18] 安 全 地 铁\n[P19] 健 康 身 心\n[P25] 廉洁从业，保障上海轨道交通健康发展\n[P27] 根据《中华人民共和国民法典》等法律的规定，甲乙双方经友好协商，就甲方在乙方Metro大都会APP支付宝渠道开展活动，乙方向甲方收取营销管理费事项有关事宜达成如下协议。\n[P28] 第一条 合作事项\n[P29] 甲方在乙方Metro大都会APP支付宝渠道开展活动，乙方向甲方收取营销管理费。本合同约定的价格为含税价格，即营销管理费，包括活动或服务有关的咨询费、管理费、报酬、税金等所有有关费用，增值税税率为6%。\n[P30] 第二条 活动或服务的地点、时间\n[P31] 2.1 活动或服务的地点：  乙方Metro大都会APP支付宝渠道                  。\n[P32] 2.2 活动或服务的时间： 自合同签订之日起至2026年12月31日。\n[P33] 第三条 质量标准\n[P34] 3.1 甲方应严格按照双方确定的活动方案在乙方渠道内开展活动，保证活动质量、按规定期限完成，并遵守乙方平台的运营管理规范。同时甲方在开展活动的过程中应得体，活动质量应符合乙方活动方案的要求及行业通常的标准。\n[P35] 3.2 活动中不得出现不尊重用户和相关管理方的情形，不得与用户、相关管理方等发生冲突。\n[P36] 3.3 不得发生因甲方自身的原因，导致用户或相关管理方等投诉的情形。\n[P37] 3.4 甲方在提供服务的过程中涉及使用第三方知识产权的，均应获得相应许可，不得侵犯任何第三方之合法权益。\n[P38] 3.5 不得出现违反管理方或相关方管理制度的情形；服从乙方及相关方的管理，不得发生拒绝执行乙方及相关方合理要求的情形。\n[P39] 第四条  付款\n[P40] 4.1 本合同约定款项由甲方通过银行转账的方式支付至乙方如下账户：\n[P41] 收款人：上海申通地铁资产经营管理有限公司\n[P42] 开户行：中国工商银行上海天目东路支行\n[P43] 账号（卡号）： 1001215509300248807\n[P44] 4.2 本合同约定款项采取如下方式付：\n[P45] 合同款项含税总价为：¥30,000（大写：人民币叁万元整）。\n[P46] 全部活动完成后，乙方开具的相应金额的增值税专用/普通发票给甲方。甲方收到活动成果并验收合格、并收到乙方开具的相应金额增值税专用/普通发票后 7 日内，将相应金额款项一次性支付给乙方。\n[P47] 第五条 违约责任\n[P48] 5.1 甲方应确保活动运营过程中的安全及合规，若因甲方原因造成用户权益损害或者其他损失的，甲方承担全部法律责任。如甲方未按要求时间完成服务导致乙方出现损失的，甲方应负责赔偿乙方的损失。\n[P49] 5.2 如因甲方原因导致乙方或者任何第三方出现任何损失的，甲方应承担全部赔偿责任。如根据届时有效的法律法规或相关规则，应由乙方先行承担责任的，乙方有权在承担相应责任后向甲方追偿，甲方除承担全部赔偿责任外，对于乙方为进行追偿而产生的相关费用，包括但不限于诉讼费、律师费、公证费等一并由甲方承担。\n[P50] 5.3 因一方违约造成另一方损失的，除按本合同其他约定承担违约责任外，还应赔偿守约方因此而造成的全部损失（包括但不限于诉讼费、律师费、仲裁申请费、仲裁处理费、保全费、查询费等）。\n[P51] 第六条 合同的解除\n[P52] 6.1 双方协商一致可以解除本合同。\n[P53] 6.2 在活动执行前2日内，甲方仍未完成活动准备工作，乙方有权通知甲方解除本合同。合同解除的，甲方应按本合同总价款10%的数额向乙方支付违约金，给乙方造成其他损失的，还应赔偿乙方的其他损失。\n[P54] 第七条 保密条款以及不可抗力条款\n[P55] 7.1 未经双方书面同意，任何一方不得将本合同内容及双方所提供的所有活动资料及方案向第三方透露。\n[P56] 7.2 不可抗力是指双方不能预见、不能避免、无法克服的客观情况：包括政府行为、自然灾害、气候影响、交通意外、战争、动乱、空中物体坠落等，该情况妨碍、影响或延误一方根据本合同履行相关义务。\n[P57] 7.3 遭受不可抗力事件一方应尽最大努力克服相关事件，并于不可抗力事件发生后三日内，采取快捷、安全的方式将有关部门或公证机关出具的证明文件提供对方确认。\n[P58] 7.4 遭受不可抗力事件一方竭尽最大努力，仍导致无法完全或部分履行，或导致本合同迟延履行，不承担违约责任。不可抗力事件消除后，双方应继续履行合同。如...(truncated)"
+      }
+    ]
+  }
+}

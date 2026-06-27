@@ -93,19 +93,24 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   String _lastTabMode = '';
 
   String _lastWorkMode = 'conversation';
+  String? _lastWorkDirectory;
 
   @override
   void initState() {
     super.initState();
-    // 监听会话变化，当发送状态结束或模式变化时清除缓存
+    // 监听会话变化，当发送状态结束、模式变化或工作目录变化时清除缓存
     ever(sessionController.currentSession, (session) {
       if (session != null) {
         final currentMode = session.workMode ?? 'conversation';
+        final currentWorkDir = session.workDirectory;
         final isSending = session.isSending ?? false;
 
-        // 模式变化或发送结束时清除缓存
-        if (currentMode != _lastWorkMode || !isSending) {
+        // 模式变化、工作目录变化或发送结束时清除缓存
+        if (currentMode != _lastWorkMode ||
+            currentWorkDir != _lastWorkDirectory ||
+            !isSending) {
           _lastWorkMode = currentMode;
+          _lastWorkDirectory = currentWorkDir;
           if (_cachedTabChildren != null) {
             setState(() {
               _cachedTabChildren = null;
@@ -135,6 +140,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
 
       final messages = session?.messages ?? const [];
       final sessionId = session?.sessionId ?? '';
+      final workDirectory = session?.workDirectory;
 
       // 动态调整 tab 数量
       final currentTabCount = _getTabCount();
@@ -147,7 +153,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       // 从策略获取模式专属 Tab 内容（跳过 index 0，文件列表已添加）
       final sidebar = _getSidebar();
       for (int i = 1; i < sidebar.tabCount; i++) {
-        tabChildren.add(sidebar.buildTabContent(context, i, sessionId));
+        tabChildren.add(sidebar.buildTabContent(context, i, sessionId, workDirectory: workDirectory));
       }
 
       final result = Container(

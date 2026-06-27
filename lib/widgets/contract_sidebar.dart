@@ -19,18 +19,18 @@ class ContractSidebar {
   static int get tabCount => 5;
 
   /// 构建指定 Tab 的内容
-  static Widget buildTabContent(BuildContext context, int index, String sessionId) {
+  static Widget buildTabContent(BuildContext context, int index, String sessionId, {String? workDirectory}) {
     switch (index) {
       case 0:
         return _buildFilesTab(context);
       case 1:
-        return _buildContractPointsTab(context, sessionId);
+        return _buildContractPointsTab(context, sessionId, workDirectory: workDirectory);
       case 2:
-        return _buildContractFileTab(context, sessionId, 'contract_process.md', '合同履约');
+        return _buildContractFileTab(context, sessionId, 'contract_process.md', '合同履约', workDirectory: workDirectory);
       case 3:
-        return _buildContractFileTab(context, sessionId, 'contract_disguss.md', '合同争议');
+        return _buildContractFileTab(context, sessionId, 'contract_disguss.md', '合同争议', workDirectory: workDirectory);
       case 4:
-        return _buildContractFileTab(context, sessionId, 'note.md', '备忘录');
+        return _buildContractFileTab(context, sessionId, 'note.md', '备忘录', workDirectory: workDirectory);
       default:
         return _buildFilesTab(context);
     }
@@ -42,13 +42,13 @@ class ContractSidebar {
   }
 
   /// 合约要点 Tab（从文件读取）
-  static Widget _buildContractPointsTab(BuildContext context, String sessionId) {
+  static Widget _buildContractPointsTab(BuildContext context, String sessionId, {String? workDirectory}) {
     if (sessionId.isEmpty) {
       return _buildEmptyState(context, '暂无合约要点', '在对话中解析合同后会自动记录');
     }
 
     return FutureBuilder<String?>(
-      future: _loadFile(sessionId, 'contract_content.md'),
+      future: _loadFile(sessionId, 'contract_content.md', workDirectory: workDirectory),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -117,14 +117,15 @@ class ContractSidebar {
     BuildContext context,
     String sessionId,
     String fileName,
-    String title,
-  ) {
+    String title, {
+    String? workDirectory,
+  }) {
     if (sessionId.isEmpty) {
       return _buildEmptyState(context, '暂无$title记录', '在对话中提及相关信息时会自动记录');
     }
 
     return FutureBuilder<String?>(
-      future: _loadFile(sessionId, fileName),
+      future: _loadFile(sessionId, fileName, workDirectory: workDirectory),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -207,8 +208,8 @@ class ContractSidebar {
   }
 
   /// 加载文件内容
-  static Future<String?> _loadFile(String sessionId, String fileName) async {
-    final path = '${StoragePaths.sessionDir(sessionId)}/$fileName';
+  static Future<String?> _loadFile(String sessionId, String fileName, {String? workDirectory}) async {
+    final path = '${StoragePaths.modeDir(sessionId: sessionId, workMode: 'contract', workDirectory: workDirectory)}/$fileName';
     return FileStorage.readText(path);
   }
 

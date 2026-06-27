@@ -40,8 +40,11 @@ String buildMemoryContext(ChatSession session) {
 }
 
 /// 加载聊天室模式的所有角色上下文
-Future<List<String>> loadRoleContexts(String sessionId) async {
-  final rolesDirPath = StoragePaths.rolesDir(sessionId);
+Future<List<String>> loadRoleContexts(String sessionId, {String? workDirectory}) async {
+  final rolesDirPath = StoragePaths.rolesDir(
+    sessionId: sessionId,
+    workDirectory: workDirectory,
+  );
   final dir = Directory(rolesDirPath);
 
   if (!await dir.exists()) return [];

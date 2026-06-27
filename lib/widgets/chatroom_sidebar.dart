@@ -27,28 +27,28 @@ class ChatroomSidebar {
   static int get tabCount => 3;
 
   /// 构建指定 Tab 的内容
-  static Widget buildTabContent(BuildContext context, int index, String sessionId) {
+  static Widget buildTabContent(BuildContext context, int index, String sessionId, {String? workDirectory}) {
     switch (index) {
       case 0:
         return const SizedBox.shrink(); // 文件列表（由 chat_right_sidebar 提供）
       case 1:
-        return _buildRolesTab(context, sessionId);
+        return _buildRolesTab(context, sessionId, workDirectory: workDirectory);
       case 2:
-        return _buildNoteTab(context, sessionId);
+        return _buildNoteTab(context, sessionId, workDirectory: workDirectory);
       default:
         return const SizedBox.shrink();
     }
   }
 
   /// 角色列表 Tab
-  static Widget _buildRolesTab(BuildContext context, String sessionId) {
+  static Widget _buildRolesTab(BuildContext context, String sessionId, {String? workDirectory}) {
     if (sessionId.isEmpty) {
       return _buildEmptyState(context, '暂无角色', '在对话中创建角色后会自动记录');
     }
 
     return FutureBuilder<List<_RoleInfo>>(
-      key: ValueKey('roles_${sessionId}_$_refreshCounter'),
-      future: _loadRoles(sessionId),
+      key: ValueKey('roles_${sessionId}_${workDirectory ?? ''}_$_refreshCounter'),
+      future: _loadRoles(sessionId, workDirectory: workDirectory),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -76,8 +76,8 @@ class ChatroomSidebar {
   }
 
   /// 备忘录 Tab
-  static Widget _buildNoteTab(BuildContext context, String sessionId) {
-    return _buildFileTab(context, sessionId, 'note.md', '备忘录');
+  static Widget _buildNoteTab(BuildContext context, String sessionId, {String? workDirectory}) {
+    return _buildFileTab(context, sessionId, 'note.md', '备忘录', workDirectory: workDirectory);
   }
 
   /// 通用文件 Tab
@@ -85,14 +85,15 @@ class ChatroomSidebar {
     BuildContext context,
     String sessionId,
     String fileName,
-    String title,
-  ) {
+    String title, {
+    String? workDirectory,
+  }) {
     if (sessionId.isEmpty) {
       return _buildEmptyState(context, '暂无$title', '在对话中提及相关信息时会自动记录');
     }
 
     return FutureBuilder<String?>(
-      future: _loadFile(sessionId, fileName),
+      future: _loadFile(sessionId, fileName, workDirectory: workDirectory),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -144,8 +145,11 @@ class ChatroomSidebar {
   }
 
   /// 加载所有角色
-  static Future<List<_RoleInfo>> _loadRoles(String sessionId) async {
-    final rolesDirPath = StoragePaths.rolesDir(sessionId);
+  static Future<List<_RoleInfo>> _loadRoles(String sessionId, {String? workDirectory}) async {
+    final rolesDirPath = StoragePaths.rolesDir(
+      sessionId: sessionId,
+      workDirectory: workDirectory,
+    );
     final dir = Directory(rolesDirPath);
     
     if (!await dir.exists()) return [];
@@ -172,8 +176,8 @@ class ChatroomSidebar {
   }
 
   /// 加载文件内容
-  static Future<String?> _loadFile(String sessionId, String fileName) async {
-    final path = '${StoragePaths.sessionDir(sessionId)}/$fileName';
+  static Future<String?> _loadFile(String sessionId, String fileName, {String? workDirectory}) async {
+    final path = '${StoragePaths.modeDir(sessionId: sessionId, workMode: 'chatroom', workDirectory: workDirectory)}/$fileName';
     return FileStorage.readText(path);
   }
 

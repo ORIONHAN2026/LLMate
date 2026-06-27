@@ -35,18 +35,26 @@ class BuiltinMcpRegistry {
     _projectRoot = root;
   }
 
-  /// 获取服务器脚本目录
-  static String get _serversDir {
-    // 开发模式：直接使用源码目录
-    if (_projectRoot.isNotEmpty) {
-      return '$_projectRoot/lib/mcp_builtins/servers';
-    }
-    // 打包后：使用可执行文件所在目录
-    return p.join(
+  /// 获取服务器路径（自动检测编译版本或源码版本）
+  static String _getServerPath(String name) {
+    // 优先检查编译后的可执行文件
+    final compiledPath = p.join(
       p.dirname(Platform.resolvedExecutable),
       'data',
       'mcp_servers',
+      name,
     );
+    if (File(compiledPath).existsSync()) {
+      return compiledPath;
+    }
+
+    // 回退到源码路径
+    if (_projectRoot.isNotEmpty) {
+      return '$_projectRoot/lib/mcp_builtins/servers/$name.dart';
+    }
+
+    // 最后回退
+    return './mcp_servers/$name.dart';
   }
 
   static List<BuiltinMcpTool> get tools => [
@@ -58,7 +66,7 @@ class BuiltinMcpRegistry {
       color: const Color(0xFFFF9800),
       category: '文件系统',
       command: 'dart',
-      args: ['${_serversDir}/filesystem_server.dart'],
+      args: [_getServerPath('filesystem_server')],
     ),
     BuiltinMcpTool(
       id: 'git',
@@ -68,7 +76,7 @@ class BuiltinMcpRegistry {
       color: const Color(0xFFF05032),
       category: '开发工具',
       command: 'dart',
-      args: ['${_serversDir}/git_server.dart'],
+      args: [_getServerPath('git_server')],
     ),
     BuiltinMcpTool(
       id: 'shell',
@@ -78,7 +86,7 @@ class BuiltinMcpRegistry {
       color: const Color(0xFF4EAA25),
       category: '开发工具',
       command: 'dart',
-      args: ['${_serversDir}/shell_server.dart'],
+      args: [_getServerPath('shell_server')],
     ),
     BuiltinMcpTool(
       id: 'fetch',
@@ -88,7 +96,7 @@ class BuiltinMcpRegistry {
       color: const Color(0xFF2196F3),
       category: '网络工具',
       command: 'dart',
-      args: ['${_serversDir}/fetch_server.dart'],
+      args: [_getServerPath('fetch_server')],
     ),
     BuiltinMcpTool(
       id: 'sqlite',
@@ -98,7 +106,7 @@ class BuiltinMcpRegistry {
       color: const Color(0xFF003B57),
       category: '数据库',
       command: 'dart',
-      args: ['${_serversDir}/sqlite_server.dart'],
+      args: [_getServerPath('sqlite_server')],
     ),
     BuiltinMcpTool(
       id: 'writepage',

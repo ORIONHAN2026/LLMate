@@ -59,41 +59,188 @@ class StoragePaths {
   static String businessFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'business.md');
 
-  /// ~/.llmwork/chats/{sessionId}/contract_content.md（合同要点）
-  static String contractContentFile(String sessionId) =>
+  // ═══════════════════════════════════════════════════
+  // 工作模式文件路径（按模式名隐藏文件夹存储）
+  // ═══════════════════════════════════════════════════
+
+  /// 获取工作模式目录
+  ///
+  /// - 如果设置了 workDirectory → `{workDirectory}/.llmwork/{workMode}/`
+  /// - 否则 → `{sessionDir}/.llmwork/{workMode}/`
+  static String modeDir({
+    required String sessionId,
+    required String workMode,
+    String? workDirectory,
+  }) {
+    final base = (workDirectory != null && workDirectory.isNotEmpty)
+        ? workDirectory
+        : sessionDir(sessionId);
+    return p.join(base, '.llmwork', workMode);
+  }
+
+  /// 获取 .llmwork 根目录
+  static String llmworkDir({
+    required String sessionId,
+    String? workDirectory,
+  }) {
+    final base = (workDirectory != null && workDirectory.isNotEmpty)
+        ? workDirectory
+        : sessionDir(sessionId);
+    return p.join(base, '.llmwork');
+  }
+
+  /// 确保工作模式目录存在
+  static Future<void> ensureModeDir({
+    required String sessionId,
+    required String workMode,
+    String? workDirectory,
+  }) async {
+    final dir = modeDir(
+      sessionId: sessionId,
+      workMode: workMode,
+      workDirectory: workDirectory,
+    );
+    await Directory(dir).create(recursive: true);
+  }
+
+  /// 合同模式文件
+  static String contractContentFile({
+    required String sessionId,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: 'contract', workDirectory: workDirectory),
+    'contract_content.md',
+  );
+
+  static String contractProcessFile({
+    required String sessionId,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: 'contract', workDirectory: workDirectory),
+    'contract_process.md',
+  );
+
+  static String contractDisgussFile({
+    required String sessionId,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: 'contract', workDirectory: workDirectory),
+    'contract_disguss.md',
+  );
+
+  /// 发票模式文件
+  static String invoiceSummaryFile({
+    required String sessionId,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: 'invoice', workDirectory: workDirectory),
+    'invoice_summary.md',
+  );
+
+  static String invoiceDetailFile({
+    required String sessionId,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: 'invoice', workDirectory: workDirectory),
+    'invoice_detail.md',
+  );
+
+  static String reimbursementFile({
+    required String sessionId,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: 'invoice', workDirectory: workDirectory),
+    'reimbursement.md',
+  );
+
+  /// 通用文件（备忘录、脑图等，各模式独立）
+  static String noteFile({
+    required String sessionId,
+    required String workMode,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: workMode, workDirectory: workDirectory),
+    'note.md',
+  );
+
+  static String mindmapFile({
+    required String sessionId,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: 'creative', workDirectory: workDirectory),
+    'mindmap.md',
+  );
+
+  /// 聊天室模式 - 角色目录
+  static String rolesDir({
+    required String sessionId,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: 'chatroom', workDirectory: workDirectory),
+    'roles',
+  );
+
+  static String roleFile({
+    required String sessionId,
+    required String roleName,
+    String? workDirectory,
+  }) => p.join(
+    rolesDir(sessionId: sessionId, workDirectory: workDirectory),
+    '$roleName.md',
+  );
+
+  /// 创意模式 - 草稿目录
+  static String draftsDir({
+    required String sessionId,
+    String? workDirectory,
+  }) => p.join(
+    modeDir(sessionId: sessionId, workMode: 'creative', workDirectory: workDirectory),
+    'drafts',
+  );
+
+  // ═══════════════════════════════════════════════════
+  // 旧接口兼容（标记为 deprecated）
+  // ═══════════════════════════════════════════════════
+
+  /// @deprecated 使用 contractContentFile(sessionId:, workDirectory:) 代替
+  static String contractContentFileLegacy(String sessionId) =>
       p.join(sessionDir(sessionId), 'contract_content.md');
 
-  /// ~/.llmwork/chats/{sessionId}/contract_process.md（合同履约跟踪）
-  static String contractProcessFile(String sessionId) =>
+  /// @deprecated 使用 contractProcessFile(sessionId:, workDirectory:) 代替
+  static String contractProcessFileLegacy(String sessionId) =>
       p.join(sessionDir(sessionId), 'contract_process.md');
 
-  /// ~/.llmwork/chats/{sessionId}/contract_disguss.md（合同争议记录）
-  static String contractDisgussFile(String sessionId) =>
+  /// @deprecated 使用 contractDisgussFile(sessionId:, workDirectory:) 代替
+  static String contractDisgussFileLegacy(String sessionId) =>
       p.join(sessionDir(sessionId), 'contract_disguss.md');
 
-  /// ~/.llmwork/chats/{sessionId}/note.md（备忘录）
-  static String noteFile(String sessionId) =>
+  /// @deprecated 使用 noteFile(sessionId:, workMode:, workDirectory:) 代替
+  static String noteFileLegacy(String sessionId) =>
       p.join(sessionDir(sessionId), 'note.md');
 
-  /// ~/.llmwork/chats/{sessionId}/invoice_summary.md（发票汇总）
-  static String invoiceSummaryFile(String sessionId) =>
+  /// @deprecated 使用 invoiceSummaryFile(sessionId:, workDirectory:) 代替
+  static String invoiceSummaryFileLegacy(String sessionId) =>
       p.join(sessionDir(sessionId), 'invoice_summary.md');
 
-  /// ~/.llmwork/chats/{sessionId}/invoice_detail.md（发票明细）
-  static String invoiceDetailFile(String sessionId) =>
+  /// @deprecated 使用 invoiceDetailFile(sessionId:, workDirectory:) 代替
+  static String invoiceDetailFileLegacy(String sessionId) =>
       p.join(sessionDir(sessionId), 'invoice_detail.md');
 
-  /// ~/.llmwork/chats/{sessionId}/reimbursement.md（报销记录）
-  static String reimbursementFile(String sessionId) =>
+  /// @deprecated 使用 reimbursementFile(sessionId:, workDirectory:) 代替
+  static String reimbursementFileLegacy(String sessionId) =>
       p.join(sessionDir(sessionId), 'reimbursement.md');
 
-  /// ~/.llmwork/chats/{sessionId}/roles/（角色目录）
-  static String rolesDir(String sessionId) =>
+  /// @deprecated 使用 rolesDir(sessionId:, workDirectory:) 代替
+  static String rolesDirLegacy(String sessionId) =>
       p.join(sessionDir(sessionId), 'roles');
 
-  /// 获取角色文件路径
-  static String roleFile(String sessionId, String roleName) =>
-      p.join(rolesDir(sessionId), '$roleName.md');
+  /// @deprecated 使用 roleFile(sessionId:, roleName:, workDirectory:) 代替
+  static String roleFileLegacy(String sessionId, String roleName) =>
+      p.join(rolesDirLegacy(sessionId), '$roleName.md');
+
+  // ═══════════════════════════════════════════════════
+  // 通用工具
+  // ═══════════════════════════════════════════════════
 
   /// 确保根目录存在
   static Future<void> ensureRoot() async {
@@ -119,5 +266,49 @@ class StoragePaths {
         .whereType<Directory>()
         .map((d) => p.basename(d.path))
         .toList();
+  }
+
+  /// 迁移模式文件：从会话目录迁移到工作目录
+  ///
+  /// 当用户设置工作目录时，将已有的模式文件从会话目录移动到工作目录。
+  /// 支持的模式：contract, invoice, chatroom, creative
+  static Future<void> migrateModeFiles({
+    required String sessionId,
+    required String workDirectory,
+  }) async {
+    final modes = ['contract', 'invoice', 'chatroom', 'creative'];
+
+    for (final mode in modes) {
+      final srcDir = modeDir(sessionId: sessionId, workMode: mode);
+      final dstDir = modeDir(
+        sessionId: sessionId,
+        workMode: mode,
+        workDirectory: workDirectory,
+      );
+
+      final src = Directory(srcDir);
+      if (!await src.exists()) continue;
+
+      // 检查源目录是否有实际文件
+      final srcFiles = await src.list(recursive: true).toList();
+      final hasSrcFiles = srcFiles.any((e) => e is File);
+      if (!hasSrcFiles) continue;
+
+      // 确保目标目录存在
+      await Directory(dstDir).create(recursive: true);
+
+      // 复制所有文件
+      await for (final entity in src.list(recursive: true)) {
+        if (entity is File) {
+          final relativePath = p.relative(entity.path, from: srcDir);
+          final dstFile = File(p.join(dstDir, relativePath));
+          await dstFile.parent.create(recursive: true);
+          await entity.copy(dstFile.path);
+        }
+      }
+
+      // 删除源目录
+      await src.delete(recursive: true);
+    }
   }
 }

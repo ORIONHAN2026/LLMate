@@ -781,8 +781,15 @@ class SystemToolService {
         return _errorResult(callId, arguments, 'content 参数不能为空');
       }
 
-      final filePath = StoragePaths.contractContentFile(session.sessionId);
-      await StoragePaths.ensureSessionDir(session.sessionId);
+      final filePath = StoragePaths.contractContentFile(
+        sessionId: session.sessionId,
+        workDirectory: session.workDirectory,
+      );
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'contract',
+        workDirectory: session.workDirectory,
+      );
       await File(filePath).writeAsString(content);
 
       debugPrint('📄 合同要点已更新: $filePath');
@@ -815,8 +822,15 @@ class SystemToolService {
         return _errorResult(callId, arguments, 'content 参数不能为空');
       }
 
-      final filePath = StoragePaths.contractProcessFile(session.sessionId);
-      await StoragePaths.ensureSessionDir(session.sessionId);
+      final filePath = StoragePaths.contractProcessFile(
+        sessionId: session.sessionId,
+        workDirectory: session.workDirectory,
+      );
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'contract',
+        workDirectory: session.workDirectory,
+      );
       await File(filePath).writeAsString(content);
 
       debugPrint('📄 合同履约跟踪已更新: $filePath');
@@ -849,8 +863,15 @@ class SystemToolService {
         return _errorResult(callId, arguments, 'content 参数不能为空');
       }
 
-      final filePath = StoragePaths.contractDisgussFile(session.sessionId);
-      await StoragePaths.ensureSessionDir(session.sessionId);
+      final filePath = StoragePaths.contractDisgussFile(
+        sessionId: session.sessionId,
+        workDirectory: session.workDirectory,
+      );
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'contract',
+        workDirectory: session.workDirectory,
+      );
       await File(filePath).writeAsString(content);
 
       debugPrint('📄 合同争议记录已更新: $filePath');
@@ -937,8 +958,16 @@ print("文档修改成功: $filePath")
         return _errorResult(callId, arguments, 'content 参数不能为空');
       }
 
-      final filePath = StoragePaths.noteFile(session.sessionId);
-      await StoragePaths.ensureSessionDir(session.sessionId);
+      final filePath = StoragePaths.noteFile(
+        sessionId: session.sessionId,
+        workMode: session.workMode,
+        workDirectory: session.workDirectory,
+      );
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: session.workMode,
+        workDirectory: session.workDirectory,
+      );
       await File(filePath).writeAsString(content);
 
       debugPrint('📝 备忘录已更新: $filePath');
@@ -971,8 +1000,15 @@ print("文档修改成功: $filePath")
         return _errorResult(callId, arguments, 'content 参数不能为空');
       }
 
-      final filePath = StoragePaths.invoiceSummaryFile(session.sessionId);
-      await StoragePaths.ensureSessionDir(session.sessionId);
+      final filePath = StoragePaths.invoiceSummaryFile(
+        sessionId: session.sessionId,
+        workDirectory: session.workDirectory,
+      );
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'invoice',
+        workDirectory: session.workDirectory,
+      );
       await File(filePath).writeAsString(content);
 
       debugPrint('🧾 发票汇总已更新: $filePath');
@@ -1005,8 +1041,15 @@ print("文档修改成功: $filePath")
         return _errorResult(callId, arguments, 'content 参数不能为空');
       }
 
-      final filePath = StoragePaths.invoiceDetailFile(session.sessionId);
-      await StoragePaths.ensureSessionDir(session.sessionId);
+      final filePath = StoragePaths.invoiceDetailFile(
+        sessionId: session.sessionId,
+        workDirectory: session.workDirectory,
+      );
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'invoice',
+        workDirectory: session.workDirectory,
+      );
       await File(filePath).writeAsString(content);
 
       debugPrint('🧾 发票明细已更新: $filePath');
@@ -1048,13 +1091,24 @@ print("文档修改成功: $filePath")
         return _errorResult(callId, arguments, 'content 参数不能为空');
       }
 
-      final rolesDirPath = StoragePaths.rolesDir(session.sessionId);
-      await StoragePaths.ensureSessionDir(session.sessionId);
+      final rolesDirPath = StoragePaths.rolesDir(
+        sessionId: session.sessionId,
+        workDirectory: session.workDirectory,
+      );
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'chatroom',
+        workDirectory: session.workDirectory,
+      );
       await Directory(rolesDirPath).create(recursive: true);
 
       // 写入角色文件，文件头包含显示名称
       final fileContent = '# $displayName\n\n$content';
-      final filePath = StoragePaths.roleFile(session.sessionId, roleName);
+      final filePath = StoragePaths.roleFile(
+        sessionId: session.sessionId,
+        roleName: roleName,
+        workDirectory: session.workDirectory,
+      );
       await File(filePath).writeAsString(fileContent);
 
       debugPrint('🎭 角色已创建: $filePath');
@@ -1094,7 +1148,11 @@ print("文档修改成功: $filePath")
         return _errorResult(callId, arguments, 'content 参数不能为空');
       }
 
-      final filePath = StoragePaths.roleFile(session.sessionId, roleName);
+      final filePath = StoragePaths.roleFile(
+        sessionId: session.sessionId,
+        roleName: roleName,
+        workDirectory: session.workDirectory,
+      );
       if (!await File(filePath).exists()) {
         return _errorResult(callId, arguments, '角色 "$roleName" 不存在');
       }
@@ -1138,7 +1196,11 @@ print("文档修改成功: $filePath")
         return _errorResult(callId, arguments, 'roleName 参数不能为空');
       }
 
-      final filePath = StoragePaths.roleFile(session.sessionId, roleName);
+      final filePath = StoragePaths.roleFile(
+        sessionId: session.sessionId,
+        roleName: roleName,
+        workDirectory: session.workDirectory,
+      );
       if (!await File(filePath).exists()) {
         return _errorResult(callId, arguments, '角色 "$roleName" 不存在');
       }
@@ -1174,8 +1236,15 @@ print("文档修改成功: $filePath")
         return _errorResult(callId, arguments, 'content 参数不能为空');
       }
 
-      final filePath = StoragePaths.reimbursementFile(session.sessionId);
-      await StoragePaths.ensureSessionDir(session.sessionId);
+      final filePath = StoragePaths.reimbursementFile(
+        sessionId: session.sessionId,
+        workDirectory: session.workDirectory,
+      );
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'invoice',
+        workDirectory: session.workDirectory,
+      );
       await File(filePath).writeAsString(content);
 
       debugPrint('🧾 报销记录已更新: $filePath');
@@ -1218,8 +1287,15 @@ print("文档修改成功: $filePath")
         return _errorResult(callId, arguments, 'content 不是有效的 JSON: $e');
       }
 
-      final filePath = '${StoragePaths.sessionDir(session.sessionId)}/mindmap.md';
-      await StoragePaths.ensureSessionDir(session.sessionId);
+      final filePath = StoragePaths.mindmapFile(
+        sessionId: session.sessionId,
+        workDirectory: session.workDirectory,
+      );
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'creative',
+        workDirectory: session.workDirectory,
+      );
       await File(filePath).writeAsString(content);
 
       debugPrint('🧠 脑图已更新: $filePath');

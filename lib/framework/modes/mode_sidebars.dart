@@ -14,7 +14,7 @@ class ConversationModeSidebar extends WorkModeSidebar {
   List<String> get tabTitles => ['文件列表'];
 
   @override
-  Widget buildTabContent(BuildContext context, int index, String sessionId) {
+  Widget buildTabContent(BuildContext context, int index, String sessionId, {String? workDirectory}) {
     return const SizedBox.shrink();
   }
 }
@@ -28,8 +28,8 @@ class ContractModeSidebar extends WorkModeSidebar {
   List<String> get tabTitles => ContractSidebar.getTabTitles();
 
   @override
-  Widget buildTabContent(BuildContext context, int index, String sessionId) {
-    return ContractSidebar.buildTabContent(context, index, sessionId);
+  Widget buildTabContent(BuildContext context, int index, String sessionId, {String? workDirectory}) {
+    return ContractSidebar.buildTabContent(context, index, sessionId, workDirectory: workDirectory);
   }
 }
 
@@ -42,8 +42,8 @@ class InvoiceModeSidebar extends WorkModeSidebar {
   List<String> get tabTitles => InvoiceSidebar.getTabTitles();
 
   @override
-  Widget buildTabContent(BuildContext context, int index, String sessionId) {
-    return InvoiceSidebar.buildTabContent(context, index, sessionId);
+  Widget buildTabContent(BuildContext context, int index, String sessionId, {String? workDirectory}) {
+    return InvoiceSidebar.buildTabContent(context, index, sessionId, workDirectory: workDirectory);
   }
 }
 
@@ -56,8 +56,8 @@ class ChatroomModeSidebar extends WorkModeSidebar {
   List<String> get tabTitles => ChatroomSidebar.getTabTitles();
 
   @override
-  Widget buildTabContent(BuildContext context, int index, String sessionId) {
-    return ChatroomSidebar.buildTabContent(context, index, sessionId);
+  Widget buildTabContent(BuildContext context, int index, String sessionId, {String? workDirectory}) {
+    return ChatroomSidebar.buildTabContent(context, index, sessionId, workDirectory: workDirectory);
   }
 }
 

@@ -2063,9 +2063,28 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     if (result != null && mounted) {
+      debugPrint('📂 选择工作目录: $result');
+
+      // 检查目录冲突
+      final conflictError = await _checkDirectoryConflict(
+        currentSession.sessionId,
+        result,
+      );
+      if (conflictError != null) {
+        debugPrint('❌ 目录冲突: $conflictError');
+        SnackBarUtils.showError(context, conflictError);
+        return;
+      }
+
       // 检测目录中是否有合同文件或发票文件
       final fileType = await _detectFileType(result);
       
+      // 迁移已有的模式文件到工作目录
+      await StoragePaths.migrateModeFiles(
+        sessionId: currentSession.sessionId,
+        workDirectory: result,
+      );
+
       // 设置工作目录和工作模式
       final dirName = p.basename(result);
       sessionController.updateSession(
@@ -2080,30 +2099,125 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         AppLocalizations.of(context)!.workingDirSet,
       );
 
-      // 合同模式：选择目录后自动解析合同
+      // 如果目录中已有模式文件，发送自动介绍消息
+      await _sendWelcomeMessage(result, fileType);
+
+      // 合同模式：仅当目录中没有 .llmwork/contract/ 目录时才自动解析合同
       if (fileType == 'contract') {
-        await Future.delayed(const Duration(milliseconds: 300));
-        _parseContracts();
+        final contractDir = Directory(p.join(result, '.llmwork', 'contract'));
+        if (!await contractDir.exists()) {
+          await Future.delayed(const Duration(milliseconds: 300));
+          _parseContracts();
+        }
       }
     }
   }
 
-  /// 检测目录中的文件类型（仅通过文件名关键词）
+  /// 发送自动介绍消息：当目录中已有模式文件时，让 LLM 自然介绍当前状态
+  Future<void> _sendWelcomeMessage(String workDir, String workMode) async {
+    final session = sessionController.currentSession.value;
+    if (session == null) return;
+
+    // 检查该模式目录是否有文件
+    final modeDirPath = StoragePaths.modeDir(
+      sessionId: session.sessionId,
+      workMode: workMode,
+      workDirectory: workDir,
+    );
+    final dir = Directory(modeDirPath);
+    if (!await dir.exists()) return;
+
+    final files = await dir.list(recursive: true).toList();
+    final hasFiles = files.any((e) => e is File);
+    if (!hasFiles) return;
+
+    // 生成提示词，让 LLM 自然介绍
+    final prompt = '我刚设置了工作目录，当前处于${_getModeName(workMode)}模式。请帮我检查一下目录中已有的文件，介绍当前的工作状态和你可以提供的帮助。';
+
+    // 设置输入框内容并触发发送
+    _inputController.text = prompt;
+    setState(() {});
+    await Future.delayed(const Duration(milliseconds: 100));
+    await _doSendMessage(prompt);
+  }
+
+  /// 获取模式中文名
+  String _getModeName(String workMode) {
+    switch (workMode) {
+      case 'contract': return '合同';
+      case 'invoice': return '发票';
+      case 'chatroom': return '聊天室';
+      case 'creative': return '创意';
+      default: return '对话';
+    }
+  }
+
+  /// 检查目录冲突：非对话模式下，如果目标目录有 .llmwork，则不允许设置
+  Future<String?> _checkDirectoryConflict(String sessionId, String targetDir) async {
+    // 检查目标目录是否有 .llmwork 目录
+    final llmworkDir = Directory(p.join(targetDir, '.llmwork'));
+    final hasLlmwork = await llmworkDir.exists();
+    debugPrint('🔍 检查 .llmwork 目录: ${llmworkDir.path}, 存在: $hasLlmwork');
+
+    if (!hasLlmwork) return null;
+
+    // 获取当前会话的工作模式
+    final session = sessionController.currentSession.value;
+    final currentMode = session?.workMode ?? 'conversation';
+    debugPrint('🔍 当前工作模式: $currentMode');
+
+    // 非对话模式下，如果目标目录有 .llmwork，直接拒绝
+    // （对话模式下会自动识别模式，不需要拦截）
+    if (currentMode != 'conversation') {
+      return '该目录已存在 LLM 工作文件（.llmwork），请选择其他目录';
+    }
+
+    return null;
+  }
+
+  /// 检测目录中的文件类型
+  ///
+  /// 优先级：
+  /// 1. 检查 .llmwork/ 目录是否存在
+  ///    - 如果存在，检查里面有哪个模式的目录
+  /// 2. 根据文件名关键词检测
   Future<String> _detectFileType(String dirPath) async {
     try {
       final dir = Directory(dirPath);
       if (!await dir.exists()) return 'conversation';
-      
-      // 合同文件名关键词
+
+      // 检查 .llmwork 目录
+      final llmworkDir = Directory(p.join(dirPath, '.llmwork'));
+      if (await llmworkDir.exists()) {
+        // 检查里面有哪些模式目录
+        if (await Directory(p.join(llmworkDir.path, 'contract')).exists()) {
+          debugPrint('✅ 检测到 .llmwork/contract 目录');
+          return 'contract';
+        }
+        if (await Directory(p.join(llmworkDir.path, 'chatroom')).exists()) {
+          debugPrint('✅ 检测到 .llmwork/chatroom 目录');
+          return 'chatroom';
+        }
+        if (await Directory(p.join(llmworkDir.path, 'invoice')).exists()) {
+          debugPrint('✅ 检测到 .llmwork/invoice 目录');
+          return 'invoice';
+        }
+        if (await Directory(p.join(llmworkDir.path, 'creative')).exists()) {
+          debugPrint('✅ 检测到 .llmwork/creative 目录');
+          return 'creative';
+        }
+        // .llmwork 存在但没有模式目录，默认对话模式
+        return 'conversation';
+      }
+
+      // 根据文件名关键词检测
       const contractKeywords = ['合同', '协议', '契约', '合约', '合同书', '协议书'];
-      // 发票文件名关键词
       const invoiceKeywords = ['发票', 'invoice', '收据', 'receipt', '开票', '报销', '费用'];
       
       await for (final entity in dir.list(recursive: false)) {
         if (entity is File) {
           final fileName = p.basename(entity.path).toLowerCase();
           
-          // 检测发票关键词（优先级高）
           for (final keyword in invoiceKeywords) {
             if (fileName.contains(keyword)) {
               debugPrint('✅ 检测到发票文件: ${entity.path}');
@@ -2111,7 +2225,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             }
           }
           
-          // 检测合同关键词
           for (final keyword in contractKeywords) {
             if (fileName.contains(keyword)) {
               debugPrint('✅ 检测到合同文件: ${entity.path}');

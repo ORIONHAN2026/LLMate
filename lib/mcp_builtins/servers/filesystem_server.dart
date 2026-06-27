@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:path/path.dart' as p;
 
 /// 文件系统 MCP 服务器
 void main() async {
   final server = _FilesystemServer();
   await server.start();
+}
+
+/// 获取文件名（不使用 path 包）
+String _basename(String path) {
+  return path.split(Platform.pathSeparator).last;
 }
 
 class _FilesystemServer {
@@ -103,7 +107,7 @@ class _FilesystemServer {
           break;
         case 'list_directory':
           final dir = Directory(args['path'] as String);
-          final items = await dir.list().map((e) => p.basename(e.path)).toList();
+          final items = await dir.list().map((e) => _basename(e.path)).toList();
           result = items.join('\n');
           break;
         case 'create_directory':
@@ -126,7 +130,7 @@ class _FilesystemServer {
           final regex = RegExp(pattern.replaceAll('*', '.*').replaceAll('?', '.'));
           final results = <String>[];
           await for (final entity in Directory(root).list(recursive: true)) {
-            if (regex.hasMatch(p.basename(entity.path))) results.add(entity.path);
+            if (regex.hasMatch(_basename(entity.path))) results.add(entity.path);
           }
           result = results.join('\n');
           break;

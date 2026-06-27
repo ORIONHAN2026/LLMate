@@ -14,41 +14,41 @@ class InvoiceSidebar {
   static int get tabCount => 5;
 
   /// 构建指定 Tab 的内容
-  static Widget buildTabContent(BuildContext context, int index, String sessionId) {
+  static Widget buildTabContent(BuildContext context, int index, String sessionId, {String? workDirectory}) {
     switch (index) {
       case 0:
         return const SizedBox.shrink();
       case 1:
-        return _buildInvoiceSummaryTab(context, sessionId);
+        return _buildInvoiceSummaryTab(context, sessionId, workDirectory: workDirectory);
       case 2:
-        return _buildInvoiceDetailTab(context, sessionId);
+        return _buildInvoiceDetailTab(context, sessionId, workDirectory: workDirectory);
       case 3:
-        return _buildReimbursementTab(context, sessionId);
+        return _buildReimbursementTab(context, sessionId, workDirectory: workDirectory);
       case 4:
-        return _buildNoteTab(context, sessionId);
+        return _buildNoteTab(context, sessionId, workDirectory: workDirectory);
       default:
         return const SizedBox.shrink();
     }
   }
 
   /// 发票汇总 Tab
-  static Widget _buildInvoiceSummaryTab(BuildContext context, String sessionId) {
-    return _buildFileTab(context, sessionId, 'invoice_summary.md', '发票汇总');
+  static Widget _buildInvoiceSummaryTab(BuildContext context, String sessionId, {String? workDirectory}) {
+    return _buildFileTab(context, sessionId, 'invoice_summary.md', '发票汇总', workDirectory: workDirectory);
   }
 
   /// 发票明细 Tab
-  static Widget _buildInvoiceDetailTab(BuildContext context, String sessionId) {
-    return _buildFileTab(context, sessionId, 'invoice_detail.md', '发票明细');
+  static Widget _buildInvoiceDetailTab(BuildContext context, String sessionId, {String? workDirectory}) {
+    return _buildFileTab(context, sessionId, 'invoice_detail.md', '发票明细', workDirectory: workDirectory);
   }
 
   /// 报销记录 Tab
-  static Widget _buildReimbursementTab(BuildContext context, String sessionId) {
-    return _buildFileTab(context, sessionId, 'reimbursement.md', '报销记录');
+  static Widget _buildReimbursementTab(BuildContext context, String sessionId, {String? workDirectory}) {
+    return _buildFileTab(context, sessionId, 'reimbursement.md', '报销记录', workDirectory: workDirectory);
   }
 
   /// 备忘录 Tab
-  static Widget _buildNoteTab(BuildContext context, String sessionId) {
-    return _buildFileTab(context, sessionId, 'note.md', '备忘录');
+  static Widget _buildNoteTab(BuildContext context, String sessionId, {String? workDirectory}) {
+    return _buildFileTab(context, sessionId, 'note.md', '备忘录', workDirectory: workDirectory);
   }
 
   /// 通用文件 Tab
@@ -56,14 +56,15 @@ class InvoiceSidebar {
     BuildContext context,
     String sessionId,
     String fileName,
-    String title,
-  ) {
+    String title, {
+    String? workDirectory,
+  }) {
     if (sessionId.isEmpty) {
       return _buildEmptyState(context, '暂无$title', '在对话中提及相关信息时会自动记录');
     }
 
     return FutureBuilder<String?>(
-      future: _loadFile(sessionId, fileName),
+      future: _loadFile(sessionId, fileName, workDirectory: workDirectory),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -146,8 +147,8 @@ class InvoiceSidebar {
   }
 
   /// 加载文件内容
-  static Future<String?> _loadFile(String sessionId, String fileName) async {
-    final path = '${StoragePaths.sessionDir(sessionId)}/$fileName';
+  static Future<String?> _loadFile(String sessionId, String fileName, {String? workDirectory}) async {
+    final path = '${StoragePaths.modeDir(sessionId: sessionId, workMode: 'invoice', workDirectory: workDirectory)}/$fileName';
     return FileStorage.readText(path);
   }
 

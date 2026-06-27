@@ -33,7 +33,10 @@ class ChatroomMode extends WorkModeStrategy {
       workDir: effectiveWorkDir,
     ));
 
-    final roleContexts = await loadRoleContexts(session.sessionId);
+    final roleContexts = await loadRoleContexts(
+      session.sessionId,
+      workDirectory: session.workDirectory,
+    );
     messages.add({
       'role': 'system',
       'content': CommonSystemPrompts.chatroomMode(

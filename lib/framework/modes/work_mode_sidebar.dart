@@ -11,5 +11,5 @@ abstract class WorkModeSidebar {
   List<String> get tabTitles;
 
   /// 构建指定 Tab 的内容
-  Widget buildTabContent(BuildContext context, int index, String sessionId);
+  Widget buildTabContent(BuildContext context, int index, String sessionId, {String? workDirectory});
 }

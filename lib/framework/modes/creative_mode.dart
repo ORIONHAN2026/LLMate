@@ -33,7 +33,11 @@ class CreativeMode extends WorkModeStrategy {
   }) async {
     final messages = <Map<String, dynamic>>[];
     final effectiveWorkDir = getEffectiveWorkDir(session);
-    final sessionDir = StoragePaths.sessionDir(session.sessionId);
+    final modeDirPath = StoragePaths.modeDir(
+      sessionId: session.sessionId,
+      workMode: 'creative',
+      workDirectory: session.workDirectory,
+    );
 
     messages.addAll(buildBaseSystemMessages(
       model: model,
@@ -44,7 +48,7 @@ class CreativeMode extends WorkModeStrategy {
 
     messages.add({
       'role': 'system',
-      'content': CommonSystemPrompts.creativeMode(effectiveWorkDir, sessionDir),
+      'content': CommonSystemPrompts.creativeMode(effectiveWorkDir, modeDirPath),
     });
 
     final memoryCtx = buildMemoryContext(session);
@@ -124,28 +128,28 @@ class CreativeModeSidebar extends WorkModeSidebar {
   List<String> get tabTitles => ['灵感', '脑图', '草稿'];
 
   @override
-  Widget buildTabContent(BuildContext context, int index, String sessionId) {
+  Widget buildTabContent(BuildContext context, int index, String sessionId, {String? workDirectory}) {
     switch (index) {
       case 0:
-        return _buildInspirationTab(context, sessionId);
+        return _buildInspirationTab(context, sessionId, workDirectory: workDirectory);
       case 1:
-        return _buildMindmapTab(context, sessionId);
+        return _buildMindmapTab(context, sessionId, workDirectory: workDirectory);
       case 2:
-        return _buildDraftsTab(context, sessionId);
+        return _buildDraftsTab(context, sessionId, workDirectory: workDirectory);
       default:
         return const SizedBox.shrink();
     }
   }
 
   /// 灵感笔记 Tab
-  Widget _buildInspirationTab(BuildContext context, String sessionId) {
+  Widget _buildInspirationTab(BuildContext context, String sessionId, {String? workDirectory}) {
     if (sessionId.isEmpty) {
       return _buildEmptyState(context, '暂无灵感', '在对话中记录灵感后会自动保存');
     }
 
     return FutureBuilder<String?>(
       key: ValueKey('inspiration_${sessionId}_'),
-      future: _loadFile(sessionId, 'note.md'),
+      future: _loadFile(sessionId, 'note.md', workDirectory: workDirectory),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -179,14 +183,14 @@ class CreativeModeSidebar extends WorkModeSidebar {
   }
 
   /// 脑图 Tab
-  Widget _buildMindmapTab(BuildContext context, String sessionId) {
+  Widget _buildMindmapTab(BuildContext context, String sessionId, {String? workDirectory}) {
     if (sessionId.isEmpty) {
       return _buildEmptyState(context, '暂无脑图', '在对话中创建脑图后会自动显示');
     }
 
     return FutureBuilder<String?>(
       key: ValueKey('mindmap_${sessionId}_'),
-      future: _loadFile(sessionId, 'mindmap.md'),
+      future: _loadFile(sessionId, 'mindmap.md', workDirectory: workDirectory),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -209,16 +213,19 @@ class CreativeModeSidebar extends WorkModeSidebar {
   }
 
   /// 草稿列表 Tab
-  Widget _buildDraftsTab(BuildContext context, String sessionId) {
+  Widget _buildDraftsTab(BuildContext context, String sessionId, {String? workDirectory}) {
     if (sessionId.isEmpty) {
       return _buildEmptyState(context, '暂无草稿', '在对话中创作后会自动保存');
     }
 
-    final draftsDir = '${StoragePaths.sessionDir(sessionId)}/drafts';
+    final draftsDirPath = StoragePaths.draftsDir(
+      sessionId: sessionId,
+      workDirectory: workDirectory,
+    );
 
     return FutureBuilder<List<_DraftInfo>>(
       key: ValueKey('drafts_${sessionId}_'),
-      future: _loadDrafts(draftsDir),
+      future: _loadDrafts(draftsDirPath),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -244,8 +251,8 @@ class CreativeModeSidebar extends WorkModeSidebar {
     );
   }
 
-  Future<String?> _loadFile(String sessionId, String fileName) async {
-    final path = '${StoragePaths.sessionDir(sessionId)}/$fileName';
+  Future<String?> _loadFile(String sessionId, String fileName, {String? workDirectory}) async {
+    final path = '${StoragePaths.modeDir(sessionId: sessionId, workMode: 'creative', workDirectory: workDirectory)}/$fileName';
     return FileStorage.readText(path);
   }
 

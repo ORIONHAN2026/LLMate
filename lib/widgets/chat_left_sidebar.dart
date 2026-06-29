@@ -9,7 +9,6 @@ import 'package:get/get.dart';
 import 'dart:math' as math;
 import '../models/chat/chat_session.dart';
 import '../utils/model_icon_utils.dart';
-import '../framework/modes/work_mode_factory.dart';
 
 // 会话项组件
 class _SessionItem extends StatefulWidget {
@@ -47,9 +46,16 @@ class _SessionItemState extends State<_SessionItem>
   List<ChatSession> get chatSessions => sessionController.sessions;
   late TextEditingController _nameController;
 
-  /// 获取工作模式显示名称（从策略类获取）
+  /// 获取工作模式中文名
   String _getWorkModeName(String workMode) {
-    return getWorkModeDisplayName(workMode);
+    switch (workMode) {
+      case 'contract': return '📋 合同模式';
+      case 'invoice': return '🧾 发票模式';
+      case 'chatroom': return '💬 聊天室';
+      case 'creative': return '🎭 创意模式';
+      case 'task': return '📅 日程模式';
+      default: return '💬 对话模式';
+    }
   }
   late FocusNode _nameFocusNode;
   @override

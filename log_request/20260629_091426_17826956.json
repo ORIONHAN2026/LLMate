@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-06-29T09:14:26.575588",
+  "sessionId": "1782695627470",
+  "model": "deepseek-v4-flash",
+  "request": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 📂 工作目录\n当前工作目录：`/Users/orion/.llmwork/chats/1782695627470`\n\n⚠️ **注意：工作目录是用来读取用户文件的，不是用来保存会话数据的。**\n\n### 文件操作规则\n1. **读取用户文件**：使用 `file_read` 工具读取工作目录下的文件\n2. **修改用户文件**：使用 `file_write` 工具修改用户指定的文件\n3. **格式保留**：修改文件时必须保留原有格式，包括字体、缩进、换行等\n4. **仅限工作目录**：读取和修改用户文件时，仅限工作目录下的文件\n\n### ⚠️ 重要：会话数据文件存储在会话目录，不在工作目录\n合同要点、履约跟踪、争议记录、备忘录、角色等会话数据，必须使用专用工具（如 contract_content_update）写入，这些工具会自动保存到会话目录（~/.llmwork/chats/会话ID/），**不要**写入工作目录。"
+      },
+      {
+        "role": "system",
+        "content": "## ⚡ 核心规则\n\n1. **工具优先**：回答需要文件内容、目录结构、代码片段或数据时，必须先调用工具获取。严禁在未调用工具的情况下编造文件名、路径、代码内容或数据。\n2. **操作验证**：声称完成了任何操作（修改文件、执行命令等），必须确实通过工具执行过。严禁假装执行。\n3. **诚实回应**：如果无法获取需要的信息，直接说\"无法确定\"，不要编造。区分事实（工具返回的）与推测。\n4. **静默执行**：直接调用工具并返回结果，无需向用户解释你正在使用什么工具。不要将内部工具作为功能特性向用户介绍。\n5. **过期数据**：不要依赖历史对话中看到过的数据，每次都重新通过工具获取最新内容。\n\n一句话：没调用工具就不准呈现数据，没执行操作就不准说已完成。"
+      },
+      {
+        "role": "system",
+        "content": "You MUST respond in Chinese (Simplified). Code, variable names, and URLs can remain in their original language."
+      },
+      {
+        "role": "user",
+        "content": "帮我创建一个聊天室"
+      }
+    ]
+  },
+  "response": {
+    "content": "错误: API 错误：DioException [connection timeout]: The request connection took longer than 0:00:30.000000 and it was aborted. To get rid of this exception, try raising the RequestOptions.connectTimeout above the duration of 0:00:30.000000 or improve the response time of the server."
+  }
+}

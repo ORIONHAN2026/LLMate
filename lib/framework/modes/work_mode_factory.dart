@@ -24,13 +24,3 @@ WorkModeStrategy createWorkModeStrategy(String workMode) {
       return ConversationMode();
   }
 }
-
-/// 获取工作模式的显示名称
-String getWorkModeDisplayName(String workMode) {
-  return createWorkModeStrategy(workMode).displayName;
-}
-
-/// 获取工作模式的图标
-String getWorkModeIcon(String workMode) {
-  return createWorkModeStrategy(workMode).icon;
-}

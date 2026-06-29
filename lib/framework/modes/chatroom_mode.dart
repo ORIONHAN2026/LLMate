@@ -17,12 +17,6 @@ class ChatroomMode extends WorkModeStrategy {
   String get modeName => 'chatroom';
 
   @override
-  String get displayName => '聊天室';
-
-  @override
-  String get icon => '💬';
-
-  @override
   Future<List<Map<String, dynamic>>> buildMessages({
     required ChatModel? model,
     required ChatMessage userMessage,

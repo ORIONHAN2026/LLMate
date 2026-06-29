@@ -17,12 +17,6 @@ class ContractMode extends WorkModeStrategy {
   String get modeName => 'contract';
 
   @override
-  String get displayName => '合同模式';
-
-  @override
-  String get icon => '📋';
-
-  @override
   Future<List<Map<String, dynamic>>> buildMessages({
     required ChatModel? model,
     required ChatMessage userMessage,

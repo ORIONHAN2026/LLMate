@@ -20,12 +20,6 @@ class TaskMode extends WorkModeStrategy {
   String get modeName => 'task';
 
   @override
-  String get displayName => '日程模式';
-
-  @override
-  String get icon => '📅';
-
-  @override
   Future<List<Map<String, dynamic>>> buildMessages({
     required ChatModel? model,
     required ChatMessage userMessage,

@@ -358,9 +358,9 @@ class _ModelSelectorState extends State<ModelSelector> {
   }
 
   void _selectModel(dynamic model) {
-    // 检查当前会话是否为空
-    if (widget.currentSession == null) {
-      // 如果当前会话为空，不执行任何操作或显示提示
+    // 始终从控制器获取最新会话，widget.currentSession 可能因不在 GetX 内而过时
+    final current = sessionController.currentSession.value;
+    if (current == null) {
       SnackBarUtils.showWarning(
         context,
         AppLocalizations.of(context)!.sessionNotFoundCannotSelectModel,
@@ -368,9 +368,8 @@ class _ModelSelectorState extends State<ModelSelector> {
       return;
     }
 
-    final updatedSession = widget.currentSession!.copyWith(chatModel: model);
+    final updatedSession = current.copyWith(chatModel: model);
     sessionController.updateSession(updatedSession);
-    // 使用setState确保UI更新
     setState(() {
       widget.currentSession = updatedSession;
     });

@@ -26,12 +26,6 @@ class CreativeMode extends WorkModeStrategy {
   String get modeName => 'creative';
 
   @override
-  String get displayName => '创意模式';
-
-  @override
-  String get icon => '🎭';
-
-  @override
   Future<List<Map<String, dynamic>>> buildMessages({
     required ChatModel? model,
     required ChatMessage userMessage,

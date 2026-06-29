@@ -50,7 +50,6 @@ dependencies:
   syncfusion_flutter_pdf: ^33.2.13
   image: ">=4.0.0 <4.5.2"  # 图片处理库
   docx_to_text: ^1.0.1  # Word文档读取库
-  mcp_client: ^1.0.1  # MCP 客户端库
   crypto: ^3.0.3  # 用于图片哈希和编码
   html: ^0.15.4  # HTML解析库
   url_launcher: ^6.2.5  # URL启动器
@@ -60,10 +59,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
-
-dependency_overrides:
-  mcp_client:
-    path: packages/mcp_client
 
 dev_dependencies:
   flutter_test:

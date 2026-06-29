@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:mcp_client/mcp_client.dart';
+import '../mcp_client/mcp_client.dart';
 import '../llm/modes/mode_utils.dart';
 import '../../models/chat/chat_session.dart';
 import '../mcp/mcp_service.dart';

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:mcp_client/mcp_client.dart';
+import '../mcp_client/mcp_client.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/mcp_config.dart';
 import '../../models/bigmodel/chat_model.dart';

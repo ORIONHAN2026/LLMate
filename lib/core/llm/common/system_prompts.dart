@@ -57,30 +57,33 @@ class CommonSystemPrompts {
 
   /// 工作目录提示（动态拼接路径）
   static String workDirectory(String dir) {
-    return '## 📂 工作目录\n当前工作目录：`$dir`\n\n⚠️ **注意：工作目录是用来读取用户文件的，不是用来保存会话数据的。**'
-        '\n\n### 文件操作规则'
+    return '## 📂 工作目录\n当前工作目录：`$dir`\n\n'
+        '### 文件操作规则'
         '\n1. **读取用户文件**：使用 `file_read` 工具读取工作目录下的文件'
         '\n2. **修改用户文件**：使用 `file_write` 工具修改用户指定的文件'
         '\n3. **格式保留**：修改文件时必须保留原有格式，包括字体、缩进、换行等'
         '\n4. **仅限工作目录**：读取和修改用户文件时，仅限工作目录下的文件'
-        '\n\n### ⚠️ 重要：会话数据文件存储在会话目录，不在工作目录'
-        '\n合同要点、履约跟踪、争议记录、备忘录、角色等会话数据，必须使用专用工具（如 contract_content_update）写入，这些工具会自动保存到会话目录（~/.llmwork/chats/会话ID/），**不要**写入工作目录。';
+        '\n\n### ⚠️ 重要说明'
+        '\n- **工作模式文件**（合同要点、履约跟踪、争议记录、备忘录、脑图、日程等）使用专用工具（如 `contract_content_update`）写入，工具会自动保存到**工作目录**下'
+        '\n- **会话数据**（session.json、messages.json、memory.md）由系统自动管理，存储在会话目录（~/.llmwork/chats/会话ID/），无需手动操作';
   }
 
   /// 合同模式提示词
   static String contractMode(String workDir, String sessionDir) {
     return '''## 📋 合同模式
 
-### 🔴 两个目录（必须严格区分）
+### 📂 两个目录
 
 1. **工作目录** = `$workDir`
    - 存放用户的原始合同文件（Word等）
-   - 只能用 `file_read` 读取这里的内容
-   - ❌ 禁止在这里创建/写入任何文件
+   - 存放合同分析结果（contract_content.md 等）
+   - 使用 `file_read` 读取用户文件
+   - 使用专用工具写入合同数据
 
-2. **会话目录** = `$sessionDir`
-   - 存放合同分析结果
-   - 使用专用工具写入这里
+2. **会话目录** = `~/.llmwork/chats/会话ID/`
+   - 由系统自动管理
+   - 存储会话数据（session.json、messages.json、memory.md）
+   - 无需手动操作
 
 ### 🔴 操作流程
 
@@ -91,7 +94,7 @@ file_read({"filePath": "$workDir/xxx.docx"})
 
 步骤2：分析合同内容
 
-步骤3：调用专用工具写入会话目录
+步骤3：调用专用工具写入工作目录
 ```
 contract_content_update({"content": "合同要点Markdown内容"})
 contract_process_update({"content": "履约跟踪Markdown内容"})
@@ -100,9 +103,7 @@ contract_disguss_update({"content": "争议记录Markdown内容"})
 
 ### 🔴 禁止事项
 
-- ❌ 禁止使用 file_write 写入合同数据
 - ❌ 禁止使用 bash/cat 命令写入文件
-- ❌ 禁止将 contract_content.md 等文件保存到工作目录
 - ❌ 禁止只输出内容而不调用工具
 
 ### 工具用途
@@ -110,10 +111,10 @@ contract_disguss_update({"content": "争议记录Markdown内容"})
 | 工具 | 用途 | 写入位置 |
 |------|------|----------|
 | `file_read` | 读取工作目录文件 | 只读 |
-| `contract_content_update` | 合同要点 | `$sessionDir` |
-| `contract_process_update` | 合同履约 | `$sessionDir` |
-| `contract_disguss_update` | 合同争议 | `$sessionDir` |
-| `note_update` | 备忘录 | `$sessionDir` |
+| `contract_content_update` | 合同要点 | `$workDir/.llmwork/contract/` |
+| `contract_process_update` | 合同履约 | `$workDir/.llmwork/contract/` |
+| `contract_disguss_update` | 合同争议 | `$workDir/.llmwork/contract/` |
+| `note_update` | 备忘录 | `$workDir/.llmwork/contract/` |
 
 ### ⚠️ 严格格式要求
 
@@ -251,6 +252,10 @@ contract_disguss_update({"content": "争议记录Markdown内容"})
     return '''## 🧾 发票模式
 
 你处于发票模式下，专注于发票管理、报销处理、财务记录等场景。
+
+### 📂 文件存储
+
+发票相关文件（发票汇总、发票明细、报销记录、备忘录）使用专用工具写入，工具会自动保存到**工作目录**下。
 
 ### 文件管理规则
 
@@ -422,6 +427,10 @@ $rolesInfo
 
 你处于创意模式下，专注于创意写作、头脑风暴、故事创作等场景。
 
+### 📂 文件存储
+
+创意相关文件（脑图、灵感笔记、草稿）使用专用工具写入，工具会自动保存到**工作目录**下。
+
 ### ⚠️ 核心要求：必须使用工具保存内容
 
 **你必须主动使用以下工具将创意内容保存到文件，这样用户才能在右侧边栏查看：**
@@ -445,7 +454,7 @@ $rolesInfo
 - 规划章节/场景/情节
 
 #### 3. 创作阶段
-- 调用 `file_write` 写入草稿（路径：`$sessionDir/drafts/文件名.md`）
+- 调用 `file_write` 写入草稿（路径：`$workDir/.llmwork/creative/drafts/文件名.md`）
 - 分章节/场景逐步创作
 - 每完成一部分就保存
 
@@ -458,9 +467,9 @@ $rolesInfo
 
 | 工具 | 用途 | 存储位置 |
 |------|------|----------|
-| `mindmap_update` | 创建/更新脑图 | `$sessionDir/mindmap.md` |
-| `note_update` | 更新灵感笔记 | `$sessionDir/note.md` |
-| `file_write` | 写入草稿 | `$sessionDir/drafts/文件名.md` |
+| `mindmap_update` | 创建/更新脑图 | `$workDir/.llmwork/creative/mindmap.md` |
+| `note_update` | 更新灵感笔记 | `$workDir/.llmwork/creative/note.md` |
+| `file_write` | 写入草稿 | `$workDir/.llmwork/creative/drafts/文件名.md` |
 
 ### 脑图格式
 
@@ -497,6 +506,10 @@ $rolesInfo
     return '''## 📋 日程模式
 
 你处于日程模式下，专注于日程安排管理。
+
+### 📂 文件存储
+
+日程安排文件使用专用工具写入，工具会自动保存到**工作目录**下。
 
 ### ⚠️ 核心要求：必须使用工具保存内容
 

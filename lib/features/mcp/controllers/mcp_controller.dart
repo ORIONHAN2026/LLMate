@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../../../models/chat/mcp_config.dart';
-import '../builtins/mcp_storage_manager.dart';
+import '../storage/mcp_storage_manager.dart';
 
 /// MCP 服务配置全局控制器
 class McpController extends GetxController {

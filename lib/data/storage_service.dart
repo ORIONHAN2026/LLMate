@@ -52,7 +52,7 @@ class StorageService {
     _initialized = false;
   }
 
-  // ── 供应商密钥便捷方法（供 mcp_marketplace_page 等页面调用）──
+  // ── 供应商密钥便捷方法 ──
 
   static Future<String?> getVendorKey(String vendorId) async {
     final record = await instance.store.isarVendorKeys.getByVendorId(vendorId);

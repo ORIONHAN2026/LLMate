@@ -9,7 +9,7 @@ import 'package:get/get.dart';
 import '../controllers/mcp_controller.dart';
 import '../../../controllers/session_controller.dart';
 import '../../../models/chat/mcp_config.dart';
-import '../builtins/mcp_storage_manager.dart';
+import '../storage/mcp_storage_manager.dart';
 import '../../../core/mcp/mcp_service.dart';
 import '../../../core/mcp/mcp_json_parser.dart';
 import '../../../utils/snackbar_utils.dart';

@@ -301,33 +301,6 @@ class CreativeModeSidebar extends WorkModeSidebar {
     }
   }
 
-  Future<List<_DraftInfo>> _loadDrafts(String draftsDir) async {
-    final dir = Directory(draftsDir);
-    if (!await dir.exists()) return [];
-
-    final drafts = <_DraftInfo>[];
-    await for (final entity in dir.list(recursive: false)) {
-      if (entity is File && entity.path.endsWith('.md')) {
-        final fileName = p.basenameWithoutExtension(entity.path);
-        final content = await FileStorage.readText(entity.path);
-        if (content != null && content.trim().isNotEmpty) {
-          // 从文件头提取标题
-          final titleMatch = RegExp(r'^# (.+)$', multiLine: true).firstMatch(content);
-          final title = titleMatch?.group(1) ?? fileName;
-          drafts.add(_DraftInfo(
-            name: fileName,
-            title: title,
-            content: content,
-            path: entity.path,
-          ));
-        }
-      }
-    }
-
-    drafts.sort((a, b) => b.path.compareTo(a.path));
-    return drafts;
-  }
-
   Widget _buildDraftCard(BuildContext context, _DraftInfo draft) {
     return Container(
       width: double.infinity,

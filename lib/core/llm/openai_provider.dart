@@ -100,7 +100,11 @@ class OpenAiProvider {
 
       if (kDebugMode) {
         debugPrint('$providerName 发送请求到: ${_model!.apiUrl}');
+        debugPrint('📤 请求报文: ${jsonEncode(requestData)}');
       }
+
+      // 将原始请求报文传递给上层用于日志记录
+      yield {'__requestData': jsonEncode(requestData)};
 
       final response = await _dio.post<ResponseBody>(
         _model!.apiUrl!,
@@ -142,6 +146,11 @@ class OpenAiProvider {
         'max_tokens': 4000,
         'temperature': 0.3,
       };
+
+      if (kDebugMode) {
+        debugPrint('$providerName 发送请求到: ${_model!.apiUrl}');
+        debugPrint('📤 请求报文: ${jsonEncode(requestData)}');
+      }
 
       final response = await _dio.post(
         _model!.apiUrl!,

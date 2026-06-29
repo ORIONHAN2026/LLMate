@@ -491,25 +491,4 @@ class AttachmentChipWidget extends StatelessWidget {
     );
   }
 
-  /// 获取文件类型描述
-  String _getFileTypeDescription(BuildContext context, String type) {
-    switch (type) {
-      case 'image':
-        return AppLocalizations.of(context)!.imageFile;
-      case 'document':
-        return AppLocalizations.of(context)!.documentFile;
-      case 'text':
-        return AppLocalizations.of(context)!.textFile;
-      case 'code':
-        return AppLocalizations.of(context)!.codeFile;
-      case 'office':
-        return AppLocalizations.of(context)!.officeDocument;
-      case 'web':
-        return AppLocalizations.of(context)!.webLink;
-      case 'folder':
-        return AppLocalizations.of(context)!.folderType;
-      default:
-        return AppLocalizations.of(context)!.otherFile;
-    }
-  }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import '../../../../data/storage_paths.dart';
 import '../../../../data/file_storage.dart';
 import '../../../../core/llm/modes/mode_utils.dart';
 

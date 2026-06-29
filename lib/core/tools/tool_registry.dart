@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart' as p;
 
 import '../../controllers/session_controller.dart';
 import '../../models/chat/chat_session.dart';

@@ -92,6 +92,7 @@ class LlmClient {
     final responseBuffer = StringBuffer();
     final thinkBuffer = StringBuffer();
     final toolCallLog = <Map<String, dynamic>>[];
+    String? rawRequestData;
 
     int toolIteration = 0;
 
@@ -108,6 +109,13 @@ class LlmClient {
       );
       await for (final chunk in stream) {
         if (_cancelled) return;
+
+        // 捕获原始请求报文（仅第一次迭代）
+        if (rawRequestData == null && chunk.containsKey('__requestData')) {
+          rawRequestData = chunk['__requestData'];
+          continue;
+        }
+
         final tc = chunk['toolcall'];
         if (tc != null && tc.isNotEmpty) {
           yield {'tool': 'true'};
@@ -161,6 +169,7 @@ class LlmClient {
         if (!_cancelled) {
           _writeRequestLog(
             requestMessages: requestSnapshot,
+            rawRequestData: rawRequestData,
             responseContent: responseBuffer.toString(),
             responseThink: thinkBuffer.toString(),
             toolCalls: toolCallLog,
@@ -291,6 +300,7 @@ class LlmClient {
 
   static Future<void> _writeRequestLog({
     required List<Map<String, dynamic>> requestMessages,
+    String? rawRequestData,
     required String responseContent,
     String? responseThink,
     List<Map<String, dynamic>>? toolCalls,
@@ -310,10 +320,11 @@ class LlmClient {
       final fileName = '${timestamp}_${sessionId.substring(0, 8)}.json';
       final file = File(p.join(dir.path, fileName));
 
-      final logData = {
+      final logData = <String, dynamic>{
         'timestamp': now.toIso8601String(),
         'sessionId': sessionId,
         'model': modelName,
+        if (rawRequestData != null) 'rawRequest': jsonDecode(rawRequestData),
         'request': {
           'messages': requestMessages,
           if (requestTools != null && requestTools.isNotEmpty)

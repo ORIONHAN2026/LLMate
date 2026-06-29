@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 
 import '../../../controllers/theme_controller.dart';
 import '../../../controllers/locale_controller.dart';
-import '../../../controllers/work_mode_controller.dart';
 
 /// 其他设置页面，包含语言设置和皮肤设置
 class OtherSettingsPage extends StatelessWidget {
@@ -19,7 +18,6 @@ class OtherSettingsPage extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final themeController = Get.find<ThemeController>();
     final localeController = Get.find<LocaleController>();
-    final workModeController = Get.find<WorkModeController>();
 
     return Scaffold(
       appBar: AppBar(
@@ -66,10 +64,6 @@ class OtherSettingsPage extends StatelessWidget {
             _buildSectionTitle(l10n.skinSettings, colorScheme),
             const SizedBox(height: 8),
             _buildSkinOptions(themeController, colorScheme, l10n),
-            const SizedBox(height: 32),
-            _buildSectionTitle(l10n.workModeSettings, colorScheme),
-            const SizedBox(height: 8),
-            _buildWorkModeOptions(workModeController, colorScheme, l10n),
           ],
         ),
       ),
@@ -245,137 +239,6 @@ class OtherSettingsPage extends StatelessWidget {
   }
 
   Widget _buildSkinTile(
-    ColorScheme colorScheme, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool selected,
-    required bool isFirst,
-    required bool isLast,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.vertical(
-        top: isFirst ? const Radius.circular(12) : Radius.zero,
-        bottom: isLast ? const Radius.circular(12) : Radius.zero,
-      ),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (selected)
-              Icon(
-                CupertinoIcons.checkmark_alt_circle_fill,
-                size: 22,
-                color: colorScheme.primary,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWorkModeOptions(
-    WorkModeController workModeController,
-    ColorScheme colorScheme,
-    AppLocalizations l10n,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Obx(() {
-        final currentMode = workModeController.workMode.value;
-        return Column(
-          children: [
-            _buildWorkModeTile(
-              colorScheme,
-              icon: CupertinoIcons.briefcase,
-              title: l10n.workModeBusiness,
-              subtitle: l10n.workModeBusinessDesc,
-              selected: currentMode == WorkMode.business,
-              isFirst: true,
-              isLast: false,
-              onTap: () =>
-                  workModeController.setWorkMode(WorkMode.business),
-            ),
-            _buildDivider(colorScheme),
-            _buildWorkModeTile(
-              colorScheme,
-              icon: CupertinoIcons.money_dollar_circle,
-              title: l10n.workModeFinance,
-              subtitle: l10n.workModeFinanceDesc,
-              selected: currentMode == WorkMode.finance,
-              isFirst: false,
-              isLast: false,
-              onTap: () =>
-                  workModeController.setWorkMode(WorkMode.finance),
-            ),
-            _buildDivider(colorScheme),
-            _buildWorkModeTile(
-              colorScheme,
-              icon: CupertinoIcons.shield_lefthalf_fill,
-              title: l10n.workModeLegal,
-              subtitle: l10n.workModeLegalDesc,
-              selected: currentMode == WorkMode.legal,
-              isFirst: false,
-              isLast: false,
-              onTap: () =>
-                  workModeController.setWorkMode(WorkMode.legal),
-            ),
-            _buildDivider(colorScheme),
-            _buildWorkModeTile(
-              colorScheme,
-              icon: CupertinoIcons.chart_bar_alt_fill,
-              title: l10n.workModeMarketing,
-              subtitle: l10n.workModeMarketingDesc,
-              selected: currentMode == WorkMode.marketing,
-              isFirst: false,
-              isLast: true,
-              onTap: () =>
-                  workModeController.setWorkMode(WorkMode.marketing),
-            ),
-          ],
-        );
-      }),
-    );
-  }
-
-  Widget _buildWorkModeTile(
     ColorScheme colorScheme, {
     required IconData icon,
     required String title,

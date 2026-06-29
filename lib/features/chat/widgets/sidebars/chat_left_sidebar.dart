@@ -8,7 +8,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'dart:math' as math;
 import '../../../../models/chat/chat_session.dart';
-import '../../../../core/utils/model_icon_utils.dart';
 
 // 会话项组件
 class _SessionItem extends StatefulWidget {
@@ -309,17 +308,6 @@ class _SessionItemState extends State<_SessionItem>
 
   // 已移除未使用的模型图标/颜色辅助方法 _getModelIcon / _getModelIconColor
 
-  // 根据模型名称构建对应的图标Widget
-  Widget _buildModelIconWidget(String modelName, bool isSelected) {
-    // 使用统一的ModelIconUtils来处理图标
-    return ModelIconUtils.buildModelIconWidget(
-      modelName,
-      isSelected,
-      platform: widget.session.chatModel?.platform,
-      protocol: widget.session.chatModel?.protocol,
-    );
-  }
-
   // 构建精美的菊花样式加载动画
   Widget _buildLoadingIcon() {
     return RotationTransition(
@@ -339,26 +327,24 @@ class _SessionItemState extends State<_SessionItem>
 
   // 构建名称显示组件
   Widget _buildNameDisplay() {
-    final isBusinessMode = workModeController.workMode.value == WorkMode.business;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onDoubleTap: isBusinessMode
-          ? null
-          : () {
-              _startEditing();
-            },
-      child: Text(
-        widget.session.name,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color:
-              widget.isSelected
-                  ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+    return Tooltip(
+      message: '双击修改会话名称',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onDoubleTap: () => _showRenameDialog(context),
+        child: Text(
+          widget.session.name,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color:
+                widget.isSelected
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -488,6 +474,131 @@ class _SessionItemState extends State<_SessionItem>
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showRenameDialog(BuildContext context) {
+    final nameController = TextEditingController(text: widget.session.name);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: Row(
+            children: [
+              Icon(
+                CupertinoIcons.pencil,
+                size: 14,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '重命名会话',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '请输入新的会话名称',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[800],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                style: const TextStyle(fontSize: 12),
+                decoration: InputDecoration(
+                  hintText: '会话名称',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[400],
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                ),
+                onSubmitted: (value) {
+                  if (value.trim().isNotEmpty) {
+                    final updatedSession = widget.session.copyWith(title: value.trim());
+                    sessionController.updateSession(updatedSession);
+                  }
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: const Size(60, 28),
+                textStyle: const TextStyle(fontSize: 11),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: Text(
+                '取消',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final value = nameController.text.trim();
+                if (value.isNotEmpty) {
+                  final updatedSession = widget.session.copyWith(title: value);
+                  sessionController.updateSession(updatedSession);
+                }
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: const Size(60, 28),
+                textStyle: const TextStyle(fontSize: 11),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.checkmark, size: 10),
+                  SizedBox(width: 4),
+                  Text('确定'),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );

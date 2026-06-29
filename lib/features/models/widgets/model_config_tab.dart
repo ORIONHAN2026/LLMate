@@ -25,11 +25,8 @@ class ModelConfigTab extends StatefulWidget {
 
 class _ModelConfigTabState extends State<ModelConfigTab> {
   late ChatModel _currentModel;
-  bool _isEditingApiKey = false;
-  bool _isApiKeyVisible = false;
   bool _isEditingModelName = false;
   bool _isHoveringModelName = false; // 新增：鼠标悬停状态
-  bool _isHoveringApiKey = false; // 新增：API密钥鼠标悬停状态
   late TextEditingController _apiKeyController;
   late TextEditingController _modelNameController;
   late TextEditingController _systemPromptController;
@@ -149,153 +146,6 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildApiKeyItem() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '${AppLocalizations.of(context)!.apiKeyLabel}:',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child:
-                _isEditingApiKey
-                    ? TextField(
-                      controller: _apiKeyController,
-                      decoration: InputDecoration(
-                        hintText: AppLocalizations.of(context)!.apiKeyHint,
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        isDense: true,
-                      ),
-                      obscureText: !_isApiKeyVisible,
-                      style: const TextStyle(fontSize: 12),
-                      autofocus: true,
-                      onSubmitted: (value) => _saveApiKey(),
-                      onTapOutside: (event) => _cancelEditApiKey(),
-                    )
-                    : MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      onEnter: (_) => setState(() => _isHoveringApiKey = true),
-                      onExit: (_) => setState(() => _isHoveringApiKey = false),
-                      child: GestureDetector(
-                        onDoubleTap: _startEditApiKey,
-                        child: Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color:
-                                  _isHoveringApiKey
-                                      ? Theme.of(
-                                        context,
-                                      ).colorScheme.primary.withOpacity(0.3)
-                                      : Colors.transparent,
-                              width: 1,
-                            ),
-                            color:
-                                _isHoveringApiKey
-                                    ? Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withOpacity(0.05)
-                                    : Colors.transparent,
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 4,
-                                    horizontal: 8,
-                                  ),
-                                  child: Text(
-                                    _currentModel.apiKey?.isNotEmpty == true
-                                        ? (_isApiKeyVisible
-                                            ? _currentModel.apiKey!
-                                            : '••••••••')
-                                        : AppLocalizations.of(context)!.notSetDoubleClickToEdit,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          _currentModel.apiKey?.isNotEmpty ==
-                                                  true
-                                              ? Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withOpacity(0.8)
-                                              : Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withOpacity(0.5),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // 眼睛图标 - 切换密码可见性
-                              if (_currentModel.apiKey?.isNotEmpty == true)
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _isApiKeyVisible = !_isApiKeyVisible;
-                                    });
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Icon(
-                                      _isApiKeyVisible
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
-                                      size: 12,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withOpacity(0.6),
-                                    ),
-                                  ),
-                                ),
-                              // 编辑图标
-                              GestureDetector(
-                                onTap: _startEditApiKey,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Icon(
-                                    Icons.edit,
-                                    size: 12,
-                                    color:
-                                        _isHoveringApiKey
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.7)
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withOpacity(0.4),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
           ),
         ],
       ),
@@ -565,35 +415,6 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         );
       },
     );
-  }
-
-  void _startEditApiKey() {
-    setState(() {
-      _isEditingApiKey = true;
-      _isApiKeyVisible = true; // 进入编辑模式时默认显示明文
-      _apiKeyController.text = _currentModel.apiKey ?? '';
-    });
-  }
-
-  void _cancelEditApiKey() {
-    setState(() {
-      _isEditingApiKey = false;
-      _apiKeyController.text = _currentModel.apiKey ?? '';
-    });
-  }
-
-  void _saveApiKey() {
-    final newApiKey = _apiKeyController.text.trim();
-    setState(() {
-      _currentModel = _currentModel.copyWith(apiKey: newApiKey);
-      _isEditingApiKey = false;
-    });
-
-    // 保存到本地存储
-    widget.onModelUpdated(_currentModel);
-
-    // 显示保存成功提示
-    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.apiKeySaved);
   }
 
   void _startEditModelName() {

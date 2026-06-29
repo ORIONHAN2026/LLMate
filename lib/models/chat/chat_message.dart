@@ -1,5 +1,5 @@
-import 'chat_attachment.dart';
-import 'content_block.dart';
+import './chat_attachment.dart';
+import './content_block.dart';
 
 enum MessageRole { user, bot, tool }
 

@@ -4,12 +4,12 @@ import 'package:llmwork/models/bigmodel/chat_model.dart';
 import 'package:llmwork/models/chat/mcp_config.dart';
 import 'package:llmwork/models/chat/skill.dart';
 
-import 'chat_message.dart';
-import 'chat_attachment.dart';
-import 'chat_setting.dart';
-import 'scheduled_task.dart';
-import 'memory_turn.dart';
-import 'contract_info.dart';
+import './chat_message.dart';
+import './chat_attachment.dart';
+import './chat_setting.dart';
+import './scheduled_task.dart';
+import './memory_turn.dart';
+import './contract_info.dart';
 
 const List<String> kSessionEmojis = [
   // 表情

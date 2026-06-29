@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="LLMWork - 智能对话助手，支持多模型、MCP协议、文件操作、技能系统的AI工作台">
-  <meta name="keywords" content="AI助手,LLMWork,LLM,MCP,智能对话,多模型,AI工作台">
-  <meta property="og:title" content="LLMWork - 智能对话助手">
-  <meta property="og:description" content="一个平台，连接所有AI模型。支持OpenAI、Claude、Gemini等8+主流模型，内置MCP协议、文件操作、技能系统。">
+  <meta name="description" content="LLMWork - 支持8+主流大模型API一键切换，内置合同模式、发票模式等多种工作模式与智能导航台，让AI真正成为你的生产力伙伴。">
+  <meta name="keywords" content="AI助手,LLMWork,LLM,大模型切换,工作模式,智能导航,合同模式,AI工作台">
+  <meta property="og:title" content="LLMWork - 智能AI工作台">
+  <meta property="og:description" content="支持8+主流大模型API一键切换，内置多种工作模式与智能导航台。合同模式下自动生成合同概要、履约记录、争议条款，让AI理解你的工作场景。">
   <meta property="og:type" content="website">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
   <link rel="manifest" href="manifest.json">
-  <title>LLMWork - 智能对话助手 | 多模型 AI 工作台</title>
+  <title>LLMWork - 智能AI工作台 | 多模型一键切换 · 工作模式智能导航</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth}
@@ -228,8 +228,8 @@
     <span class="gradient-text">所有 AI 模型</span>
   </h1>
   <p class="hero-desc">
-    LLMWork 是你的全能 AI 工作台。统一管理 OpenAI、Claude、Gemini、DeepSeek 等 8+ 主流模型，
-    内置 MCP 协议支持、文件操作引擎、技能系统，让 AI 真正成为你的生产力伙伴。
+    支持 OpenAI、Claude、Gemini、DeepSeek 等 8+ 主流大模型 API，随时一键切换，无需更换平台。<br>
+    内置多种工作模式与智能导航台——合同模式下自动生成合同概要、履约记录、争议条款等导航面板，让 AI 真正理解你的工作场景。
   </p>
   <div class="hero-actions">
     <a class="btn btn-primary" onclick="navigate('download')">
@@ -433,6 +433,32 @@
   </div>
 </footer>
 
+<!-- MCP 安装弹窗 -->
+<div class="modal-overlay" id="mcp-install-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeMcpInstallModal()">✕</button>
+    <h3 id="mcp-modal-title">微信公众号Token管理</h3>
+    <div class="modal-subtitle">MCP 服务配置</div>
+    <div class="config-block">
+      <pre id="mcp-modal-config"></pre>
+    </div>
+    <div class="alert-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p>此 MCP 服务为 LLMWork 专属服务，需要联系 LLMWork 团队获取使用权限后方可正常使用。</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-copy" id="btn-copy-config" onclick="copyMcpConfig()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        复制配置
+      </button>
+      <button class="btn-contact" onclick="contactTeam()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        联系 LLMWork 团队获取权限
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -470,6 +496,63 @@ function getCategoryLabel(cat) {
   const map = {proprietary:'专属'};
   return map[cat] || cat;
 }
+
+// ========== MCP 安装弹窗 ==========
+const MCP_CONFIGS = {
+  wechatpublic: {
+    title: '微信公众号Token管理',
+    config: JSON.stringify({
+      mcpServers: {
+        wechatpublic: {
+          headers: {
+            "Authorization": "请联系LLMWork获取授权码",
+            "X-Appid": "您的微信服务号的AppID",
+            "X-Secret": "您的微信服务号的AppSecret"
+          },
+          "url": "https://mcp-wchatpublic-261458-4-1402725619.sh.run.tcloudbase.com/mcp"
+        }
+      }
+    }, null, 2)
+  }
+};
+
+function showMcpInstallModal(key) {
+  const cfg = MCP_CONFIGS[key];
+  if (!cfg) return;
+  document.getElementById('mcp-modal-title').textContent = cfg.title;
+  document.getElementById('mcp-modal-config').textContent = cfg.config;
+  document.getElementById('mcp-install-modal').classList.add('active');
+  document.getElementById('btn-copy-config').classList.remove('copied');
+  document.getElementById('btn-copy-config').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>复制配置';
+}
+
+function closeMcpInstallModal() {
+  document.getElementById('mcp-install-modal').classList.remove('active');
+}
+
+function copyMcpConfig() {
+  const text = document.getElementById('mcp-modal-config').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy-config');
+    btn.classList.add('copied');
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>已复制';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>复制配置';
+    }, 2000);
+  });
+}
+
+function contactTeam() {
+  window.open('mailto:llmwork@example.com?subject=MCP使用权限申请 - 微信公众号Token管理', '_blank');
+}
+
+// 点击弹窗遮罩关闭
+document.addEventListener('click', function(e) {
+  if (e.target.id === 'mcp-install-modal') {
+    closeMcpInstallModal();
+  }
+});
 
 // ========== 更新日志：按日期从 update/ 目录的 md 文件加载 ==========
 const CHANGELOG_DATA = [

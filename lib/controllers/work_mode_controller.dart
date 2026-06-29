@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 
-import '../storage/isar_service.dart';
+import '../data/storage_service.dart';
 
 /// 工作模式枚举
 enum WorkMode {
@@ -31,7 +31,7 @@ class WorkModeController extends GetxController {
 
   Future<void> _load() async {
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
       final setting = await store.isarSettings.getByKey(_settingsKey);
       if (setting != null) {
         final mode = WorkMode.values.cast<WorkMode?>().firstWhere(
@@ -50,7 +50,7 @@ class WorkModeController extends GetxController {
   Future<void> setWorkMode(WorkMode mode) async {
     workMode.value = mode;
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
       await store.isarSettings.put(_settingsKey, mode.name);
     } catch (e) {
       // 忽略保存错误

@@ -5,21 +5,21 @@ import 'package:window_manager/window_manager.dart';
 import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:llmwork/l10n/app_localizations.dart';
-import 'controllers/model_controller.dart';
-import 'controllers/session_controller.dart';
-import 'controllers/theme_controller.dart';
-import 'controllers/locale_controller.dart';
-import 'controllers/mcp_controller.dart';
-import 'controllers/work_mode_controller.dart';
-import 'pages/home.dart';
-import 'pages/loading_page.dart';
-import 'services/scheduled_task_service.dart';
-import 'services/skill_storage_service.dart';
-import 'services/skill_service.dart';
+import './features/models/controllers/model_controller.dart';
+import './controllers/session_controller.dart';
+import './controllers/theme_controller.dart';
+import './controllers/locale_controller.dart';
+import './features/mcp/controllers/mcp_controller.dart';
+import './controllers/work_mode_controller.dart';
+import './features/chat/pages/home.dart';
+import './pages/loading_page.dart';
+import './core/scheduler/scheduled_task_service.dart';
+import './core/skills/skill_storage_service.dart';
+import './core/skills/skill_service.dart';
 
-import 'models/bigmodel/chat_model.dart';
+import './models/bigmodel/chat_model.dart';
 import 'models/chat/chat_session.dart';
-import 'storage/isar_service.dart';
+import './data/storage_service.dart';
 
 // 最小窗口宽度组成: 左侧边栏最小 200 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
 const double kMinLeftSidebarWidth = 200;
@@ -68,7 +68,7 @@ void main() async {
   }
 
   // 初始化文件存储（必须在 ThemeController 之前）
-  await IsarService.instance.initialize();
+  await StorageService.instance.initialize();
 
   // 在应用启动前初始化 ThemeController
   Get.put(ThemeController());

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'mcp_config.dart';
+import './mcp_config.dart';
 
 /// AI Skill 模型
 ///

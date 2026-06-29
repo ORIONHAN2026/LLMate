@@ -8,12 +8,12 @@ import 'package:get/get.dart';
 
 import '../models/chat/chat_session.dart';
 import '../models/bigmodel/chat_model.dart';
-import '../storage/isar_service.dart';
-import '../storage/storage_paths.dart';
-import '../services/mcp_service.dart';
-import '../services/skill_service.dart';
-import 'model_controller.dart';
-import 'mcp_controller.dart';
+import '../data/storage_service.dart';
+import '../data/storage_paths.dart';
+import '../core/mcp/mcp_service.dart';
+import '../core/skills/skill_service.dart';
+import '../features/models/controllers/model_controller.dart';
+import '../features/mcp/controllers/mcp_controller.dart';
 
 class SessionController extends GetxController {
   var sessions = <ChatSession>[].obs;
@@ -117,7 +117,7 @@ class SessionController extends GetxController {
   Future<void> _persistSessionAndCurrent(ChatSession updatedSession,
       {required bool isCurrent}) async {
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
 
       // === 1. 持久化所有会话元数据 ===
       final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
@@ -254,7 +254,7 @@ class SessionController extends GetxController {
 
     // 从文件系统删除
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
       await store.isarChatSessions.delete(sessionId);
       // 删除会话目录（包含 session.json, message.json, memory.md 等）
       await store.isarChatMessages.delete(sessionId);
@@ -335,7 +335,7 @@ class SessionController extends GetxController {
   /// 加载所有会话和当前会话（消息懒加载）
   Future<void> loadAll() async {
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
       final isarSessions = await store.isarChatSessions.findAll();
 
       final List<ChatSession> loaded = [];
@@ -365,7 +365,7 @@ class SessionController extends GetxController {
   /// 为指定会话加载消息
   Future<List<ChatMessage>> loadMessages(String sessionId) async {
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
       final messagesData =
           await store.isarChatMessages.getBySessionId(sessionId);
 
@@ -389,7 +389,7 @@ class SessionController extends GetxController {
 
   Future<void> _persistSessions() async {
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
       final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
 
       for (final session in sessions) {
@@ -423,7 +423,7 @@ class SessionController extends GetxController {
 
     // 从文件系统搜索
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
       final ids = await StoragePaths.listSessionIds();
       for (final sid in ids) {
         final messagesData =

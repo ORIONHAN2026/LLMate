@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../chat/chat_setting.dart';
-import '../../utils/model_icon_utils.dart';
+import '../../core/utils/model_icon_utils.dart';
 
 /// 聊天模型数据结构
 class ChatModel {

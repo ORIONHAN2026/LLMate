@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../storage/isar_service.dart';
+import '../data/storage_service.dart';
 
 class ThemeController extends GetxController {
   var isDarkMode = false.obs;
@@ -54,7 +54,7 @@ class ThemeController extends GetxController {
   /// 加载保存的主题模式
   Future<void> _loadThemeMode() async {
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
       final useSysSetting =
           await store.isarSettings.getByKey('useSystemTheme');
       if (useSysSetting != null && useSysSetting['value'] == 'true') {
@@ -78,7 +78,7 @@ class ThemeController extends GetxController {
   /// 保存主题模式
   Future<void> _saveThemeMode() async {
     try {
-      final store = IsarService.instance.store;
+      final store = StorageService.instance.store;
       await store.isarSettings
           .put('useSystemTheme', useSystemTheme.value.toString());
       await store.isarSettings

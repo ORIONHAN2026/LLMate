@@ -1822,6 +1822,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         icon = CupertinoIcons.lightbulb;
         label = '创意';
         break;
+      case 'task':
+        icon = CupertinoIcons.rectangle_grid_2x2;
+        label = '日程';
+        break;
       default:
         icon = CupertinoIcons.chat_bubble;
         label = '对话';
@@ -1910,6 +1914,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       _ModeItem('conversation', CupertinoIcons.chat_bubble, '对话', '通用对话模式'),
       _ModeItem('chatroom', CupertinoIcons.person_2, '聊天室', '多角色对话模式'),
       _ModeItem('creative', CupertinoIcons.lightbulb, '创意', '创意写作与脑图'),
+      _ModeItem('task', CupertinoIcons.rectangle_grid_2x2, '日程', '任务管理与工作日志'),
     ];
 
     // 如果当前是合同/发票模式，也显示在列表中（不可选）
@@ -1985,19 +1990,27 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final workMode = currentSession?.workMode ?? 'conversation';
     final workDir = currentSession?.workDirectory;
     final hasWorkDir = workDir != null && workDir.isNotEmpty;
-    final isLocked = workMode == 'contract' || workMode == 'invoice';
     final displayText = hasWorkDir
         ? p.basename(workDir)
         : AppLocalizations.of(context)!.workingDirectoryLabel;
 
+    // 判断是否锁定：
+    // 1. 对话模式：始终可设置
+    // 2. 非对话模式 + 已设置工作目录 + 是合同/发票模式：锁定
+    // 3. 非对话模式 + 未设置工作目录 + 会话目录有模式文件：锁定
+    // 4. 非对话模式 + 未设置工作目录 + 会话目录无模式文件：允许设置
+    final isConversationMode = workMode == 'conversation';
+    final isContractOrInvoice = workMode == 'contract' || workMode == 'invoice';
+    final isLocked = hasWorkDir && (isContractOrInvoice || !isConversationMode);
+
     return Tooltip(
       message: isLocked
-          ? '已锁定：${workDir ?? ""}（合同/发票模式不可修改）'
+          ? '已锁定：${workDir ?? ""}（不可修改）'
           : hasWorkDir
               ? '双击打开，长按修改'
               : AppLocalizations.of(context)!.setWorkingDirHint,
       child: GestureDetector(
-        // 合同/发票模式不可点击；其他模式单击选择，双击打开
+        // 锁定时不可点击；未设置时单击选择，已设置时双击打开/长按修改
         onTap: _isSending || isLocked
             ? null
             : hasWorkDir
@@ -2077,7 +2090,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       }
 
       // 检测目录中是否有合同文件或发票文件
-      final fileType = await _detectFileType(result);
+      final detectedFileType = await _detectFileType(result);
       
       // 迁移已有的模式文件到工作目录
       await StoragePaths.migrateModeFiles(
@@ -2085,13 +2098,21 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         workDirectory: result,
       );
 
-      // 设置工作目录和工作模式
+      // 设置工作目录
+      // 如果当前已经是非对话模式，则保持当前模式不变
+      // 如果当前是对话模式，则使用检测到的文件类型
+      final currentMode = currentSession.workMode ?? 'conversation';
+      final targetMode = currentMode != 'conversation' ? currentMode : detectedFileType;
       final dirName = p.basename(result);
+      
+      // 如果会话名称是"新建会话"，则改为目录名称
+      final shouldUpdateTitle = currentSession.name == '新建会话' || currentSession.name.isEmpty;
+      
       sessionController.updateSession(
         currentSession.copyWith(
           workDirectory: result,
-          workMode: fileType,
-          title: fileType == 'contract' ? dirName : null,
+          workMode: targetMode,
+          title: shouldUpdateTitle ? dirName : null,
         ),
       );
       SnackBarUtils.showSuccess(
@@ -2100,10 +2121,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       );
 
       // 如果目录中已有模式文件，发送自动介绍消息
-      await _sendWelcomeMessage(result, fileType);
+      await _sendWelcomeMessage(result, targetMode);
 
       // 合同模式：仅当目录中没有 .llmwork/contract/ 目录时才自动解析合同
-      if (fileType == 'contract') {
+      if (targetMode == 'contract') {
         final contractDir = Directory(p.join(result, '.llmwork', 'contract'));
         if (!await contractDir.exists()) {
           await Future.delayed(const Duration(milliseconds: 300));
@@ -2152,7 +2173,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  /// 检查目录冲突：非对话模式下，如果目标目录有 .llmwork，则不允许设置
+  /// 检查目录冲突
+  ///
+  /// 规则：
+  /// 1. 对话模式：始终允许（会自动识别模式）
+  /// 2. 非对话模式 + 目标目录有 .llmwork + 会话已有模式文件：拒绝（避免冲突）
+  /// 3. 非对话模式 + 目标目录有 .llmwork + 会话无模式文件：允许（首次设置）
   Future<String?> _checkDirectoryConflict(String sessionId, String targetDir) async {
     // 检查目标目录是否有 .llmwork 目录
     final llmworkDir = Directory(p.join(targetDir, '.llmwork'));
@@ -2166,13 +2192,36 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentMode = session?.workMode ?? 'conversation';
     debugPrint('🔍 当前工作模式: $currentMode');
 
-    // 非对话模式下，如果目标目录有 .llmwork，直接拒绝
-    // （对话模式下会自动识别模式，不需要拦截）
-    if (currentMode != 'conversation') {
+    // 对话模式：始终允许（会自动识别模式）
+    if (currentMode == 'conversation') return null;
+
+    // 检查会话目录是否有模式文件
+    final sessionHasModeFiles = await _sessionHasModeFiles(sessionId);
+    debugPrint('🔍 会话目录有模式文件: $sessionHasModeFiles');
+
+    // 非对话模式 + 会话已有模式文件：拒绝
+    if (sessionHasModeFiles) {
       return '该目录已存在 LLM 工作文件（.llmwork），请选择其他目录';
     }
 
+    // 非对话模式 + 会话无模式文件：允许（首次设置）
     return null;
+  }
+
+  /// 检查会话目录是否有任何模式文件
+  Future<bool> _sessionHasModeFiles(String sessionId) async {
+    final modes = ['contract', 'invoice', 'chatroom', 'creative', 'task'];
+    for (final mode in modes) {
+      final modeDir = StoragePaths.modeDir(sessionId: sessionId, workMode: mode);
+      final dir = Directory(modeDir);
+      if (await dir.exists()) {
+        final files = await dir.list(recursive: true).toList();
+        if (files.any((e) => e is File)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /// 检测目录中的文件类型

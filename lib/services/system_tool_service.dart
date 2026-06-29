@@ -53,6 +53,8 @@ class SystemToolService {
   static const String roleUpdateTool = 'role_update';
   static const String roleDeleteTool = 'role_delete';
   static const String mindmapUpdateTool = 'mindmap_update';
+  static const String taskUpdateTool = 'task_update';
+  static const String logUpdateTool = 'log_update';
 
   static const List<SystemToolDefinition> _tools = [
     SystemToolDefinition(
@@ -465,6 +467,38 @@ class SystemToolService {
         'required': ['content'],
       },
     ),
+    SystemToolDefinition(
+      name: taskUpdateTool,
+      description:
+          '更新日程安排文件（schedule.md）。直接写入完整的日程安排内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的日程安排完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
+    SystemToolDefinition(
+      name: logUpdateTool,
+      description:
+          '写入工作日志文件（logs/{日期}.md）。直接写入完整的工作日志内容，无需指定文件路径。'
+          '文件会自动保存到当前会话的工作目录下，按日期自动命名。',
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'content': {
+            'type': 'string',
+            'description': '要写入的工作日志完整内容（Markdown 格式）。',
+          },
+        },
+        'required': ['content'],
+      },
+    ),
   ];
 
   static List<SystemToolDefinition> get tools => List.unmodifiable(_tools);
@@ -604,6 +638,18 @@ class SystemToolService {
         );
       case mindmapUpdateTool:
         return _executeMindmapUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case taskUpdateTool:
+        return _executeTaskUpdate(
+          session: session,
+          arguments: arguments,
+          callId: callId,
+        );
+      case logUpdateTool:
+        return _executeLogUpdate(
           session: session,
           arguments: arguments,
           callId: callId,
@@ -1313,6 +1359,88 @@ print("文档修改成功: $filePath")
       };
     } catch (e) {
       return _errorResult(callId, arguments, '脑图更新失败: $e');
+    }
+  }
+
+  /// 执行日程安排更新
+  static Future<Map<String, dynamic>> _executeTaskUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      final filePath = '${StoragePaths.modeDir(sessionId: session.sessionId, workMode: 'task', workDirectory: session.workDirectory)}/schedule.md';
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'task',
+        workDirectory: session.workDirectory,
+      );
+      await File(filePath).writeAsString(content);
+
+      debugPrint('📋 日程安排已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': taskUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '日程安排已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '日程安排更新失败: $e');
+    }
+  }
+
+  /// 执行工作日志更新
+  static Future<Map<String, dynamic>> _executeLogUpdate({
+    required ChatSession session,
+    required Map<String, dynamic> arguments,
+    required String callId,
+  }) async {
+    try {
+      final content = arguments['content'] as String? ?? '';
+      if (content.isEmpty) {
+        return _errorResult(callId, arguments, 'content 参数不能为空');
+      }
+
+      // 按日期命名日志文件
+      final now = DateTime.now();
+      final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final logsDir = '${StoragePaths.modeDir(sessionId: session.sessionId, workMode: 'task', workDirectory: session.workDirectory)}/logs';
+      await StoragePaths.ensureModeDir(
+        sessionId: session.sessionId,
+        workMode: 'task',
+        workDirectory: session.workDirectory,
+      );
+      await Directory(logsDir).create(recursive: true);
+
+      final filePath = '$logsDir/$dateStr.md';
+      await File(filePath).writeAsString(content);
+
+      debugPrint('📝 工作日志已更新: $filePath');
+
+      return {
+        'id': callId,
+        'name': logUpdateTool,
+        'args': arguments,
+        'result': jsonEncode({
+          'ok': true,
+          'filePath': filePath,
+          'message': '工作日志已更新',
+        }),
+        'isError': false,
+      };
+    } catch (e) {
+      return _errorResult(callId, arguments, '工作日志更新失败: $e');
     }
   }
 

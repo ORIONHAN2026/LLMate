@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'dart:math' as math;
 import '../models/chat/chat_session.dart';
 import '../utils/model_icon_utils.dart';
+import '../framework/modes/work_mode_factory.dart';
 
 // 会话项组件
 class _SessionItem extends StatefulWidget {
@@ -45,6 +46,11 @@ class _SessionItemState extends State<_SessionItem>
   final workModeController = Get.find<WorkModeController>();
   List<ChatSession> get chatSessions => sessionController.sessions;
   late TextEditingController _nameController;
+
+  /// 获取工作模式显示名称（从策略类获取）
+  String _getWorkModeName(String workMode) {
+    return getWorkModeDisplayName(workMode);
+  }
   late FocusNode _nameFocusNode;
   @override
   void initState() {
@@ -143,6 +149,7 @@ class _SessionItemState extends State<_SessionItem>
               children: [
                 // Emoji 头像
                 GestureDetector(
+                  behavior: HitTestBehavior.deferToChild,
                   onTap: () => _showEmojiPicker(context),
                   child: Container(
                     width: 28,
@@ -181,27 +188,26 @@ class _SessionItemState extends State<_SessionItem>
                           // 收藏指示器 - 对收藏的会话始终显示小星星
                         ],
                       ),
-                      // 模型信息显示
-                      if (widget.session.chatModel != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            widget.session.modelDisplayInfo,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color:
-                                  widget.isSelected
-                                      ? Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withOpacity(0.7)
-                                      : Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                      // 工作模式信息显示
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          _getWorkModeName(widget.session.workMode ?? 'conversation'),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color:
+                                widget.isSelected
+                                    ? Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.7)
+                                    : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.5),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -329,10 +335,10 @@ class _SessionItemState extends State<_SessionItem>
   Widget _buildNameDisplay() {
     final isBusinessMode = workModeController.workMode.value == WorkMode.business;
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onDoubleTap: isBusinessMode
-          ? null // 商务模式下禁止编辑会话名称
+          ? null
           : () {
-              // 阻止事件冒泡到外层InkWell
               _startEditing();
             },
       child: Text(

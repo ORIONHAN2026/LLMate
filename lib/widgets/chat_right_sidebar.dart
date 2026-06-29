@@ -72,10 +72,11 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   }
 
   /// 获取当前模式的 Tab 数量
-  int _getTabCount() => _getSidebar().tabCount;
+  /// 获取当前模式的 Tab 数量（包含文件列表）
+  int _getTabCount() => _getSidebar().tabCount + 1; // +1 for file list
 
-  /// 获取当前模式的 Tab 标题
-  List<String> _getTabTitles() => _getSidebar().tabTitles;
+  /// 获取当前模式的 Tab 标题（包含文件列表）
+  List<String> _getTabTitles() => ['文件列表', ..._getSidebar().tabTitles];
 
   TabController _getTabController() {
     final count = _getTabCount();
@@ -150,9 +151,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         _buildFilesContent(context, messages),
       ];
 
-      // 从策略获取模式专属 Tab 内容（跳过 index 0，文件列表已添加）
+      // 从策略获取模式专属 Tab 内容（文件列表已单独添加）
       final sidebar = _getSidebar();
-      for (int i = 1; i < sidebar.tabCount; i++) {
+      for (int i = 0; i < sidebar.tabCount; i++) {
         tabChildren.add(sidebar.buildTabContent(context, i, sessionId, workDirectory: workDirectory));
       }
 

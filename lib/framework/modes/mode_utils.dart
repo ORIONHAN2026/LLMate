@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
@@ -70,6 +71,66 @@ String getEffectiveWorkDir(ChatSession session) {
     return session.workDirectory!;
   }
   return StoragePaths.sessionDir(session.sessionId);
+}
+
+/// 查找模式文件：先查工作目录，再查会话目录
+///
+/// 返回找到的文件路径，如果都没找到返回 null
+Future<String?> findModeFile({
+  required String sessionId,
+  required String workMode,
+  required String fileName,
+  String? workDirectory,
+}) async {
+  // 1. 先查工作目录
+  if (workDirectory != null && workDirectory.isNotEmpty) {
+    final workPath = '${StoragePaths.modeDir(sessionId: sessionId, workMode: workMode, workDirectory: workDirectory)}/$fileName';
+    debugPrint('🔍 查找工作目录文件: $workPath');
+    if (await File(workPath).exists()) {
+      debugPrint('✅ 找到文件: $workPath');
+      return workPath;
+    }
+    debugPrint('❌ 工作目录文件不存在: $workPath');
+  }
+
+  // 2. 再查会话目录
+  final sessionPath = '${StoragePaths.modeDir(sessionId: sessionId, workMode: workMode)}/$fileName';
+  debugPrint('🔍 查格會话目录文件: $sessionPath');
+  if (await File(sessionPath).exists()) {
+    debugPrint('✅ 找到文件: $sessionPath');
+    return sessionPath;
+  }
+  debugPrint('❌ 会话目录文件不存在: $sessionPath');
+
+  return null;
+}
+
+/// 查找模式目录下的文件列表
+///
+/// 先查工作目录，再查会话目录
+Future<List<FileSystemEntity>> findModeFiles({
+  required String sessionId,
+  required String workMode,
+  String? workDirectory,
+}) async {
+  // 1. 先查工作目录
+  if (workDirectory != null && workDirectory.isNotEmpty) {
+    final workDir = StoragePaths.modeDir(sessionId: sessionId, workMode: workMode, workDirectory: workDirectory);
+    if (await Directory(workDir).exists()) {
+      final files = await Directory(workDir).list(recursive: true).toList();
+      if (files.any((e) => e is File)) {
+        return files;
+      }
+    }
+  }
+
+  // 2. 再查会话目录
+  final sessionDir = StoragePaths.modeDir(sessionId: sessionId, workMode: workMode);
+  if (await Directory(sessionDir).exists()) {
+    return await Directory(sessionDir).list(recursive: true).toList();
+  }
+
+  return [];
 }
 
 /// 将当前消息之前的会话历史追加到消息列表中（滑动窗口）

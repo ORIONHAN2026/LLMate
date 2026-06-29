@@ -16,6 +16,12 @@ class ConversationMode extends WorkModeStrategy {
   String get modeName => 'conversation';
 
   @override
+  String get displayName => '对话模式';
+
+  @override
+  String get icon => '💬';
+
+  @override
   Future<List<Map<String, dynamic>>> buildMessages({
     required ChatModel? model,
     required ChatMessage userMessage,

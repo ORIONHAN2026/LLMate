@@ -124,7 +124,7 @@ class McpService {
   }
 
   /// 根据配置创建对应的 Transport（支持 stdio / SSE / StreamableHTTP）
-  /// 当 type 未指定时，先尝试 SSE，若 SSE 返回 405 则自动回退到 Streamable HTTP。
+  /// 当 type 未指定时，先尝试 Streamable HTTP，若失败则回退到 SSE。
   static Future<ClientTransport> _createTransport(
     Mcp config, {
     Duration? timeout,
@@ -162,23 +162,23 @@ class McpService {
           rethrow;
         }
       } else {
-        // type 未指定，先尝试 SSE，405 时自动回退 Streamable HTTP
-        debugPrint('🔗 传输类型未指定，先尝试 SSE: ${config.url}');
+        // type 未指定，先尝试 Streamable HTTP，失败时回退 SSE
+        debugPrint('🔗 传输类型未指定，先尝试 Streamable HTTP: ${config.url}');
         try {
-          return SseClientTransport.create(
-            serverUrl: config.url!,
+          return await StreamableHttpClientTransport.create(
+            baseUrl: config.url!,
             headers: config.headers,
+            body: config.body,
+            timeout: timeout,
           );
         } catch (e) {
           final es = e.toString();
-          // SSE 端点不支持（405 Method Not Allowed），回退到 Streamable HTTP
-          if (es.contains('405') || es.contains('Method not allowed')) {
-            debugPrint('🔗 SSE 不支持 (405)，自动回退到 Streamable HTTP: ${config.url}');
-            return StreamableHttpClientTransport.create(
-              baseUrl: config.url!,
+          // Streamable HTTP 不支持，回退到 SSE
+          if (es.contains('405') || es.contains('Method not allowed') || es.contains('404')) {
+            debugPrint('🔗 Streamable HTTP 不支持，回退到 SSE: ${config.url}');
+            return await SseClientTransport.create(
+              serverUrl: config.url!,
               headers: config.headers,
-              body: config.body,
-              timeout: timeout,
             );
           }
           rethrow;
@@ -369,7 +369,7 @@ class McpService {
   /// 根据原始服务器名称和工具列表生成一个友好的名称和描述。
   ///
   /// 返回 `{name, description}`，失败时返回 null。
-  static Future<Map<String, String>?> _summarizeMcpWithLLM({
+  static Future<Map<String, String>?> summarizeWithLLM({
     required String serverName,
     required List<McpToolInfo> tools,
   }) async {
@@ -558,7 +558,7 @@ ${toolSummary.toString()}
       if (preDefinedDescription != null) {
         finalDescription = preDefinedDescription;
       } else {
-        final llmResult = await _summarizeMcpWithLLM(
+        final llmResult = await summarizeWithLLM(
           serverName: serverName,
           tools: toolInfos,
         );

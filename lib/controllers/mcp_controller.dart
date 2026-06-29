@@ -26,6 +26,8 @@ class McpController extends GetxController {
         code: data.server.isNotEmpty ? jsonEncode(data.server) : '{}',
         command: data.command,
         args: data.args,
+        url: data.url,
+        headers: data.headers,
         env: data.env,
       );
     }).toList();

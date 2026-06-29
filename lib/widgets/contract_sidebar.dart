@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import '../models/chat/contract_info.dart';
 import '../storage/storage_paths.dart';
 import '../storage/file_storage.dart';
+import '../framework/modes/mode_utils.dart';
 
 /// 合同模式右侧边栏内容
 class ContractSidebar {
@@ -208,9 +209,16 @@ class ContractSidebar {
   }
 
   /// 加载文件内容
+  /// 加载文件内容：先查工作目录，再查会话目录
   static Future<String?> _loadFile(String sessionId, String fileName, {String? workDirectory}) async {
-    final path = '${StoragePaths.modeDir(sessionId: sessionId, workMode: 'contract', workDirectory: workDirectory)}/$fileName';
-    return FileStorage.readText(path);
+    final filePath = await findModeFile(
+      sessionId: sessionId,
+      workMode: 'contract',
+      fileName: fileName,
+      workDirectory: workDirectory,
+    );
+    if (filePath == null) return null;
+    return FileStorage.readText(filePath);
   }
 
   /// 空状态

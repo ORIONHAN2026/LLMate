@@ -110,7 +110,6 @@ class McpData {
 
   /// 获取 command
   String? get command {
-    // 从 mcpServers 中提取
     final mcpServers = server['mcpServers'] as Map<String, dynamic>?;
     if (mcpServers != null && mcpServers.isNotEmpty) {
       final firstServer = mcpServers.values.first as Map<String, dynamic>;
@@ -129,6 +128,28 @@ class McpData {
     }
     final argsList = server['args'] as List?;
     return argsList?.cast<String>();
+  }
+
+  /// 获取 URL
+  String? get url {
+    final mcpServers = server['mcpServers'] as Map<String, dynamic>?;
+    if (mcpServers != null && mcpServers.isNotEmpty) {
+      final firstServer = mcpServers.values.first as Map<String, dynamic>;
+      return firstServer['url'] as String?;
+    }
+    return server['url'] as String?;
+  }
+
+  /// 获取 headers
+  Map<String, String>? get headers {
+    final mcpServers = server['mcpServers'] as Map<String, dynamic>?;
+    if (mcpServers != null && mcpServers.isNotEmpty) {
+      final firstServer = mcpServers.values.first as Map<String, dynamic>;
+      final headersMap = firstServer['headers'] as Map<String, dynamic>?;
+      return headersMap?.map((k, v) => MapEntry(k, v.toString()));
+    }
+    final headersMap = server['headers'] as Map<String, dynamic>?;
+    return headersMap?.map((k, v) => MapEntry(k, v.toString()));
   }
 
   /// 获取环境变量

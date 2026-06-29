@@ -7,8 +7,14 @@ import '../../models/chat/chat_message.dart';
 /// 每种 workMode（conversation/contract/invoice/chatroom）对应一个实现类，
 /// 负责该模式下的消息组装、系统提示词注入和工具列表构建。
 abstract class WorkModeStrategy {
-  /// 模式名称
+  /// 模式标识符（如 'conversation', 'contract'）
   String get modeName;
+
+  /// 模式显示名称（如 '对话模式', '合同模式'）
+  String get displayName;
+
+  /// 模式图标（如 '💬', '📋'）
+  String get icon;
 
   /// 构建完整的消息列表（系统提示词 + 历史消息 + 用户消息）
   ///

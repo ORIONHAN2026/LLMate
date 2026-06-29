@@ -6,6 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:path/path.dart' as p;
 import '../storage/storage_paths.dart';
 import '../storage/file_storage.dart';
+import '../framework/modes/mode_utils.dart';
 
 /// 聊天室模式右侧边栏内容
 class ChatroomSidebar {
@@ -144,23 +145,35 @@ class ChatroomSidebar {
     );
   }
 
-  /// 加载所有角色
+  /// 加载所有角色：先查工作目录，再查会话目录
   static Future<List<_RoleInfo>> _loadRoles(String sessionId, {String? workDirectory}) async {
-    final rolesDirPath = StoragePaths.rolesDir(
-      sessionId: sessionId,
-      workDirectory: workDirectory,
-    );
-    final dir = Directory(rolesDirPath);
-    
-    if (!await dir.exists()) return [];
-    
     final roles = <_RoleInfo>[];
-    await for (final entity in dir.list(recursive: false)) {
+    
+    // 1. 先查工作目录
+    if (workDirectory != null && workDirectory.isNotEmpty) {
+      final workRolesDir = StoragePaths.rolesDir(sessionId: sessionId, workDirectory: workDirectory);
+      if (await Directory(workRolesDir).exists()) {
+        await _loadRolesFromDir(workRolesDir, roles);
+      }
+    }
+    
+    // 2. 如果工作目录没有角色，再查会话目录
+    if (roles.isEmpty) {
+      final sessionRolesDir = StoragePaths.rolesDir(sessionId: sessionId);
+      if (await Directory(sessionRolesDir).exists()) {
+        await _loadRolesFromDir(sessionRolesDir, roles);
+      }
+    }
+    
+    return roles;
+  }
+
+  static Future<void> _loadRolesFromDir(String dirPath, List<_RoleInfo> roles) async {
+    await for (final entity in Directory(dirPath).list(recursive: false)) {
       if (entity is File && entity.path.endsWith('.md')) {
         final fileName = p.basenameWithoutExtension(entity.path);
         final content = await FileStorage.readText(entity.path);
         if (content != null && content.trim().isNotEmpty) {
-          // 从文件头提取显示名称
           final displayNameMatch = RegExp(r'^# (.+)$', multiLine: true).firstMatch(content);
           final displayName = displayNameMatch?.group(1) ?? fileName;
           roles.add(_RoleInfo(
@@ -171,14 +184,18 @@ class ChatroomSidebar {
         }
       }
     }
-    
-    return roles;
   }
 
-  /// 加载文件内容
+  /// 加载文件内容：先查工作目录，再查会话目录
   static Future<String?> _loadFile(String sessionId, String fileName, {String? workDirectory}) async {
-    final path = '${StoragePaths.modeDir(sessionId: sessionId, workMode: 'chatroom', workDirectory: workDirectory)}/$fileName';
-    return FileStorage.readText(path);
+    final filePath = await findModeFile(
+      sessionId: sessionId,
+      workMode: 'chatroom',
+      fileName: fileName,
+      workDirectory: workDirectory,
+    );
+    if (filePath == null) return null;
+    return FileStorage.readText(filePath);
   }
 
   /// 空状态
@@ -233,10 +250,11 @@ class ChatroomSidebar {
 
   /// 角色卡片
   static Widget _buildRoleCard(BuildContext context, _RoleInfo role) {
-    // 从 displayName 提取 emoji（第一个字符）
-    final emoji = role.displayName.isNotEmpty ? role.displayName.characters.first : '';
-    final nameWithoutEmoji = role.displayName.length > 1
-        ? role.displayName.substring(1).trim()
+    // 从 displayName 提取 emoji（第一个字符，正确处理 surrogate pairs）
+    final chars = role.displayName.characters;
+    final emoji = chars.isNotEmpty ? chars.first : '';
+    final nameWithoutEmoji = chars.length > 1
+        ? chars.skip(1).join().trim()
         : role.displayName;
 
     return Container(

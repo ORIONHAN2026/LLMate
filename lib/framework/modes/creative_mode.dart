@@ -26,6 +26,12 @@ class CreativeMode extends WorkModeStrategy {
   String get modeName => 'creative';
 
   @override
+  String get displayName => '创意模式';
+
+  @override
+  String get icon => '🎭';
+
+  @override
   Future<List<Map<String, dynamic>>> buildMessages({
     required ChatModel? model,
     required ChatMessage userMessage,
@@ -218,14 +224,9 @@ class CreativeModeSidebar extends WorkModeSidebar {
       return _buildEmptyState(context, '暂无草稿', '在对话中创作后会自动保存');
     }
 
-    final draftsDirPath = StoragePaths.draftsDir(
-      sessionId: sessionId,
-      workDirectory: workDirectory,
-    );
-
     return FutureBuilder<List<_DraftInfo>>(
-      key: ValueKey('drafts_${sessionId}_'),
-      future: _loadDrafts(draftsDirPath),
+      key: ValueKey('drafts_${sessionId}_${workDirectory ?? ''}_'),
+      future: _loadDraftsFromBothLocations(sessionId, workDirectory),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -251,9 +252,59 @@ class CreativeModeSidebar extends WorkModeSidebar {
     );
   }
 
+  /// 加载文件内容：先查工作目录，再查会话目录
   Future<String?> _loadFile(String sessionId, String fileName, {String? workDirectory}) async {
-    final path = '${StoragePaths.modeDir(sessionId: sessionId, workMode: 'creative', workDirectory: workDirectory)}/$fileName';
-    return FileStorage.readText(path);
+    final filePath = await findModeFile(
+      sessionId: sessionId,
+      workMode: 'creative',
+      fileName: fileName,
+      workDirectory: workDirectory,
+    );
+    if (filePath == null) return null;
+    return FileStorage.readText(filePath);
+  }
+
+  /// 加载草稿：先查工作目录，再查会话目录
+  Future<List<_DraftInfo>> _loadDraftsFromBothLocations(String sessionId, String? workDirectory) async {
+    final drafts = <_DraftInfo>[];
+    
+    // 1. 先查工作目录
+    if (workDirectory != null && workDirectory.isNotEmpty) {
+      final workDraftsDir = StoragePaths.draftsDir(sessionId: sessionId, workDirectory: workDirectory);
+      if (await Directory(workDraftsDir).exists()) {
+        await _loadDraftsFromDir(workDraftsDir, drafts);
+      }
+    }
+    
+    // 2. 如果工作目录没有草稿，再查会话目录
+    if (drafts.isEmpty) {
+      final sessionDraftsDir = StoragePaths.draftsDir(sessionId: sessionId);
+      if (await Directory(sessionDraftsDir).exists()) {
+        await _loadDraftsFromDir(sessionDraftsDir, drafts);
+      }
+    }
+    
+    drafts.sort((a, b) => b.path.compareTo(a.path));
+    return drafts;
+  }
+
+  Future<void> _loadDraftsFromDir(String draftsDir, List<_DraftInfo> drafts) async {
+    await for (final entity in Directory(draftsDir).list(recursive: false)) {
+      if (entity is File && entity.path.endsWith('.md')) {
+        final fileName = p.basenameWithoutExtension(entity.path);
+        final content = await FileStorage.readText(entity.path);
+        if (content != null && content.trim().isNotEmpty) {
+          final titleMatch = RegExp(r'^# (.+)$', multiLine: true).firstMatch(content);
+          final title = titleMatch?.group(1) ?? fileName;
+          drafts.add(_DraftInfo(
+            name: fileName,
+            title: title,
+            content: content,
+            path: entity.path,
+          ));
+        }
+      }
+    }
   }
 
   Future<List<_DraftInfo>> _loadDrafts(String draftsDir) async {

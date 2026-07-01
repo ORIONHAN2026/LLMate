@@ -9,6 +9,7 @@ import '../../../../controllers/session_controller.dart';
 import '../../../../models/chat/chat_message.dart';
 import '../../../../core/llm/modes/mode_sidebars.dart';
 import '../../../../core/llm/modes/work_mode_sidebar.dart';
+import 'session_config_sidebar.dart';
 
 /// 文件树节点
 class _FileTreeNode {
@@ -62,11 +63,11 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   }
 
   /// 获取当前模式的 Tab 数量
-  /// 获取当前模式的 Tab 数量（包含文件列表）
-  int _getTabCount() => _getSidebar().tabCount + 1; // +1 for file list
+  /// 获取当前模式的 Tab 数量（包含文件列表和会话配置）
+  int _getTabCount() => _getSidebar().tabCount + 2; // +1 for file list, +1 for session config
 
-  /// 获取当前模式的 Tab 标题（包含文件列表）
-  List<String> _getTabTitles() => ['文件列表', ..._getSidebar().tabTitles];
+  /// 获取当前模式的 Tab 标题（包含文件列表和会话配置）
+  List<String> _getTabTitles() => ['文件列表', ..._getSidebar().tabTitles, '会话配置'];
 
   TabController _getTabController() {
     final count = _getTabCount();
@@ -143,6 +144,9 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       for (int i = 0; i < sidebar.tabCount; i++) {
         tabChildren.add(sidebar.buildTabContent(context, i, sessionId, workDirectory: workDirectory));
       }
+      
+      // 添加会话配置 Tab
+      tabChildren.add(SessionConfigSidebar.buildTabContent(context));
 
       final result = Container(
         color: Theme.of(context).scaffoldBackgroundColor,

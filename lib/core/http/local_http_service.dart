@@ -222,7 +222,7 @@ class LocalHttpService {
     }
   }
 
-  /// 流式透传 - 返回 StreamedResponse
+  /// 流式透传 - 返回 StreamedResponse，同时解析 SSE 并更新本地会话
   static Response _streamProxyResponse(
     ChatSession session,
     Map<String, dynamic> requestBodyMap,
@@ -256,9 +256,7 @@ class LocalHttpService {
 
         if (response.statusCode >= 400) {
           final errorBody = await response.transform(utf8.decoder).join();
-          debugPrint(
-            '❌ LLM 返回错误: ${response.statusCode}\n$errorBody',
-          );
+          debugPrint('❌ LLM 返回错误: ${response.statusCode}\n$errorBody');
           controller.add(
             utf8.encode(
               jsonEncode({
@@ -274,11 +272,65 @@ class LocalHttpService {
           return;
         }
 
+        // SSE 解析状态
+        final generationStartTime = DateTime.now();
+        final contentBuffer = StringBuffer();
+        int? promptTokens;
+        int? completionTokens;
+        int? totalTokens;
+        String sseBuffer = '';
+
         await for (final chunk in response) {
-          debugPrint('📤 接收响应: ${chunk}');
+          // 透传原始数据给客户端
           controller.add(chunk);
+
+          // 解析 SSE 数据提取 content 和 usage
+          sseBuffer += utf8.decode(chunk, allowMalformed: true);
+          final lines = sseBuffer.split('\n');
+          sseBuffer = lines.removeLast(); // 保留不完整的行
+
+          for (final line in lines) {
+            final trimmed = line.trim();
+            if (!trimmed.startsWith('data: ')) continue;
+            final dataStr = trimmed.substring(6);
+            if (dataStr == '[DONE]') continue;
+
+            try {
+              final json = jsonDecode(dataStr) as Map<String, dynamic>;
+
+              // 提取 content
+              final choices = json['choices'] as List?;
+              if (choices != null && choices.isNotEmpty) {
+                final delta = choices[0]['delta'] as Map<String, dynamic>?;
+                if (delta != null && delta['content'] != null) {
+                  contentBuffer.write(delta['content']);
+                }
+              }
+
+              // 提取 usage（通常在最后一个 chunk 中）
+              final usage = json['usage'] as Map<String, dynamic>?;
+              if (usage != null) {
+                promptTokens = usage['prompt_tokens'] as int?;
+                completionTokens = usage['completion_tokens'] as int?;
+                totalTokens = usage['total_tokens'] as int?;
+              }
+            } catch (_) {
+              // 忽略解析失败的行
+            }
+          }
         }
         await controller.close();
+
+        // 流结束后，更新本地会话
+        _updateSessionAfterStream(
+          session: session,
+          requestBodyMap: requestBodyMap,
+          content: contentBuffer.toString(),
+          promptTokens: promptTokens,
+          completionTokens: completionTokens,
+          totalTokens: totalTokens,
+          generationStartTime: generationStartTime,
+        );
       } catch (e) {
         debugPrint('❌ 流式代理错误: $e');
         controller.addError(e);
@@ -297,6 +349,70 @@ class LocalHttpService {
         'connection': 'keep-alive',
       },
     );
+  }
+
+  /// 流结束后更新本地会话：添加用户消息 + AI 回复 + token 统计 + 计费
+  static void _updateSessionAfterStream({
+    required ChatSession session,
+    required Map<String, dynamic> requestBodyMap,
+    required String content,
+    int? promptTokens,
+    int? completionTokens,
+    int? totalTokens,
+    required DateTime generationStartTime,
+  }) {
+    try {
+      final sessionController = Get.find<SessionController>();
+      final now = DateTime.now();
+
+      // 从请求体中提取用户消息内容
+      final messages = requestBodyMap['messages'] as List?;
+      final lastUserMsg = messages?.lastOrNull as Map<String, dynamic>?;
+      final userContent = lastUserMsg?['content'] as String? ?? '';
+
+      // 创建用户消息
+      final userMsgId = '${DateTime.now().millisecondsSinceEpoch}_user';
+      final userMessage = ChatMessage(
+        msgId: userMsgId,
+        role: MessageRole.user,
+        content: userContent,
+        timestamp: now,
+        sessionId: session.sessionId,
+      );
+
+      // 创建 AI 回复消息
+      final botMsgId = '${DateTime.now().millisecondsSinceEpoch}_bot';
+      final botMessage = ChatMessage(
+        msgId: botMsgId,
+        role: MessageRole.bot,
+        content: content,
+        timestamp: now,
+        sessionId: session.sessionId,
+        pairedMsgId: userMsgId,
+        generationStartTime: generationStartTime,
+        generationEndTime: now,
+        inputTokens: promptTokens,
+        outputTokens: completionTokens,
+        totalTokens: totalTokens,
+        generationDuration: now.difference(generationStartTime),
+      );
+
+      // 更新会话消息列表
+      final newMessages = [...session.messages, userMessage, botMessage];
+      final updatedSession = session.copyWith(messages: newMessages);
+
+      // updateSession 内部会调用 _recalculateBilling 自动计算费用
+      sessionController.updateSession(updatedSession);
+
+      debugPrint(
+        '✅ 会话已更新: ${session.sessionId}, '
+        '用户消息: "${userContent.substring(0, userContent.length.clamp(0, 30))}", '
+        'AI回复: "${content.substring(0, content.length.clamp(0, 30))}", '
+        'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
+      );
+    } catch (e) {
+      debugPrint('❌ 更新会话失败: $e');
+    }
   }
 
   /// 本地对话调用（对话框使用）

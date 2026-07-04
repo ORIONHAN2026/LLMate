@@ -31,13 +31,7 @@ class ConversationMode extends WorkModeStrategy {
       workDir: workDir,
     ));
 
-    // 2. 记忆上下文
-    final memoryCtx = buildMemoryContext(session);
-    if (memoryCtx.isNotEmpty) {
-      messages.add({'role': 'system', 'content': memoryCtx});
-    }
-
-    // 3. 历史消息
+    // 2. 历史消息
     if (session.messages.isNotEmpty) {
       appendHistoryMessages(messages, session, userMessage);
     }

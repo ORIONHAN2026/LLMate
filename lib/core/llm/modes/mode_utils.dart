@@ -16,30 +16,6 @@ String resolveOriginalToolName(String safeName) {
   return _safeNameToOriginal[safeName] ?? safeName;
 }
 
-/// 构建记忆上下文，合并压缩记忆和最近记忆
-String buildMemoryContext(ChatSession session) {
-  final buf = StringBuffer();
-  var hasContent = false;
-
-  if (session.compressedMemory != null &&
-      session.compressedMemory!.isNotEmpty) {
-    buf.writeln('## 📝 对话历史记忆（压缩摘要）');
-    buf.writeln(session.compressedMemory);
-    hasContent = true;
-  }
-
-  if (session.memory.isNotEmpty) {
-    if (hasContent) buf.writeln();
-    buf.writeln('## 💬 最近对话记录');
-    for (final turn in session.memory) {
-      final label = turn.role == 'user' ? '👤 用户' : '🤖 助手';
-      buf.writeln('$label: ${turn.content}');
-    }
-  }
-
-  return buf.toString();
-}
-
 /// 加载聊天室模式的所有角色上下文
 Future<List<String>> loadRoleContexts(String sessionId, {String? workDirectory}) async {
   final rolesDirPath = StoragePaths.rolesDir(
@@ -150,23 +126,8 @@ void appendHistoryMessages(
   if (userMsgIndex <= 0) return;
 
   final historyMessages = session.messages.sublist(0, userMsgIndex);
-  final int maxRounds = session.memoryRounds;
-  if (maxRounds <= 0) return;
 
-  int roundCount = 0;
-  int historyStart = 0;
-  for (int i = historyMessages.length - 1; i >= 0; i--) {
-    if (historyMessages[i].role == MessageRole.user) {
-      roundCount++;
-      if (roundCount >= maxRounds) {
-        historyStart = i;
-        break;
-      }
-    }
-  }
-
-  final included = historyMessages.sublist(historyStart);
-  for (final msg in included) {
+  for (final msg in historyMessages) {
     if (msg.content.isEmpty && msg.attachments.isEmpty) continue;
     final apiRole = _toOpenAIRole(msg.role);
     if (apiRole == null) continue;

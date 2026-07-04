@@ -7,7 +7,6 @@ import './chat_message.dart';
 import './chat_attachment.dart';
 import './chat_setting.dart';
 import './scheduled_task.dart';
-import './memory_turn.dart';
 import './contract_info.dart';
 
 const List<String> kSessionEmojis = [
@@ -85,10 +84,6 @@ class ChatSession {
   /// 绑定的 MCP 服务（null = 未绑定，运行时由 mcpId 动态解析）
   final Mcp? mcp;
 
-  /// 触发记忆压缩的轮数（0 = 禁用记忆压缩，默认 20）
-  /// 当累积的记忆达到此轮数时，自动触发 LLM 压缩
-  final int memoryRounds;
-
   /// 深度思考模式（默认关闭）
   final bool deepThink;
 
@@ -105,14 +100,6 @@ class ChatSession {
 
   /// 累计费用（美元）
   final double totalCost;
-
-  // === 记忆压缩 ===
-
-  /// 最近对话记忆（user + assistant 轮次）
-  final List<MemoryTurn> memory;
-
-  /// 压缩后的记忆摘要（由 LLM 生成）
-  final String? compressedMemory;
 
   /// 合约要点列表（商务模式下，由 contract_inspect 工具写入）
   final List<ContractInfo>? contracts;
@@ -151,13 +138,10 @@ class ChatSession {
     this.scrollPosition = 0.0,
     this.lastSelectedDirectory,
     this.workDirectory,
-    this.memoryRounds = 100,
     this.deepThink = false,
     this.connectPrompt,
     this.sessionQuickCommands = const [],
     this.scheduledTask,
-    this.memory = const [],
-    this.compressedMemory,
     this.contracts,
     this.totalInputTokens = 0,
     this.totalOutputTokens = 0,
@@ -217,17 +201,12 @@ class ChatSession {
     bool clearMcp = false,
     ChatModel? chatModel,
     bool clearChatModel = false,
-    int? memoryRounds,
     bool? deepThink,
     String? connectPrompt,
     bool clearConnectPrompt = false,
     List<ChatCommand>? sessionQuickCommands,
     ScheduledTask? scheduledTask,
     bool clearScheduledTask = false,
-    List<MemoryTurn>? memory,
-    bool clearMemory = false,
-    String? compressedMemory,
-    bool clearCompressedMemory = false,
     List<ContractInfo>? contracts,
     bool clearContracts = false,
     int? totalInputTokens,
@@ -282,16 +261,12 @@ class ChatSession {
       modelId: resolvedModelId,
       mcpId: resolvedMcpId,
       chatModel: resolvedChatModel,
-      memoryRounds: memoryRounds ?? this.memoryRounds,
       deepThink: deepThink ?? this.deepThink,
       connectPrompt:
           clearConnectPrompt ? null : (connectPrompt ?? this.connectPrompt),
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
       scheduledTask:
           clearScheduledTask ? null : (scheduledTask ?? this.scheduledTask),
-      memory: clearMemory ? [] : (memory ?? this.memory),
-      compressedMemory:
-          clearCompressedMemory ? null : (compressedMemory ?? this.compressedMemory),
       contracts:
           clearContracts ? null : (contracts ?? this.contracts),
       totalInputTokens: totalInputTokens ?? this.totalInputTokens,
@@ -335,7 +310,6 @@ class ChatSession {
       scrollPosition: (json['scrollPosition'] as num?)?.toDouble() ?? 0.0,
       lastSelectedDirectory: json['lastSelectedDirectory'],
       workDirectory: json['workDirectory'],
-      memoryRounds: json['memoryRounds'] as int? ?? 100,
       deepThink: json['deepThink'] as bool? ?? false,
       connectPrompt: json['connectPrompt'] as String?,
       sessionQuickCommands:
@@ -347,12 +321,6 @@ class ChatSession {
           json['scheduledTask'] is Map<String, dynamic>
               ? ScheduledTask.fromJson(json['scheduledTask'])
               : null,
-      memory:
-          (json['memory'] as List<dynamic>?)
-              ?.map((t) => MemoryTurn.fromJson(t as Map<String, dynamic>))
-              .toList() ??
-          [],
-      compressedMemory: json['compressedMemory'] as String?,
       contracts:
           (json['contracts'] as List<dynamic>?)
               ?.map(
@@ -385,14 +353,11 @@ class ChatSession {
       'scrollPosition': scrollPosition,
       'lastSelectedDirectory': lastSelectedDirectory,
       if (workDirectory != null) 'workDirectory': workDirectory,
-      'memoryRounds': memoryRounds,
       'deepThink': deepThink,
       if (connectPrompt != null) 'connectPrompt': connectPrompt,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
       if (scheduledTask != null) 'scheduledTask': scheduledTask!.toJson(),
-      'memory': memory.map((t) => t.toJson()).toList(),
-      if (compressedMemory != null) 'compressedMemory': compressedMemory,
       if (contracts != null)
         'contracts': contracts!.map((c) => c.toJson()).toList(),
       'totalInputTokens': totalInputTokens,

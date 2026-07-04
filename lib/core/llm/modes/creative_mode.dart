@@ -50,11 +50,6 @@ class CreativeMode extends WorkModeStrategy {
       'content': CommonSystemPrompts.creativeMode(effectiveWorkDir, modeDirPath),
     });
 
-    final memoryCtx = buildMemoryContext(session);
-    if (memoryCtx.isNotEmpty) {
-      messages.add({'role': 'system', 'content': memoryCtx});
-    }
-
     if (session.messages.isNotEmpty) {
       appendHistoryMessages(messages, session, userMessage);
     }

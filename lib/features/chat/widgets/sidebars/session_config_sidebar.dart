@@ -158,12 +158,6 @@ class SessionConfigSidebar {
           ),
           const SizedBox(height: 8),
           
-          _buildConfigItem(
-            context,
-            icon: CupertinoIcons.square_list,
-            label: '记忆压缩轮数',
-            value: session.memoryRounds == 0 ? '已禁用' : '${session.memoryRounds}轮',
-          ),
           const SizedBox(height: 12),
           
           // 关联提示词
@@ -183,12 +177,6 @@ class SessionConfigSidebar {
             value: '${session.messages.length}条',
           ),
           const SizedBox(height: 8),
-          _buildConfigItem(
-            context,
-            icon: CupertinoIcons.square_list,
-            label: '记忆轮数',
-            value: '${session.memory.length}轮',
-          ),
           const SizedBox(height: 12),
           
           // 计费信息
@@ -228,12 +216,6 @@ class SessionConfigSidebar {
             ),
           ],
           const SizedBox(height: 8),
-          _buildConfigItem(
-            context,
-            icon: CupertinoIcons.memories,
-            label: '记忆轮数',
-            value: '${session.memory.length}轮',
-          ),
         ],
       ),
     );

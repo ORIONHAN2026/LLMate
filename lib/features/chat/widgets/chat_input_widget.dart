@@ -3216,23 +3216,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           break; // 收到 done 后立即退出循环
         }
 
-        // 处理记忆更新
-        final memoryUpdatedJson = chunkMap['memory_updated'];
-        if (memoryUpdatedJson is String && memoryUpdatedJson.isNotEmpty) {
-          try {
-            final updated = ChatSession.fromJson(
-              jsonDecode(memoryUpdatedJson) as Map<String, dynamic>,
-            );
-            // 合并 original sessionId/modelId 等信息
-            final merged = updateSession.copyWith(
-              memory: updated.memory,
-              compressedMemory: updated.compressedMemory,
-            );
-            updateSession = merged;
-            sessionController.updateSession(merged);
-          } catch (_) {}
-        }
-
         if (contentChunk.isNotEmpty ||
             effectiveThinkChunk.isNotEmpty ||
             toolcall.isNotEmpty) {

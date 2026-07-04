@@ -175,14 +175,7 @@ class SessionController extends GetxController {
             updatedSession.sessionId, messagesJson);
       }
 
-      // === 3. 持久化记忆到 memory.md ===
-      if (updatedSession.compressedMemory != null &&
-          updatedSession.compressedMemory!.isNotEmpty) {
-        await SessionFileStore.writeMemory(
-            updatedSession.sessionId, updatedSession.compressedMemory!);
-      }
-
-      // === 4. 持久化 MCP 绑定到 mcp.json ===
+      // === 3. 持久化 MCP 绑定到 mcp.json ===
       if (updatedSession.mcp != null) {
         await SessionFileStore.writeMcp(
             updatedSession.sessionId, updatedSession.mcp!.toFullJson());
@@ -483,13 +476,11 @@ class SessionController extends GetxController {
       'workDirectory': session.workDirectory,
       'modelId': session.modelId,
       'mcpId': session.mcpId,
-      'memoryRounds': session.memoryRounds,
       'deepThink': session.deepThink,
       'connectPrompt': session.connectPrompt,
       'sessionQuickCommands':
           session.sessionQuickCommands.map((c) => c.toJson()).toList(),
       'scheduledTask': session.scheduledTask?.toJson(),
-      'compressedMemory': session.compressedMemory,
       'attachments':
           session.attachments.map((a) => a.toJson()).toList(),
       'emoji': session.emoji,
@@ -558,12 +549,10 @@ class SessionController extends GetxController {
       scrollPosition: (entity['scrollPosition'] as num?)?.toDouble() ?? 0.0,
       lastSelectedDirectory: entity['lastSelectedDirectory'] as String?,
       workDirectory: entity['workDirectory'] as String?,
-      memoryRounds: entity['memoryRounds'] as int? ?? 100,
       deepThink: entity['deepThink'] as bool? ?? false,
       connectPrompt: entity['connectPrompt'] as String?,
       sessionQuickCommands: commands,
       scheduledTask: scheduledTask,
-      compressedMemory: entity['compressedMemory'] as String?,
       contracts: await _loadContracts(entity['sessionId'] as String? ?? ''),
       emoji: entity['emoji'] as String?,
     );

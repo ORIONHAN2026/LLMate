@@ -7,9 +7,7 @@ import 'package:path/path.dart' as p;
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../../models/chat/memory_turn.dart';
 import '../tools/tool_execution_service.dart';
-import '../memory/memory_compressor.dart';
 import '../../controllers/session_controller.dart';
 import '../../features/models/controllers/model_controller.dart';
 import './openai_provider.dart';
@@ -78,13 +76,7 @@ class LlmClient {
       ),
     );
 
-    // 2. 记忆上下文
-    final memoryCtx = buildMemoryContext(session);
-    if (memoryCtx.isNotEmpty) {
-      messages.add({'role': 'system', 'content': memoryCtx});
-    }
-
-    // 3. 历史消息
+    // 2. 历史消息
     if (session.messages.isNotEmpty) {
       appendHistoryMessages(messages, session, userMessage);
     }
@@ -252,16 +244,6 @@ class LlmClient {
             modelName: _session.chatModel?.model ?? 'unknown',
           );
         }
-        if (!_cancelled && responseBuffer.isNotEmpty) {
-          final memoryUpdatedSession = await accumulateMemory(
-            userMessage?.content ?? '',
-            responseBuffer.toString(),
-            null,
-          );
-          if (memoryUpdatedSession != null) {
-            yield {'memory_updated': jsonEncode(memoryUpdatedSession.toJson())};
-          }
-        }
         if (doneReceived) {
           yield {'done': 'true'};
         }
@@ -426,71 +408,6 @@ class LlmClient {
   static String _pad(int n) => n.toString().padLeft(2, '0');
 
   // ==================== 压缩请求 ====================
-
-  Future<String?> sendCompressRequest(String prompt) async {
-    try {
-      final response = await _provider.sendMessage(
-        userMessage: ChatMessage(
-          msgId: 'compress_${DateTime.now().millisecondsSinceEpoch}',
-          role: MessageRole.user,
-          content: prompt,
-          timestamp: DateTime.now(),
-          sessionId: _session.sessionId,
-        ),
-        session: _session,
-      );
-      return response;
-    } catch (e) {
-      if (kDebugMode) debugPrint('🧠 压缩请求失败: $e');
-      return null;
-    }
-  }
-
-  // ==================== 记忆累积 ====================
-
-  Future<ChatSession?> accumulateMemory(
-    String userText,
-    String assistantText,
-    SessionController? sessionController,
-  ) async {
-    if (_session.memoryRounds <= 0) return null;
-
-    final now = DateTime.now();
-    final updatedMemory =
-        List<MemoryTurn>.from(_session.memory)
-          ..add(MemoryTurn(role: 'user', content: userText, timestamp: now))
-          ..add(
-            MemoryTurn(
-              role: 'assistant',
-              content: assistantText,
-              timestamp: now,
-            ),
-          );
-
-    final rounds = MemoryTurn.roundCount(updatedMemory);
-
-    if (rounds >= _session.memoryRounds) {
-      if (kDebugMode) {
-        debugPrint(
-          '🧠 [Memory] 记忆达到 ${rounds} 轮 (≥ ${_session.memoryRounds})，触发压缩',
-        );
-      }
-
-      final compressed = await MemoryCompressor.compress(
-        session: _session,
-        compressedMemory: _session.compressedMemory,
-        memory: updatedMemory,
-      );
-
-      if (compressed != null) {
-        _session = _session.copyWith(compressedMemory: compressed, memory: []);
-        return _session;
-      }
-    }
-
-    _session = _session.copyWith(memory: updatedMemory);
-    return _session;
-  }
 
   // ==================== 工具调用解析 ====================
 

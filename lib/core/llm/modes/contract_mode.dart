@@ -37,11 +37,6 @@ class ContractMode extends WorkModeStrategy {
       'content': CommonSystemPrompts.contractMode(effectiveWorkDir, sessionDir),
     });
 
-    final memoryCtx = buildMemoryContext(session);
-    if (memoryCtx.isNotEmpty) {
-      messages.add({'role': 'system', 'content': memoryCtx});
-    }
-
     if (session.messages.isNotEmpty) {
       appendHistoryMessages(messages, session, userMessage);
     }

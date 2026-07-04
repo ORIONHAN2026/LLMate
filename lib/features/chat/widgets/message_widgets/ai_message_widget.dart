@@ -946,21 +946,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           botMessage.isToolCalling = false;
         }
 
-        // 处理记忆更新
-        final memoryUpdatedJson = chunkMap['memory_updated'];
-        if (memoryUpdatedJson is String && memoryUpdatedJson.isNotEmpty) {
-          try {
-            final updated = ChatSession.fromJson(
-              jsonDecode(memoryUpdatedJson) as Map<String, dynamic>,
-            );
-            currentSession = currentSession.copyWith(
-              memory: updated.memory,
-              compressedMemory: updated.compressedMemory,
-            );
-            await sessionController.updateSession(currentSession);
-          } catch (_) {}
-        }
-
         accumulatedContent += contentChunk;
         accumulatedThink += thinkChunk;
 

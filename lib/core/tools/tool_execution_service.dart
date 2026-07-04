@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../mcp_client/mcp_client.dart';
 import '../llm/modes/mode_utils.dart';
 import '../../models/chat/chat_session.dart';
 import '../mcp/mcp_service.dart';
-import 'tool_registry.dart';
+
 
 /// 工具调用执行结果（统一返回）
 class ToolExecutionResult {
@@ -23,26 +22,11 @@ class ToolExecutionResult {
 /// 统一工具执行服务
 ///
 /// 与 MCP 完全解耦，独立调度所有类型工具的执行：
-/// - `exec`/`bash`/`shell` 等：本地 Shell 命令（bash -c）
-/// - 系统内置工具：由客户端本地实现（如 Word 文档创建）
 /// - MCP 工具：通过 MCP 客户端执行
 /// - 其他工具：尝试 MCP，不可用时返回错误
 ///
 /// 注意：工具调用解析由 OpenAiProvider 负责，本服务只执行已解析的工具。
 class ToolExecutionService {
-  /// Shell 命令执行超时（秒）
-  static const _execTimeoutSeconds = 30;
-
-  /// Shell 工具名称集合
-  static const _shellToolNames = {
-    'exec',
-    'bash',
-    'shell',
-    'sh',
-    'run',
-    'command',
-  };
-
   // ── 执行入口 ──
 
   /// 执行已解析的工具调用列表
@@ -112,25 +96,6 @@ class ToolExecutionService {
     // 还原被转义的工具名（OpenAI function calling 不允许函数名含点号等特殊字符）
     final resolvedName = resolveOriginalToolName(toolName);
 
-    // ── 系统内置工具 ──
-    if (SystemToolService.hasTool(resolvedName)) {
-      return SystemToolService.execute(
-        session: session,
-        toolName: resolvedName,
-        arguments: arguments,
-        callId: callId,
-      );
-    }
-
-    // ── Shell 命令（exec / bash / shell / sh / run / command）──
-    if (_shellToolNames.contains(resolvedName)) {
-      return _executeShellCommand(
-        toolName: resolvedName,
-        arguments: arguments,
-        callId: callId,
-      );
-    }
-
     // ── MCP 工具：尝试 MCP 客户端 ──
     final mc = await McpService.getOrInitClient(session);
     if (mc != null) {
@@ -174,10 +139,8 @@ class ToolExecutionService {
     };
   }
 
-  // ── Shell 命令执行 ──
+  // ── MCP 工具执行 ──
 
-  /// 执行单个 MCP 工具调用
-  /// 成功返回结果 Map，连接类失败返回 null（由调用方决定是否重连重试）
   static Future<Map<String, dynamic>?> _callMCPTool(
     Client mc,
     String toolName,
@@ -220,85 +183,6 @@ class ToolExecutionService {
         'name': toolName,
         'args': arguments,
         'result': 'MCP 执行失败: $errStr',
-        'isError': true,
-      };
-    }
-  }
-
-  /// 支持 exec / bash / shell / sh / run / command 等工具名
-  /// 参数 key 兼容: command, cmd, script
-  static Future<Map<String, dynamic>> _executeShellCommand({
-    required String toolName,
-    required Map<String, dynamic> arguments,
-    required String callId,
-  }) async {
-    final cmd =
-        (arguments['command'] ?? arguments['cmd'] ?? arguments['script'] ?? '')
-            as String;
-
-    if (cmd.trim().isEmpty) {
-      return {
-        'id': callId,
-        'name': toolName,
-        'args': arguments,
-        'result': '错误: 命令为空',
-        'isError': true,
-      };
-    }
-
-    debugPrint('🖥️ [$toolName] 执行: $cmd');
-
-    try {
-      final result = await Process.run(
-        'bash',
-        ['-c', cmd],
-        runInShell: true,
-        workingDirectory: Directory.current.path,
-      ).timeout(
-        const Duration(seconds: _execTimeoutSeconds),
-        onTimeout: () {
-          throw TimeoutException('命令执行超时 (${_execTimeoutSeconds}s)');
-        },
-      );
-
-      final stdout = (result.stdout as String).trim();
-      final stderr = (result.stderr as String).trim();
-      final exitCode = result.exitCode;
-
-      final output = StringBuffer();
-      if (stdout.isNotEmpty) output.writeln(stdout);
-      if (stderr.isNotEmpty) output.writeln(stderr);
-
-      final isError = exitCode != 0;
-      final msg = output.toString().trim();
-      final preview = msg.length > 200 ? '${msg.substring(0, 200)}...' : msg;
-
-      debugPrint('🖥️ [$toolName] exit=$exitCode, output=$preview');
-
-      return {
-        'id': callId,
-        'name': toolName,
-        'args': arguments,
-        'result':
-            msg.isNotEmpty
-                ? msg
-                : (isError ? '命令执行失败 (exit $exitCode)' : '命令执行完成'),
-        'isError': isError,
-      };
-    } on TimeoutException catch (e) {
-      return {
-        'id': callId,
-        'name': toolName,
-        'args': arguments,
-        'result': e.message ?? '命令执行超时',
-        'isError': true,
-      };
-    } catch (e) {
-      return {
-        'id': callId,
-        'name': toolName,
-        'args': arguments,
-        'result': '执行失败: $e',
         'isError': true,
       };
     }

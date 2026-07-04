@@ -19,6 +19,12 @@ class ChatModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// 输入价格（美元/百万token）
+  final double? inputPrice;
+
+  /// 输出价格（美元/百万token）
+  final double? outputPrice;
+
   // 对话设置 - 使用ChatSettings对象
   final ChatSettings? chatSettings;
 
@@ -33,6 +39,8 @@ class ChatModel {
     this.apiUrl,
     this.createdAt,
     this.updatedAt,
+    this.inputPrice,
+    this.outputPrice,
     this.chatSettings,
   });
 
@@ -76,6 +84,8 @@ class ChatModel {
           map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
       updatedAt:
           map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      inputPrice: map['inputPrice']?.toDouble(),
+      outputPrice: map['outputPrice']?.toDouble(),
       chatSettings: settings,
     );
   }
@@ -93,6 +103,8 @@ class ChatModel {
       'apiUrl': apiUrl,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      if (inputPrice != null) 'inputPrice': inputPrice,
+      if (outputPrice != null) 'outputPrice': outputPrice,
     };
 
     // 保存 ChatSettings 对象
@@ -128,6 +140,8 @@ class ChatModel {
     String? protocol,
     String? apiKey,
     String? apiUrl,
+    double? inputPrice,
+    double? outputPrice,
     ChatSettings? chatSettings,
   }) {
     return ChatModel(
@@ -141,6 +155,8 @@ class ChatModel {
       apiUrl: apiUrl,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      inputPrice: inputPrice,
+      outputPrice: outputPrice,
       chatSettings: chatSettings,
     );
   }
@@ -157,6 +173,8 @@ class ChatModel {
     String? apiUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
+    double? inputPrice,
+    double? outputPrice,
     ChatSettings? chatSettings,
   }) {
     return ChatModel(
@@ -170,6 +188,8 @@ class ChatModel {
       apiUrl: apiUrl ?? this.apiUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      inputPrice: inputPrice ?? this.inputPrice,
+      outputPrice: outputPrice ?? this.outputPrice,
       chatSettings: chatSettings ?? this.chatSettings,
     );
   }

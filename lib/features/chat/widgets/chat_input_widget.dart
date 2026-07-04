@@ -7,10 +7,8 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
 import 'package:path/path.dart' as p;
-
 import '../../../controllers/session_controller.dart';
 import '../../mcp/controllers/mcp_controller.dart';
-import '../../../controllers/work_mode_controller.dart';
 import '../../../models/models.dart';
 import '../../../core/llm/llm_framework.dart';
 import '../../models/controllers/model_controller.dart';
@@ -37,7 +35,7 @@ import './scheduled_task_dialog.dart';
 ///
 /// 完全自包含的聊天输入组件，包括：
 /// - 文本输入框
-/// - 发送功能（内置消息发送逻辑）
+/// - 发送功能
 /// - 附件、图片、网页等功能按钮
 /// - 模型管理
 /// - 会话管理
@@ -79,20 +77,8 @@ class ChatInputWidget extends StatefulWidget {
   State<ChatInputWidget> createState() => _ChatInputWidgetState();
 }
 
-/// 模式选择项
-class _ModeItem {
-  final String id;
-  final IconData icon;
-  final String label;
-  final String desc;
-  final bool locked;
-
-  const _ModeItem(this.id, this.icon, this.label, this.desc, {this.locked = false});
-}
-
 class _ChatInputWidgetState extends State<ChatInputWidget> {
   final sessionController = Get.find<SessionController>();
-  final workModeController = Get.find<WorkModeController>();
 
   // 输入控制器和焦点
   late final TextEditingController _inputController;
@@ -106,8 +92,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   // 消息发送相关状态
   final Set<String> _streamingMessageIds = {};
 
-  // 模式按钮 GlobalKey
-  final GlobalKey _modeButtonKey = GlobalKey();
   final Map<String, Duration> _thinkingTimes = {};
 
   // 模型相关数据
@@ -123,26 +107,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   OverlayEntry? _fileMentionOverlayEntry;
 
   List<FileSystemEntity> _workDirFiles = [];
-  bool _hasFileMention = false; // 是否有文件引用（用于修订模式）
-
-  // 模式锁定状态缓存（非对话模式且有文件时锁定）
-  bool _isModeLocked = false;
+  bool _hasFileMention = false;
 
   // 监听器
   late final StreamSubscription _sessionSubscription;
   Timer? _textChangeTimer;
-
-  /// 检查并更新模式锁定状态
-  ///
-  /// 非对话模式且会话目录或工作目录有文件时锁定模式和工作目录
-  Future<void> _checkModeLockStatus() async {
-    final hasFiles = await _currentModeHasFiles();
-    if (mounted && _isModeLocked != hasFiles) {
-      setState(() {
-        _isModeLocked = hasFiles;
-      });
-    }
-  }
 
   /// 获取当前会话的发送状态
   bool get _isSending =>
@@ -193,7 +162,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Future<void> _loadWorkDirFiles() async {
     final currentSession = sessionController.currentSession.value;
     final workDir = currentSession?.workDirectory;
-    
+
     if (workDir == null || workDir.trim().isEmpty) {
       setState(() {
         _workDirFiles = [];
@@ -214,11 +183,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       // 递归获取所有文件（排除隐藏文件和常见忽略目录）
       final files = <FileSystemEntity>[];
-      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+      await for (final entity in dir.list(
+        recursive: true,
+        followLinks: false,
+      )) {
         if (entity is File) {
           final relativePath = entity.path.substring(workDir.length + 1);
           // 跳过隐藏文件和常见忽略目录
-          if (relativePath.startsWith('.') || 
+          if (relativePath.startsWith('.') ||
               relativePath.contains('/.') ||
               relativePath.contains('node_modules') ||
               relativePath.contains('.git') ||
@@ -247,13 +219,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 过滤文件列表
   List<FileSystemEntity> _getFilteredFiles() {
     if (_fileMentionFilter.isEmpty) return _workDirFiles;
-    
+
     final filter = _fileMentionFilter.toLowerCase();
     return _workDirFiles.where((file) {
       final fileName = file.path.split('/').last.toLowerCase();
-      final relativePath = file.path.substring(
-        (sessionController.currentSession.value?.workDirectory?.length ?? 0) + 1
-      ).toLowerCase();
+      final relativePath =
+          file.path
+              .substring(
+                (sessionController
+                            .currentSession
+                            .value
+                            ?.workDirectory
+                            ?.length ??
+                        0) +
+                    1,
+              )
+              .toLowerCase();
       return fileName.contains(filter) || relativePath.contains(filter);
     }).toList();
   }
@@ -262,22 +243,23 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   void _insertFileMention(String filePath) {
     final text = _inputController.text;
     final currentCursor = _inputController.selection.baseOffset;
-    
+
     final workDir = sessionController.currentSession.value?.workDirectory ?? '';
-    final relativePath = filePath.startsWith(workDir) 
-        ? filePath.substring(workDir.length + 1)
-        : filePath;
-    
+    final relativePath =
+        filePath.startsWith(workDir)
+            ? filePath.substring(workDir.length + 1)
+            : filePath;
+
     final insertText = '@$relativePath ';
-    
+
     final before = text.substring(0, _fileMentionAtOffset);
     final after = text.substring(currentCursor);
     final newText = '$before$insertText$after';
-    
+
     _inputController.text = newText;
     final newCursorPos = _fileMentionAtOffset + insertText.length;
     _inputController.selection = TextSelection.collapsed(offset: newCursorPos);
-    
+
     _hideFileMentionOverlay();
     setState(() {
       _showFileMention = false;
@@ -288,7 +270,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 显示文件提及弹出层
   void _updateFileMentionOverlay() {
     _hideFileMentionOverlay();
-    
+
     final filtered = _getFilteredFiles();
     if (filtered.isEmpty) return;
 
@@ -308,7 +290,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Widget _buildFileMentionPopup() {
     final filtered = _getFilteredFiles();
     final workDir = sessionController.currentSession.value?.workDirectory ?? '';
-    
+
     return Positioned(
       left: 20,
       right: 20,
@@ -329,7 +311,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             children: [
               // 搜索提示
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
@@ -343,14 +328,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     Icon(
                       CupertinoIcons.search,
                       size: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.4),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '选择工作目录下的文件',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                   ],
@@ -364,13 +353,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   itemCount: filtered.length > 8 ? 8 : filtered.length,
                   itemBuilder: (context, index) {
                     final file = filtered[index];
-                    final relativePath = file.path.substring(workDir.length + 1);
+                    final relativePath = file.path.substring(
+                      workDir.length + 1,
+                    );
                     final fileName = file.path.split('/').last;
-                    
+
                     return InkWell(
                       onTap: () => _insertFileMention(file.path),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                         child: Row(
                           children: [
                             Icon(
@@ -388,7 +382,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color:
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -398,7 +395,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                       relativePath,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.5),
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -450,16 +450,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         setState(() {
           // UI会自动从getter获取最新的附件列表
         });
-        // 检查模式锁定状态
-        _checkModeLockStatus();
-        // debugPrint('会话监听器 - 附件数: ${currentSession.attachments.length} 个附件');
       } else if (mounted && currentSession == null) {
         // 当前会话为空时，触发UI更新
         setState(() {
-          _isModeLocked = false;
           // UI会自动从getter获取空的附件列表
         });
-        // debugPrint('当前会话为空，清空附件列表');
       }
     });
 
@@ -544,9 +539,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         _inputController.text = inputContent;
       }
 
-      // 检查模式锁定状态
-      _checkModeLockStatus();
-
       // 延迟触发UI更新以加载会话的附件（通过getter获取）
       if (mounted) {
         setState(() {
@@ -556,7 +548,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     } else {
       if (mounted) {
         setState(() {
-          _isModeLocked = false;
           // UI会自动从getter获取空的附件列表
         });
       }
@@ -597,7 +588,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 检测 @ 文件提及相关输入
     _checkForFileMention();
-    
+
     // 检查是否还有文件引用
     final text = _inputController.text;
     final hasAtMention = text.contains('@') && _showFileMention;
@@ -1426,13 +1417,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             // 内联附件展示区域（在输入框和按钮之间）
             if (_currentAttachments.isNotEmpty)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _currentAttachments.map((attachment) {
-                    return _buildInlineAttachmentChip(attachment);
-                  }).toList(),
+                  children:
+                      _currentAttachments.map((attachment) {
+                        return _buildInlineAttachmentChip(attachment);
+                      }).toList(),
                 ),
               ),
             // 功能按钮组
@@ -1451,15 +1446,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         children: [
                           _buildInputAttachToggle(),
                           const SizedBox(width: 8),
-                          _buildWorkModeToggle(),
-                          const SizedBox(width: 8),
                           _buildDeepThinkToggle(),
                           const SizedBox(width: 8),
                           _buildMcpToolsToggle(),
                           const SizedBox(width: 8),
 
-                          _buildSkillToggle(),
-                          const SizedBox(width: 8),
                           if (FeatureToggleService()
                               .isScheduledTaskEnabled) ...[
                             _buildScheduledTaskToggle(),
@@ -1504,10 +1495,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-          width: 1,
-        ),
+        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1541,7 +1529,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           _formatFileSize(attachment.size!),
                           style: TextStyle(
                             fontSize: 10,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.5),
                           ),
                         ),
                       if (isProcessing) ...[
@@ -1558,10 +1548,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         ),
                       ] else if (hasError) ...[
                         const SizedBox(width: 4),
-                        Icon(Icons.error_outline, size: 10, color: Colors.red[600]),
+                        Icon(
+                          Icons.error_outline,
+                          size: 10,
+                          color: Colors.red[600],
+                        ),
                       ] else ...[
                         const SizedBox(width: 4),
-                        Icon(Icons.check_circle, size: 10, color: Colors.green[600]),
+                        Icon(
+                          Icons.check_circle,
+                          size: 10,
+                          color: Colors.green[600],
+                        ),
                       ],
                     ],
                   ),
@@ -1581,7 +1579,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 child: Icon(
                   Icons.close,
                   size: 10,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ),
@@ -1815,234 +1815,39 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建工作模式按钮（点击弹出选择菜单）
-  Widget _buildWorkModeToggle() {
-    final currentSession = sessionController.currentSession.value;
-    final workMode = currentSession?.workMode ?? 'conversation';
-    // 非对话模式且有文件时锁定
-    final isLocked = _isModeLocked;
-
-    // 根据模式显示不同的图标和文字
-    IconData icon;
-    String label;
-    
-    switch (workMode) {
-      case 'contract':
-        icon = CupertinoIcons.doc_plaintext;
-        label = '合同';
-        break;
-      case 'invoice':
-        icon = CupertinoIcons.doc_text;
-        label = '发票';
-        break;
-      case 'chatroom':
-        icon = CupertinoIcons.person_2;
-        label = '聊天室';
-        break;
-      case 'creative':
-        icon = CupertinoIcons.lightbulb;
-        label = '创意';
-        break;
-      case 'task':
-        icon = CupertinoIcons.rectangle_grid_2x2;
-        label = '日程';
-        break;
-      default:
-        icon = CupertinoIcons.chat_bubble;
-        label = '对话';
-    }
-
-    final isActive = workMode != 'conversation';
-
-    return Tooltip(
-      message: isLocked ? '已锁定：模式已有工作文件，不可修改' : '选择工作模式',
-      child: GestureDetector(
-        key: _modeButtonKey,
-        onTap: _isSending || isLocked ? null : () => _showModePicker(),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 13,
-                color: _isSending
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                    : isActive
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: _isSending
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                      : isActive
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-              const SizedBox(width: 2),
-              Icon(
-                CupertinoIcons.chevron_up,
-                size: 10,
-                color: _isSending
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 显示模式选择菜单（在按钮上方弹出）
-  void _showModePicker() {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final currentMode = currentSession.workMode ?? 'conversation';
-
-    // 获取按钮位置
-    final RenderBox? button =
-        _modeButtonKey.currentContext?.findRenderObject() as RenderBox?;
-    final RenderBox overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
-
-    if (button == null) return;
-
-    final Offset buttonPosition = button.localToGlobal(
-      Offset.zero,
-      ancestor: overlay,
-    );
-
-    // 菜单在按钮上方弹出
-    final position = RelativeRect.fromRect(
-      Rect.fromLTWH(
-        buttonPosition.dx,
-        buttonPosition.dy - 180, // 向上偏移
-        button.size.width,
-        0,
-      ),
-      Offset.zero & overlay.size,
-    );
-
-    final modes = <_ModeItem>[
-      _ModeItem('conversation', CupertinoIcons.chat_bubble, '对话', '通用对话模式'),
-      _ModeItem('chatroom', CupertinoIcons.person_2, '聊天室', '多角色对话模式'),
-      _ModeItem('creative', CupertinoIcons.lightbulb, '创意', '创意写作与脑图'),
-      _ModeItem('task', CupertinoIcons.rectangle_grid_2x2, '日程', '任务管理与工作日志'),
-    ];
-
-    // 如果当前是合同/发票模式，也显示在列表中（不可选）
-    if (currentMode == 'contract') {
-      modes.insert(0, _ModeItem('contract', CupertinoIcons.doc_plaintext, '合同', '合同分析模式', locked: true));
-    }
-    if (currentMode == 'invoice') {
-      modes.insert(0, _ModeItem('invoice', CupertinoIcons.doc_text, '发票', '发票管理模式', locked: true));
-    }
-
-    showMenu<String>(
-      context: context,
-      position: position,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 8,
-      color: Theme.of(context).scaffoldBackgroundColor,
-      constraints: const BoxConstraints(minWidth: 160),
-      items: modes.map((mode) => PopupMenuItem<String>(
-        value: mode.id,
-        enabled: !mode.locked && mode.id != currentMode,
-        height: 40,
-        child: Row(
-          children: [
-            Icon(
-              mode.icon,
-              size: 16,
-              color: mode.locked
-                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                  : mode.id == currentMode
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                mode.label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: mode.id == currentMode ? FontWeight.w600 : FontWeight.w400,
-                  color: mode.locked
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                      : Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ),
-            if (mode.id == currentMode)
-              Icon(
-                Icons.check,
-                size: 16,
-                color: Theme.of(context).colorScheme.primary,
-              )
-            else if (mode.locked)
-              Icon(
-                Icons.lock_outline,
-                size: 14,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-              ),
-          ],
-        ),
-      )).toList(),
-    ).then((selectedId) {
-      if (selectedId != null && selectedId != currentMode) {
-        sessionController.updateSession(
-          currentSession.copyWith(workMode: selectedId),
-        );
-      }
-    });
-  }
-
-  /// 构建工作目录按钮（非对话模式且有文件时锁定）
+  /// 构建工作目录按钮
   Widget _buildWorkDirectoryToggle() {
     final currentSession = sessionController.currentSession.value;
     final workDir = currentSession?.workDirectory;
     final hasWorkDir = workDir != null && workDir.isNotEmpty;
-    final displayText = hasWorkDir
-        ? p.basename(workDir)
-        : AppLocalizations.of(context)!.workingDirectoryLabel;
-
-    // 非对话模式且有文件时锁定
-    final isLocked = _isModeLocked;
+    final displayText =
+        hasWorkDir
+            ? p.basename(workDir)
+            : AppLocalizations.of(context)!.workingDirectoryLabel;
 
     return Tooltip(
-      message: isLocked
-          ? '已锁定：模式已有工作文件，不可修改'
-          : hasWorkDir
+      message:
+          hasWorkDir
               ? '双击打开，长按修改'
               : AppLocalizations.of(context)!.setWorkingDirHint,
       child: GestureDetector(
-        // 锁定时不可点击；未设置时单击选择，已设置时双击打开/长按修改
-        onTap: _isSending || isLocked
-            ? null
-            : hasWorkDir
+        // 未设置时单击选择，已设置时双击打开/长按修改
+        onTap:
+            _isSending
+                ? null
+                : hasWorkDir
                 ? null
                 : _showWorkDirectoryPicker,
-        onLongPress: _isSending || isLocked || !hasWorkDir
-            ? null
-            : () => _showWorkDirectoryPicker(),
-        onDoubleTap: hasWorkDir && !_isSending
-            ? () {
-                try {
-                  Process.run('open', [workDir!]);
-                } catch (_) {}
-              }
-            : null,
+        onLongPress:
+            _isSending || !hasWorkDir ? null : () => _showWorkDirectoryPicker(),
+        onDoubleTap:
+            hasWorkDir && !_isSending
+                ? () {
+                  try {
+                    Process.run('open', [workDir]);
+                  } catch (_) {}
+                }
+                : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
@@ -2051,11 +1856,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               Icon(
                 CupertinoIcons.folder,
                 size: 13,
-                color: _isSending
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                    : hasWorkDir
+                color:
+                    _isSending
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
+                        : hasWorkDir
                         ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -2067,11 +1877,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: hasWorkDir ? FontWeight.w700 : FontWeight.w500,
-                    color: _isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                        : hasWorkDir
+                    color:
+                        _isSending
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3)
+                            : hasWorkDir
                             ? Theme.of(context).colorScheme.onSurface
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ),
@@ -2106,9 +1921,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         return;
       }
 
-      // 检测目录中是否有合同文件或发票文件
-      final detectedFileType = await _detectFileType(result);
-      
       // 迁移已有的模式文件到工作目录
       await StoragePaths.migrateModeFiles(
         sessionId: currentSession.sessionId,
@@ -2116,19 +1928,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       );
 
       // 设置工作目录
-      // 如果当前已经是非对话模式，则保持当前模式不变
-      // 如果当前是对话模式，则使用检测到的文件类型
-      final currentMode = currentSession.workMode ?? 'conversation';
-      final targetMode = currentMode != 'conversation' ? currentMode : detectedFileType;
       final dirName = p.basename(result);
-      
+
       // 如果会话名称是"新建会话"，则改为目录名称
-      final shouldUpdateTitle = currentSession.name == '新建会话' || currentSession.name.isEmpty;
-      
+      final shouldUpdateTitle =
+          currentSession.name == '新建会话' || currentSession.name.isEmpty;
+
       sessionController.updateSession(
         currentSession.copyWith(
           workDirectory: result,
-          workMode: targetMode,
           title: shouldUpdateTitle ? dirName : null,
         ),
       );
@@ -2136,67 +1944,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         context,
         AppLocalizations.of(context)!.workingDirSet,
       );
-
-      // 如果目录中已有模式文件，发送自动介绍消息
-      await _sendWelcomeMessage(result, targetMode);
-
-      // 合同模式：仅当目录中没有 .llmwork/contract/ 目录时才自动解析合同
-      if (targetMode == 'contract') {
-        final contractDir = Directory(p.join(result, '.llmwork', 'contract'));
-        if (!await contractDir.exists()) {
-          await Future.delayed(const Duration(milliseconds: 300));
-          _parseContracts();
-        }
-      }
-    }
-  }
-
-  /// 发送自动介绍消息：当目录中已有模式文件时，让 LLM 自然介绍当前状态
-  Future<void> _sendWelcomeMessage(String workDir, String workMode) async {
-    final session = sessionController.currentSession.value;
-    if (session == null) return;
-
-    // 检查该模式目录是否有文件
-    final modeDirPath = StoragePaths.modeDir(
-      sessionId: session.sessionId,
-      workMode: workMode,
-      workDirectory: workDir,
-    );
-    final dir = Directory(modeDirPath);
-    if (!await dir.exists()) return;
-
-    final files = await dir.list(recursive: true).toList();
-    final hasFiles = files.any((e) => e is File);
-    if (!hasFiles) return;
-
-    // 生成提示词，让 LLM 自然介绍
-    final prompt = '我刚设置了工作目录，当前处于${_getModeName(workMode)}模式。请帮我检查一下目录中已有的文件，介绍当前的工作状态和你可以提供的帮助。';
-
-    // 设置输入框内容并触发发送
-    _inputController.text = prompt;
-    setState(() {});
-    await Future.delayed(const Duration(milliseconds: 100));
-    await _doSendMessage(prompt);
-  }
-
-  /// 获取模式中文名
-  String _getModeName(String workMode) {
-    switch (workMode) {
-      case 'contract': return '合同';
-      case 'invoice': return '发票';
-      case 'chatroom': return '聊天室';
-      case 'creative': return '创意';
-      default: return '对话';
     }
   }
 
   /// 检查目录冲突
-  ///
-  /// 规则：
-  /// 1. 对话模式：始终允许（会自动识别模式）
-  /// 2. 非对话模式 + 目标目录有 .llmwork + 会话已有模式文件：拒绝（避免冲突）
-  /// 3. 非对话模式 + 目标目录有 .llmwork + 会话无模式文件：允许（首次设置）
-  Future<String?> _checkDirectoryConflict(String sessionId, String targetDir) async {
+  Future<String?> _checkDirectoryConflict(
+    String sessionId,
+    String targetDir,
+  ) async {
     // 检查目标目录是否有 .llmwork 目录
     final llmworkDir = Directory(p.join(targetDir, '.llmwork'));
     final hasLlmwork = await llmworkDir.exists();
@@ -2204,24 +1959,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     if (!hasLlmwork) return null;
 
-    // 获取当前会话的工作模式
-    final session = sessionController.currentSession.value;
-    final currentMode = session?.workMode ?? 'conversation';
-    debugPrint('🔍 当前工作模式: $currentMode');
-
-    // 对话模式：始终允许（会自动识别模式）
-    if (currentMode == 'conversation') return null;
-
     // 检查会话目录是否有模式文件
     final sessionHasModeFiles = await _sessionHasModeFiles(sessionId);
     debugPrint('🔍 会话目录有模式文件: $sessionHasModeFiles');
 
-    // 非对话模式 + 会话已有模式文件：拒绝
+    // 如果会话已有模式文件，拒绝
     if (sessionHasModeFiles) {
       return '该目录已存在 LLM 工作文件（.llmwork），请选择其他目录';
     }
 
-    // 非对话模式 + 会话无模式文件：允许（首次设置）
+    // 允许（首次设置）
     return null;
   }
 
@@ -2229,7 +1976,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Future<bool> _sessionHasModeFiles(String sessionId) async {
     final modes = ['contract', 'invoice', 'chatroom', 'creative', 'task'];
     for (final mode in modes) {
-      final modeDir = StoragePaths.modeDir(sessionId: sessionId, workMode: mode);
+      final modeDir = StoragePaths.modeDir(
+        sessionId: sessionId,
+        workMode: mode,
+      );
       final dir = Directory(modeDir);
       if (await dir.exists()) {
         final files = await dir.list(recursive: true).toList();
@@ -2238,53 +1988,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         }
       }
     }
-    return false;
-  }
-
-  /// 检查当前模式是否有文件（会话目录或工作目录）
-  ///
-  /// 用于判断模式和工作目录是否应该锁定
-  Future<bool> _currentModeHasFiles() async {
-    final session = sessionController.currentSession.value;
-    if (session == null) return false;
-    
-    final currentMode = session.workMode ?? 'conversation';
-    if (currentMode == 'conversation') return false;
-    
-    final sessionId = session.sessionId;
-    final workDir = session.workDirectory;
-    
-    // 检查会话目录
-    final sessionModeDir = StoragePaths.modeDir(
-      sessionId: sessionId,
-      workMode: currentMode,
-    );
-    final sessionDir = Directory(sessionModeDir);
-    if (await sessionDir.exists()) {
-      final files = await sessionDir.list(recursive: true).toList();
-      if (files.any((e) => e is File)) {
-        debugPrint('🔒 当前模式在会话目录有文件: $sessionModeDir');
-        return true;
-      }
-    }
-    
-    // 检查工作目录
-    if (workDir != null && workDir.isNotEmpty) {
-      final workModeDir = StoragePaths.modeDir(
-        sessionId: sessionId,
-        workMode: currentMode,
-        workDirectory: workDir,
-      );
-      final workDirObj = Directory(workModeDir);
-      if (await workDirObj.exists()) {
-        final files = await workDirObj.list(recursive: true).toList();
-        if (files.any((e) => e is File)) {
-          debugPrint('🔒 当前模式在工作目录有文件: $workModeDir');
-          return true;
-        }
-      }
-    }
-    
     return false;
   }
 
@@ -2325,19 +2028,27 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
       // 根据文件名关键词检测
       const contractKeywords = ['合同', '协议', '契约', '合约', '合同书', '协议书'];
-      const invoiceKeywords = ['发票', 'invoice', '收据', 'receipt', '开票', '报销', '费用'];
-      
+      const invoiceKeywords = [
+        '发票',
+        'invoice',
+        '收据',
+        'receipt',
+        '开票',
+        '报销',
+        '费用',
+      ];
+
       await for (final entity in dir.list(recursive: false)) {
         if (entity is File) {
           final fileName = p.basename(entity.path).toLowerCase();
-          
+
           for (final keyword in invoiceKeywords) {
             if (fileName.contains(keyword)) {
               debugPrint('✅ 检测到发票文件: ${entity.path}');
               return 'invoice';
             }
           }
-          
+
           for (final keyword in contractKeywords) {
             if (fileName.contains(keyword)) {
               debugPrint('✅ 检测到合同文件: ${entity.path}');
@@ -2346,7 +2057,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           }
         }
       }
-      
+
       return 'conversation';
     } catch (e) {
       debugPrint('文件类型检测失败: $e');
@@ -2398,8 +2109,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 非合同文件名排除词
     const excludeFileNameKeywords = [
-      '说明', '证明', '告知', '通知', '清单', '目录',
-      '附件', '附表', '模板', '空白', '范本', '草稿',
+      '说明',
+      '证明',
+      '告知',
+      '通知',
+      '清单',
+      '目录',
+      '附件',
+      '附表',
+      '模板',
+      '空白',
+      '范本',
+      '草稿',
     ];
 
     // 第二轮筛选
@@ -2470,8 +2191,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
           if (hasStrongKeyword) {
             const evidenceKeywords = [
-              '公章', '违约', '盖章', '甲方', '乙方', '签署',
-              '签章', '法定代表', '条款', '违约责任',
+              '公章',
+              '违约',
+              '盖章',
+              '甲方',
+              '乙方',
+              '签署',
+              '签章',
+              '法定代表',
+              '条款',
+              '违约责任',
             ];
             for (final kw in evidenceKeywords) {
               if (fileContent.contains(kw)) {
@@ -2897,92 +2626,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建技能切换按钮
-  Widget _buildSkillToggle() {
-    final currentSession = sessionController.currentSession.value;
-    final activeSkill = currentSession?.skill;
-    final hasSkills = SkillService.skills.isNotEmpty;
-
-    // 统一按钮：图标 + 文字（未选：请选择，已选：技能名）
-    final displayText =
-        activeSkill != null
-            ? activeSkill.name
-            : (hasSkills
-                ? AppLocalizations.of(context)!.selectSkill
-                : AppLocalizations.of(context)!.noAvailableSkill);
-
-    final hasSelectedSkill = activeSkill != null;
-
-    final iconWidget = Icon(
-      CupertinoIcons.wand_stars,
-      size: 13,
-      color:
-          _isSending
-              ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-              : hasSelectedSkill
-              ? Theme.of(context).colorScheme.onSurface
-              : hasSkills
-              ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
-              : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-    );
-
-    return Tooltip(
-      message:
-          activeSkill != null
-              ? '${AppLocalizations.of(context)!.currentSkill(activeSkill.name)}\n长按移除'
-              : (hasSkills
-                  ? AppLocalizations.of(context)!.clickToSelectSkill
-                  : AppLocalizations.of(context)!.noSelectableSkill),
-      child: GestureDetector(
-        onTap:
-            hasSkills && !_isSending
-                ? (activeSkill != null
-                    ? () => _showSkillDetail(activeSkill)
-                    : () => _showSkillSelectionList())
-                : null,
-        onLongPress:
-            hasSelectedSkill && !_isSending
-                ? () => _showRemoveSkillDialog()
-                : null,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              iconWidget,
-              if (hasSkills) ...[
-                const SizedBox(width: 4),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 100),
-                  child: Text(
-                    displayText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight:
-                          hasSelectedSkill ? FontWeight.w700 : FontWeight.w500,
-                      color:
-                          _isSending
-                              ? Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withOpacity(0.3)
-                              : hasSelectedSkill
-                              ? Theme.of(context).colorScheme.onSurface
-                              : Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   /// 命令面板通用搜索栏
   Widget _buildCommandPaletteSearchBar({
     required TextEditingController controller,
@@ -3321,271 +2964,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  /// 显示技能选择列表弹窗，点击技能直接绑定
-  Future<void> _showSkillSelectionList() async {
-    // 强制重新扫描文件系统以获取最新技能列表
-    SkillService.reset();
-    await SkillService.ensureLoaded();
-    var skills = SkillService.skills;
-
-    final session = sessionController.currentSession.value;
-    final currentSkillId = session?.skill?.skillId;
-    final searchController = TextEditingController();
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.15),
-      barrierDismissible: true,
-      builder: (BuildContext dialogContext) {
-        return Dialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          elevation: 8,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 40,
-            vertical: 120,
-          ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 480),
-            child: StatefulBuilder(
-              builder: (context, setDialogState) {
-                final query = searchController.text.trim().toLowerCase();
-                final filtered =
-                    skills.where((s) {
-                      if (query.isEmpty) return true;
-                      return s.name.toLowerCase().contains(query) ||
-                          s.description.toLowerCase().contains(query);
-                    }).toList();
-
-                final clearCount =
-                    currentSkillId != null &&
-                            (query.isEmpty ||
-                                '清空'.contains(query) ||
-                                '取消'.contains(query) ||
-                                '清空技能'.contains(query))
-                        ? 1
-                        : 0;
-
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 搜索栏 + 创建按钮
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Theme.of(context).dividerColor,
-                            width: 0.5,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            CupertinoIcons.search,
-                            size: 16,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.4),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: searchController,
-                              autofocus: true,
-                              onChanged: (_) => setDialogState(() {}),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                              decoration: InputDecoration(
-                                hintText:
-                                    AppLocalizations.of(context)!.searchSkills,
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                              ),
-                            ),
-                          ),
-                          // 创建按钮
-                          if (searchController.text.trim().isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: CupertinoButton(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                minSize: 0,
-                                borderRadius: BorderRadius.circular(6),
-                                color: Theme.of(context).primaryColor,
-                                onPressed: () async {
-                                  final skillName =
-                                      searchController.text.trim();
-                                  if (skillName.isEmpty) return;
-
-                                  try {
-                                    final newSkill =
-                                        await SkillStorageService.createSkill(
-                                          name: skillName,
-                                          description: '',
-                                          prompt:
-                                              '# $skillName\n\n请在此编写技能提示词...',
-                                        );
-
-                                    // 刷新技能列表
-                                    SkillService.reset();
-                                    await SkillService.ensureLoaded();
-                                    skills = SkillService.skills;
-
-                                    Navigator.of(dialogContext).pop();
-                                    _applySkillSelection(newSkill.skillId);
-
-                                    if (mounted) {
-                                      SnackBarUtils.showSuccess(
-                                        context,
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.skillCreatedSelected(skillName),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (mounted) {
-                                      SnackBarUtils.showError(
-                                        context,
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.createSkillFailed(e.toString()),
-                                      );
-                                    }
-                                  }
-                                },
-                                child: Text(
-                                  AppLocalizations.of(context)!.createAction,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: CupertinoColors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Flexible(
-                      child:
-                          filtered.isEmpty && clearCount == 0
-                              ? Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(24),
-                                  child: Text(
-                                    AppLocalizations.of(
-                                      context,
-                                    )!.noMatchingResults,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withOpacity(0.4),
-                                    ),
-                                  ),
-                                ),
-                              )
-                              : ListView.builder(
-                                shrinkWrap: true,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                ),
-                                itemCount: filtered.length + clearCount,
-                                itemBuilder: (context, index) {
-                                  if (clearCount > 0 && index == 0) {
-                                    return _buildCommandItem(
-                                      title:
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.clearSkillSelection,
-                                      isClearAction: true,
-                                      onTap: () {
-                                        Navigator.of(dialogContext).pop();
-                                        _applySkillSelection(null);
-                                      },
-                                    );
-                                  }
-                                  final skillIndex = index - clearCount;
-                                  final skill = filtered[skillIndex];
-                                  final isSelected =
-                                      currentSkillId == skill.skillId;
-                                  return _buildCommandItem(
-                                    title: skill.name,
-                                    subtitle: skill.description,
-                                    isSelected: isSelected,
-                                    onTap: () {
-                                      Navigator.of(dialogContext).pop();
-                                      _applySkillSelection(
-                                        isSelected ? null : skill.skillId,
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-    ).then((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        try {
-          searchController.dispose();
-        } catch (_) {}
-      });
-    });
-  }
-
-  /// 应用技能选择
-  void _applySkillSelection(String? skillId) async {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    // 确保技能列表已从文件系统加载
-    await SkillService.ensureLoaded();
-
-    final selectedSkill =
-        skillId != null ? SkillService.getSkillById(skillId) : null;
-
-    var updatedSession = currentSession.copyWith(
-      skill: selectedSkill,
-      clearSkill: skillId == null,
-    );
-
-    // 如果会话名是默认的"新对话"，自动改为技能名
-    if (selectedSkill != null &&
-        updatedSession.name == AppLocalizations.of(context)!.newSession) {
-      updatedSession = updatedSession.copyWith(title: selectedSkill.name);
-    }
-
-    sessionController.updateSession(updatedSession);
-
-    if (mounted) {
-      SnackBarUtils.showInfo(
-        context,
-        selectedSkill != null
-            ? AppLocalizations.of(context)!.skillSelected(selectedSkill.name)
-            : AppLocalizations.of(context)!.skillCleared,
-      );
-    }
-  }
-
   bool _sendingInProgress = false; // 本地防重入锁
   bool _contractParsePending = false; // 合同解析标记：响应完成后写入 business.md
 
@@ -3672,7 +3050,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 如果有文件引用，添加修订模式指令
     String messageContent = text;
     if (_hasFileMention) {
-      messageContent = '【修订模式】$text\n\n'
+      messageContent =
+          '【修订模式】$text\n\n'
           '注意：你正在修改文件，请务必保留文件的原始格式（包括字体、缩进、换行等），'
           '只修改内容部分，不要添加额外的格式化或改变文件结构。';
       // 重置修订模式标记
@@ -3800,8 +3179,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       //   throw Exception('Model config validation failed, please check API Key and URL settings');
       // }
 
-      // 发送消息并获取流式响应
-      final responseStream = client.LLMChat(userMessage);
+      // 直接调用 LLMClient（本地聊天不走 HTTP）
+      final responseStream = client.LLMChat(userMessage: userMessage);
 
       // 处理流式响应并更新UI（LlmClient 已在内部处理 MCP 工具调用和 follow-up）
       // chunk 格式: {content,think,tool}  三个字段互斥，每次必有一个有值
@@ -4186,28 +3565,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     });
   }
 
-  /// 显示移除技能确认弹窗
-  void _showRemoveSkillDialog() async {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final bool? shouldRemove = await ConfirmDeleteDialog.show(
-      context: context,
-      title: '移除技能',
-      itemName: currentSession.skill?.name ?? '',
-      description: '确定要移除当前技能',
-      warningMessage: '此操作无法撤销',
-      icon: CupertinoIcons.wand_stars,
-      iconColor: Theme.of(context).colorScheme.error,
-    );
-
-    if (shouldRemove == true) {
-      sessionController.updateSession(
-        currentSession.copyWith(clearSkill: true),
-      );
-    }
-  }
-
   /// 显示移除MCP确认弹窗
   void _showRemoveMcpDialog() async {
     final currentSession = sessionController.currentSession.value;
@@ -4224,356 +3581,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     if (shouldRemove == true) {
-      sessionController.updateSession(
-        currentSession.copyWith(clearMcp: true),
-      );
+      sessionController.updateSession(currentSession.copyWith(clearMcp: true));
     }
-  }
-
-  /// 显示技能详情弹窗（与技能管理页面保持一致）
-  void _showSkillDetail(Skill skill) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: AppLocalizations.of(context)!.skillDetail,
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (ctx, anim1, anim2) {
-        return Center(
-          child: FadeTransition(
-            opacity: anim1,
-            child: StatefulBuilder(
-              builder: (ctx, setSheetState) {
-                final tools = skill.tools;
-                final hasTools = tools != null && tools.isNotEmpty;
-
-                return ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: 700,
-                    maxHeight: MediaQuery.of(ctx).size.height * 0.75,
-                  ),
-                  child: Material(
-                    color: Theme.of(ctx).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // 头部
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            skill.name,
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                        // 编辑按钮（与技能名称同行，靠右）
-                                        Tooltip(
-                                          message: '编辑技能',
-                                          child: InkWell(
-                                            onTap: () async {
-                                              Navigator.of(ctx).pop(); // 关闭弹窗
-                                              await Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder:
-                                                      (_) => SkillEditPage(
-                                                        skill: skill,
-                                                      ),
-                                                ),
-                                              );
-                                              // 编辑返回后刷新技能数据
-                                              await SkillService.loadSkills();
-                                              final updatedSkill =
-                                                  SkillService.getSkillById(
-                                                    skill.skillId,
-                                                  );
-                                              if (updatedSkill != null &&
-                                                  mounted) {
-                                                final currentSession =
-                                                    sessionController
-                                                        .currentSession
-                                                        .value;
-                                                if (currentSession != null) {
-                                                  final refreshedSession =
-                                                      currentSession.copyWith(
-                                                        skill: updatedSkill,
-                                                      );
-                                                  sessionController
-                                                      .updateSession(
-                                                        refreshedSession,
-                                                      );
-                                                  setState(() {});
-                                                }
-                                              }
-                                            },
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
-                                              child: Icon(
-                                                CupertinoIcons.pencil,
-                                                size: 14,
-                                                color:
-                                                    Theme.of(
-                                                      ctx,
-                                                    ).colorScheme.onSurface,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      skill.description.isNotEmpty
-                                          ? skill.description
-                                          : AppLocalizations.of(
-                                            context,
-                                          )!.folderPath(skill.skillId),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.6),
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 工具列表
-                          if (hasTools) ...[
-                            Text(
-                              AppLocalizations.of(
-                                context,
-                              )!.toolList(tools.length),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children:
-                                  tools.take(50).map((t) {
-                                    final label =
-                                        t.description.isNotEmpty
-                                            ? '${t.name}: ${t.description}'
-                                            : t.name;
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary.withOpacity(0.08),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withOpacity(0.15),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        label,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color:
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.primary,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                            ),
-                            if (tools.length > 50)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.moreXTools(tools.length - 50),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(height: 6),
-                            const Divider(),
-                            const SizedBox(height: 12),
-                          ],
-
-                          // 系统提示词
-                          if (skill.prompt.isNotEmpty) ...[
-                            Text(
-                              AppLocalizations.of(context)!.systemPrompt,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: const Color(0xFFE0E0E0),
-                                ),
-                              ),
-                              child: Text(
-                                skill.prompt,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontFamily: 'monospace',
-                                  color: Color(0xFF333333),
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-
-                          // JSON 配置
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // 代码块标题栏
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  color: const Color(0xFFF0F0F0),
-                                  child: Row(
-                                    children: [
-                                      const Text(
-                                        '{ }',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontFamily: 'monospace',
-                                          color: Color(0xFF999999),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      const Text(
-                                        'JSON',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontFamily: 'monospace',
-                                          color: Color(0xFF999999),
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      GestureDetector(
-                                        onTap: () {
-                                          Clipboard.setData(
-                                            ClipboardData(
-                                              text:
-                                                  const JsonEncoder.withIndent(
-                                                    '  ',
-                                                  ).convert(skill.toJson()),
-                                            ),
-                                          );
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                AppLocalizations.of(
-                                                  context,
-                                                )!.jsonCopied,
-                                              ),
-                                              duration: const Duration(
-                                                seconds: 1,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        child: const Icon(
-                                          CupertinoIcons.doc_on_clipboard,
-                                          size: 12,
-                                          color: Color(0xFF999999),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // 代码内容
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  color: const Color(0xFFF5F5F5),
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Text(
-                                      const JsonEncoder.withIndent(
-                                        '  ',
-                                      ).convert(skill.toJson()),
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontFamily: 'monospace',
-                                        color: Color(0xFF333333),
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
   }
 
   /// 显示 MCP 服务详情弹窗（与 MCP 管理页面保持一致）

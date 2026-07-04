@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../../../models/bigmodel/chat_model.dart';
 import '../../../models/chat/chat_session.dart';
 import '../../../models/chat/chat_message.dart';
-import '../../tools/tool_registry.dart';
 import '../../../data/storage_paths.dart';
 import '../../../data/file_storage.dart';
 import '../common/system_prompts.dart';
@@ -70,7 +69,6 @@ class TaskMode extends WorkModeStrategy {
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
     final allTools = <Map<String, dynamic>>[];
 
-    allTools.addAll(SystemToolService.buildOpenAIToolsFormat());
 
     allTools.addAll([
       {
@@ -90,7 +88,7 @@ class TaskMode extends WorkModeStrategy {
     ]);
 
     allTools.addAll(buildMcpTools(session));
-    allTools.addAll(buildSkillTools(session));
+    allTools.addAll([]);
     return allTools;
   }
 }

@@ -34,7 +34,9 @@ class OpenAiProvider {
 
   Dio get _dio {
     final client = Dio();
-    client.options.connectTimeout = const Duration(milliseconds: defaultTimeout);
+    client.options.connectTimeout = const Duration(
+      milliseconds: defaultTimeout,
+    );
     client.options.receiveTimeout = const Duration(minutes: 5);
     client.options.sendTimeout = const Duration(minutes: 5);
     return client;
@@ -277,7 +279,9 @@ class OpenAiProvider {
     }
 
     final es = error.toString();
-    if (es.contains('Dio can\'t establish a new connection after it was closed'))
+    if (es.contains(
+      'Dio can\'t establish a new connection after it was closed',
+    ))
       return '连接错误，请重试发送消息';
     if (es.contains('CONNECT_TIMEOUT')) return '网络连接超时，请检查网络设置';
     if (es.contains('RECEIVE_TIMEOUT')) return 'API 响应超时，请稍后重试';
@@ -294,7 +298,16 @@ class OpenAiProvider {
   Future<Map<String, dynamic>?> getModelInfo() async {
     if (_model == null) return null;
     final modelName = _model!.model.toLowerCase();
-    final reasoningKeywords = ['o1', 'o3', 'o4', 'r1', 'qwq', 'glm', 'deepseek-r1', 'thinking'];
+    final reasoningKeywords = [
+      'o1',
+      'o3',
+      'o4',
+      'r1',
+      'qwq',
+      'glm',
+      'deepseek-r1',
+      'thinking',
+    ];
     final supportsReasoning = reasoningKeywords.any(
       (kw) => modelName.contains(kw.toLowerCase()),
     );

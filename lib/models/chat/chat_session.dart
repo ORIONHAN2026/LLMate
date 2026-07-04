@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:llmwork/models/bigmodel/chat_model.dart';
 import 'package:llmwork/models/chat/mcp_config.dart';
-import 'package:llmwork/models/chat/skill.dart';
 
 import './chat_message.dart';
 import './chat_attachment.dart';
@@ -80,17 +79,11 @@ class ChatSession {
 
   // === 会话级功能配置 ===
 
-  /// 工作模式：conversation（对话模式）或 business（商务模式）
-  final String workMode;
-
   /// 工作目录：会话产生的文件默认保存到此目录
   final String? workDirectory;
 
   /// 绑定的 MCP 服务（null = 未绑定，运行时由 mcpId 动态解析）
   final Mcp? mcp;
-
-  /// 绑定的技能（null = 未绑定，运行时由 skillId 动态解析）
-  final Skill? skill;
 
   /// 触发记忆压缩的轮数（0 = 禁用记忆压缩，默认 20）
   /// 当累积的记忆达到此轮数时，自动触发 LLM 压缩
@@ -99,8 +92,19 @@ class ChatSession {
   /// 深度思考模式（默认关闭）
   final bool deepThink;
 
-  /// 连接器和技能的关联关系描述提示词
+  /// 连接器的关联关系描述提示词
   final String? connectPrompt;
+
+  // === 计费统计 ===
+
+  /// 累计输入token数
+  final int totalInputTokens;
+
+  /// 累计输出token数
+  final int totalOutputTokens;
+
+  /// 累计费用（美元）
+  final double totalCost;
 
   // === 记忆压缩 ===
 
@@ -121,9 +125,6 @@ class ChatSession {
   /// 绑定的 MCP 服务名称（ID）
   final String? mcpId;
 
-  /// 绑定的技能ID
-  final String? skillId;
-
   /// 会话头像 emoji
   final String emoji;
 
@@ -140,10 +141,8 @@ class ChatSession {
     required this.messages,
     String? modelId,
     String? mcpId,
-    String? skillId,
     this.chatModel,
     this.mcp,
-    this.skill,
     this.isFavorite = false,
     this.inputContent = '',
     this.attachments = const [],
@@ -152,7 +151,6 @@ class ChatSession {
     this.scrollPosition = 0.0,
     this.lastSelectedDirectory,
     this.workDirectory,
-    this.workMode = 'conversation',
     this.memoryRounds = 100,
     this.deepThink = false,
     this.connectPrompt,
@@ -161,10 +159,12 @@ class ChatSession {
     this.memory = const [],
     this.compressedMemory,
     this.contracts,
+    this.totalInputTokens = 0,
+    this.totalOutputTokens = 0,
+    this.totalCost = 0.0,
     String? emoji,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcpId = mcpId ?? mcp?.mcpId,
-       skillId = skillId ?? skill?.skillId,
        emoji = emoji ?? randomEmoji();
 
   // 获取会话的预览文本
@@ -213,11 +213,8 @@ class ChatSession {
     String? lastSelectedDirectory,
     String? workDirectory,
     bool clearWorkDirectory = false,
-    String? workMode,
     Mcp? mcp,
     bool clearMcp = false,
-    Skill? skill,
-    bool clearSkill = false,
     ChatModel? chatModel,
     bool clearChatModel = false,
     int? memoryRounds,
@@ -233,6 +230,9 @@ class ChatSession {
     bool clearCompressedMemory = false,
     List<ContractInfo>? contracts,
     bool clearContracts = false,
+    int? totalInputTokens,
+    int? totalOutputTokens,
+    double? totalCost,
     String? emoji,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
@@ -249,7 +249,7 @@ class ChatSession {
       resolvedChatModel = this.chatModel;
     }
 
-    // 自动同步 mcpId / skillId
+    // 自动同步 mcpId
     final String? resolvedMcpId;
     final Mcp? resolvedMcp;
     if (clearMcp) {
@@ -261,19 +261,6 @@ class ChatSession {
     } else {
       resolvedMcpId = mcpId;
       resolvedMcp = this.mcp;
-    }
-
-    final String? resolvedSkillId;
-    final Skill? resolvedSkill;
-    if (clearSkill) {
-      resolvedSkillId = null;
-      resolvedSkill = null;
-    } else if (skill != null) {
-      resolvedSkillId = skill.skillId;
-      resolvedSkill = skill;
-    } else {
-      resolvedSkillId = skillId;
-      resolvedSkill = this.skill;
     }
 
     return ChatSession(
@@ -291,12 +278,9 @@ class ChatSession {
           lastSelectedDirectory ?? this.lastSelectedDirectory,
       workDirectory:
           clearWorkDirectory ? null : (workDirectory ?? this.workDirectory),
-      workMode: workMode ?? this.workMode,
       mcp: resolvedMcp,
-      skill: resolvedSkill,
       modelId: resolvedModelId,
       mcpId: resolvedMcpId,
-      skillId: resolvedSkillId,
       chatModel: resolvedChatModel,
       memoryRounds: memoryRounds ?? this.memoryRounds,
       deepThink: deepThink ?? this.deepThink,
@@ -310,6 +294,9 @@ class ChatSession {
           clearCompressedMemory ? null : (compressedMemory ?? this.compressedMemory),
       contracts:
           clearContracts ? null : (contracts ?? this.contracts),
+      totalInputTokens: totalInputTokens ?? this.totalInputTokens,
+      totalOutputTokens: totalOutputTokens ?? this.totalOutputTokens,
+      totalCost: totalCost ?? this.totalCost,
       emoji: emoji ?? this.emoji,
     );
   }
@@ -317,17 +304,12 @@ class ChatSession {
   factory ChatSession.fromJson(Map<String, dynamic> json) {
     final String? modelId = json['modelId'] as String?;
     final String? mcpId = json['mcpId'] as String?;
-    final String? skillId = json['skillId'] as String?;
 
     // 兼容旧数据
     final ChatModel? chatModel =
         json['chatModel'] != null ? ChatModel.fromMap(json['chatModel']) : null;
     final Mcp? parsedMcp =
         json['mcp'] is Map<String, dynamic> ? Mcp.fromMap(json['mcp']) : null;
-    final Skill? skill =
-        json['skill'] is Map<String, dynamic>
-            ? Skill.fromJson(json['skill'])
-            : null;
 
     return ChatSession(
       sessionId: json['id'] ?? '',
@@ -353,7 +335,6 @@ class ChatSession {
       scrollPosition: (json['scrollPosition'] as num?)?.toDouble() ?? 0.0,
       lastSelectedDirectory: json['lastSelectedDirectory'],
       workDirectory: json['workDirectory'],
-      workMode: json['workMode'] as String? ?? 'conversation',
       memoryRounds: json['memoryRounds'] as int? ?? 100,
       deepThink: json['deepThink'] as bool? ?? false,
       connectPrompt: json['connectPrompt'] as String?,
@@ -378,12 +359,13 @@ class ChatSession {
                 (c) => ContractInfo.fromJson(c as Map<String, dynamic>),
               )
               .toList(),
+      totalInputTokens: json['totalInputTokens'] as int? ?? 0,
+      totalOutputTokens: json['totalOutputTokens'] as int? ?? 0,
+      totalCost: (json['totalCost'] as num?)?.toDouble() ?? 0.0,
       modelId: modelId,
       mcpId: mcpId,
-      skillId: skillId,
       chatModel: chatModel,
       mcp: parsedMcp,
-      skill: skill,
       emoji: json['emoji'] as String?,
     );
   }
@@ -403,7 +385,6 @@ class ChatSession {
       'scrollPosition': scrollPosition,
       'lastSelectedDirectory': lastSelectedDirectory,
       if (workDirectory != null) 'workDirectory': workDirectory,
-      'workMode': workMode,
       'memoryRounds': memoryRounds,
       'deepThink': deepThink,
       if (connectPrompt != null) 'connectPrompt': connectPrompt,
@@ -414,12 +395,13 @@ class ChatSession {
       if (compressedMemory != null) 'compressedMemory': compressedMemory,
       if (contracts != null)
         'contracts': contracts!.map((c) => c.toJson()).toList(),
+      'totalInputTokens': totalInputTokens,
+      'totalOutputTokens': totalOutputTokens,
+      'totalCost': totalCost,
       if (modelId != null) 'modelId': modelId,
       if (mcpId != null) 'mcpId': mcpId,
-      if (skillId != null) 'skillId': skillId,
       'chatModel': chatModel?.toMap(),
       if (mcp != null) 'mcp': mcp!.toJson(),
-      if (skill != null) 'skill': skill!.toJson(),
       'emoji': emoji,
     };
   }

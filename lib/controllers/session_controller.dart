@@ -11,7 +11,7 @@ import '../models/bigmodel/chat_model.dart';
 import '../data/storage_service.dart';
 import '../data/storage_paths.dart';
 import '../core/mcp/mcp_service.dart';
-import '../core/skills/skill_service.dart';
+
 import '../features/models/controllers/model_controller.dart';
 import '../features/mcp/controllers/mcp_controller.dart';
 
@@ -68,16 +68,6 @@ class SessionController extends GetxController {
       }
     }
 
-    // 根据 skillId 动态解析 skill
-    if (s.skillId != null && s.skillId!.isNotEmpty) {
-      await SkillService.ensureLoaded();
-      final skillObj = SkillService.getSkillById(s.skillId!);
-      if (skillObj != null) {
-        s = s.copyWith(skill: skillObj);
-        updated = true;
-      }
-    }
-
     if (updated) {
       final idx = sessions.indexWhere((ss) => ss.sessionId == s.sessionId);
       if (idx != -1) {
@@ -98,6 +88,9 @@ class SessionController extends GetxController {
 
   /// 更新会话并持久化
   Future<void> updateSession(ChatSession updatedSession) async {
+    // 自动计算计费信息
+    updatedSession = _recalculateBilling(updatedSession);
+
     final idx = sessions.indexWhere(
       (s) => s.sessionId == updatedSession.sessionId,
     );
@@ -111,6 +104,42 @@ class SessionController extends GetxController {
     if (idx != -1 || isCurrent) {
       await _persistSessionAndCurrent(updatedSession, isCurrent: isCurrent);
     }
+  }
+
+  /// 自动计算会话的累计计费信息
+  ChatSession _recalculateBilling(ChatSession session) {
+    int inputTotal = 0;
+    int outputTotal = 0;
+    double cost = 0.0;
+
+    for (final msg in session.messages) {
+      if (msg.inputTokens != null) inputTotal += msg.inputTokens!;
+      if (msg.outputTokens != null) outputTotal += msg.outputTokens!;
+    }
+
+    // 根据模型价格计算费用（美元/百万token）
+    if (session.chatModel != null) {
+      final inputPrice = session.chatModel!.inputPrice;
+      final outputPrice = session.chatModel!.outputPrice;
+      if (inputPrice != null) {
+        cost += inputTotal * inputPrice / 1000000.0;
+      }
+      if (outputPrice != null) {
+        cost += outputTotal * outputPrice / 1000000.0;
+      }
+    }
+
+    // 只有值发生变化时才创建新对象
+    if (inputTotal != session.totalInputTokens ||
+        outputTotal != session.totalOutputTokens ||
+        cost != session.totalCost) {
+      return session.copyWith(
+        totalInputTokens: inputTotal,
+        totalOutputTokens: outputTotal,
+        totalCost: cost,
+      );
+    }
+    return session;
   }
 
   /// 合并持久化：session.json + message.json + memory.md + 相关文件
@@ -153,13 +182,7 @@ class SessionController extends GetxController {
             updatedSession.sessionId, updatedSession.compressedMemory!);
       }
 
-      // === 4. 持久化技能绑定到 skill.json ===
-      if (updatedSession.skill != null) {
-        await SessionFileStore.writeSkill(
-            updatedSession.sessionId, updatedSession.skill!.toJson());
-      }
-
-      // === 5. 持久化 MCP 绑定到 mcp.json ===
+      // === 4. 持久化 MCP 绑定到 mcp.json ===
       if (updatedSession.mcp != null) {
         await SessionFileStore.writeMcp(
             updatedSession.sessionId, updatedSession.mcp!.toFullJson());
@@ -458,10 +481,8 @@ class SessionController extends GetxController {
       'inputContent': session.inputContent,
       'lastSelectedDirectory': session.lastSelectedDirectory,
       'workDirectory': session.workDirectory,
-      'workMode': session.workMode,
       'modelId': session.modelId,
       'mcpId': session.mcpId,
-      'skillId': session.skillId,
       'memoryRounds': session.memoryRounds,
       'deepThink': session.deepThink,
       'connectPrompt': session.connectPrompt,
@@ -472,6 +493,9 @@ class SessionController extends GetxController {
       'attachments':
           session.attachments.map((a) => a.toJson()).toList(),
       'emoji': session.emoji,
+      'totalInputTokens': session.totalInputTokens,
+      'totalOutputTokens': session.totalOutputTokens,
+      'totalCost': session.totalCost,
     };
   }
 
@@ -525,7 +549,6 @@ class SessionController extends GetxController {
       messages: [], // 消息懒加载
       modelId: modelId,
       mcpId: entity['mcpId'] as String?,
-      skillId: entity['skillId'] as String?,
       chatModel: chatModel,
       isFavorite: entity['isFavorite'] as bool? ?? false,
       inputContent: entity['inputContent'] as String? ?? '',
@@ -535,7 +558,6 @@ class SessionController extends GetxController {
       scrollPosition: (entity['scrollPosition'] as num?)?.toDouble() ?? 0.0,
       lastSelectedDirectory: entity['lastSelectedDirectory'] as String?,
       workDirectory: entity['workDirectory'] as String?,
-      workMode: entity['workMode'] as String? ?? 'conversation',
       memoryRounds: entity['memoryRounds'] as int? ?? 100,
       deepThink: entity['deepThink'] as bool? ?? false,
       connectPrompt: entity['connectPrompt'] as String?,

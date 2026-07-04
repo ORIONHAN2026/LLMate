@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../../models/chat/chat_session.dart';
@@ -124,14 +125,6 @@ class SessionConfigSidebar {
           
           _buildConfigItem(
             context,
-            icon: CupertinoIcons.settings,
-            label: '工作模式',
-            value: _getWorkModeName(session.workMode),
-          ),
-          const SizedBox(height: 8),
-          
-          _buildConfigItem(
-            context,
             icon: CupertinoIcons.folder,
             label: '工作目录',
             value: session.workDirectory ?? '未设置',
@@ -139,6 +132,14 @@ class SessionConfigSidebar {
             valueColor: session.workDirectory != null 
                 ? Theme.of(context).colorScheme.primary
                 : null,
+          ),
+          const SizedBox(height: 8),
+          
+          _buildCopyableConfigItem(
+            context,
+            icon: CupertinoIcons.link,
+            label: '服务地址',
+            value: 'http://127.0.0.1:8899/${session.sessionId}/v1',
           ),
           const SizedBox(height: 12),
           
@@ -152,17 +153,6 @@ class SessionConfigSidebar {
             label: 'MCP连接器',
             value: session.mcp?.name ?? '未绑定',
             valueColor: session.mcp != null 
-                ? Theme.of(context).colorScheme.primary
-                : null,
-          ),
-          const SizedBox(height: 8),
-          
-          _buildConfigItem(
-            context,
-            icon: CupertinoIcons.wand_stars,
-            label: '技能',
-            value: session.skill?.name ?? '未绑定',
-            valueColor: session.skill != null 
                 ? Theme.of(context).colorScheme.primary
                 : null,
           ),
@@ -192,6 +182,51 @@ class SessionConfigSidebar {
             label: '消息数量',
             value: '${session.messages.length}条',
           ),
+          const SizedBox(height: 8),
+          _buildConfigItem(
+            context,
+            icon: CupertinoIcons.square_list,
+            label: '记忆轮数',
+            value: '${session.memory.length}轮',
+          ),
+          const SizedBox(height: 12),
+          
+          // 计费信息
+          _buildSectionTitle(context, '计费信息'),
+          const SizedBox(height: 8),
+          _buildConfigItem(
+            context,
+            icon: CupertinoIcons.arrow_down_circle,
+            label: '累计输入Token',
+            value: _formatTokenCount(session.totalInputTokens),
+            valueColor: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(height: 8),
+          _buildConfigItem(
+            context,
+            icon: CupertinoIcons.arrow_up_circle,
+            label: '累计输出Token',
+            value: _formatTokenCount(session.totalOutputTokens),
+            valueColor: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(height: 8),
+          _buildConfigItem(
+            context,
+            icon: CupertinoIcons.money_dollar_circle,
+            label: '累计费用',
+            value: '\$${session.totalCost.toStringAsFixed(6)}',
+            valueColor: session.totalCost > 0 
+                ? Theme.of(context).colorScheme.error
+                : Theme.of(context).colorScheme.onSurface,
+          ),
+          if (session.chatModel?.inputPrice != null || session.chatModel?.outputPrice != null) ...[
+            const SizedBox(height: 8),
+            _buildPriceCard(
+              context,
+              inputPrice: session.chatModel?.inputPrice,
+              outputPrice: session.chatModel?.outputPrice,
+            ),
+          ],
           const SizedBox(height: 8),
           _buildConfigItem(
             context,
@@ -254,6 +289,78 @@ class SessionConfigSidebar {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 构建可复制的配置项（点击复制到剪贴板）
+  static Widget _buildCopyableConfigItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return InkWell(
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: value));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已复制到剪贴板'),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              CupertinoIcons.doc_on_doc,
+              size: 12,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -323,23 +430,73 @@ class SessionConfigSidebar {
         '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  /// 获取工作模式中文名
-  static String _getWorkModeName(String workMode) {
-    switch (workMode) {
-      case 'conversation':
-        return '对话模式';
-      case 'contract':
-        return '合同模式';
-      case 'invoice':
-        return '发票模式';
-      case 'chatroom':
-        return '聊天室模式';
-      case 'creative':
-        return '创意模式';
-      case 'task':
-        return '任务模式';
-      default:
-        return '对话模式';
+  /// 格式化Token数量
+  static String _formatTokenCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(2)}M';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
     }
+    return '$count';
+  }
+
+  /// 构建价格卡片
+  static Widget _buildPriceCard(
+    BuildContext context, {
+    double? inputPrice,
+    double? outputPrice,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                CupertinoIcons.info_circle,
+                size: 12,
+                color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '模型定价（美元/百万Token）',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (inputPrice != null)
+            Text(
+              '输入: \$${inputPrice.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          if (inputPrice != null && outputPrice != null)
+            const SizedBox(height: 4),
+          if (outputPrice != null)
+            Text(
+              '输出: \$${outputPrice.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

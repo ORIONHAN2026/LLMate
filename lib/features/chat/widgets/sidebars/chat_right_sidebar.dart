@@ -7,8 +7,6 @@ import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import '../../../../controllers/session_controller.dart';
 import '../../../../models/chat/chat_message.dart';
-import '../../../../core/llm/modes/mode_sidebars.dart';
-import '../../../../core/llm/modes/work_mode_sidebar.dart';
 import 'session_config_sidebar.dart';
 
 /// 文件树节点
@@ -27,7 +25,7 @@ class _FileTreeNode {
   });
 }
 
-/// 右侧边栏 — 显示当前会话的记忆内容和文件列表
+/// 右侧边栏 — 显示当前会话的文件列表和会话配置
 class ChatRightSidebar extends StatefulWidget {
   final double width;
   final bool isCollapsed;
@@ -45,63 +43,25 @@ class ChatRightSidebar extends StatefulWidget {
 }
 
 class _ChatRightSidebarState extends State<ChatRightSidebar>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   final sessionController = Get.find<SessionController>();
-  TabController? _tabController;
+  late TabController _tabController;
 
   /// 缓存发送期间的构建结果
   Widget? _cachedTabChildren;
 
-  /// 获取当前会话的工作模式
-  String _getWorkMode() {
-    return sessionController.currentSession.value?.workMode ?? 'conversation';
-  }
-
-  /// 获取当前模式的侧边栏策略
-  WorkModeSidebar _getSidebar() {
-    return getSidebarByMode(_getWorkMode());
-  }
-
-  /// 获取当前模式的 Tab 数量
-  /// 获取当前模式的 Tab 数量（包含文件列表和会话配置）
-  int _getTabCount() => _getSidebar().tabCount + 2; // +1 for file list, +1 for session config
-
-  /// 获取当前模式的 Tab 标题（包含文件列表和会话配置）
-  List<String> _getTabTitles() => ['文件列表', ..._getSidebar().tabTitles, '会话配置'];
-
-  TabController _getTabController() {
-    final count = _getTabCount();
-    final currentMode = _getWorkMode();
-
-    // 模式变化或数量不匹配时重建 TabController
-    if (_tabController == null || _tabController!.length != count || _lastTabMode != currentMode) {
-      _tabController?.dispose();
-      _tabController = TabController(length: count, vsync: this);
-      _lastTabMode = currentMode;
-    }
-    return _tabController!;
-  }
-
-  String _lastTabMode = '';
-
-  String _lastWorkMode = 'conversation';
-  String? _lastWorkDirectory;
-
   @override
   void initState() {
     super.initState();
-    // 监听会话变化，当发送状态结束、模式变化或工作目录变化时清除缓存
+    _tabController = TabController(length: 2, vsync: this);
+
+    // 监听会话变化，当发送状态结束或工作目录变化时清除缓存
     ever(sessionController.currentSession, (session) {
       if (session != null) {
-        final currentMode = session.workMode ?? 'conversation';
         final currentWorkDir = session.workDirectory;
         final isSending = session.isSending ?? false;
 
-        // 模式变化、工作目录变化或发送结束时清除缓存
-        if (currentMode != _lastWorkMode ||
-            currentWorkDir != _lastWorkDirectory ||
-            !isSending) {
-          _lastWorkMode = currentMode;
+        if (!isSending || currentWorkDir != _lastWorkDirectory) {
           _lastWorkDirectory = currentWorkDir;
           if (_cachedTabChildren != null) {
             setState(() {
@@ -113,9 +73,11 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
     });
   }
 
+  String? _lastWorkDirectory;
+
   @override
   void dispose() {
-    _tabController?.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -131,22 +93,13 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
       }
 
       final messages = session?.messages ?? const [];
-      final sessionId = session?.sessionId ?? '';
-      final workDirectory = session?.workDirectory;
 
       final tabChildren = <Widget>[
         // Tab 0: 文件列表
         _buildFilesContent(context, messages),
+        // Tab 1: 会话配置
+        SessionConfigSidebar.buildTabContent(context),
       ];
-
-      // 从策略获取模式专属 Tab 内容（文件列表已单独添加）
-      final sidebar = _getSidebar();
-      for (int i = 0; i < sidebar.tabCount; i++) {
-        tabChildren.add(sidebar.buildTabContent(context, i, sessionId, workDirectory: workDirectory));
-      }
-      
-      // 添加会话配置 Tab
-      tabChildren.add(SessionConfigSidebar.buildTabContent(context));
 
       final result = Container(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -158,7 +111,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
             // 内容区域
             Expanded(
               child: TabBarView(
-                controller: _getTabController(),
+                controller: _tabController,
                 children: tabChildren,
               ),
             ),
@@ -174,9 +127,6 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
   }
 
   Widget _buildTabBar(BuildContext context) {
-    final tabTitles = _getTabTitles();
-    final tabs = tabTitles.map((title) => Tab(text: title)).toList();
-
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -185,7 +135,7 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         ),
       ),
       child: TabBar(
-        controller: _getTabController(),
+        controller: _tabController,
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         unselectedLabelStyle: const TextStyle(
           fontSize: 12,
@@ -196,12 +146,14 @@ class _ChatRightSidebarState extends State<ChatRightSidebar>
         unselectedLabelColor: Theme.of(
           context,
         ).colorScheme.onSurface.withValues(alpha: 0.35),
-        tabs: tabs,
+        tabs: const [
+          Tab(text: '文件列表'),
+          Tab(text: '会话配置'),
+        ],
       ),
     );
   }
 
-  /// 记忆内容区域
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Text(
       title,

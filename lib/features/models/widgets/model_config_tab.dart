@@ -76,10 +76,22 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
             _buildEditableModelItem(),
             _buildConfigItem(AppLocalizations.of(context)!.platformLabel, _currentModel.platform ?? AppLocalizations.of(context)!.unknown),
             _buildConfigItem(AppLocalizations.of(context)!.apiAddress, _currentModel.apiUrl ?? widget.apiUrl),
-            // _buildConfigItem('模型ID', _currentModel.modelId),
           ]),
           const SizedBox(height: 12),
-          // 模型参数卡片（从 ChatSettingsTab 移入）
+          _buildConfigCard('计费设置', CupertinoIcons.money_dollar_circle, [
+            _buildInputPriceField(),
+            const SizedBox(height: 12),
+            _buildOutputPriceField(),
+            const SizedBox(height: 8),
+            Text(
+              '价格单位：美元/百万Token。用于计算会话累计费用。',
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 12),
           _buildConfigCard(AppLocalizations.of(context)!.modelParams, CupertinoIcons.slider_horizontal_3, [
             _buildTemperatureSlider(),
             const SizedBox(height: 12),
@@ -855,6 +867,130 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         duration: const Duration(seconds: 2),
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
+    );
+  }
+
+  Widget _buildInputPriceField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '输入价格',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            Text(
+              '美元/百万Token',
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: TextEditingController(
+            text: _currentModel.inputPrice?.toString() ?? '',
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            hintText: '例如: 0.14',
+            hintStyle: const TextStyle(fontSize: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            contentPadding: const EdgeInsets.all(10),
+            isDense: true,
+          ),
+          style: const TextStyle(fontSize: 12),
+          onChanged: (value) {
+            _debounceTimer?.cancel();
+            _debounceTimer = Timer(const Duration(seconds: 1), () {
+              final price = double.tryParse(value);
+              setState(() {
+                _currentModel = _currentModel.copyWith(inputPrice: price);
+              });
+              widget.onModelUpdated(_currentModel);
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOutputPriceField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '输出价格',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            Text(
+              '美元/百万Token',
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: TextEditingController(
+            text: _currentModel.outputPrice?.toString() ?? '',
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            hintText: '例如: 0.28',
+            hintStyle: const TextStyle(fontSize: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            contentPadding: const EdgeInsets.all(10),
+            isDense: true,
+          ),
+          style: const TextStyle(fontSize: 12),
+          onChanged: (value) {
+            _debounceTimer?.cancel();
+            _debounceTimer = Timer(const Duration(seconds: 1), () {
+              final price = double.tryParse(value);
+              setState(() {
+                _currentModel = _currentModel.copyWith(outputPrice: price);
+              });
+              widget.onModelUpdated(_currentModel);
+            });
+          },
+        ),
+      ],
     );
   }
 }

@@ -1,6 +1,5 @@
 import 'package:llmwork/controllers/session_controller.dart';
 import 'package:llmwork/controllers/theme_controller.dart';
-import 'package:llmwork/controllers/work_mode_controller.dart';
 import 'package:llmwork/l10n/app_localizations.dart';
 import 'package:llmwork/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
@@ -41,21 +40,8 @@ class _SessionItemState extends State<_SessionItem>
   late AnimationController _loadingAnimationController;
   late Animation<double> _loadingAnimation;
   final sessionController = Get.find<SessionController>();
-  final workModeController = Get.find<WorkModeController>();
   List<ChatSession> get chatSessions => sessionController.sessions;
   late TextEditingController _nameController;
-
-  /// 获取工作模式中文名
-  String _getWorkModeName(String workMode) {
-    switch (workMode) {
-      case 'contract': return '📋 合同模式';
-      case 'invoice': return '🧾 发票模式';
-      case 'chatroom': return '💬 聊天室';
-      case 'creative': return '🎭 创意模式';
-      case 'task': return '📅 日程模式';
-      default: return '💬 对话模式';
-    }
-  }
   late FocusNode _nameFocusNode;
   @override
   void initState() {
@@ -148,7 +134,7 @@ class _SessionItemState extends State<_SessionItem>
               _isEditing
                   ? null
                   : () => widget.onSessionSwitch(widget.session), // 编辑模式下禁用会话切换
-            child: Padding(
+          child: Padding(
             padding: const EdgeInsets.all(6),
             child: Row(
               children: [
@@ -160,18 +146,25 @@ class _SessionItemState extends State<_SessionItem>
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: widget.isSelected
-                          ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                          : Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                      color:
+                          widget.isSelected
+                              ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.1)
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withOpacity(0.3),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     alignment: Alignment.center,
-                    child: widget.session.isSending
-                        ? _buildLoadingIcon()
-                        : Text(
-                            widget.session.emoji,
-                            style: const TextStyle(fontSize: 16),
-                          ),
+                    child:
+                        widget.session.isSending
+                            ? _buildLoadingIcon()
+                            : Text(
+                              widget.session.emoji,
+                              style: const TextStyle(fontSize: 16),
+                            ),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -192,26 +185,6 @@ class _SessionItemState extends State<_SessionItem>
 
                           // 收藏指示器 - 对收藏的会话始终显示小星星
                         ],
-                      ),
-                      // 工作模式信息显示
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          _getWorkModeName(widget.session.workMode ?? 'conversation'),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color:
-                                widget.isSelected
-                                    ? Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.7)
-                                    : Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.5),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
                       ),
                     ],
                   ),
@@ -245,7 +218,10 @@ class _SessionItemState extends State<_SessionItem>
                                 ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       padding: EdgeInsets.zero,
-                      tooltip: widget.session.isFavorite ? AppLocalizations.of(context)!.unfavorite : AppLocalizations.of(context)!.favoriteSession,
+                      tooltip:
+                          widget.session.isFavorite
+                              ? AppLocalizations.of(context)!.unfavorite
+                              : AppLocalizations.of(context)!.favoriteSession,
                     ),
                   ),
                 ),
@@ -406,9 +382,12 @@ class _SessionItemState extends State<_SessionItem>
     final trimmedName = newName.trim();
     if (trimmedName.isEmpty) {
       // 如果名字为空，设置为默认名称"新会话"
-      final updatedSession = widget.session.copyWith(title: AppLocalizations.of(context)!.newSession);
+      final updatedSession = widget.session.copyWith(
+        title: AppLocalizations.of(context)!.newSession,
+      );
       sessionController.updateSession(updatedSession);
-      _nameController.text = AppLocalizations.of(context)!.newSession; // 同步更新控制器文本
+      _nameController.text =
+          AppLocalizations.of(context)!.newSession; // 同步更新控制器文本
     } else if (trimmedName != widget.session.name) {
       // 更新会话名称
       final updatedSession = widget.session.copyWith(title: trimmedName);
@@ -424,7 +403,9 @@ class _SessionItemState extends State<_SessionItem>
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Container(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -442,34 +423,46 @@ class _SessionItemState extends State<_SessionItem>
                 Wrap(
                   spacing: 4,
                   runSpacing: 4,
-                  children: kSessionEmojis.map((emoji) {
-                    final isSelected = widget.session.emoji == emoji;
-                    return GestureDetector(
-                      onTap: () {
-                        final updatedSession = widget.session.copyWith(emoji: emoji);
-                        sessionController.updateSession(updatedSession);
-                        Navigator.of(context).pop();
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          border: isSelected
-                              ? Border.all(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 1.5,
-                                )
-                              : null,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(emoji, style: const TextStyle(fontSize: 22)),
-                      ),
-                    );
-                  }).toList(),
+                  children:
+                      kSessionEmojis.map((emoji) {
+                        final isSelected = widget.session.emoji == emoji;
+                        return GestureDetector(
+                          onTap: () {
+                            final updatedSession = widget.session.copyWith(
+                              emoji: emoji,
+                            );
+                            sessionController.updateSession(updatedSession);
+                            Navigator.of(context).pop();
+                          },
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color:
+                                  isSelected
+                                      ? Theme.of(context).colorScheme.primary
+                                          .withValues(alpha: 0.15)
+                                      : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              border:
+                                  isSelected
+                                      ? Border.all(
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                        width: 1.5,
+                                      )
+                                      : null,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              emoji,
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                 ),
               ],
             ),
@@ -524,9 +517,7 @@ class _SessionItemState extends State<_SessionItem>
                 style: const TextStyle(fontSize: 12),
                 decoration: InputDecoration(
                   hintText: '会话名称',
-                  hintStyle: TextStyle(
-                    color: Colors.grey[400],
-                  ),
+                  hintStyle: TextStyle(color: Colors.grey[400]),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
                     borderSide: BorderSide(color: Colors.grey[300]!),
@@ -537,13 +528,20 @@ class _SessionItemState extends State<_SessionItem>
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                 ),
                 onSubmitted: (value) {
                   if (value.trim().isNotEmpty) {
-                    final updatedSession = widget.session.copyWith(title: value.trim());
+                    final updatedSession = widget.session.copyWith(
+                      title: value.trim(),
+                    );
                     sessionController.updateSession(updatedSession);
                   }
                   Navigator.of(context).pop();
@@ -782,6 +780,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
             child: Row(
               children: [
                 _buildSettingsButton(),
+                const Spacer(),
                 _buildThemeToggle(),
               ],
             ),
@@ -996,10 +995,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
       borderRadius: BorderRadius.circular(8),
       child: const Padding(
         padding: EdgeInsets.all(8),
-        child: Icon(
-          CupertinoIcons.gear,
-          size: 15,
-        ),
+        child: Icon(CupertinoIcons.gear, size: 15),
       ),
     );
   }

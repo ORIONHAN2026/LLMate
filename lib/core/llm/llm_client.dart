@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
@@ -10,26 +11,40 @@ import '../../models/chat/memory_turn.dart';
 import '../tools/tool_execution_service.dart';
 import '../memory/memory_compressor.dart';
 import '../../controllers/session_controller.dart';
+import '../../features/models/controllers/model_controller.dart';
 import './openai_provider.dart';
 import './common/message_builder.dart';
-import './modes/work_mode_strategy.dart';
-import './modes/work_mode_factory.dart';
+import './common/system_prompts.dart';
+import './modes/mode_utils.dart';
 
 /// LLM 客户端
 ///
-/// 负责协调 OpenAiProvider（网络层）和 WorkModeStrategy（消息/工具组装）。
+/// 负责协调 OpenAiProvider（网络层）和消息/工具组装。
 class LlmClient {
   ChatSession _session;
   final OpenAiProvider _provider;
-  final WorkModeStrategy _strategy;
   bool _cancelled = false;
 
   LlmClient(ChatSession session)
     : _session = session,
-      _provider = OpenAiProvider(),
-      _strategy = createWorkModeStrategy(session.workMode) {
-    _provider.configure(session.chatModel!);
-    _provider.applySessionSettings(session);
+      _provider = OpenAiProvider() {
+    // 安全配置模型：优先使用会话模型，否则使用全局默认模型
+    final chatModel = session.chatModel;
+    if (chatModel != null) {
+      _provider.configure(chatModel);
+      _provider.applySessionSettings(session);
+    } else {
+      debugPrint('⚠️ LlmClient: 会话未配置模型，尝试使用全局默认模型');
+      // 尝试从 ModelController 获取默认模型
+      try {
+        final modelController = Get.find<ModelController>();
+        if (modelController.models.isNotEmpty) {
+          _provider.configure(modelController.models.last);
+        }
+      } catch (e) {
+        debugPrint('❌ LlmClient: 无法获取默认模型: $e');
+      }
+    }
   }
 
   ChatModel? get model => _session.chatModel;
@@ -41,38 +56,98 @@ class LlmClient {
   Future<bool> validateConfiguration() => _provider.validateConfiguration();
 
   String buildSystemPrompt({ChatSession? session}) {
-    return MessageBuilder.buildSystemPrompt(
-      model: model,
-      session: session,
-    );
+    return MessageBuilder.buildSystemPrompt(model: model, session: session);
   }
 
-  /// 发送消息并获取流式响应（递归处理 MCP 工具调用，直到无工具调用为止）
-  Stream<Map<String, dynamic>> LLMChat(ChatMessage userMessage) async* {
+  /// 构建完整的消息列表（系统提示词 + 历史消息 + 用户消息）
+  Future<List<Map<String, dynamic>>> _buildMessages({
+    required ChatModel? model,
+    required ChatMessage userMessage,
+    required ChatSession session,
+  }) async {
+    final messages = <Map<String, dynamic>>[];
+    final workDir = getEffectiveWorkDir(session);
+
+    // 1. 通用系统提示词
+    messages.addAll(
+      buildBaseSystemMessages(
+        model: model,
+        session: session,
+        thinkEnabled: session.deepThink,
+        workDir: workDir,
+      ),
+    );
+
+    // 2. 记忆上下文
+    final memoryCtx = buildMemoryContext(session);
+    if (memoryCtx.isNotEmpty) {
+      messages.add({'role': 'system', 'content': memoryCtx});
+    }
+
+    // 3. 历史消息
+    if (session.messages.isNotEmpty) {
+      appendHistoryMessages(messages, session, userMessage);
+    }
+
+    // 4. 核心规则 + 语言（紧邻用户消息前）
+    messages.add({'role': 'system', 'content': CommonSystemPrompts.coreRules});
+    messages.add({
+      'role': 'system',
+      'content': CommonSystemPrompts.responseLanguage(
+        Get.locale?.languageCode ?? 'zh',
+      ),
+    });
+
+    // 5. 用户消息
+    messages.add({'role': 'user', 'content': buildUserContent(userMessage)});
+
+    return messages;
+  }
+
+  /// 构建可用的工具列表（MCP + Skill）
+  List<Map<String, dynamic>> _buildTools(ChatSession? session) {
+    final allTools = <Map<String, dynamic>>[];
+    // MCP + Skill 工具
+    allTools.addAll(buildMcpTools(session));
+    return allTools;
+  }
+
+  /// 发送消息并获取流式响应
+  ///
+  /// 支持两种请求来源：
+  /// - [userMessage] 非空：本地客户端发起，需要组装消息和工具
+  /// - [prebuiltMessages] 非空：HTTP API 发起，消息已组装好
+  Stream<Map<String, dynamic>> LLMChat({
+    ChatMessage? userMessage,
+    List<Map<String, dynamic>>? prebuiltMessages,
+  }) async* {
     _cancelled = false;
     bool doneReceived = false;
 
-    if (kDebugMode) {
-      debugPrint(
-        '🧠 [LLMChat] 会话消息数: ${_session.messages.length}, 当前消息ID: ${userMessage.msgId}',
+    List<Map<String, dynamic>> messages;
+    List<Map<String, dynamic>> tools;
+    bool enableToolCall;
+
+    if (prebuiltMessages != null && prebuiltMessages.isNotEmpty) {
+      // HTTP API 请求：消息已组装好，支持 MCP 工具执行
+      messages = prebuiltMessages;
+      tools = _buildTools(_session);
+      enableToolCall = tools.isNotEmpty;
+      debugPrint('🧠 [LLMChat] HTTP API 模式，使用预构建消息: ${messages.length} 条');
+    } else if (userMessage != null) {
+      // 本地客户端请求：需要组装消息和工具
+      messages = await _buildMessages(
+        model: model,
+        userMessage: userMessage,
+        session: _session,
       );
-      for (int i = 0; i < _session.messages.length; i++) {
-        final m = _session.messages[i];
-        final preview =
-            m.content.length > 50
-                ? '${m.content.substring(0, 50)}...'
-                : m.content;
-        debugPrint('  [$i] ${m.role.name}: $preview (id: ${m.msgId})');
-      }
+      tools = _buildTools(_session);
+      enableToolCall = true;
+      debugPrint('🧠 [LLMChat] 本地客户端模式，组装消息: ${messages.length} 条');
+    } else {
+      debugPrint('❌ [LLMChat] 错误: 必须提供 userMessage 或 prebuiltMessages');
+      return;
     }
-
-    var messages = await _strategy.buildMessages(
-      model: model,
-      userMessage: userMessage,
-      session: _session,
-    );
-
-    final tools = _strategy.buildTools(_session);
 
     final requestSnapshot = List<Map<String, dynamic>>.from(
       messages.map((m) => Map<String, dynamic>.from(m)),
@@ -83,9 +158,8 @@ class LlmClient {
       for (int i = 0; i < messages.length; i++) {
         final m = messages[i];
         final content = m['content']?.toString() ?? '';
-        final preview =
-            content.length > 80 ? '${content.substring(0, 80)}...' : content;
-        debugPrint('  [$i] ${m['role']}: $preview');
+
+        debugPrint('  [$i] ${m['role']}: $content');
       }
     }
 
@@ -165,7 +239,8 @@ class LlmClient {
           completedTextToolCalls ??
           _finalizeNativeToolCalls(nativeToolCallDeltas);
 
-      if (_cancelled || parsedCalls.isEmpty) {
+      // HTTP API 模式不执行工具调用，直接返回结果
+      if (!enableToolCall || _cancelled || parsedCalls.isEmpty) {
         if (!_cancelled) {
           _writeRequestLog(
             requestMessages: requestSnapshot,
@@ -179,14 +254,12 @@ class LlmClient {
         }
         if (!_cancelled && responseBuffer.isNotEmpty) {
           final memoryUpdatedSession = await accumulateMemory(
-            userMessage.content,
+            userMessage?.content ?? '',
             responseBuffer.toString(),
             null,
           );
           if (memoryUpdatedSession != null) {
-            yield {
-              'memory_updated': jsonEncode(memoryUpdatedSession.toJson()),
-            };
+            yield {'memory_updated': jsonEncode(memoryUpdatedSession.toJson())};
           }
         }
         if (doneReceived) {
@@ -230,9 +303,10 @@ class LlmClient {
           'name': name,
           'arguments': args,
           'success': ok,
-          'result': resultText.length > 2000
-              ? '${resultText.substring(0, 2000)}...(truncated)'
-              : resultText,
+          'result':
+              resultText.length > 2000
+                  ? '${resultText.substring(0, 2000)}...(truncated)'
+                  : resultText,
         });
 
         final buf = StringBuffer();
@@ -315,7 +389,8 @@ class LlmClient {
       }
 
       final now = DateTime.now();
-      final timestamp = '${now.year}${_pad(now.month)}${_pad(now.day)}_'
+      final timestamp =
+          '${now.year}${_pad(now.month)}${_pad(now.day)}_'
           '${_pad(now.hour)}${_pad(now.minute)}${_pad(now.second)}';
       final fileName = '${timestamp}_${sessionId.substring(0, 8)}.json';
       final file = File(p.join(dir.path, fileName));
@@ -381,13 +456,16 @@ class LlmClient {
     if (_session.memoryRounds <= 0) return null;
 
     final now = DateTime.now();
-    final updatedMemory = List<MemoryTurn>.from(_session.memory)
-      ..add(MemoryTurn(role: 'user', content: userText, timestamp: now))
-      ..add(MemoryTurn(
-        role: 'assistant',
-        content: assistantText,
-        timestamp: now,
-      ));
+    final updatedMemory =
+        List<MemoryTurn>.from(_session.memory)
+          ..add(MemoryTurn(role: 'user', content: userText, timestamp: now))
+          ..add(
+            MemoryTurn(
+              role: 'assistant',
+              content: assistantText,
+              timestamp: now,
+            ),
+          );
 
     final rounds = MemoryTurn.roundCount(updatedMemory);
 
@@ -405,10 +483,7 @@ class LlmClient {
       );
 
       if (compressed != null) {
-        _session = _session.copyWith(
-          compressedMemory: compressed,
-          memory: [],
-        );
+        _session = _session.copyWith(compressedMemory: compressed, memory: []);
         return _session;
       }
     }

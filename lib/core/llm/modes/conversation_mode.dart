@@ -2,7 +2,6 @@ import 'package:get/get.dart';
 import '../../../models/bigmodel/chat_model.dart';
 import '../../../models/chat/chat_session.dart';
 import '../../../models/chat/chat_message.dart';
-import '../../tools/tool_registry.dart';
 import '../common/system_prompts.dart';
 import './work_mode_strategy.dart';
 import './mode_utils.dart';
@@ -62,10 +61,9 @@ class ConversationMode extends WorkModeStrategy {
   List<Map<String, dynamic>> buildTools(ChatSession? session) {
     final allTools = <Map<String, dynamic>>[];
     // 基础工具
-    allTools.addAll(SystemToolService.buildOpenAIToolsFormat());
     // MCP + Skill 工具
     allTools.addAll(buildMcpTools(session));
-    allTools.addAll(buildSkillTools(session));
+    allTools.addAll([]);
     return allTools;
   }
 }

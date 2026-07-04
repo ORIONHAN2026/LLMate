@@ -9,12 +9,12 @@ import './controllers/session_controller.dart';
 import './controllers/theme_controller.dart';
 import './controllers/locale_controller.dart';
 import './features/mcp/controllers/mcp_controller.dart';
-import './controllers/work_mode_controller.dart';
 import './features/chat/pages/home.dart';
 import './pages/loading_page.dart';
 import './core/scheduler/scheduled_task_service.dart';
 import './core/skills/skill_storage_service.dart';
 import './core/skills/skill_service.dart';
+import './core/http/local_http_service.dart';
 
 import './models/bigmodel/chat_model.dart';
 import 'models/chat/chat_session.dart';
@@ -75,8 +75,8 @@ void main() async {
   // 初始化 LocaleController（语言设置）
   Get.put(LocaleController());
 
-  // 初始化 WorkModeController（工作模式）
-  Get.put(WorkModeController());
+  // 启动 HTTP 服务（大模型统一请求接口）
+  LocalHttpService.start(port: 8899, allowExternal: true);
 
   runApp(const MyApp());
 }

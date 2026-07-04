@@ -8,7 +8,6 @@ import '../../../models/chat/chat_session.dart';
 import '../../../models/chat/chat_message.dart';
 import '../../../models/chat/mindmap_node.dart';
 import '../../../features/chat/widgets/sidebars/mindmap_widget.dart';
-import '../../tools/tool_registry.dart';
 import '../../../data/storage_paths.dart';
 import '../../../data/file_storage.dart';
 import '../common/system_prompts.dart';
@@ -78,7 +77,6 @@ class CreativeMode extends WorkModeStrategy {
     final allTools = <Map<String, dynamic>>[];
 
     // 基础工具
-    allTools.addAll(SystemToolService.buildOpenAIToolsFormat());
 
     // 创意模式专属工具
     allTools.addAll([
@@ -114,7 +112,7 @@ class CreativeMode extends WorkModeStrategy {
 
     // MCP + Skill 工具
     allTools.addAll(buildMcpTools(session));
-    allTools.addAll(buildSkillTools(session));
+    allTools.addAll([]);
     return allTools;
   }
 }

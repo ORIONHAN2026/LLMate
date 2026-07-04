@@ -10,7 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../../models/models.dart';
 import '../../models/controllers/model_controller.dart';
-import '../../../core/skills/skill_service.dart';
+
 import '../widgets/sidebars/chat_left_sidebar.dart';
 import '../widgets/sidebars/chat_right_sidebar.dart';
 import '../widgets/chat_input_widget.dart';
@@ -19,7 +19,7 @@ import 'package:llmwork/utils/responsive_utils.dart';
 import '../widgets/chat_conversation_area.dart';
 import '../../settings/pages/modelssetting.dart';
 import '../../mcp/pages/mcp_management_page.dart';
-import '../../skills/pages/skill_management_page.dart';
+
 import '../../settings/pages/other_settings_page.dart';
 
 class CodeChatHomePage extends StatefulWidget {
@@ -72,7 +72,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
 
     _loadModels();
     _loadSessions(); // 加载保存的会话
-    SkillService.ensureLoaded(); // 异步加载技能（无需 await，有缓存机制）
+
 
     // 添加滚动监听器来保存滚动位置
     _scrollController.addListener(_onScrollChanged);
@@ -599,32 +599,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                   context,
                   MaterialPageRoute(
                     builder: (context) => const McpManagementPage(),
-                  ),
-                );
-              }
-            });
-          },
-        ),
-        PopupMenuItem(
-          height: 48,
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.wand_stars,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-              const SizedBox(width: 12),
-              Text(l10n.skillManagement, style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () async {
-              if (mounted) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SkillManagementPage(),
                   ),
                 );
               }

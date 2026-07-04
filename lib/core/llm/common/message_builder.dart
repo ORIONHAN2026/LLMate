@@ -1,6 +1,6 @@
 import '../../../models/bigmodel/chat_model.dart';
 import '../../../models/chat/chat_session.dart';
-import '../../skills/skill_service.dart';
+
 import './system_prompts.dart';
 
 /// 系统提示词构建 — 所有 provider 共用的系统提示词组装逻辑
@@ -48,27 +48,18 @@ class MessageBuilder {
       'content': CommonSystemPrompts.noWebSearch,
     });
 
-    // 4. 技能提示词注入
-    if (session?.skill != null) {
-      final skillPrompt = SkillService.buildSkillPrompt(session!.skill);
-      if (skillPrompt.isNotEmpty) {
-        systemMessages.add({'role': 'system', 'content': skillPrompt});
-      }
-    }
-
-    // 4.5. MCP 工具描述注入（添加/刷新时已生成 prompt，直接读取）
+    // 4. MCP 工具描述注入（添加/刷新时已生成 prompt，直接读取）
     if (session?.mcp?.prompt != null && session!.mcp!.prompt!.isNotEmpty) {
       systemMessages.add({'role': 'system', 'content': session.mcp!.prompt!});
     }
 
-    // 4.6. 连接器与技能关系描述提示词
+    // 5. 连接器关系描述提示词
     if (session?.connectPrompt != null &&
         session!.connectPrompt!.isNotEmpty) {
       final mcpName = session.mcp?.name ?? '未选择连接器';
-      final skillName = session.skill?.name ?? '未选择技能';
       systemMessages.add({
         'role': 'system',
-        'content': '连接器【$mcpName】和技能[$skillName]的使用关系：${session.connectPrompt}',
+        'content': '连接器【$mcpName】的使用关系：${session.connectPrompt}',
       });
     }
 

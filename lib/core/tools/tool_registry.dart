@@ -1005,12 +1005,12 @@ print("文档修改成功: $filePath")
 
       final filePath = StoragePaths.noteFile(
         sessionId: session.sessionId,
-        workMode: session.workMode,
+        workMode: 'conversation',
         workDirectory: session.workDirectory,
       );
       await StoragePaths.ensureModeDir(
         sessionId: session.sessionId,
-        workMode: session.workMode,
+        workMode: 'conversation',
         workDirectory: session.workDirectory,
       );
       await File(filePath).writeAsString(content);

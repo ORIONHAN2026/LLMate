@@ -8,7 +8,7 @@ import '../../../controllers/theme_controller.dart';
 import '../../../controllers/locale_controller.dart';
 import './modelssetting.dart';
 import '../../mcp/pages/mcp_management_page.dart';
-import '../../skills/pages/skill_management_page.dart';
+
 
 /// 设置页面 - 左侧导航 + 右侧内容区
 class SettingsPage extends StatefulWidget {
@@ -39,14 +39,6 @@ class _SettingsPageState extends State<SettingsPage> {
         icon: CupertinoIcons.link,
         label: l10n.connectorManagement,
         builder: (actions) => McpManagementPage(
-          embedded: true,
-          onActionsChanged: actions,
-        ),
-      ),
-      _SettingsNavItem(
-        icon: CupertinoIcons.wand_stars,
-        label: l10n.skillManagement,
-        builder: (actions) => SkillManagementPage(
           embedded: true,
           onActionsChanged: actions,
         ),

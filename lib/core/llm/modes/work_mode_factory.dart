@@ -1,26 +1,7 @@
 import './work_mode_strategy.dart';
 import './conversation_mode.dart';
-import './contract_mode.dart';
-import './invoice_mode.dart';
-import './chatroom_mode.dart';
-import './creative_mode.dart';
-import './task_mode.dart';
 
-/// 根据 workMode 字符串创建对应的策略实例
-WorkModeStrategy createWorkModeStrategy(String workMode) {
-  switch (workMode) {
-    case 'contract':
-      return ContractMode();
-    case 'invoice':
-      return InvoiceMode();
-    case 'chatroom':
-      return ChatroomMode();
-    case 'creative':
-      return CreativeMode();
-    case 'task':
-      return TaskMode();
-    case 'conversation':
-    default:
-      return ConversationMode();
-  }
+/// 创建默认策略实例（对话模式）
+WorkModeStrategy createWorkModeStrategy([String? workMode]) {
+  return ConversationMode();
 }

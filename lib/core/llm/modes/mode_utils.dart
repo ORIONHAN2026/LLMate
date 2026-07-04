@@ -4,7 +4,7 @@ import '../../../models/bigmodel/chat_model.dart';
 import '../../../models/chat/chat_session.dart';
 import '../../../models/chat/chat_message.dart';
 import '../../../models/chat/chat_attachment.dart';
-import '../../skills/skill_service.dart';
+
 import '../../../data/storage_paths.dart';
 import '../common/system_prompts.dart';
 
@@ -330,40 +330,6 @@ List<Map<String, dynamic>> buildMcpTools(ChatSession? session) {
   return tools;
 }
 
-/// 构建技能工具列表
-List<Map<String, dynamic>> buildSkillTools(ChatSession? session) {
-  final tools = <Map<String, dynamic>>[];
-  if (session?.skill == null || session!.skill!.tools == null) return tools;
-
-  for (final tool in session.skill!.tools!) {
-    final safeName = tool.name.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
-    if (safeName != tool.name) {
-      _safeNameToOriginal[safeName] = tool.name;
-    }
-    final schema = <String, dynamic>{
-      'type': 'function',
-      'function': <String, dynamic>{
-        'name': safeName,
-        'description': tool.description,
-      },
-    };
-    if (tool.inputSchema.isNotEmpty) {
-      final s = Map<String, dynamic>.from(tool.inputSchema);
-      if (!s.containsKey('type')) s['type'] = 'object';
-      if (!s.containsKey('properties')) s['properties'] = <String, dynamic>{};
-      schema['function']['parameters'] = s;
-    } else {
-      schema['function']['parameters'] = {
-        'type': 'object',
-        'properties': <String, dynamic>{},
-        'required': <String>[],
-      };
-    }
-    tools.add(schema);
-  }
-  return tools;
-}
-
 /// 构建通用系统提示词（所有模式共享部分）
 List<Map<String, dynamic>> buildBaseSystemMessages({
   ChatModel? model,
@@ -376,13 +342,6 @@ List<Map<String, dynamic>> buildBaseSystemMessages({
   if (model?.chatSettings?.systemPrompt != null &&
       model!.chatSettings!.systemPrompt.isNotEmpty) {
     messages.add({'role': 'system', 'content': model.chatSettings!.systemPrompt});
-  }
-
-  if (session?.skill != null) {
-    final sp = SkillService.buildSkillPrompt(session!.skill);
-    if (sp.isNotEmpty) {
-      messages.add({'role': 'system', 'content': sp});
-    }
   }
 
   if (thinkEnabled) {

@@ -110,7 +110,7 @@ class ScheduledTaskService {
       final client = LlmClient(updatedSession);
       String accumulatedContent = '';
 
-      final responseStream = client.LLMChat(userMessage);
+      final responseStream = client.LLMChat(userMessage: userMessage);
       await for (final chunkMap in responseStream) {
         // 处理记忆更新
         final memoryUpdatedJson = chunkMap['memory_updated'];

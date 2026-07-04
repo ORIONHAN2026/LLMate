@@ -247,12 +247,6 @@ class SkillService {
   static List<Map<String, dynamic>> buildSkillTools(ChatSession? session) {
     if (session == null) return [];
     final tools = <Map<String, dynamic>>[];
-
-    // 会话绑定的技能
-    if (session.skill != null) {
-      final t = _skillToTool(session.skill!);
-      if (t != null) tools.add(t);
-    }
     return tools;
   }
 

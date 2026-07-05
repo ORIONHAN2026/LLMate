@@ -10,7 +10,6 @@ import '../../models/chat/chat_message.dart';
 /// OpenAI 兼容协议 Provider
 ///
 /// 只负责 HTTP 通信：请求构建、SSE 流解析、错误处理。
-/// 消息组装和工具构建由 WorkModeStrategy 负责。
 class OpenAiProvider {
   static const int defaultTimeout = 30000;
 

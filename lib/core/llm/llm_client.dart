@@ -8,7 +8,6 @@ import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import '../tools/tool_execution_service.dart';
-import '../../features/models/controllers/model_controller.dart';
 import './openai_provider.dart';
 import './common/message_builder.dart';
 import './common/system_prompts.dart';
@@ -25,23 +24,8 @@ class LlmClient {
   LlmClient(ChatSession session)
     : _session = session,
       _provider = OpenAiProvider() {
-    // 安全配置模型：优先使用会话模型，否则使用全局默认模型
-    final chatModel = session.chatModel;
-    if (chatModel != null) {
-      _provider.configure(chatModel);
-      _provider.applySessionSettings(session);
-    } else {
-      debugPrint('⚠️ LlmClient: 会话未配置模型，尝试使用全局默认模型');
-      // 尝试从 ModelController 获取默认模型
-      try {
-        final modelController = Get.find<ModelController>();
-        if (modelController.models.isNotEmpty) {
-          _provider.configure(modelController.models.last);
-        }
-      } catch (e) {
-        debugPrint('❌ LlmClient: 无法获取默认模型: $e');
-      }
-    }
+    _provider.configure(session.chatModel!);
+    _provider.applySessionSettings(session);
   }
 
   ChatModel? get model => _session.chatModel;
@@ -56,89 +40,32 @@ class LlmClient {
     return MessageBuilder.buildSystemPrompt(model: model, session: session);
   }
 
-  /// 构建完整的消息列表（系统提示词 + 历史消息 + 用户消息）
-  Future<List<Map<String, dynamic>>> _buildMessages({
-    required ChatModel? model,
-    required ChatMessage userMessage,
-    required ChatSession session,
-  }) async {
-    final messages = <Map<String, dynamic>>[];
-    final workDir = getEffectiveWorkDir(session);
-
-    // 1. 通用系统提示词
-    messages.addAll(
-      buildBaseSystemMessages(
-        model: model,
-        session: session,
-        thinkEnabled: session.deepThink,
-        workDir: workDir,
-      ),
-    );
-
-    // 2. 历史消息
-    if (session.messages.isNotEmpty) {
-      appendHistoryMessages(messages, session, userMessage);
-    }
-
-    // 4. 核心规则 + 语言（紧邻用户消息前）
-    messages.add({'role': 'system', 'content': CommonSystemPrompts.coreRules});
-    messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.responseLanguage(
-        Get.locale?.languageCode ?? 'zh',
-      ),
-    });
-
-    // 5. 用户消息
-    messages.add({'role': 'user', 'content': buildUserContent(userMessage)});
-
-    return messages;
-  }
-
-  /// 构建可用的工具列表（MCP + Skill）
-  List<Map<String, dynamic>> _buildTools(ChatSession? session) {
-    final allTools = <Map<String, dynamic>>[];
-    // MCP + Skill 工具
-    allTools.addAll(buildMcpTools(session));
-    return allTools;
-  }
-
-  /// 发送消息并获取流式响应
-  ///
-  /// 支持两种请求来源：
-  /// - [userMessage] 非空：本地客户端发起，需要组装消息和工具
-  /// - [prebuiltMessages] 非空：HTTP API 发起，消息已组装好
-  Stream<Map<String, dynamic>> LLMChat({
-    ChatMessage? userMessage,
-    List<Map<String, dynamic>>? prebuiltMessages,
-  }) async* {
+  /// 发送消息并获取流式响应（递归处理 MCP 工具调用，直到无工具调用为止）
+  Stream<Map<String, dynamic>> LLMChat(ChatMessage userMessage) async* {
     _cancelled = false;
     bool doneReceived = false;
 
-    List<Map<String, dynamic>> messages;
-    List<Map<String, dynamic>> tools;
-    bool enableToolCall;
-
-    if (prebuiltMessages != null && prebuiltMessages.isNotEmpty) {
-      // HTTP API 请求：消息已组装好，支持 MCP 工具执行
-      messages = prebuiltMessages;
-      tools = _buildTools(_session);
-      enableToolCall = tools.isNotEmpty;
-      debugPrint('🧠 [LLMChat] HTTP API 模式，使用预构建消息: ${messages.length} 条');
-    } else if (userMessage != null) {
-      // 本地客户端请求：需要组装消息和工具
-      messages = await _buildMessages(
-        model: model,
-        userMessage: userMessage,
-        session: _session,
+    if (kDebugMode) {
+      debugPrint(
+        '🧠 [LLMChat] 会话消息数: ${_session.messages.length}, 当前消息ID: ${userMessage.msgId}',
       );
-      tools = _buildTools(_session);
-      enableToolCall = true;
-      debugPrint('🧠 [LLMChat] 本地客户端模式，组装消息: ${messages.length} 条');
-    } else {
-      debugPrint('❌ [LLMChat] 错误: 必须提供 userMessage 或 prebuiltMessages');
-      return;
+      for (int i = 0; i < _session.messages.length; i++) {
+        final m = _session.messages[i];
+        final preview =
+            m.content.length > 50
+                ? '${m.content.substring(0, 50)}...'
+                : m.content;
+        debugPrint('  [$i] ${m.role.name}: $preview (id: ${m.msgId})');
+      }
     }
+
+    var messages = await _buildMessages(
+      model: model,
+      userMessage: userMessage,
+      session: _session,
+    );
+
+    final tools = _buildTools(_session);
 
     final requestSnapshot = List<Map<String, dynamic>>.from(
       messages.map((m) => Map<String, dynamic>.from(m)),
@@ -149,8 +76,9 @@ class LlmClient {
       for (int i = 0; i < messages.length; i++) {
         final m = messages[i];
         final content = m['content']?.toString() ?? '';
-
-        debugPrint('  [$i] ${m['role']}: $content');
+        final preview =
+            content.length > 80 ? '${content.substring(0, 80)}...' : content;
+        debugPrint('  [$i] ${m['role']}: $preview');
       }
     }
 
@@ -231,7 +159,7 @@ class LlmClient {
           _finalizeNativeToolCalls(nativeToolCallDeltas);
 
       // HTTP API 模式不执行工具调用，直接返回结果
-      if (!enableToolCall || _cancelled || parsedCalls.isEmpty) {
+      if (_cancelled || parsedCalls.isEmpty) {
         if (!_cancelled) {
           _writeRequestLog(
             requestMessages: requestSnapshot,
@@ -342,11 +270,53 @@ class LlmClient {
     }
   }
 
-  Stream<Map<String, String?>> sendMessageStreamWithMessages(
-    List<Map<String, dynamic>> messages,
-  ) => _provider.sendMessageStream(messages: messages, session: _session);
-
   void cancel() => _cancelled = true;
+
+  // ======================== 消息和工具构建 ========================
+
+  /// 构建完整的消息列表（系统提示词 + 历史消息 + 用户消息）
+  Future<List<Map<String, dynamic>>> _buildMessages({
+    required ChatModel? model,
+    required ChatMessage userMessage,
+    required ChatSession session,
+  }) async {
+    final messages = <Map<String, dynamic>>[];
+    final workDir = getEffectiveWorkDir(session);
+
+    // 1. 通用系统提示词
+    messages.addAll(buildBaseSystemMessages(
+      model: model,
+      session: session,
+      thinkEnabled: session.deepThink,
+      workDir: workDir,
+    ));
+
+    // 2. 历史消息
+    if (session.messages.isNotEmpty) {
+      appendHistoryMessages(messages, session, userMessage);
+    }
+
+    // 3. 核心规则 + 语言（紧邻用户消息前）
+    messages.add({'role': 'system', 'content': CommonSystemPrompts.coreRules});
+    messages.add({
+      'role': 'system',
+      'content': CommonSystemPrompts.responseLanguage(
+        Get.locale?.languageCode ?? 'zh',
+      ),
+    });
+
+    // 4. 用户消息
+    messages.add({'role': 'user', 'content': buildUserContent(userMessage)});
+
+    return messages;
+  }
+
+  /// 构建可用的工具列表（MCP + Skill）
+  List<Map<String, dynamic>> _buildTools(ChatSession? session) {
+    final allTools = <Map<String, dynamic>>[];
+    allTools.addAll(buildMcpTools(session));
+    return allTools;
+  }
 
   // ======================== 请求日志 ========================
 

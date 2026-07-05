@@ -2949,7 +2949,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           context,
           AppLocalizations.of(context)!.mcpServiceSelected(service.name),
         );
-        // MCP 懒连接：不在选择时预初始化，等 LLM 返回工具调用时再按需连接
+        // 立即初始化 MCP 连接，填充工具列表，确保后续发送时 tools 可用
+        McpService.initForSession(updatedSession);
       } else {
         // 关闭 MCP 时清理客户端
         final oldServiceName = currentSession.mcp?.mcpId;
@@ -3180,7 +3181,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // }
 
       // 直接调用 LLMClient（本地聊天不走 HTTP）
-      final responseStream = client.LLMChat(userMessage: userMessage);
+      final responseStream = client.LLMChat(userMessage);
 
       // 处理流式响应并更新UI（LlmClient 已在内部处理 MCP 工具调用和 follow-up）
       // chunk 格式: {content,think,tool}  三个字段互斥，每次必有一个有值

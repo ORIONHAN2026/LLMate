@@ -110,7 +110,7 @@ class ScheduledTaskService {
       final client = LlmClient(updatedSession);
       String accumulatedContent = '';
 
-      final responseStream = client.LLMChat(userMessage: userMessage);
+      final responseStream = client.LLMChat(userMessage);
       await for (final chunkMap in responseStream) {
         final contentChunk = chunkMap['content'] ?? '';
         final thinkChunk = chunkMap['think'] ?? '';

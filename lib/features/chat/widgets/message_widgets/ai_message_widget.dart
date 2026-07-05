@@ -915,7 +915,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
       // 使用 LLM Hub 创建客户端
       client = LlmClient(currentSession);
-      final responseStream = client.LLMChat(userMessage: userMessage);
+      final responseStream = client.LLMChat(userMessage);
 
       await for (final chunkMap in responseStream) {
         // 检查是否被停止 - 通过查找会话列表中的会话状态

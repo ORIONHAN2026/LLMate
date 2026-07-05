@@ -12,7 +12,6 @@
 | `tools/` | 工具注册与执行 | `ToolRegistry`, `ToolExecutionService` |
 | `mcp/` | MCP 协议客户端 | `McpService`, `McpJsonParser` |
 | `skills/` | 技能管理 | `SkillService`, `SkillStorageService` |
-| `memory/` | 对话记忆压缩 | `MemoryCompressor` |
 | `scheduler/` | 定时任务 | `ScheduledTaskService` |
 | `config/` | 功能开关 | `FeatureToggleService` |
 | `utils/` | 工具函数 | `ModelIconUtils` |

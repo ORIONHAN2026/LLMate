@@ -8,7 +8,6 @@ import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import '../tools/tool_execution_service.dart';
-import '../../controllers/session_controller.dart';
 import '../../features/models/controllers/model_controller.dart';
 import './openai_provider.dart';
 import './common/message_builder.dart';

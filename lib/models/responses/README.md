@@ -8,11 +8,7 @@
 
 | 文件 | 行数 | 对应厂商 |
 |------|------|----------|
-| `openai_response.dart` | 170 | OpenAI |
-| `deepseek_response.dart` | 191 | DeepSeek |
-| `zhipu_response.dart` | 170 | 智谱 AI (GLM) |
-| `qwen_response.dart` | 170 | 阿里云通义千问 |
-| `modelscope_response.dart` | 170 | ModelScope |
+| `openai_response.dart` | 170 | OpenAI (兼容格式) |
 
 ## 结构说明
 

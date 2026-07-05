@@ -22,12 +22,9 @@ chat/
     │   └── chat_message_widget.dart # 共享类型定义和回调
     ├── sidebars/                    # 侧边栏组件
     │   ├── chat_left_sidebar.dart   # 左侧：会话列表、搜索、收藏
-    │   ├── chat_right_sidebar.dart  # 右侧：记忆/文件/模式面板
+    │   ├── chat_right_sidebar.dart  # 右侧：会话配置面板
     │   ├── contract_sidebar.dart    # 合同模式面板
     │   ├── invoice_sidebar.dart     # 发票模式面板
     │   ├── chatroom_sidebar.dart    # 聊天室模式面板
     │   └── mindmap_widget.dart      # 脑图渲染组件
-    └── attachment/                   # 附件组件
-        ├── attachment_chip_widget.dart   # 单个附件卡片
-        └── attachment_list_widget.dart   # 附件列表（带动画）
 ```

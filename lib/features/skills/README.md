@@ -9,9 +9,7 @@ AI 技能的浏览、创建、编辑、导入导出和市场安装。
 ```
 skills/
 └── pages/
-    ├── skill_management_page.dart    # 技能管理页：列表/创建/编辑/删除/导入ZIP/导出
-    ├── skill_edit_page.dart          # 技能编辑器：SKILL.md 编辑 + @提及自动补全
-    └── skill_marketplace_page.dart   # 技能市场：分类浏览/搜索/安装预设技能
+    └── skill_edit_page.dart          # 技能编辑器：SKILL.md 编辑 + @提及自动补全
 ```
 
 ## 技能市场分类

@@ -8,10 +8,9 @@
 
 | 文件 | 行数 | 说明 |
 |------|------|------|
-| `session_controller.dart` | 661 | **会话控制器**：会话 CRUD、消息更新、懒加载、记忆压缩、定时任务调度 |
+| `session_controller.dart` | 661 | **会话控制器**：会话 CRUD、消息更新、懒加载、定时任务调度 |
 | `theme_controller.dart` | 90 | 主题控制器：亮色/暗色/跟随系统，持久化切换 |
 | `locale_controller.dart` | 54 | 语言控制器：中文/英文切换，持久化 |
-| `work_mode_controller.dart` | 59 | 工作模式控制器：商务/金融/法律/营销模式切换 |
 
 ## 使用方式
 
@@ -34,7 +33,6 @@ themeCtrl.toggleTheme();
 1. `StorageService` (数据层)
 2. `ThemeController` (主题)
 3. `LocaleController` (语言)
-4. `WorkModeController` (工作模式)
-5. `ModelController` (模型列表)
-6. `SessionController` (会话)
+4. `ModelController` (模型列表)
+5. `SessionController` (会话)
 7. `McpController` (MCP 配置)

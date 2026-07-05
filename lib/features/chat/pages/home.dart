@@ -43,7 +43,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   final GlobalKey _modelSelectorKey = GlobalKey(); // 模型选择器的key
   bool _isSidebarCollapsed = false; // 侧边栏折叠状态
   double _sidebarWidth = 200.0; // 左侧边栏宽度，可调整
-  bool _isRightSidebarCollapsed = true; // 右侧边栏折叠状态（默认隐藏）
+  bool _isRightSidebarCollapsed = false; // 右侧边栏折叠状态（默认显示）
   double _rightSidebarWidth = 440.0; // 右侧边栏宽度
   bool _isResizeHandleHovered = false; // 拖动条悬停状态
   bool _isRightResizeHandleHovered = false; // 右侧拖动条悬停状态

@@ -132,6 +132,12 @@ abstract class AppLocalizations {
   /// **'Connector (MCP)'**
   String get connectorManagement;
 
+  /// No description provided for @domainManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Management'**
+  String get domainManagement;
+
   /// No description provided for @skillManagement.
   ///
   /// In en, this message translates to:
@@ -2999,6 +3005,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Marketing planning, brand promotion, competitive analysis'**
   String get workModeMarketingDesc;
+
+  /// No description provided for @domainSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Settings'**
+  String get domainSettings;
+
+  /// No description provided for @serviceStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Service'**
+  String get serviceStatus;
+
+  /// No description provided for @localService.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Service'**
+  String get localService;
+
+  /// No description provided for @serviceStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Service stopped'**
+  String get serviceStopped;
+
+  /// No description provided for @serviceRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running'**
+  String get serviceRunning;
+
+  /// No description provided for @serviceStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting...'**
+  String get serviceStarting;
+
+  /// No description provided for @restart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get restart;
+
+  /// No description provided for @certificateSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate Settings'**
+  String get certificateSettings;
+
+  /// No description provided for @httpsStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTPS Status'**
+  String get httpsStatus;
+
+  /// No description provided for @domainAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Address'**
+  String get domainAddress;
+
+  /// No description provided for @domainHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. api.example.com'**
+  String get domainHint;
+
+  /// No description provided for @domainDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'After setting, the session service URL will use this address. HTTP default port 80, HTTPS default port 443.'**
+  String get domainDesc;
+
+  /// No description provided for @sslCertificate.
+  ///
+  /// In en, this message translates to:
+  /// **'SSL Certificate'**
+  String get sslCertificate;
+
+  /// No description provided for @sslPrivateKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Private Key'**
+  String get sslPrivateKey;
+
+  /// No description provided for @enabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get enabled;
+
+  /// No description provided for @disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get disabled;
+
+  /// No description provided for @httpsEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTPS'**
+  String get httpsEnabled;
+
+  /// No description provided for @httpsEnabledDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate uploaded, HTTPS auto-enabled'**
+  String get httpsEnabledDesc;
+
+  /// No description provided for @httpsDisabledDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload certificate (crt/cert + key) to auto-enable HTTPS'**
+  String get httpsDisabledDesc;
+
+  /// No description provided for @domainInfoDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'After configuring the service address, the session service URL will display this address. External clients can access the session API (/llmwork/chat/completions etc.) through this address.'**
+  String get domainInfoDesc;
+
+  /// No description provided for @pleaseEnterDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter service address'**
+  String get pleaseEnterDomain;
+
+  /// No description provided for @domainSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Service configuration saved'**
+  String get domainSaved;
 }
 
 class _AppLocalizationsDelegate

@@ -36,20 +36,14 @@ class _SessionItem extends StatefulWidget {
 class _SessionItemState extends State<_SessionItem>
     with SingleTickerProviderStateMixin {
   bool _isHovered = false;
-  bool _isEditing = false;
   late AnimationController _loadingAnimationController;
   late Animation<double> _loadingAnimation;
   final sessionController = Get.find<SessionController>();
   List<ChatSession> get chatSessions => sessionController.sessions;
-  late TextEditingController _nameController;
-  late FocusNode _nameFocusNode;
+
   @override
   void initState() {
     super.initState();
-
-    // 初始化文本编辑器和焦点节点
-    _nameController = TextEditingController(text: widget.session.name);
-    _nameFocusNode = FocusNode();
 
     // 初始化加载动画控制器
     _loadingAnimationController = AnimationController(
@@ -74,11 +68,6 @@ class _SessionItemState extends State<_SessionItem>
   void didUpdateWidget(_SessionItem oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 更新文本控制器内容
-    if (widget.session.name != oldWidget.session.name) {
-      _nameController.text = widget.session.name;
-    }
-
     // 监听会话发送状态变化
     if (widget.session.isSending != oldWidget.session.isSending) {
       if (widget.session.isSending) {
@@ -92,8 +81,6 @@ class _SessionItemState extends State<_SessionItem>
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _nameFocusNode.dispose();
     _loadingAnimationController.dispose();
     super.dispose();
   }
@@ -130,42 +117,35 @@ class _SessionItemState extends State<_SessionItem>
         onExit: (_) => setState(() => _isHovered = false),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap:
-              _isEditing
-                  ? null
-                  : () => widget.onSessionSwitch(widget.session), // 编辑模式下禁用会话切换
+          onTap: () => widget.onSessionSwitch(widget.session),
           child: Padding(
             padding: const EdgeInsets.all(6),
             child: Row(
               children: [
                 // Emoji 头像
-                GestureDetector(
-                  behavior: HitTestBehavior.deferToChild,
-                  onTap: () => _showEmojiPicker(context),
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color:
-                          widget.isSelected
-                              ? Theme.of(
-                                context,
-                              ).colorScheme.primary.withOpacity(0.1)
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest
-                                  .withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
-                    child:
-                        widget.session.isSending
-                            ? _buildLoadingIcon()
-                            : Text(
-                              widget.session.emoji,
-                              style: const TextStyle(fontSize: 16),
-                            ),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color:
+                        widget.isSelected
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.1)
+                            : Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  alignment: Alignment.center,
+                  child:
+                      widget.session.isSending
+                          ? _buildLoadingIcon()
+                          : Text(
+                            widget.session.emoji,
+                            style: const TextStyle(fontSize: 16),
+                          ),
                 ),
                 const SizedBox(width: 6),
                 // 对话信息
@@ -177,10 +157,19 @@ class _SessionItemState extends State<_SessionItem>
                       Row(
                         children: [
                           Expanded(
-                            child:
-                                _isEditing
-                                    ? _buildNameEditor()
-                                    : _buildNameDisplay(),
+                            child: Text(
+                              widget.session.name,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    widget.isSelected
+                                        ? Theme.of(context).colorScheme.onSurface
+                                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
 
                           // 收藏指示器 - 对收藏的会话始终显示小星星
@@ -301,306 +290,6 @@ class _SessionItemState extends State<_SessionItem>
     );
   }
 
-  // 构建名称显示组件
-  Widget _buildNameDisplay() {
-    return Tooltip(
-      message: '双击修改会话名称',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onDoubleTap: () => _showRenameDialog(context),
-        child: Text(
-          widget.session.name,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color:
-                widget.isSelected
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-    );
-  }
-
-  // 构建名称编辑器组件
-  Widget _buildNameEditor() {
-    return TextField(
-      controller: _nameController,
-      focusNode: _nameFocusNode,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color:
-            widget.isSelected
-                ? Theme.of(context).colorScheme.onSurface
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-      ),
-      decoration: const InputDecoration(
-        isDense: true,
-        contentPadding: EdgeInsets.zero,
-        border: InputBorder.none,
-      ),
-      cursorWidth: 1.0, // 设置光标宽度为1.0像素（约为默认的2/3）
-      cursorHeight: 12.0, // 设置光标高度为8.0像素（约为12px字体的2/3）
-      maxLines: 1,
-      onSubmitted: _finishEditing,
-      onTapOutside: (_) => _finishEditing(_nameController.text),
-    );
-  }
-
-  // 开始编辑会话名称
-  void _startEditing() {
-    if (_isEditing) return; // 防止重复调用
-
-    setState(() {
-      _isEditing = true;
-    });
-
-    // 使用更短的延迟确保状态更新后立即获取焦点
-    Future.delayed(const Duration(milliseconds: 10), () {
-      if (mounted && _nameFocusNode.canRequestFocus) {
-        _nameFocusNode.requestFocus();
-        // 将光标定位到文字末尾，而不是选中所有文字
-        _nameController.selection = TextSelection.fromPosition(
-          TextPosition(offset: _nameController.text.length),
-        );
-      }
-    });
-  }
-
-  // 完成编辑会话名称
-  void _finishEditing(String newName) {
-    if (!_isEditing) return;
-
-    setState(() {
-      _isEditing = false;
-    });
-
-    final trimmedName = newName.trim();
-    if (trimmedName.isEmpty) {
-      // 如果名字为空，设置为默认名称"新会话"
-      final updatedSession = widget.session.copyWith(
-        title: AppLocalizations.of(context)!.newSession,
-      );
-      sessionController.updateSession(updatedSession);
-      _nameController.text =
-          AppLocalizations.of(context)!.newSession; // 同步更新控制器文本
-    } else if (trimmedName != widget.session.name) {
-      // 更新会话名称
-      final updatedSession = widget.session.copyWith(title: trimmedName);
-      sessionController.updateSession(updatedSession);
-    } else {
-      // 恢复原始名称
-      _nameController.text = widget.session.name;
-    }
-  }
-
-  void _showEmojiPicker(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AppLocalizations.of(context)!.newSession,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  children:
-                      kSessionEmojis.map((emoji) {
-                        final isSelected = widget.session.emoji == emoji;
-                        return GestureDetector(
-                          onTap: () {
-                            final updatedSession = widget.session.copyWith(
-                              emoji: emoji,
-                            );
-                            sessionController.updateSession(updatedSession);
-                            Navigator.of(context).pop();
-                          },
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color:
-                                  isSelected
-                                      ? Theme.of(context).colorScheme.primary
-                                          .withValues(alpha: 0.15)
-                                      : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                              border:
-                                  isSelected
-                                      ? Border.all(
-                                        color:
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                        width: 1.5,
-                                      )
-                                      : null,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              emoji,
-                              style: const TextStyle(fontSize: 22),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showRenameDialog(BuildContext context) {
-    final nameController = TextEditingController(text: widget.session.name);
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          title: Row(
-            children: [
-              Icon(
-                CupertinoIcons.pencil,
-                size: 14,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '重命名会话',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '请输入新的会话名称',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[800],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: nameController,
-                autofocus: true,
-                style: const TextStyle(fontSize: 12),
-                decoration: InputDecoration(
-                  hintText: '会话名称',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                ),
-                onSubmitted: (value) {
-                  if (value.trim().isNotEmpty) {
-                    final updatedSession = widget.session.copyWith(
-                      title: value.trim(),
-                    );
-                    sessionController.updateSession(updatedSession);
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: const Size(60, 28),
-                textStyle: const TextStyle(fontSize: 11),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              child: Text(
-                '取消',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final value = nameController.text.trim();
-                if (value.isNotEmpty) {
-                  final updatedSession = widget.session.copyWith(title: value);
-                  sessionController.updateSession(updatedSession);
-                }
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: const Size(60, 28),
-                textStyle: const TextStyle(fontSize: 11),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(CupertinoIcons.checkmark, size: 10),
-                  SizedBox(width: 4),
-                  Text('确定'),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 
 class ChatLeftSidebar extends StatefulWidget {

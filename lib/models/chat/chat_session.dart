@@ -9,6 +9,15 @@ import './chat_setting.dart';
 import './scheduled_task.dart';
 import './contract_info.dart';
 
+/// 生成类似 DeepSeek/OpenAI 风格的 API Key
+/// 格式: sk-{32位随机hex字符串}
+String generateSessionApiKey() {
+  final random = math.Random.secure();
+  final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+  final hexString = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  return 'sk-$hexString';
+}
+
 const List<String> kSessionEmojis = [
   // 表情
   '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊',
@@ -121,6 +130,36 @@ class ChatSession {
   final List<ChatCommand> sessionQuickCommands;
   final ScheduledTask? scheduledTask;
 
+  /// 会话级别的 API 密钥，用于外部 HTTP 请求认证
+  /// 格式: sk-{64位随机hex字符串}，类似 DeepSeek/OpenAI 风格
+  final String apiKey;
+
+  // === 用量配额设置 ===
+
+  /// 是否启用用量限制
+  final bool quotaEnabled;
+
+  /// Token 用量上限（null = 不限制）
+  final int? quotaTokenLimit;
+
+  /// 费用预算上限，美元（null = 不限制）
+  final double? quotaCostLimit;
+
+  /// 请求次数上限（null = 不限制）
+  final int? quotaRequestLimit;
+
+  /// 配额重置周期，null 表示永不过期
+  /// - 'daily': 每天重置
+  /// - 'monthly': 每月重置
+  /// - null: 不自动重置
+  final String? quotaResetPeriod;
+
+  /// 配额周期起始时间（用于判断是否该重置了）
+  final DateTime? quotaPeriodStart;
+
+  /// 当前周期已使用的请求次数（增量计数，跟随重置周期清零）
+  final int quotaRequestCount;
+
   ChatSession({
     required this.sessionId,
     required this.name,
@@ -147,9 +186,18 @@ class ChatSession {
     this.totalOutputTokens = 0,
     this.totalCost = 0.0,
     String? emoji,
+    String? apiKey,
+    this.quotaEnabled = false,
+    this.quotaTokenLimit,
+    this.quotaCostLimit,
+    this.quotaRequestLimit,
+    this.quotaResetPeriod,
+    this.quotaPeriodStart,
+    this.quotaRequestCount = 0,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcpId = mcpId ?? mcp?.mcpId,
-       emoji = emoji ?? randomEmoji();
+       emoji = emoji ?? randomEmoji(),
+       apiKey = apiKey ?? generateSessionApiKey();
 
   // 获取会话的预览文本
   String get previewText {
@@ -183,6 +231,119 @@ class ChatSession {
     }
   }
 
+  /// 配额状态（用于 UI 展示和 HTTP 检查）
+  QuotaCheckResult checkQuota() {
+    if (!quotaEnabled) {
+      return QuotaCheckResult(exceeded: false);
+    }
+
+    // 周期模式的用量数据
+    final periodBilling = getPeriodBilling();
+    final effectiveTokens = quotaPeriodStart != null
+        ? periodBilling.inputTokens + periodBilling.outputTokens
+        : totalInputTokens + totalOutputTokens;
+    final effectiveCost = quotaPeriodStart != null ? periodBilling.cost : totalCost;
+
+    // 检查 Token 用量
+    if (quotaTokenLimit != null && effectiveTokens >= quotaTokenLimit!) {
+      return QuotaCheckResult(
+        exceeded: true,
+        reason: 'Token 用量已达上限',
+        detail: '已使用 $effectiveTokens Token，上限 ${quotaTokenLimit} Token',
+      );
+    }
+
+    // 检查费用预算
+    if (quotaCostLimit != null && effectiveCost >= quotaCostLimit!) {
+      return QuotaCheckResult(
+        exceeded: true,
+        reason: '费用预算已达上限',
+        detail:
+            '已花费 \$${effectiveCost.toStringAsFixed(4)}，预算 \$${quotaCostLimit!.toStringAsFixed(2)}',
+      );
+    }
+
+    // 检查请求次数
+    if (quotaRequestLimit != null && quotaRequestCount >= quotaRequestLimit!) {
+      return QuotaCheckResult(
+        exceeded: true,
+        reason: '请求次数已达上限',
+        detail: '已请求 $quotaRequestCount 次，上限 $quotaRequestLimit 次',
+      );
+    }
+
+    return QuotaCheckResult(exceeded: false);
+  }
+
+  /// 记录一次请求（递增 quotaRequestCount）
+  ChatSession recordRequest() {
+    if (!quotaEnabled) return this;
+    return copyWith(quotaRequestCount: quotaRequestCount + 1);
+  }
+
+  /// 检查是否需要重置配额周期，如果需要则返回重置后的会话
+  /// 重置时仅清零请求计数，Token/费用的周期用量通过时间过滤计算
+  /// 重置基于自然时间边界：每天零点、每月1号零点
+  ChatSession? tryResetQuotaPeriod() {
+    if (!quotaEnabled || quotaResetPeriod == null || quotaPeriodStart == null) {
+      return null;
+    }
+
+    final now = DateTime.now();
+    final periodStart = quotaPeriodStart!;
+
+    // 计算当前自然周期的起点
+    final DateTime currentPeriodStart;
+    switch (quotaResetPeriod) {
+      case 'daily':
+        currentPeriodStart = DateTime(now.year, now.month, now.day);
+        break;
+      case 'monthly':
+        currentPeriodStart = DateTime(now.year, now.month, 1);
+        break;
+      default:
+        return null;
+    }
+
+    // 如果记录的周期起点早于当前自然周期起点，说明进入了新周期
+    if (periodStart.isBefore(currentPeriodStart)) {
+      return copyWith(
+        quotaRequestCount: 0,
+        quotaPeriodStart: currentPeriodStart,
+      );
+    }
+    return null;
+  }
+
+  /// 获取当前配额周期内的 Token/费用用量（从消息中计算）
+  ({int inputTokens, int outputTokens, double cost}) getPeriodBilling() {
+    if (!quotaEnabled || quotaPeriodStart == null || chatModel == null) {
+      return (inputTokens: 0, outputTokens: 0, cost: 0.0);
+    }
+
+    int inputTotal = 0;
+    int outputTotal = 0;
+
+    for (final msg in messages) {
+      if (msg.timestamp.isAfter(quotaPeriodStart!)) {
+        if (msg.inputTokens != null) inputTotal += msg.inputTokens!;
+        if (msg.outputTokens != null) outputTotal += msg.outputTokens!;
+      }
+    }
+
+    double cost = 0.0;
+    final inputPrice = chatModel!.inputPrice;
+    final outputPrice = chatModel!.outputPrice;
+    if (inputPrice != null) {
+      cost += inputTotal * inputPrice / 1000000.0;
+    }
+    if (outputPrice != null) {
+      cost += outputTotal * outputPrice / 1000000.0;
+    }
+
+    return (inputTokens: inputTotal, outputTokens: outputTotal, cost: cost);
+  }
+
   ChatSession copyWith({
     String? sessionId,
     String? title,
@@ -213,6 +374,19 @@ class ChatSession {
     int? totalOutputTokens,
     double? totalCost,
     String? emoji,
+    String? apiKey,
+    bool? quotaEnabled,
+    int? quotaTokenLimit,
+    bool clearQuotaTokenLimit = false,
+    double? quotaCostLimit,
+    bool clearQuotaCostLimit = false,
+    int? quotaRequestLimit,
+    bool clearQuotaRequestLimit = false,
+    String? quotaResetPeriod,
+    bool clearQuotaResetPeriod = false,
+    DateTime? quotaPeriodStart,
+    bool clearQuotaPeriodStart = false,
+    int? quotaRequestCount,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -273,6 +447,19 @@ class ChatSession {
       totalOutputTokens: totalOutputTokens ?? this.totalOutputTokens,
       totalCost: totalCost ?? this.totalCost,
       emoji: emoji ?? this.emoji,
+      apiKey: apiKey ?? this.apiKey,
+      quotaEnabled: quotaEnabled ?? this.quotaEnabled,
+      quotaTokenLimit:
+          clearQuotaTokenLimit ? null : (quotaTokenLimit ?? this.quotaTokenLimit),
+      quotaCostLimit:
+          clearQuotaCostLimit ? null : (quotaCostLimit ?? this.quotaCostLimit),
+      quotaRequestLimit:
+          clearQuotaRequestLimit ? null : (quotaRequestLimit ?? this.quotaRequestLimit),
+      quotaResetPeriod:
+          clearQuotaResetPeriod ? null : (quotaResetPeriod ?? this.quotaResetPeriod),
+      quotaPeriodStart:
+          clearQuotaPeriodStart ? null : (quotaPeriodStart ?? this.quotaPeriodStart),
+      quotaRequestCount: quotaRequestCount ?? this.quotaRequestCount,
     );
   }
 
@@ -335,6 +522,16 @@ class ChatSession {
       chatModel: chatModel,
       mcp: parsedMcp,
       emoji: json['emoji'] as String?,
+      apiKey: json['apiKey'] as String?,
+      quotaEnabled: json['quotaEnabled'] as bool? ?? false,
+      quotaTokenLimit: json['quotaTokenLimit'] as int?,
+      quotaCostLimit: (json['quotaCostLimit'] as num?)?.toDouble(),
+      quotaRequestLimit: json['quotaRequestLimit'] as int?,
+      quotaResetPeriod: json['quotaResetPeriod'] as String?,
+      quotaPeriodStart: json['quotaPeriodStart'] != null
+          ? DateTime.tryParse(json['quotaPeriodStart'] as String)
+          : null,
+      quotaRequestCount: json['quotaRequestCount'] as int? ?? 0,
     );
   }
 
@@ -368,6 +565,15 @@ class ChatSession {
       'chatModel': chatModel?.toMap(),
       if (mcp != null) 'mcp': mcp!.toJson(),
       'emoji': emoji,
+      'apiKey': apiKey,
+      'quotaEnabled': quotaEnabled,
+      if (quotaTokenLimit != null) 'quotaTokenLimit': quotaTokenLimit,
+      if (quotaCostLimit != null) 'quotaCostLimit': quotaCostLimit,
+      if (quotaRequestLimit != null) 'quotaRequestLimit': quotaRequestLimit,
+      if (quotaResetPeriod != null) 'quotaResetPeriod': quotaResetPeriod,
+      if (quotaPeriodStart != null)
+        'quotaPeriodStart': quotaPeriodStart!.toIso8601String(),
+      'quotaRequestCount': quotaRequestCount,
     };
   }
 
@@ -383,4 +589,22 @@ class ChatSession {
     }
     return null;
   }
+}
+
+/// 配额检查结果
+class QuotaCheckResult {
+  /// 是否超限
+  final bool exceeded;
+
+  /// 超限原因（仅供 UI 展示）
+  final String? reason;
+
+  /// 详细信息
+  final String? detail;
+
+  const QuotaCheckResult({
+    required this.exceeded,
+    this.reason,
+    this.detail,
+  });
 }

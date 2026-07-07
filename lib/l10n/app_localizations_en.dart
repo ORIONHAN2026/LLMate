@@ -24,6 +24,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectorManagement => 'Connector (MCP)';
 
   @override
+  String get domainManagement => 'Service Management';
+
+  @override
   String get skillManagement => 'Skill (SKILL)';
 
   @override
@@ -1603,4 +1606,73 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get workModeMarketingDesc =>
       'Marketing planning, brand promotion, competitive analysis';
+
+  @override
+  String get domainSettings => 'Service Settings';
+
+  @override
+  String get serviceStatus => 'Local Service';
+
+  @override
+  String get localService => 'Local Service';
+
+  @override
+  String get serviceStopped => 'Service stopped';
+
+  @override
+  String get serviceRunning => 'Running';
+
+  @override
+  String get serviceStarting => 'Starting...';
+
+  @override
+  String get restart => 'Restart';
+
+  @override
+  String get certificateSettings => 'Certificate Settings';
+
+  @override
+  String get httpsStatus => 'HTTPS Status';
+
+  @override
+  String get domainAddress => 'Service Address';
+
+  @override
+  String get domainHint => 'e.g. api.example.com';
+
+  @override
+  String get domainDesc =>
+      'After setting, the session service URL will use this address. HTTP default port 80, HTTPS default port 443.';
+
+  @override
+  String get sslCertificate => 'SSL Certificate';
+
+  @override
+  String get sslPrivateKey => 'Private Key';
+
+  @override
+  String get enabled => 'Enabled';
+
+  @override
+  String get disabled => 'Disabled';
+
+  @override
+  String get httpsEnabled => 'HTTPS';
+
+  @override
+  String get httpsEnabledDesc => 'Certificate uploaded, HTTPS auto-enabled';
+
+  @override
+  String get httpsDisabledDesc =>
+      'Upload certificate (crt/cert + key) to auto-enable HTTPS';
+
+  @override
+  String get domainInfoDesc =>
+      'After configuring the service address, the session service URL will display this address. External clients can access the session API (/llmwork/chat/completions etc.) through this address.';
+
+  @override
+  String get pleaseEnterDomain => 'Please enter service address';
+
+  @override
+  String get domainSaved => 'Service configuration saved';
 }

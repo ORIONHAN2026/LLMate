@@ -1317,4 +1317,33 @@ ${toolSummary.toString()}
       }
     });
   }
+
+  /// 同步等待 MCP 初始化完成（在用户选择 MCP 服务后调用）
+  ///
+  /// 与 [initForSession] 不同，此方法会等待初始化完成再返回，
+  /// 确保 tools 已填充到 _availableTools 和 _cachedConfigs 中。
+  /// 返回成功初始化的服务 ID 列表。
+  static Future<List<String>> initForSessionSync(ChatSession session) async {
+    if (session.mcp == null) return [];
+    final svc = session.mcp!.name;
+
+    // 如果已经初始化过，直接返回
+    if (_clients.containsKey(svc) && _availableTools.containsKey(session.mcp!.mcpId)) {
+      debugPrint('📡 MCP 客户端已存在且工具已加载: $svc');
+      return [session.mcp!.mcpId];
+    }
+
+    debugPrint('🚀 同步初始化 MCP: $svc');
+    try {
+      await ensureGlobalConfigsLoaded();
+      final result = await initializeSessionMcpServices(session);
+      return result;
+    } on TimeoutException catch (e) {
+      debugPrint('⏱ MCP 同步初始化超时: $svc, ${e.message}');
+      return [];
+    } catch (e) {
+      debugPrint('❌ MCP 同步初始化失败: $svc, 错误: $e');
+      return [];
+    }
+  }
 }

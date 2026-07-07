@@ -21,6 +21,7 @@ import '../../settings/pages/modelssetting.dart';
 import '../../mcp/pages/mcp_management_page.dart';
 
 import '../../settings/pages/other_settings_page.dart';
+import '../../settings/pages/domain_management_page.dart';
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});
@@ -42,11 +43,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   final GlobalKey _settingsButtonKey = GlobalKey(); // 设置按钮的key
   final GlobalKey _modelSelectorKey = GlobalKey(); // 模型选择器的key
   bool _isSidebarCollapsed = false; // 侧边栏折叠状态
-  double _sidebarWidth = 200.0; // 左侧边栏宽度，可调整
+  double _sidebarWidth = 150.0; // 左侧边栏宽度，可调整
   bool _isRightSidebarCollapsed = false; // 右侧边栏折叠状态（默认显示）
-  double _rightSidebarWidth = 320.0; // 右侧边栏宽度（默认最小宽度）
   bool _isResizeHandleHovered = false; // 拖动条悬停状态
-  bool _isRightResizeHandleHovered = false; // 右侧拖动条悬停状态
   // 中间聊天区域的最小可视宽度，避免被两侧面板挤压得太窄
   static const double _minChatAreaWidth = 700.0;
 
@@ -610,6 +609,32 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           child: Row(
             children: [
               Icon(
+                CupertinoIcons.globe,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              const SizedBox(width: 12),
+              Text(l10n.domainManagement, style: const TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DomainManagementPage(),
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
                 CupertinoIcons.slider_horizontal_3,
                 size: 16,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -687,7 +712,7 @@ Thanks!
   void _onSidebarResize(double delta) {
     final screenWidth = MediaQuery.of(context).size.width;
 
-    double proposed = (_sidebarWidth + delta).clamp(200.0, 400.0);
+    double proposed = (_sidebarWidth + delta).clamp(150.0, 400.0);
     // 计算剩余聊天区域宽度
     double remaining = screenWidth - proposed;
     if (remaining < _minChatAreaWidth) {
@@ -759,47 +784,18 @@ Thanks!
     );
   }
 
-  // 右侧可调整大小的分隔条
+  // 右侧分隔条（固定宽度，不可拖拽）
   Widget _buildRightResizableHandle() {
-    return MouseRegion(
-      cursor: SystemMouseCursors.resizeColumn,
-      onEnter: (_) => setState(() => _isRightResizeHandleHovered = true),
-      onExit: (_) => setState(() => _isRightResizeHandleHovered = false),
-      child: GestureDetector(
-        onPanUpdate: (details) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          double proposed = (_rightSidebarWidth - details.delta.dx).clamp(
-            320.0,
-            600.0,
-          );
-          // 确保左侧和聊天区有足够空间
-          final leftWidth = _isSidebarCollapsed ? 0 : _sidebarWidth;
-          final remaining = screenWidth - leftWidth - proposed;
-          if (remaining < _minChatAreaWidth) {
-            proposed = (screenWidth - leftWidth - _minChatAreaWidth).clamp(
-              320.0,
-              600.0,
-            );
-          }
-          setState(() => _rightSidebarWidth = proposed);
-        },
-        child: Container(
-          width: 2,
-          color: Colors.transparent,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 0),
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  color:
-                      _isRightResizeHandleHovered
-                          ? Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.3)
-                          : Theme.of(context).dividerColor,
-                  width: 1,
-                ),
-              ),
+    return Container(
+      width: 2,
+      color: Colors.transparent,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 0),
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: Theme.of(context).dividerColor,
+              width: 1,
             ),
           ),
         ),
@@ -810,7 +806,7 @@ Thanks!
   // 构建右侧面板
   Widget _buildRightSidePanel() {
     return ChatRightSidebar(
-      width: _rightSidebarWidth,
+      width: 0, // 宽度由父级 Expanded 决定，不再需要此参数
       isCollapsed: _isRightSidebarCollapsed,
       onToggleCollapse: () {
         setState(() {
@@ -891,6 +887,7 @@ Thanks!
           ],
           // 主内容区域
           Expanded(
+            flex: 3,
             child: Column(
               children: [
                 // 顶部模型选择栏
@@ -905,10 +902,10 @@ Thanks!
               ],
             ),
           ),
-          // 右侧边栏
+          // 右侧边栏 - 宽度为聊天窗口的 2/3
           if (!_isRightSidebarCollapsed) ...[
             _buildRightResizableHandle(),
-            SizedBox(width: _rightSidebarWidth, child: _buildRightSidePanel()),
+            Expanded(flex: 2, child: _buildRightSidePanel()),
           ],
         ],
       ),
@@ -928,6 +925,7 @@ Thanks!
           ],
           // 主内容区域
           Expanded(
+            flex: 3,
             child: Column(
               children: [
                 // 顶部栏
@@ -942,10 +940,10 @@ Thanks!
               ],
             ),
           ),
-          // 右侧边栏
+          // 右侧边栏 - 宽度为聊天窗口的 2/3
           if (!_isRightSidebarCollapsed) ...[
             _buildRightResizableHandle(),
-            SizedBox(width: _rightSidebarWidth, child: _buildRightSidePanel()),
+            Expanded(flex: 2, child: _buildRightSidePanel()),
           ],
         ],
       ),

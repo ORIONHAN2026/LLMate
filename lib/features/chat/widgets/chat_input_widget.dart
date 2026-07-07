@@ -2949,8 +2949,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           context,
           AppLocalizations.of(context)!.mcpServiceSelected(service.name),
         );
-        // 立即初始化 MCP 连接，填充工具列表，确保后续发送时 tools 可用
-        McpService.initForSession(updatedSession);
+        // 等待 MCP 初始化完成，确保 tools 已填充到 session.mcp 中
+        final initedServices = await McpService.initForSessionSync(updatedSession);
+        if (initedServices.isNotEmpty) {
+          // 从缓存中获取带 tools 的 Mcp 配置，更新到 session
+          final cachedMcp = McpService.getCachedConfig(service.mcpId);
+          if (cachedMcp != null && cachedMcp.tools != null && cachedMcp.tools!.isNotEmpty) {
+            final syncedSession = updatedSession.copyWith(mcp: cachedMcp);
+            await sessionController.updateSession(syncedSession);
+          }
+        }
       } else {
         // 关闭 MCP 时清理客户端
         final oldServiceName = currentSession.mcp?.mcpId;

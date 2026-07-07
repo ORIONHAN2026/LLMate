@@ -487,6 +487,14 @@ class SessionController extends GetxController {
       'totalInputTokens': session.totalInputTokens,
       'totalOutputTokens': session.totalOutputTokens,
       'totalCost': session.totalCost,
+      'apiKey': session.apiKey,
+      'quotaEnabled': session.quotaEnabled,
+      'quotaTokenLimit': session.quotaTokenLimit,
+      'quotaCostLimit': session.quotaCostLimit,
+      'quotaRequestLimit': session.quotaRequestLimit,
+      'quotaResetPeriod': session.quotaResetPeriod,
+      'quotaPeriodStart': session.quotaPeriodStart?.toIso8601String(),
+      'quotaRequestCount': session.quotaRequestCount,
     };
   }
 
@@ -555,6 +563,16 @@ class SessionController extends GetxController {
       scheduledTask: scheduledTask,
       contracts: await _loadContracts(entity['sessionId'] as String? ?? ''),
       emoji: entity['emoji'] as String?,
+      apiKey: entity['apiKey'] as String?,
+      quotaEnabled: entity['quotaEnabled'] as bool? ?? false,
+      quotaTokenLimit: entity['quotaTokenLimit'] as int?,
+      quotaCostLimit: (entity['quotaCostLimit'] as num?)?.toDouble(),
+      quotaRequestLimit: entity['quotaRequestLimit'] as int?,
+      quotaResetPeriod: entity['quotaResetPeriod'] as String?,
+      quotaPeriodStart: entity['quotaPeriodStart'] != null
+          ? DateTime.tryParse(entity['quotaPeriodStart'] as String)
+          : null,
+      quotaRequestCount: entity['quotaRequestCount'] as int? ?? 0,
     );
   }
 

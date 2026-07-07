@@ -8,6 +8,7 @@ import './features/models/controllers/model_controller.dart';
 import './controllers/session_controller.dart';
 import './controllers/theme_controller.dart';
 import './controllers/locale_controller.dart';
+import './controllers/domain_controller.dart';
 import './features/mcp/controllers/mcp_controller.dart';
 import './features/chat/pages/home.dart';
 import './pages/loading_page.dart';
@@ -20,8 +21,8 @@ import './models/bigmodel/chat_model.dart';
 import 'models/chat/chat_session.dart';
 import './data/storage_service.dart';
 
-// 最小窗口宽度组成: 左侧边栏最小 200 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
-const double kMinLeftSidebarWidth = 200;
+// 最小窗口宽度组成: 左侧边栏最小 150 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
+const double kMinLeftSidebarWidth = 150;
 const double kMinChatAreaWidth = 520;
 const double kMinRightSidebarWidth = 260;
 const double kWindowExtraPadding = 40;
@@ -74,6 +75,12 @@ void main() async {
 
   // 初始化 LocaleController（语言设置）
   Get.put(LocaleController());
+
+  // 初始化 DomainController（域名管理）
+  Get.put(DomainController());
+
+  // 初始化 LocalHttpServiceController（本地服务控制）
+  Get.put(LocalHttpServiceController());
 
   // 启动 HTTP 服务（大模型统一请求接口）
   LocalHttpService.start(port: 8899, allowExternal: true);

@@ -24,6 +24,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get connectorManagement => '连接器管理(MCP)';
 
   @override
+  String get domainManagement => '服务管理';
+
+  @override
   String get skillManagement => '技能管理(SKILL)';
 
   @override
@@ -1570,4 +1573,71 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get workModeMarketingDesc => '面向市场营销策划、品牌推广、竞品分析等场景';
+
+  @override
+  String get domainSettings => '服务设置';
+
+  @override
+  String get serviceStatus => '本地服务';
+
+  @override
+  String get localService => '本地服务';
+
+  @override
+  String get serviceStopped => '服务未启动';
+
+  @override
+  String get serviceRunning => '已启动';
+
+  @override
+  String get serviceStarting => '启动中';
+
+  @override
+  String get restart => '重启';
+
+  @override
+  String get certificateSettings => '证书设置';
+
+  @override
+  String get httpsStatus => 'HTTPS 状态';
+
+  @override
+  String get domainAddress => '服务地址';
+
+  @override
+  String get domainHint => '例如: api.example.com';
+
+  @override
+  String get domainDesc => '设置后，会话的服务地址将使用此地址。HTTP 默认端口 80，HTTPS 默认端口 443。';
+
+  @override
+  String get sslCertificate => 'SSL 证书';
+
+  @override
+  String get sslPrivateKey => '私钥文件';
+
+  @override
+  String get enabled => '已开启';
+
+  @override
+  String get disabled => '已关闭';
+
+  @override
+  String get httpsEnabled => 'HTTPS';
+
+  @override
+  String get httpsEnabledDesc => '证书已上传，HTTPS 已自动开启';
+
+  @override
+  String get httpsDisabledDesc => '上传证书（crt/cert + key）后自动开启 HTTPS';
+
+  @override
+  String get domainInfoDesc =>
+      '配置服务地址后，会话的服务地址将显示为此地址。外部客户端可通过该地址访问会话的 API 接口（/llmwork/chat/completions 等）。';
+
+  @override
+  String get pleaseEnterDomain => '请输入服务地址';
+
+  @override
+  String get domainSaved => '服务配置已保存';
 }

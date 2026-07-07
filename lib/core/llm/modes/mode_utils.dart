@@ -4,9 +4,11 @@ import '../../../models/bigmodel/chat_model.dart';
 import '../../../models/chat/chat_session.dart';
 import '../../../models/chat/chat_message.dart';
 import '../../../models/chat/chat_attachment.dart';
+import '../../../models/chat/mcp_config.dart';
 
 import '../../../data/storage_paths.dart';
 import '../common/system_prompts.dart';
+import '../../mcp/mcp_service.dart';
 
 /// 安全函数名 → 原始函数名 映射（用于还原 MCP/Skill 工具名中的非法字符）
 final Map<String, String> _safeNameToOriginal = {};
@@ -254,13 +256,29 @@ String _formatFileSize(int bytes) {
   return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
 }
 
+/// 从 McpService 缓存中获取工具信息（作为 session.mcp.tools 为空的 fallback）
+List<McpToolInfo> _getCachedTools(String mcpId) {
+  final cached = McpService.getCachedConfig(mcpId);
+  if (cached != null && cached.tools != null && cached.tools!.isNotEmpty) {
+    return cached.tools!;
+  }
+  return [];
+}
+
 /// 构建 MCP 服务工具列表
 List<Map<String, dynamic>> buildMcpTools(ChatSession? session) {
   final tools = <Map<String, dynamic>>[];
   final mcp = session?.mcp;
-  if (mcp == null || mcp.tools == null || mcp.tools!.isEmpty) return tools;
+  if (mcp == null) return tools;
 
-  for (final tool in mcp.tools!) {
+  // 优先使用 session.mcp.tools，如果为空则从 McpService 缓存中获取
+  final toolInfos = (mcp.tools != null && mcp.tools!.isNotEmpty)
+      ? mcp.tools!
+      : _getCachedTools(mcp.mcpId);
+
+  if (toolInfos.isEmpty) return tools;
+
+  for (final tool in toolInfos) {
     final safeName = tool.name.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
     if (safeName != tool.name) {
       _safeNameToOriginal[safeName] = tool.name;

@@ -8,6 +8,7 @@ import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import '../tools/tool_execution_service.dart';
+import '../../controllers/mcp_controller.dart';
 import './openai_provider.dart';
 import './common/message_builder.dart';
 import './common/system_prompts.dart';
@@ -284,12 +285,14 @@ class LlmClient {
     final workDir = getEffectiveWorkDir(session);
 
     // 1. 通用系统提示词
-    messages.addAll(buildBaseSystemMessages(
-      model: model,
-      session: session,
-      thinkEnabled: session.deepThink,
-      workDir: workDir,
-    ));
+    messages.addAll(
+      buildBaseSystemMessages(
+        model: model,
+        session: session,
+        thinkEnabled: session.deepThink,
+        workDir: workDir,
+      ),
+    );
 
     // 2. 历史消息
     if (session.messages.isNotEmpty) {
@@ -313,9 +316,7 @@ class LlmClient {
 
   /// 构建可用的工具列表（MCP）
   List<Map<String, dynamic>> _buildTools(ChatSession? session) {
-    final allTools = <Map<String, dynamic>>[];
-    allTools.addAll(buildMcpTools(session));
-    return allTools;
+    return McpController.instance.getTools(session?.mcpServer?.name ?? '');
   }
 
   // ======================== 请求日志 ========================

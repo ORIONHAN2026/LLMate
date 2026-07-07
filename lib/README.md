@@ -10,7 +10,6 @@ lib/
 │   ├── llm/               # LLM 通信框架（客户端、传输、模式策略）
 │   ├── tools/             # 工具系统（注册表、执行器、文档工具）
 │   ├── mcp/               # MCP 协议客户端服务
-│   ├── skills/            # 技能管理（加载、缓存、CRUD）
 │   ├── memory/            # 对话记忆压缩
 │   ├── scheduler/         # 定时任务调度
 │   ├── cloud/             # 云服务（OSS、CloudBase）
@@ -22,7 +21,6 @@ lib/
 │   ├── chat/              # 聊天功能
 │   ├── mcp/               # MCP 管理
 │   ├── models/            # 模型管理
-│   ├── skills/            # 技能管理
 │   └── settings/          # 设置页
 ├── pages/                 # 独立页面（加载页）
 ├── widgets/               # 跨功能共享组件

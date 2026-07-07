@@ -90,8 +90,11 @@ class ChatSession {
   /// 工作目录：会话产生的文件默认保存到此目录
   final String? workDirectory;
 
-  /// 绑定的 MCP 服务（null = 未绑定，运行时由 mcpId 动态解析）
-  final Mcp? mcp;
+  /// 绑定的 MCP 服务文件夹名（~/.llmwork/mcps/{mcp}），null = 未绑定
+  final String? mcp;
+
+  /// 绑定的 MCP 服务（合并后的 server.json，运行时解析自磁盘）
+  final Mcp? mcpServer;
 
   /// 深度思考模式（默认关闭）
   final bool deepThink;
@@ -117,9 +120,6 @@ class ChatSession {
 
   /// 绑定的模型ID，用于动态加载 chatModel
   final String? modelId;
-
-  /// 绑定的 MCP 服务名称（ID）
-  final String? mcpId;
 
   /// 会话头像 emoji
   final String emoji;
@@ -166,9 +166,9 @@ class ChatSession {
     required this.createdAt,
     required this.messages,
     String? modelId,
-    String? mcpId,
+    String? mcp,
     this.chatModel,
-    this.mcp,
+    this.mcpServer,
     this.isFavorite = false,
     this.inputContent = '',
     this.attachments = const [],
@@ -195,7 +195,7 @@ class ChatSession {
     this.quotaPeriodStart,
     this.quotaRequestCount = 0,
   }) : modelId = modelId ?? chatModel?.modelId,
-       mcpId = mcpId ?? mcp?.mcpId,
+       mcp = mcp ?? mcpServer?.name,
        emoji = emoji ?? randomEmoji(),
        apiKey = apiKey ?? generateSessionApiKey();
 
@@ -358,7 +358,8 @@ class ChatSession {
     String? lastSelectedDirectory,
     String? workDirectory,
     bool clearWorkDirectory = false,
-    Mcp? mcp,
+    String? mcp,
+    Mcp? mcpServer,
     bool clearMcp = false,
     ChatModel? chatModel,
     bool clearChatModel = false,
@@ -402,19 +403,15 @@ class ChatSession {
       resolvedChatModel = this.chatModel;
     }
 
-    // 自动同步 mcpId
-    final String? resolvedMcpId;
-    final Mcp? resolvedMcp;
+    // 解析绑定的 MCP 文件夹名
+    final String? resolvedMcp;
     if (clearMcp) {
-      resolvedMcpId = null;
       resolvedMcp = null;
-    } else if (mcp != null) {
-      resolvedMcpId = mcp.mcpId;
-      resolvedMcp = mcp;
     } else {
-      resolvedMcpId = mcpId;
-      resolvedMcp = this.mcp;
+      resolvedMcp = mcp ?? this.mcp;
     }
+    final Mcp? resolvedMcpServer =
+        clearMcp ? null : (mcpServer ?? this.mcpServer);
 
     return ChatSession(
       sessionId: sessionId ?? this.sessionId,
@@ -433,7 +430,7 @@ class ChatSession {
           clearWorkDirectory ? null : (workDirectory ?? this.workDirectory),
       mcp: resolvedMcp,
       modelId: resolvedModelId,
-      mcpId: resolvedMcpId,
+      mcpServer: resolvedMcpServer,
       chatModel: resolvedChatModel,
       deepThink: deepThink ?? this.deepThink,
       connectPrompt:
@@ -465,14 +462,32 @@ class ChatSession {
 
   factory ChatSession.fromJson(Map<String, dynamic> json) {
     final String? modelId = json['modelId'] as String?;
-    final String? mcpId = json['mcpId'] as String?;
+
+    // 解析 MCP 绑定：新格式为字符串文件夹名 'mcp'；兼容旧格式（Map 或 'mcpId' 字符串）
+    final dynamic mcpField = json['mcp'];
+    final String? mcpFolder;
+    final Mcp? parsedMcpServer;
+    if (mcpField is String) {
+      mcpFolder =
+          mcpField.startsWith('mcp_') ? mcpField.substring(4) : mcpField;
+      parsedMcpServer = null;
+    } else if (mcpField is Map<String, dynamic>) {
+      parsedMcpServer = Mcp.fromMap(mcpField);
+      final legacyId = (mcpField['mcpId'] as String? ?? '');
+      mcpFolder = legacyId.startsWith('mcp_')
+          ? legacyId.substring(4)
+          : (legacyId.isNotEmpty ? legacyId : null);
+    } else {
+      final old = json['mcpId'] as String?;
+      mcpFolder = old == null
+          ? null
+          : (old.startsWith('mcp_') ? old.substring(4) : old);
+      parsedMcpServer = null;
+    }
 
     // 兼容旧数据
     final ChatModel? chatModel =
         json['chatModel'] != null ? ChatModel.fromMap(json['chatModel']) : null;
-    final Mcp? parsedMcp =
-        json['mcp'] is Map<String, dynamic> ? Mcp.fromMap(json['mcp']) : null;
-
     return ChatSession(
       sessionId: json['id'] ?? '',
       name: json['name'] ?? '新对话',
@@ -518,9 +533,9 @@ class ChatSession {
       totalOutputTokens: json['totalOutputTokens'] as int? ?? 0,
       totalCost: (json['totalCost'] as num?)?.toDouble() ?? 0.0,
       modelId: modelId,
-      mcpId: mcpId,
+      mcp: mcpFolder,
       chatModel: chatModel,
-      mcp: parsedMcp,
+      mcpServer: parsedMcpServer,
       emoji: json['emoji'] as String?,
       apiKey: json['apiKey'] as String?,
       quotaEnabled: json['quotaEnabled'] as bool? ?? false,
@@ -561,9 +576,9 @@ class ChatSession {
       'totalOutputTokens': totalOutputTokens,
       'totalCost': totalCost,
       if (modelId != null) 'modelId': modelId,
-      if (mcpId != null) 'mcpId': mcpId,
+      if (mcp != null) 'mcp': mcp!,
+      if (mcpServer != null) 'mcpServer': mcpServer!.toJson(),
       'chatModel': chatModel?.toMap(),
-      if (mcp != null) 'mcp': mcp!.toJson(),
       'emoji': emoji,
       'apiKey': apiKey,
       'quotaEnabled': quotaEnabled,

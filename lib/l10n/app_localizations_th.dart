@@ -27,9 +27,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get domainManagement => 'Service Management';
 
   @override
-  String get skillManagement => 'การจัดการทักษะ(ทักษะ)';
-
-  @override
   String get otherSettings => 'การตั้งค่าอื่นๆ';
 
   @override
@@ -230,15 +227,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get clearKey => 'กุญแจที่ชัดเจน';
 
   @override
-  String get installSkill => 'ทักษะการติดตั้ง';
-
-  @override
-  String get uninstallSkill => 'ถอนการติดตั้งทักษะ';
-
-  @override
-  String get deleteSkill => 'ลบทักษะ';
-
-  @override
   String get fetchTools => 'รับรายการเครื่องมือ';
 
   @override
@@ -287,16 +275,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get clearMcpServices => 'ล้างบริการ MCP';
 
   @override
-  String get clearSkillSelection => 'ล้างการเลือกทักษะ';
-
-  @override
   String get selectFile => 'เลือกไฟล์';
 
   @override
   String get selectWorkingDir => 'เลือกไดเร็กทอรีการทำงาน';
-
-  @override
-  String get skillMarketplace => 'ตลาดการประยุกต์ใช้ทักษะ';
 
   @override
   String get confirmDeleteTitle => 'ยืนยันการลบ';
@@ -318,9 +300,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get removeServiceTitle => 'ลบบริการ';
-
-  @override
-  String get deleteSkillTitle => 'ลบทักษะ';
 
   @override
   String get removeMcpServiceTitle => 'ลบบริการ MCP';
@@ -374,9 +353,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get typeCommandOrSearch => 'พิมพ์คำสั่งหรือค้นหา...';
-
-  @override
-  String get searchSkills => 'ทักษะการค้นหา...';
 
   @override
   String get searchMcp => 'ค้นหาบริการ MCP...';
@@ -813,9 +789,6 @@ class AppLocalizationsTh extends AppLocalizations {
       'ตั้งค่าตรรกะการใช้ตัวเชื่อมต่อและทักษะร่วมกัน';
 
   @override
-  String get needMcpOrSkillFirst => 'คุณต้องเลือกเครื่องมือหรือทักษะ MCP ก่อน';
-
-  @override
   String get alreadySet => 'ตั้งไว้แล้ว';
 
   @override
@@ -900,42 +873,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get mcpToolsDisabled => 'เครื่องมือ MCP ถูกปิดแล้ว';
 
   @override
-  String get selectSkill => 'เลือกทักษะ';
-
-  @override
-  String get noAvailableSkill => 'ไม่มีทักษะที่มีอยู่';
-
-  @override
-  String currentSkill(Object name) {
-    return 'ทักษะปัจจุบัน: $name';
-  }
-
-  @override
-  String get clickToSelectSkill => 'คลิกเพื่อเลือกทักษะ';
-
-  @override
-  String get noSelectableSkill => 'ยังไม่มีทักษะทางเลือก';
-
-  @override
   String get createAction => 'สร้าง';
-
-  @override
-  String skillCreatedSelected(Object name) {
-    return 'สร้างและเลือกทักษะ \"$name\" แล้ว';
-  }
-
-  @override
-  String createSkillFailed(Object error) {
-    return 'ไม่สามารถสร้างทักษะ: $error';
-  }
-
-  @override
-  String skillSelected(Object name) {
-    return 'ทักษะที่เลือก: $name';
-  }
-
-  @override
-  String get skillCleared => 'การเลือกทักษะเคลียร์แล้ว';
 
   @override
   String get noModelBound => 'โมเดลยังไม่ถูกผูกมัด';
@@ -954,9 +892,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get historyCleared => 'ล้างประวัติแล้ว';
-
-  @override
-  String get skillDetail => 'รายละเอียดทักษะ';
 
   @override
   String folderPath(Object path) {
@@ -1245,43 +1180,12 @@ class AppLocalizationsTh extends AppLocalizations {
   String get extractingImport => '正在解压导入...';
 
   @override
-  String get skillImported => '已导入技能';
-
-  @override
   String importFailed(Object error) {
     return '导入失败: $error';
   }
 
   @override
-  String get deleteSkillConfirm => '确定要删除技能';
-
-  @override
   String get irreversibleAction => '此操作不可撤销';
-
-  @override
-  String skillDeleted(Object name) {
-    return '已删除技能: $name';
-  }
-
-  @override
-  String deleteSkillFailed(Object error) {
-    return '删除技能失败: $error';
-  }
-
-  @override
-  String get skillDescription => '技能描述';
-
-  @override
-  String get skillManagementTitle => '技能管理(SKILL)';
-
-  @override
-  String get addSkill => '添加技能';
-
-  @override
-  String get noSkills => '暂无技能';
-
-  @override
-  String get clickAddSkillHint => '点击右上角添加按钮创建自定义技能';
 
   @override
   String toolNameDesc(Object desc, Object name) {

@@ -8,21 +8,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:path/path.dart' as p;
 import '../../../controllers/session_controller.dart';
-import '../../mcp/controllers/mcp_controller.dart';
+import '../../../controllers/mcp_controller.dart';
 import '../../../models/models.dart';
 import '../../../core/llm/llm_framework.dart';
 import '../../models/controllers/model_controller.dart';
-import '../../../core/mcp/mcp_service.dart';
-import '../../../models/chat/skill.dart';
-import '../../../core/skills/skill_service.dart';
-import '../../../core/skills/skill_storage_service.dart';
-import '../../skills/pages/skill_edit_page.dart';
-import '../../../core/tools/document_tools/word_tool_service.dart';
-import '../../../core/tools/document_tools/excel_tool_service.dart';
-import '../../../core/tools/document_tools/pdf_tool_service.dart';
-import '../../../core/tools/document_tools/ppt_tool_service.dart';
-import '../../../core/tools/document_tools/image_tool_service.dart';
-import '../../../core/tools/document_tools/file_tool_service.dart';
 import '../../../core/config/feature_toggle_service.dart';
 import '../../../utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
@@ -425,7 +414,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     super.initState();
 
     // 提前加载全局 MCP 配置，确保按钮状态正确
-    McpService.ensureGlobalConfigsLoaded().then((_) {
+    McpController.instance.ensureLoaded().then((_) {
       if (mounted) setState(() {});
     });
     // 加载功能开关配置
@@ -478,7 +467,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     _sessionSubscription.cancel(); // 先取消监听，阻止后续 setState
     _hideFileMentionOverlay();
     // 关闭所有 MCP 客户端连接（在 dispose controller 之前）
-    McpService.closeAllClients();
+    McpController.instance.closeAllClients();
     _inputController.dispose();
     _inputFocusNode.dispose();
     // scrollController 由父组件管理，不需要在这里 dispose
@@ -994,7 +983,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     debugPrint('开始后台处理附件: ${attachment.name}，目标会话: $targetSessionId');
 
     try {
-      final processedAttachment = await _readAttachmentWithTool(attachment);
+      final processedAttachment = await _readAttachmentContent(attachment);
 
       debugPrint(
         '文件处理完成: ${attachment.name}, 内容长度: ${processedAttachment.content?.length ?? 0}',
@@ -1017,8 +1006,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  /// 根据文件格式调用系统内置工具读取附件内容
-  Future<ChatAttachment> _readAttachmentWithTool(
+  /// 根据文件格式读取附件内容
+  Future<ChatAttachment> _readAttachmentContent(
     ChatAttachment attachment,
   ) async {
     if (attachment.filePath == null || attachment.filePath!.isEmpty) {
@@ -1031,7 +1020,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
 
     final ext = p.extension(attachment.name).toLowerCase();
-    final callId = 'attach_${attachment.id}';
 
     try {
       // ── 图片：base64 编码原文 ──
@@ -1048,104 +1036,21 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         final bytes = await file.readAsBytes();
         final base64Str = base64Encode(bytes);
         final mimeType = _imageMimeType(ext);
-
-        // 同时调用 image_read 获取图片描述信息
-        final readResult = await ImageToolService.execute(
-          action: 'read',
-          arguments: {'filePath': attachment.filePath},
-          callId: callId,
-        );
-        String? description;
-        if (readResult['isError'] != true && readResult['result'] is String) {
-          try {
-            final decoded = jsonDecode(readResult['result'] as String);
-            description = decoded['message'] as String?;
-          } catch (_) {}
-        }
-
         return attachment.copyWith(
           type: 'image',
-          content: description ?? '图片文件: ${attachment.name}',
+          content: '图片文件: ${attachment.name}',
           base64Data: base64Str,
           mimeType: mimeType,
           size: await file.length(),
         );
       }
 
-      // ── Word 文档 ──
-      if (ext == '.docx') {
-        final result = await WordToolService.readDocument(
-          arguments: {'filePath': attachment.filePath},
-          callId: callId,
-        );
-        return attachment.copyWith(
-          type: 'document',
-          content: _extractToolResultContent(result),
-          size: await file.length(),
-        );
-      }
-
-      // ── Excel 表格 ──
-      if (ext == '.xlsx') {
-        final result = await ExcelToolService.execute(
-          action: 'read',
-          arguments: {'filePath': attachment.filePath},
-          callId: callId,
-        );
-        return attachment.copyWith(
-          type: 'document',
-          content: _extractToolResultContent(result),
-          size: await file.length(),
-        );
-      }
-
-      // ── PDF ──
-      if (ext == '.pdf') {
-        final result = await PdfToolService.execute(
-          action: 'read',
-          arguments: {'filePath': attachment.filePath},
-          callId: callId,
-        );
-        return attachment.copyWith(
-          type: 'document',
-          content: _extractToolResultContent(result),
-          size: await file.length(),
-        );
-      }
-
-      // ── PPT ──
-      if (ext == '.pptx') {
-        final result = await PptToolService.execute(
-          action: 'read',
-          arguments: {'filePath': attachment.filePath},
-          callId: callId,
-        );
-        return attachment.copyWith(
-          type: 'document',
-          content: _extractToolResultContent(result),
-          size: await file.length(),
-        );
-      }
-
-      // ── 文本/代码文件：使用 file_read ──
-      if (FileToolService.isReadableExtension(ext)) {
-        final result = await FileToolService.execute(
-          action: 'read',
-          arguments: {'filePath': attachment.filePath},
-          callId: callId,
-        );
-        return attachment.copyWith(
-          type: _isCodeExtension(ext) ? 'code' : 'text',
-          content: _extractToolResultContent(result),
-          size: await file.length(),
-        );
-      }
-
-      // ── 其他格式：尝试作为文本读取 ──
+      // ── 文本/代码与二进制文件：尝试作为文本读取 ──
       try {
         final content = await file.readAsString(encoding: utf8);
+        final isCode = _isCodeExtension(ext);
         return attachment.copyWith(
-          type: 'text',
+          type: isCode ? 'code' : 'text',
           content: content.isEmpty ? '[空文件]' : content,
           size: await file.length(),
         );
@@ -1156,83 +1061,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         );
       }
     } catch (e) {
-      debugPrint('使用系统工具读取附件失败: $e');
+      debugPrint('读取附件失败: $e');
       return attachment.copyWith(content: '[读取文件失败: $e]');
     }
-  }
-
-  /// 从工具调用结果中提取内容文本
-  String _extractToolResultContent(Map<String, dynamic> toolResult) {
-    if (toolResult['isError'] == true) {
-      return '[读取失败: ${toolResult['result'] ?? '未知错误'}]';
-    }
-    final result = toolResult['result'];
-    if (result is String) {
-      try {
-        final decoded = jsonDecode(result);
-        if (decoded is Map) {
-          // 优先返回结构化内容
-          final parts = <String>[];
-          if (decoded['message'] != null) {
-            parts.add(decoded['message'].toString());
-          }
-          // 文件工具返回 content 字段
-          if (decoded['content'] != null) {
-            parts.add(decoded['content'].toString());
-          }
-          // PDF/Word 返回 pages/sections
-          if (decoded['pages'] is List) {
-            for (final page in decoded['pages'] as List) {
-              if (page is Map && page['text'] != null) {
-                parts.add('=== 第 ${page['pageIndex']} 页 ===\n${page['text']}');
-              }
-            }
-          }
-          if (decoded['sections'] is List) {
-            for (final section in decoded['sections'] as List) {
-              if (section is Map) {
-                final heading = section['heading'] ?? '';
-                final content = section['content'] ?? '';
-                if (heading.isNotEmpty) parts.add('## $heading');
-                if (content.isNotEmpty) parts.add(content.toString());
-              }
-            }
-          }
-          // Excel 返回 sheets
-          if (decoded['sheets'] is List) {
-            for (final sheet in decoded['sheets'] as List) {
-              if (sheet is Map) {
-                parts.add('=== Sheet: ${sheet['name']} ===');
-                if (sheet['rows'] is List) {
-                  for (final row in sheet['rows'] as List) {
-                    if (row is List) {
-                      parts.add(row.map((c) => c?.toString() ?? '').join('\t'));
-                    }
-                  }
-                }
-              }
-            }
-          }
-          // PPT 返回 slides
-          if (decoded['slides'] is List) {
-            for (final slide in decoded['slides'] as List) {
-              if (slide is Map && slide['text'] != null) {
-                parts.add(
-                  '=== 幻灯片 ${slide['slideIndex']} ===\n${slide['text']}',
-                );
-              }
-            }
-          }
-          if (parts.isNotEmpty) return parts.join('\n\n');
-          // 兜底：直接返回原始 JSON
-          return result;
-        }
-        return result;
-      } catch (_) {
-        return result;
-      }
-    }
-    return result?.toString() ?? '[读取结果为空]';
   }
 
   /// 获取图片 MIME 类型
@@ -2158,13 +1989,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         final ext = p.extension(file.path).toLowerCase();
         String? fileContent;
 
-        if (ext == '.docx') {
-          final result = await WordToolService.readDocument(
-            arguments: {'filePath': file.path},
-            callId: 'contract_scan_${file.hashCode}',
-          );
-          fileContent = _extractToolResultContent(result);
-        } else if (ext == '.doc') {
+        if (ext == '.doc') {
           try {
             final bytes = await file.readAsBytes();
             final buffer = StringBuffer();
@@ -2538,14 +2363,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
 
     // MCP 服务已全局存储，不依赖 ChatModel
-    final hasMcpServices = McpService.hasGlobalMcpServices;
-    final mcp = currentSession?.mcp;
-    final hasSelectedService = mcp != null;
+    final hasMcpServices = McpController.instance.hasGlobalMcpServices;
+    final mcpServer = currentSession?.mcpServer;
+    final hasSelectedService = mcpServer != null;
 
     // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
     final displayText =
         hasSelectedService
-            ? mcp.name
+            ? mcpServer?.name ?? ''
             : (hasMcpServices
                 ? AppLocalizations.of(context)!.selectMcpTool
                 : AppLocalizations.of(context)!.noMcpTool);
@@ -2561,7 +2386,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         onTap:
             hasMcpServices && !_isSending
                 ? (hasSelectedService
-                    ? () => _showMcpDetail(mcp)
+                    ? () => _showMcpDetail(mcpServer)
                     : _showMcpServiceSelection)
                 : null,
         onLongPress:
@@ -2785,7 +2610,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
 
     final session = sessionController.currentSession.value;
-    final selectedName = session?.mcp?.mcpId;
+    final selectedName = session?.mcp;
     final searchController = TextEditingController();
 
     showDialog(
@@ -2882,8 +2707,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                   final serviceIndex = index - clearCount;
                                   final service = filtered[serviceIndex];
                                   final isSelected =
-                                      service.mcpId == selectedName;
-                                  final toolCount = service.tools?.length ?? 0;
+                                      service.name == selectedName;
+                                  final toolCount = service.name == selectedName
+                                      ? (session?.mcpServer?.tools?.length ?? 0)
+                                      : 0;
                                   return _buildCommandItem(
                                     title: service.name,
                                     subtitle:
@@ -2931,7 +2758,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (currentSession == null) return;
 
     var updatedSession = currentSession.copyWith(
-      mcp: service,
+      mcp: service == null ? null : service.name,
+      mcpServer: service,
       clearMcp: service == null,
     );
 
@@ -2950,20 +2778,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           AppLocalizations.of(context)!.mcpServiceSelected(service.name),
         );
         // 等待 MCP 初始化完成，确保 tools 已填充到 session.mcp 中
-        final initedServices = await McpService.initForSessionSync(updatedSession);
-        if (initedServices.isNotEmpty) {
-          // 从缓存中获取带 tools 的 Mcp 配置，更新到 session
-          final cachedMcp = McpService.getCachedConfig(service.mcpId);
-          if (cachedMcp != null && cachedMcp.tools != null && cachedMcp.tools!.isNotEmpty) {
-            final syncedSession = updatedSession.copyWith(mcp: cachedMcp);
-            await sessionController.updateSession(syncedSession);
-          }
+        final refreshed = await McpController.instance.initForSessionSync(updatedSession);
+        if (refreshed != null && refreshed.tools != null && refreshed.tools!.isNotEmpty) {
+          // 将刷新后的 McpServer（含 tools）同步到 session
+          final syncedSession = updatedSession.copyWith(mcpServer: refreshed);
+          await sessionController.updateSession(syncedSession);
         }
       } else {
         // 关闭 MCP 时清理客户端
-        final oldServiceName = currentSession.mcp?.mcpId;
+        final oldServiceName = currentSession.mcp;
         if (oldServiceName != null) {
-          McpService.closeClient(oldServiceName);
+          McpController.instance.closeClient(oldServiceName);
         }
         SnackBarUtils.showInfo(
           context,
@@ -3565,7 +3390,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final bool? shouldRemove = await ConfirmDeleteDialog.show(
       context: context,
       title: '移除 MCP',
-      itemName: currentSession.mcp?.name ?? '',
+      itemName: currentSession.mcpServer?.name ?? '',
       description: '确定要移除当前 MCP',
       warningMessage: '此操作无法撤销',
       icon: CupertinoIcons.link,
@@ -3580,6 +3405,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 显示 MCP 服务详情弹窗（与 MCP 管理页面保持一致）
   void _showMcpDetail(Mcp service) {
     final mcpc = Get.find<McpController>();
+    final config = mcpc.getMcp(service.name);
 
     showGeneralDialog(
       context: context,
@@ -3645,7 +3471,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                             ),
                                           ),
                                           child: Text(
-                                            _getMcpTypeLabel(mutableService),
+                                            _getMcpTypeLabel(config),
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.w600,
@@ -3663,7 +3489,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                       mutableService.description?.isNotEmpty ==
                                               true
                                           ? mutableService.description!
-                                          : _buildMcpSubtitle(mutableService),
+                                          : _buildMcpSubtitle(config),
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: Theme.of(context)
@@ -3700,29 +3526,42 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 GestureDetector(
                                   onTap: () async {
                                     try {
+                                      final cfg = config ??
+                                          McpController.instance.getMcp(
+                                            mutableService.name,
+                                          );
+                                      if (cfg == null) {
+                                        throw Exception(
+                                            '未找到 MCP 配置: ${mutableService.name}');
+                                      }
                                       final newTools =
-                                          await McpService.refreshServiceTools(
-                                            mutableService,
+                                          await McpController.instance.refreshServiceTools(
+                                            cfg,
                                           );
-                                      final updatedService = mutableService
-                                          .copyWith(
-                                            description:
-                                                McpService.getCachedConfig(
-                                                  mutableService.mcpId,
-                                                )?.description,
-                                            tools: newTools,
-                                            lastUpdated: DateTime.now(),
-                                            prompt: McpService.buildMcpPrompt(
-                                              mutableService.copyWith(
-                                                tools: newTools,
-                                              ),
-                                            ),
+                                      final base = mutableService;
+                                      final prompt = McpController.instance
+                                          .buildMcpPrompt(
+                                            base.copyWith(tools: newTools),
                                           );
+                                      final updatedService = base.copyWith(
+                                        tools: newTools,
+                                        prompt: prompt,
+                                        lastUpdated: DateTime.now(),
+                                      );
                                       await mcpc.updateService(
-                                        mutableService.mcpId,
-                                        updatedService,
+                                        cfg.name,
+                                        cfg.copyWith(
+                                          description: updatedService.description,
+                                        ),
                                       );
                                       mutableService = updatedService;
+                                      final sess =
+                                          sessionController.currentSession.value;
+                                      if (sess != null) {
+                                        await sessionController.updateSession(
+                                          sess.copyWith(mcpServer: updatedService),
+                                        );
+                                      }
                                       setSheetState(() {});
                                       SnackBarUtils.showSuccess(
                                         ctx,
@@ -3841,29 +3680,42 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               child: OutlinedButton.icon(
                                 onPressed: () async {
                                   try {
+                                    final cfg = config ??
+                                        McpController.instance.getMcp(
+                                          mutableService.name,
+                                        );
+                                    if (cfg == null) {
+                                      throw Exception(
+                                          '未找到 MCP 配置: ${mutableService.name}');
+                                    }
                                     final newTools =
-                                        await McpService.refreshServiceTools(
-                                          mutableService,
+                                        await McpController.instance.refreshServiceTools(
+                                          cfg,
                                         );
-                                    final updatedService = mutableService
-                                        .copyWith(
-                                          description:
-                                              McpService.getCachedConfig(
-                                                mutableService.mcpId,
-                                              )?.description,
-                                          tools: newTools,
-                                          lastUpdated: DateTime.now(),
-                                          prompt: McpService.buildMcpPrompt(
-                                            mutableService.copyWith(
-                                              tools: newTools,
-                                            ),
-                                          ),
+                                    final base = mutableService;
+                                    final prompt = McpController.instance
+                                        .buildMcpPrompt(
+                                          base.copyWith(tools: newTools),
                                         );
+                                    final updatedService = base.copyWith(
+                                      tools: newTools,
+                                      prompt: prompt,
+                                      lastUpdated: DateTime.now(),
+                                    );
                                     await mcpc.updateService(
-                                      mutableService.mcpId,
-                                      updatedService,
+                                      cfg.name,
+                                      cfg.copyWith(
+                                        description: updatedService.description,
+                                      ),
                                     );
                                     mutableService = updatedService;
+                                    final sess =
+                                        sessionController.currentSession.value;
+                                    if (sess != null) {
+                                      await sessionController.updateSession(
+                                        sess.copyWith(mcpServer: updatedService),
+                                      );
+                                    }
                                     setSheetState(() {});
                                     SnackBarUtils.showSuccess(
                                       ctx,
@@ -4013,7 +3865,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   /// MCP 服务类型标签
-  String _getMcpTypeLabel(Mcp service) {
+  String _getMcpTypeLabel(Mcp? service) {
+    if (service == null) return '';
     if (service.url != null && service.url!.isNotEmpty) {
       switch (service.type) {
         case McpTransportType.sse:
@@ -4029,7 +3882,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   }
 
   /// MCP 服务副标题（URL 或 命令）
-  String _buildMcpSubtitle(Mcp service) {
+  String _buildMcpSubtitle(Mcp? service) {
+    if (service == null) return '';
     if (service.url != null && service.url!.isNotEmpty) {
       final typeLabel =
           (service.type == McpTransportType.http ||

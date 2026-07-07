@@ -49,14 +49,14 @@ class MessageBuilder {
     });
 
     // 4. MCP 工具描述注入（添加/刷新时已生成 prompt，直接读取）
-    if (session?.mcp?.prompt != null && session!.mcp!.prompt!.isNotEmpty) {
-      systemMessages.add({'role': 'system', 'content': session.mcp!.prompt!});
+    if (session?.mcpServer?.prompt != null && session!.mcpServer!.prompt!.isNotEmpty) {
+      systemMessages.add({'role': 'system', 'content': session.mcpServer!.prompt!});
     }
 
     // 5. 连接器关系描述提示词
     if (session?.connectPrompt != null &&
         session!.connectPrompt!.isNotEmpty) {
-      final mcpName = session.mcp?.name ?? '未选择连接器';
+      final mcpName = session.mcpServer?.name ?? '未选择连接器';
       systemMessages.add({
         'role': 'system',
         'content': '连接器【$mcpName】的使用关系：${session.connectPrompt}',

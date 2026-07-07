@@ -6,11 +6,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../controllers/mcp_controller.dart';
+import '../../../controllers/mcp_controller.dart';
 import '../../../controllers/session_controller.dart';
 import '../../../models/chat/mcp_config.dart';
-import '../storage/mcp_storage_manager.dart';
-import '../../../core/mcp/mcp_service.dart';
 import '../../../core/mcp/mcp_json_parser.dart';
 import '../../../utils/snackbar_utils.dart';
 
@@ -306,23 +304,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
   /// 保存新添加的 MCP
   Future<void> _saveNewMcp(String name, Map<String, dynamic> serverJson, Map<String, dynamic> serverConfig) async {
     try {
-      final data = McpData(
-        name: name,
-        server: serverJson,
-        config: {
-          'name': name,
-          'description': '',
-          'tools': [],
-        },
-      );
-      await McpStorageManager.save(data);
-
       final mcpc = Get.find<McpController>();
       final mcp = Mcp(
-        mcpId: 'mcp_$name',
         name: name,
         description: '',
-        code: jsonEncode(serverJson),
         command: serverConfig['command'] as String?,
         args: (serverConfig['args'] as List?)?.cast<String>(),
         url: serverConfig['url'] as String?,
@@ -349,11 +334,11 @@ class _McpManagementPageState extends State<McpManagementPage> {
   /// 刷新服务工具列表
   Future<void> _refreshService(Mcp service) async {
     try {
-      final tools = await McpService.refreshServiceTools(service);
-      
+      final tools = await McpController.instance.refreshServiceTools(service);
+
       String finalDescription = service.description ?? '';
       if (tools.isNotEmpty) {
-        final summary = await McpService.summarizeWithLLM(
+        final summary = await McpController.instance.summarizeWithLLM(
           serverName: service.name,
           tools: tools,
         );
@@ -369,20 +354,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
         tools: tools,
         lastUpdated: DateTime.now(),
       );
-      
-      final mcpData = await McpStorageManager.loadAll().then(
-        (list) => list.where((d) => d.name == service.name).firstOrNull,
-      );
-      if (mcpData != null) {
-        mcpData.config['description'] = finalDescription;
-        mcpData.config['tools'] = tools.map((t) => t.toJson()).toList();
-        mcpData.config['lastUpdated'] = DateTime.now().toIso8601String();
-        await McpStorageManager.save(mcpData);
-      }
 
-      await Get.find<McpController>().updateService(service.mcpId, updatedService);
+      await Get.find<McpController>().updateService(service.name, updatedService);
       await _loadServices();
-      
+
       if (mounted) {
         SnackBarUtils.showSuccess(context, '已刷新 ${tools.length} 个工具');
       }
@@ -395,12 +370,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
   /// 显示服务详情
   void _showServiceDetail(Mcp service) async {
-    final mcpData = await McpStorageManager.loadAll().then(
-      (list) => list.where((d) => d.name == service.name).firstOrNull,
-    );
+    final mcpObj = Get.find<McpController>().getMcp(service.name) ?? service;
 
-    final serverJson = mcpData?.server ?? {};
-    final tools = mcpData?.tools ?? [];
+    final serverJson = mcpObj.toJson();
+    final tools = mcpObj.tools ?? [];
     final jsonCtrl = TextEditingController(
       text: const JsonEncoder.withIndent('  ').convert(serverJson),
     );
@@ -478,8 +451,8 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     spacing: 6,
                                     runSpacing: 4,
                                     children: tools.map((tool) {
-                                      final name = tool['name'] as String? ?? '';
-                                      final desc = tool['description'] as String? ?? '';
+                                      final name = tool.name;
+                                      final desc = tool.description;
                                       final label = desc.isNotEmpty ? '$name - $desc' : name;
                                       return Tooltip(
                                         message: desc.isNotEmpty ? desc : name,
@@ -580,7 +553,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                           ),
                           child: Row(
                             children: [
-                              if (!Get.find<McpController>().isBuiltin(service.mcpId))
+                              if (!Get.find<McpController>().isBuiltin(service.name))
                                 OutlinedButton.icon(
                                   onPressed: () {
                                     Navigator.pop(ctx);
@@ -606,19 +579,18 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   }
 
                                   await Get.find<McpController>().updateServerConfig(
-                                    service.mcpId,
+                                    service.name,
                                     newServerJson,
                                   );
 
                                   final mcpServers = newServerJson['mcpServers'] as Map<String, dynamic>?;
                                   final serverConfig = mcpServers?.values.firstOrNull as Map<String, dynamic>?;
                                   final updatedService = service.copyWith(
-                                    code: jsonEncode(newServerJson),
                                     command: serverConfig?['command'] as String?,
                                     args: (serverConfig?['args'] as List?)?.cast<String>(),
                                   );
                                   await Get.find<McpController>().updateService(
-                                    service.mcpId,
+                                    service.name,
                                     updatedService,
                                   );
 
@@ -664,10 +636,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
       ),
     ).then((confirmed) async {
       if (confirmed == true) {
-        await Get.find<McpController>().removeService(service.mcpId);
+        await Get.find<McpController>().removeService(service.name);
         final sessionController = Get.find<SessionController>();
         for (final session in sessionController.sessions) {
-          if (session.mcpId == service.mcpId) {
+          if (session.mcp == service.name) {
             await sessionController.updateSession(
               session.copyWith(clearMcp: true, clearConnectPrompt: true),
             );
@@ -706,7 +678,7 @@ class _McpCardState extends State<_McpCard> {
   @override
   Widget build(BuildContext context) {
     final service = widget.service;
-    final isBuiltin = Get.find<McpController>().isBuiltin(service.mcpId);
+    final isBuiltin = Get.find<McpController>().isBuiltin(service.name);
     final description = service.description?.isNotEmpty == true ? service.description : null;
 
     return MouseRegion(

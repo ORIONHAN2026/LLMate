@@ -23,7 +23,6 @@ export './storage_paths.dart' show StoragePaths;
 ///         ├── session.json     # 会话元数据
 ///         ├── message.json     # 消息列表
 ///         ├── memory.md        # 压缩记忆（markdown）
-///         ├── skill.json       # 技能绑定
 ///         ├── mcp.json         # MCP 绑定
 ///         └── business.json    # 商务合同内容
 /// ```
@@ -460,18 +459,6 @@ class SessionFileStore {
   static Future<void> writeMemory(String sessionId, String content) async {
     await StoragePaths.ensureSessionDir(sessionId);
     await FileStorage.writeText(StoragePaths.memoryFile(sessionId), content);
-  }
-
-  /// 读取 skill.json
-  static Future<Map<String, dynamic>?> readSkill(String sessionId) async {
-    return FileStorage.readJson(StoragePaths.skillFile(sessionId));
-  }
-
-  /// 写入 skill.json
-  static Future<void> writeSkill(
-      String sessionId, Map<String, dynamic> data) async {
-    await StoragePaths.ensureSessionDir(sessionId);
-    await FileStorage.writeJson(StoragePaths.skillFile(sessionId), data);
   }
 
   /// 读取 mcp.json（会话级）

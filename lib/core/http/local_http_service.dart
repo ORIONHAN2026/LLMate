@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Response;
+import '../../controllers/mcp_controller.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
@@ -101,17 +102,18 @@ class LocalHttpService {
       SecurityContext? securityContext = _loadSecurityContext();
 
       if (securityContext != null) {
-        _server = await io.serve(handler, address, port, securityContext: securityContext);
-        _isHttps = true;
-        debugPrint(
-          '🚀 HTTPS 服务已启动: https://$_bindAddress:$port',
+        _server = await io.serve(
+          handler,
+          address,
+          port,
+          securityContext: securityContext,
         );
+        _isHttps = true;
+        debugPrint('🚀 HTTPS 服务已启动: https://$_bindAddress:$port');
       } else {
         _server = await io.serve(handler, address, port);
         _isHttps = false;
-        debugPrint(
-          '🚀 HTTP 服务已启动: http://$_bindAddress:$port',
-        );
+        debugPrint('🚀 HTTP 服务已启动: http://$_bindAddress:$port');
       }
       _isRunning = true;
       debugPrint('📡 API: POST /{sessionId}/llmwork/chat/completions');
@@ -217,16 +219,13 @@ class LocalHttpService {
       final requestBodyMap = jsonDecode(body) as Map<String, dynamic>;
       // 使用对话模型
       requestBodyMap['model'] = session.chatModel!.model;
+      requestBodyMap['stream'] = true;
 
-      final isStream = requestBodyMap['stream'] == true;
-
-      if (isStream) {
-        return _streamDirectProxy(session, requestBodyMap,
-            auditCallback: auditCallback);
-      } else {
-        return await _handleNonStream(
-          session, requestBodyMap, auditCallback: auditCallback);
-      }
+      return _streamDirectProxy(
+        session,
+        requestBodyMap,
+        auditCallback: auditCallback,
+      );
     } catch (e) {
       debugPrint('❌ 请求处理失败: $e');
 
@@ -355,6 +354,16 @@ class LocalHttpService {
           );
         }
         requestBodyMap['model'] = session.chatModel!.model;
+
+        final mcp = session.mcpServer;
+        final tools = mcp != null
+            ? McpController.instance.getTools(mcp)
+            : const <Map<String, dynamic>>[];
+        if (tools.isNotEmpty) {
+          requestBodyMap['tools'] = tools;
+          requestBodyMap['tool_choice'] = 'auto';
+          debugPrint('🔧 [Gateway Stream] 注入 ${tools.length} 个 MCP 工具');
+        }
 
         final requestBody = jsonEncode(requestBodyMap);
         httpRequest.write(requestBody);

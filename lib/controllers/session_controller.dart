@@ -7,13 +7,26 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../models/chat/chat_session.dart';
+import '../models/chat/mcp_config.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../data/storage_service.dart';
 import '../data/storage_paths.dart';
-import '../core/mcp/mcp_service.dart';
 
 import '../features/models/controllers/model_controller.dart';
-import '../features/mcp/controllers/mcp_controller.dart';
+import './mcp_controller.dart';
+
+/// 从会话存储实体中解析 MCP 文件夹名（兼容旧格式 mcpId / mcp Map）
+String? _resolveMcpFolder(Map<String, dynamic> entity) {
+  final dynamic raw = entity['mcp'] ?? entity['mcpId'];
+  if (raw is String) {
+    return raw.startsWith('mcp_') ? raw.substring(4) : raw;
+  } else if (raw is Map<String, dynamic>) {
+    final id = (raw['mcpId'] as String? ?? '');
+    if (id.isEmpty) return null;
+    return id.startsWith('mcp_') ? id.substring(4) : id;
+  }
+  return null;
+}
 
 class SessionController extends GetxController {
   var sessions = <ChatSession>[].obs;
@@ -57,13 +70,13 @@ class SessionController extends GetxController {
       } catch (_) {}
     }
 
-    // 根据 mcpId 动态解析 mcp
-    if (s.mcpId != null && s.mcpId!.isNotEmpty) {
+    // 根据 mcp 文件夹名解析 server.json / config.json
+    if (s.mcp != null && s.mcp!.isNotEmpty) {
       final mcpController = Get.find<McpController>();
       await mcpController.ensureLoaded();
-      final mcp = mcpController.getMcpById(s.mcpId!);
+      final mcp = mcpController.getMcp(s.mcp!) ?? s.mcpServer;
       if (mcp != null) {
-        s = s.copyWith(mcp: mcp);
+        s = s.copyWith(mcpServer: mcp);
         updated = true;
       }
     }
@@ -176,9 +189,9 @@ class SessionController extends GetxController {
       }
 
       // === 3. 持久化 MCP 绑定到 mcp.json ===
-      if (updatedSession.mcp != null) {
+      if (updatedSession.mcpServer != null) {
         await SessionFileStore.writeMcp(
-            updatedSession.sessionId, updatedSession.mcp!.toFullJson());
+            updatedSession.sessionId, updatedSession.mcpServer!.toFullJson());
       }
     } catch (e) {
       debugPrint('合并持久化失败: $e');
@@ -239,13 +252,13 @@ class SessionController extends GetxController {
 
   /// 切换到指定会话并持久化
   Future<void> switchToSession(String sessionId) async {
-    await McpService.closeAllClients();
+    await McpController.instance.closeAllClients();
 
     final targetIndex = sessions.indexWhere((s) => s.sessionId == sessionId);
     if (targetIndex >= 0 && targetIndex < sessions.length) {
       final target = sessions[targetIndex];
       currentSession.value = target;
-      McpService.initForSession(target);
+      McpController.instance.initForSession(target);
       Future.microtask(() =>
           _persistSessionAndCurrent(target, isCurrent: true));
     }
@@ -475,7 +488,8 @@ class SessionController extends GetxController {
       'lastSelectedDirectory': session.lastSelectedDirectory,
       'workDirectory': session.workDirectory,
       'modelId': session.modelId,
-      'mcpId': session.mcpId,
+      if (session.mcp != null) 'mcp': session.mcp!,
+      if (session.mcpServer != null) 'mcpServer': session.mcpServer!.toJson(),
       'deepThink': session.deepThink,
       'connectPrompt': session.connectPrompt,
       'sessionQuickCommands':
@@ -547,7 +561,12 @@ class SessionController extends GetxController {
           : DateTime.now(),
       messages: [], // 消息懒加载
       modelId: modelId,
-      mcpId: entity['mcpId'] as String?,
+      mcp: _resolveMcpFolder(entity),
+      mcpServer: entity['mcpServer'] is Map<String, dynamic>
+          ? Mcp.fromMap(entity['mcpServer'])
+          : (entity['mcpConfig'] is Map<String, dynamic>
+              ? Mcp.fromMap(entity['mcpConfig'])
+              : null),
       chatModel: chatModel,
       isFavorite: entity['isFavorite'] as bool? ?? false,
       inputContent: entity['inputContent'] as String? ?? '',

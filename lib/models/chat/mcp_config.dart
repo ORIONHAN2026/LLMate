@@ -63,12 +63,18 @@ class McpToolInfo {
   }
 }
 
-/// MCP服务器配置模型
+/// MCP 服务模型
+///
+/// 与磁盘上的 `server.json` 完全对应，合并了原 `config.json`（工具/描述等元信息）
+/// 与原 `server.json`（连接配置：command/args/env/url 等）的内容。
+///
+/// 字段说明：
+/// - 连接配置：command / args / env / workingDirectory（Stdio 型）、
+///   url / type / headers / body（URL 型）、timeout（通用）
+/// - 元信息：description / version / prompt / tools / lastUpdated
 class Mcp {
-  final String mcpId; // 唯一标识 ID
-  final String name;
-  final String? description; // 从 MCP 服务器 instructions 获取的描述
-  final String code; // MCP 配置脚本（原始 JSON 配置，必定保存）
+  final String name; // 唯一标识（与文件夹名一致）
+  final String? description; // 描述
 
   // ── Stdio 类型配置 ──
   final String? command; // Stdio 命令（URL 型为 null）
@@ -83,17 +89,15 @@ class Mcp {
   final Map<String, dynamic>? body; // 请求体额外参数（非标准 MCP 扩展，如 appid/secret）
   final McpTransportType? type; // 传输协议枚举
 
-  // ── 运行时数据 ──
-  final String? version; // MCP 服务器版本号（来自 serverInfo.version）
+  // ── 元信息（原 config.json）──
+  final String? version; // MCP 服务器版本号
+  final String? prompt; // LLM 用的工具介绍文本
   final List<McpToolInfo>? tools; // 工具信息列表
   final DateTime? lastUpdated; // 最后更新时间
-  final String? prompt; // LLM 用的工具介绍文本（添加/刷新时生成）
 
   const Mcp({
-    required this.mcpId,
     required this.name,
     this.description,
-    required this.code,
     this.command,
     this.args,
     this.env,
@@ -104,75 +108,83 @@ class Mcp {
     this.body,
     this.type,
     this.version,
+    this.prompt,
     this.tools,
     this.lastUpdated,
-    this.prompt,
   });
 
   /// 从包含 name 字段的 Map 反序列化
   factory Mcp.fromMap(Map<String, dynamic> json) {
     return Mcp.fromJson(
-      json['name'] as String? ?? '',
+      json['name'] as String? ?? (json['mcpId'] as String? ?? ''),
       json,
     );
   }
 
   factory Mcp.fromJson(String name, Map<String, dynamic> json) {
-    final toolsList = json['tools'] as List<dynamic>?;
-    final tools =
-        toolsList
-            ?.map((tool) => McpToolInfo.fromJson(tool as Map<String, dynamic>))
-            .toList();
+    // 兼容 mcpServers 包装格式：{ "mcpServers": { "name": {...} } }
+    Map<String, dynamic> data = json;
+    if (json.containsKey('mcpServers')) {
+      final mcpServers = json['mcpServers'] as Map<String, dynamic>? ?? {};
+      if (mcpServers.isNotEmpty) {
+        final first = mcpServers.values.first as Map<String, dynamic>;
+        data = <String, dynamic>{...first, ...json}..remove('mcpServers');
+      }
+    }
 
-    final lastUpdatedStr = json['lastUpdated'] as String?;
-    final lastUpdated =
-        lastUpdatedStr != null ? DateTime.tryParse(lastUpdatedStr) : null;
-
-    // 兜底：确保 name 和 mcpId 至少有一个有效值
-    final rawName = name.isNotEmpty ? name : (json['mcpId'] as String? ?? '');
-    final rawMcpId = (json['mcpId'] as String? ?? '').isNotEmpty
-        ? json['mcpId'] as String
-        : rawName;
+    // 兜底：确保 name 有有效值
+    final rawName = name.isNotEmpty ? name : (data['name'] as String? ?? '');
     final fallback = rawName.isNotEmpty
         ? rawName
         : 'mcp_${jsonEncode(json).hashCode}';
     final effectiveName = rawName.isNotEmpty ? rawName : fallback;
-    final effectiveMcpId = rawMcpId.isNotEmpty ? rawMcpId : fallback;
+
+    final toolsList = data['tools'] as List<dynamic>?;
+    final tools = toolsList
+        ?.map((tool) => McpToolInfo.fromJson(tool as Map<String, dynamic>))
+        .toList();
+
+    final lastUpdatedStr = data['lastUpdated'] as String?;
+    final lastUpdated =
+        lastUpdatedStr != null ? DateTime.tryParse(lastUpdatedStr) : null;
 
     return Mcp(
-      mcpId: effectiveMcpId,
       name: effectiveName,
-      description: json['description'] as String?,
-      code: json['code'] as String? ?? jsonEncode(json),
-      command: json['command'] as String?,
-      args: json['args'] != null ? List<String>.from(json['args']) : null,
-      env: json['env'] != null ? Map<String, String>.from(json['env']) : null,
-      workingDirectory: json['workingDirectory'] as String?,
-      timeout: json['timeout'] as int?,
-      url: json['url'] as String?,
-      headers:
-          json['headers'] != null
-              ? Map<String, String>.from(json['headers'])
-              : null,
-      body: json['body'] != null
-          ? Map<String, dynamic>.from(json['body'] as Map)
+      description: data['description'] as String?,
+      command: data['command'] as String?,
+      args: data['args'] != null ? List<String>.from(data['args']) : null,
+      env: data['env'] != null ? Map<String, String>.from(data['env']) : null,
+      workingDirectory: data['workingDirectory'] as String?,
+      timeout: data['timeout'] as int?,
+      url: data['url'] as String?,
+      headers: data['headers'] != null
+          ? Map<String, String>.from(data['headers'])
           : null,
-      type: McpTransportTypeExt.fromString(json['type'] as String?),
-      version: json['version'] as String?,
+      body: data['body'] != null
+          ? Map<String, dynamic>.from(data['body'] as Map)
+          : null,
+      type: McpTransportTypeExt.fromString(data['type'] as String?),
+      version: data['version'] as String?,
+      prompt: data['prompt'] as String?,
       tools: tools,
       lastUpdated: lastUpdated,
-      prompt: json['prompt'] as String?,
     );
   }
 
-  /// 序列化为标准 MCP 服务配置 JSON（不含内部字段，用于导出/展示）
+  /// 序列化为 server.json（与本对象内容完全对应）
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {};
+    final Map<String, dynamic> data = {
+      'name': name,
+    };
+    if (description != null) data['description'] = description;
 
     // Stdio 类型配置
     if (command != null && command!.isNotEmpty) data['command'] = command;
     if (args != null && args!.isNotEmpty) data['args'] = args;
     if (env != null && env!.isNotEmpty) data['env'] = env;
+    if (workingDirectory != null && workingDirectory!.isNotEmpty) {
+      data['workingDirectory'] = workingDirectory;
+    }
 
     // URL 类型配置
     if (url != null && url!.isNotEmpty) data['url'] = url;
@@ -183,18 +195,8 @@ class Mcp {
     // 通用
     if (timeout != null) data['timeout'] = timeout;
 
-    return data;
-  }
-
-  /// 序列化为包含所有字段的完整 JSON（用于展示/导出）
-  Map<String, dynamic> toFullJson() {
-    final data = toJson();
-    data['mcpId'] = mcpId;
-    data['name'] = name;
-    if (description != null) data['description'] = description;
-    data['code'] = code;
+    // 元信息（原 config.json）
     if (version != null) data['version'] = version;
-    if (workingDirectory != null) data['workingDirectory'] = workingDirectory;
     if (prompt != null && prompt!.isNotEmpty) data['prompt'] = prompt;
     if (tools != null && tools!.isNotEmpty) {
       data['tools'] = tools!.map((tool) => tool.toJson()).toList();
@@ -202,15 +204,17 @@ class Mcp {
     if (lastUpdated != null) {
       data['lastUpdated'] = lastUpdated!.toIso8601String();
     }
+
     return data;
   }
 
-  /// 创建带有工具信息的副本
+  /// 序列化为完整 JSON（用于展示/导出，与 toJson 一致）
+  Map<String, dynamic> toFullJson() => toJson();
+
+  /// 创建副本
   Mcp copyWith({
-    String? mcpId,
     String? name,
     String? description,
-    String? code, // 允许为空以支持 copyWith(code: null) 不覆盖场景，但实际创建时必填
     String? command,
     List<String>? args,
     Map<String, String>? env,
@@ -221,15 +225,13 @@ class Mcp {
     Map<String, dynamic>? body,
     McpTransportType? type,
     String? version,
+    String? prompt,
     List<McpToolInfo>? tools,
     DateTime? lastUpdated,
-    String? prompt,
   }) {
     return Mcp(
-      mcpId: mcpId ?? this.mcpId,
       name: name ?? this.name,
       description: description ?? this.description,
-      code: code ?? this.code,
       command: command ?? this.command,
       args: args ?? this.args,
       env: env ?? this.env,
@@ -240,101 +242,14 @@ class Mcp {
       body: body ?? this.body,
       type: type ?? this.type,
       version: version ?? this.version,
+      prompt: prompt ?? this.prompt,
       tools: tools ?? this.tools,
       lastUpdated: lastUpdated ?? this.lastUpdated,
-      prompt: prompt ?? this.prompt,
     );
   }
 
   @override
   String toString() {
-    return 'Mcp(mcpId: $mcpId, name: $name, command: $command, tools: ${tools?.length ?? 0})';
-  }
-}
-
-/// MCP配置文件模型
-class McpConfig {
-  final Map<String, Mcp> mcpServers;
-  final String? version;
-
-  const McpConfig({required this.mcpServers, this.version});
-
-  factory McpConfig.fromJson(Map<String, dynamic> json) {
-    final servers = <String, Mcp>{};
-    final mcpServersJson = json['mcpServers'] as Map<String, dynamic>? ?? {};
-
-    for (final entry in mcpServersJson.entries) {
-      servers[entry.key] = Mcp.fromJson(
-        entry.key,
-        entry.value as Map<String, dynamic>,
-      );
-    }
-
-    return McpConfig(mcpServers: servers, version: json['version'] as String?);
-  }
-
-  factory McpConfig.fromJsonString(String jsonString) {
-    final json = jsonDecode(jsonString) as Map<String, dynamic>;
-    return McpConfig.fromJson(json);
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> servers = {};
-    for (final entry in mcpServers.entries) {
-      servers[entry.key] = entry.value.toJson();
-    }
-
-    final Map<String, dynamic> data = {'mcpServers': servers};
-
-    if (version != null) data['version'] = version;
-
-    return data;
-  }
-
-  String toJsonString() {
-    return jsonEncode(toJson());
-  }
-
-  /// 创建默认配置示例
-  factory McpConfig.defaultConfig() {
-    return McpConfig(
-      mcpServers: {
-        '12306-mcp': Mcp(
-          mcpId: '12306-mcp',
-          name: '12306-mcp',
-          code: '{"command":"npx","args":["-y","12306-mcp"]}',
-          command: 'npx',
-          args: ['-y', '12306-mcp'],
-        ),
-        'filesystem': Mcp(
-          mcpId: 'filesystem',
-          name: 'filesystem',
-          code: '{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","/path/to/allowed/files"]}',
-          command: 'npx',
-          args: [
-            '-y',
-            '@modelcontextprotocol/server-filesystem',
-            '/path/to/allowed/files',
-          ],
-        ),
-        'sqlite': Mcp(
-          mcpId: 'sqlite',
-          name: 'sqlite',
-          code: '{"command":"npx","args":["-y","@modelcontextprotocol/server-sqlite","/path/to/database.db"]}',
-          command: 'npx',
-          args: [
-            '-y',
-            '@modelcontextprotocol/server-sqlite',
-            '/path/to/database.db',
-          ],
-        ),
-      },
-      version: '1.0.0',
-    );
-  }
-
-  @override
-  String toString() {
-    return 'McpConfig(servers: ${mcpServers.keys.toList()}, version: $version)';
+    return 'Mcp(name: $name, command: $command, url: $url, tools: ${tools?.length ?? 0})';
   }
 }

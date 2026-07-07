@@ -27,9 +27,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get domainManagement => 'Service Management';
 
   @override
-  String get skillManagement => 'Skill (SKILL)';
-
-  @override
   String get otherSettings => 'Other Settings';
 
   @override
@@ -230,15 +227,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearKey => 'Clear Key';
 
   @override
-  String get installSkill => 'Install Skill';
-
-  @override
-  String get uninstallSkill => 'Uninstall Skill';
-
-  @override
-  String get deleteSkill => 'Delete Skill';
-
-  @override
   String get fetchTools => 'Fetch Tools';
 
   @override
@@ -287,16 +275,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearMcpServices => 'Clear MCP Services';
 
   @override
-  String get clearSkillSelection => 'Clear Skill Selection';
-
-  @override
   String get selectFile => 'Select File';
 
   @override
   String get selectWorkingDir => 'Select Working Directory';
-
-  @override
-  String get skillMarketplace => 'Skill Marketplace';
 
   @override
   String get confirmDeleteTitle => 'Confirm Delete';
@@ -318,9 +300,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get removeServiceTitle => 'Remove Service';
-
-  @override
-  String get deleteSkillTitle => 'Delete Skill';
 
   @override
   String get removeMcpServiceTitle => 'Remove MCP Service';
@@ -374,9 +353,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get typeCommandOrSearch => 'Type command or search...';
-
-  @override
-  String get searchSkills => 'Search skills...';
 
   @override
   String get searchMcp => 'Search MCP services...';
@@ -811,9 +787,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Set connector and skill joint usage logic';
 
   @override
-  String get needMcpOrSkillFirst => 'Need to select MCP tool or skill first';
-
-  @override
   String get alreadySet => 'Set';
 
   @override
@@ -895,42 +868,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mcpToolsDisabled => 'MCP tools disabled';
 
   @override
-  String get selectSkill => 'Select Skill';
-
-  @override
-  String get noAvailableSkill => 'No available skills';
-
-  @override
-  String currentSkill(Object name) {
-    return 'Current Skill: $name';
-  }
-
-  @override
-  String get clickToSelectSkill => 'Click to select skill';
-
-  @override
-  String get noSelectableSkill => 'No selectable skills';
-
-  @override
   String get createAction => 'Create';
-
-  @override
-  String skillCreatedSelected(Object name) {
-    return 'Skill \"$name\" created and selected';
-  }
-
-  @override
-  String createSkillFailed(Object error) {
-    return 'Create skill failed: $error';
-  }
-
-  @override
-  String skillSelected(Object name) {
-    return 'Skill selected: $name';
-  }
-
-  @override
-  String get skillCleared => 'Skill selection cleared';
 
   @override
   String get noModelBound => 'No model bound';
@@ -949,9 +887,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get historyCleared => 'History cleared';
-
-  @override
-  String get skillDetail => 'Skill Detail';
 
   @override
   String folderPath(Object path) {
@@ -1243,43 +1178,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get extractingImport => 'Extracting import...';
 
   @override
-  String get skillImported => 'Skill imported';
-
-  @override
   String importFailed(Object error) {
     return 'Import failed: $error';
   }
 
   @override
-  String get deleteSkillConfirm => 'Are you sure you want to delete skill';
-
-  @override
   String get irreversibleAction => 'This action is irreversible';
-
-  @override
-  String skillDeleted(Object name) {
-    return 'Skill deleted: $name';
-  }
-
-  @override
-  String deleteSkillFailed(Object error) {
-    return 'Delete skill failed: $error';
-  }
-
-  @override
-  String get skillDescription => 'Skill Description';
-
-  @override
-  String get skillManagementTitle => 'Skill Management (SKILL)';
-
-  @override
-  String get addSkill => 'Add Skill';
-
-  @override
-  String get noSkills => 'No skills';
-
-  @override
-  String get clickAddSkillHint => 'Click add button to create custom skill';
 
   @override
   String toolNameDesc(Object desc, Object name) {

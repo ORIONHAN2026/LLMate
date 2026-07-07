@@ -25,7 +25,6 @@
         ├── session.json     # 会话元数据
         ├── message.json     # 消息列表
         ├── memory.md        # 压缩记忆（markdown）
-        ├── skill.json       # 技能绑定
         ├── mcp.json         # MCP 绑定
         └── business.json    # 商务数据（合同等）
 ```

@@ -311,7 +311,7 @@ class LlmClient {
     return messages;
   }
 
-  /// 构建可用的工具列表（MCP + Skill）
+  /// 构建可用的工具列表（MCP）
   List<Map<String, dynamic>> _buildTools(ChatSession? session) {
     final allTools = <Map<String, dynamic>>[];
     allTools.addAll(buildMcpTools(session));

@@ -138,12 +138,6 @@ abstract class AppLocalizations {
   /// **'Service Management'**
   String get domainManagement;
 
-  /// No description provided for @skillManagement.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill (SKILL)'**
-  String get skillManagement;
-
   /// No description provided for @otherSettings.
   ///
   /// In en, this message translates to:
@@ -540,24 +534,6 @@ abstract class AppLocalizations {
   /// **'Clear Key'**
   String get clearKey;
 
-  /// No description provided for @installSkill.
-  ///
-  /// In en, this message translates to:
-  /// **'Install Skill'**
-  String get installSkill;
-
-  /// No description provided for @uninstallSkill.
-  ///
-  /// In en, this message translates to:
-  /// **'Uninstall Skill'**
-  String get uninstallSkill;
-
-  /// No description provided for @deleteSkill.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete Skill'**
-  String get deleteSkill;
-
   /// No description provided for @fetchTools.
   ///
   /// In en, this message translates to:
@@ -654,12 +630,6 @@ abstract class AppLocalizations {
   /// **'Clear MCP Services'**
   String get clearMcpServices;
 
-  /// No description provided for @clearSkillSelection.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear Skill Selection'**
-  String get clearSkillSelection;
-
   /// No description provided for @selectFile.
   ///
   /// In en, this message translates to:
@@ -671,12 +641,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select Working Directory'**
   String get selectWorkingDir;
-
-  /// No description provided for @skillMarketplace.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill Marketplace'**
-  String get skillMarketplace;
 
   /// No description provided for @confirmDeleteTitle.
   ///
@@ -719,12 +683,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove Service'**
   String get removeServiceTitle;
-
-  /// No description provided for @deleteSkillTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete Skill'**
-  String get deleteSkillTitle;
 
   /// No description provided for @removeMcpServiceTitle.
   ///
@@ -827,12 +785,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Type command or search...'**
   String get typeCommandOrSearch;
-
-  /// No description provided for @searchSkills.
-  ///
-  /// In en, this message translates to:
-  /// **'Search skills...'**
-  String get searchSkills;
 
   /// No description provided for @searchMcp.
   ///
@@ -1626,12 +1578,6 @@ abstract class AppLocalizations {
   /// **'Set connector and skill joint usage logic'**
   String get clickToDesignWorkflow;
 
-  /// No description provided for @needMcpOrSkillFirst.
-  ///
-  /// In en, this message translates to:
-  /// **'Need to select MCP tool or skill first'**
-  String get needMcpOrSkillFirst;
-
   /// No description provided for @alreadySet.
   ///
   /// In en, this message translates to:
@@ -1764,65 +1710,11 @@ abstract class AppLocalizations {
   /// **'MCP tools disabled'**
   String get mcpToolsDisabled;
 
-  /// No description provided for @selectSkill.
-  ///
-  /// In en, this message translates to:
-  /// **'Select Skill'**
-  String get selectSkill;
-
-  /// No description provided for @noAvailableSkill.
-  ///
-  /// In en, this message translates to:
-  /// **'No available skills'**
-  String get noAvailableSkill;
-
-  /// No description provided for @currentSkill.
-  ///
-  /// In en, this message translates to:
-  /// **'Current Skill: {name}'**
-  String currentSkill(Object name);
-
-  /// No description provided for @clickToSelectSkill.
-  ///
-  /// In en, this message translates to:
-  /// **'Click to select skill'**
-  String get clickToSelectSkill;
-
-  /// No description provided for @noSelectableSkill.
-  ///
-  /// In en, this message translates to:
-  /// **'No selectable skills'**
-  String get noSelectableSkill;
-
   /// No description provided for @createAction.
   ///
   /// In en, this message translates to:
   /// **'Create'**
   String get createAction;
-
-  /// No description provided for @skillCreatedSelected.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill \"{name}\" created and selected'**
-  String skillCreatedSelected(Object name);
-
-  /// No description provided for @createSkillFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Create skill failed: {error}'**
-  String createSkillFailed(Object error);
-
-  /// No description provided for @skillSelected.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill selected: {name}'**
-  String skillSelected(Object name);
-
-  /// No description provided for @skillCleared.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill selection cleared'**
-  String get skillCleared;
 
   /// No description provided for @noModelBound.
   ///
@@ -1853,12 +1745,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'History cleared'**
   String get historyCleared;
-
-  /// No description provided for @skillDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill Detail'**
-  String get skillDetail;
 
   /// No description provided for @folderPath.
   ///
@@ -2346,71 +2232,17 @@ abstract class AppLocalizations {
   /// **'Extracting import...'**
   String get extractingImport;
 
-  /// No description provided for @skillImported.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill imported'**
-  String get skillImported;
-
   /// No description provided for @importFailed.
   ///
   /// In en, this message translates to:
   /// **'Import failed: {error}'**
   String importFailed(Object error);
 
-  /// No description provided for @deleteSkillConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Are you sure you want to delete skill'**
-  String get deleteSkillConfirm;
-
   /// No description provided for @irreversibleAction.
   ///
   /// In en, this message translates to:
   /// **'This action is irreversible'**
   String get irreversibleAction;
-
-  /// No description provided for @skillDeleted.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill deleted: {name}'**
-  String skillDeleted(Object name);
-
-  /// No description provided for @deleteSkillFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete skill failed: {error}'**
-  String deleteSkillFailed(Object error);
-
-  /// No description provided for @skillDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill Description'**
-  String get skillDescription;
-
-  /// No description provided for @skillManagementTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Skill Management (SKILL)'**
-  String get skillManagementTitle;
-
-  /// No description provided for @addSkill.
-  ///
-  /// In en, this message translates to:
-  /// **'Add Skill'**
-  String get addSkill;
-
-  /// No description provided for @noSkills.
-  ///
-  /// In en, this message translates to:
-  /// **'No skills'**
-  String get noSkills;
-
-  /// No description provided for @clickAddSkillHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Click add button to create custom skill'**
-  String get clickAddSkillHint;
 
   /// No description provided for @toolNameDesc.
   ///

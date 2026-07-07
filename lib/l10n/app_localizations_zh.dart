@@ -27,9 +27,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get domainManagement => '服务管理';
 
   @override
-  String get skillManagement => '技能管理(SKILL)';
-
-  @override
   String get otherSettings => '其他设置';
 
   @override
@@ -230,15 +227,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clearKey => '清除密钥';
 
   @override
-  String get installSkill => '安装技能';
-
-  @override
-  String get uninstallSkill => '卸载技能';
-
-  @override
-  String get deleteSkill => '删除技能';
-
-  @override
   String get fetchTools => '获取工具列表';
 
   @override
@@ -287,16 +275,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clearMcpServices => '清空MCP服务';
 
   @override
-  String get clearSkillSelection => '清空技能选择';
-
-  @override
   String get selectFile => '选择文件';
 
   @override
   String get selectWorkingDir => '选择工作目录';
-
-  @override
-  String get skillMarketplace => '技能应用市场';
 
   @override
   String get confirmDeleteTitle => '确认删除';
@@ -318,9 +300,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get removeServiceTitle => '移除服务';
-
-  @override
-  String get deleteSkillTitle => '删除技能';
 
   @override
   String get removeMcpServiceTitle => '移除 MCP 服务';
@@ -372,9 +351,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get typeCommandOrSearch => '键入命令或搜索...';
-
-  @override
-  String get searchSkills => '搜索技能...';
 
   @override
   String get searchMcp => '搜索 MCP 服务...';
@@ -802,9 +778,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clickToDesignWorkflow => '设定连接器和技能联合使用逻辑';
 
   @override
-  String get needMcpOrSkillFirst => '需要先选择MCP工具或技能';
-
-  @override
   String get alreadySet => '已设置';
 
   @override
@@ -885,42 +858,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mcpToolsDisabled => '已关闭MCP工具';
 
   @override
-  String get selectSkill => '选技能';
-
-  @override
-  String get noAvailableSkill => '无可用技能';
-
-  @override
-  String currentSkill(Object name) {
-    return '当前技能: $name';
-  }
-
-  @override
-  String get clickToSelectSkill => '点击选择技能';
-
-  @override
-  String get noSelectableSkill => '暂无可选技能';
-
-  @override
   String get createAction => '创建';
-
-  @override
-  String skillCreatedSelected(Object name) {
-    return '已创建技能「$name」并选中';
-  }
-
-  @override
-  String createSkillFailed(Object error) {
-    return '创建技能失败: $error';
-  }
-
-  @override
-  String skillSelected(Object name) {
-    return '已选择技能: $name';
-  }
-
-  @override
-  String get skillCleared => '已清空技能选择';
 
   @override
   String get noModelBound => '还未绑定模型';
@@ -938,9 +876,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get historyCleared => '历史记录已清除';
-
-  @override
-  String get skillDetail => '技能详情';
 
   @override
   String folderPath(Object path) {
@@ -1226,43 +1161,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get extractingImport => '正在解压导入...';
 
   @override
-  String get skillImported => '已导入技能';
-
-  @override
   String importFailed(Object error) {
     return '导入失败: $error';
   }
 
   @override
-  String get deleteSkillConfirm => '确定要删除技能';
-
-  @override
   String get irreversibleAction => '此操作不可撤销';
-
-  @override
-  String skillDeleted(Object name) {
-    return '已删除技能: $name';
-  }
-
-  @override
-  String deleteSkillFailed(Object error) {
-    return '删除技能失败: $error';
-  }
-
-  @override
-  String get skillDescription => '技能描述';
-
-  @override
-  String get skillManagementTitle => '技能管理(SKILL)';
-
-  @override
-  String get addSkill => '添加技能';
-
-  @override
-  String get noSkills => '暂无技能';
-
-  @override
-  String get clickAddSkillHint => '点击右上角添加按钮创建自定义技能';
 
   @override
   String toolNameDesc(Object desc, Object name) {

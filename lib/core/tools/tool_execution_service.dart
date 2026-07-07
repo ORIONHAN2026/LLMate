@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../mcp_client/mcp_client.dart';
 import '../llm/modes/mode_utils.dart';
 import '../../models/chat/chat_session.dart';
-import '../mcp/mcp_service.dart';
+import '../../controllers/mcp_controller.dart';
 
 
 /// 工具调用执行结果（统一返回）
@@ -97,7 +97,7 @@ class ToolExecutionService {
     final resolvedName = resolveOriginalToolName(toolName);
 
     // ── MCP 工具：尝试 MCP 客户端 ──
-    final mc = await McpService.getOrInitClient(session);
+    final mc = await McpController.instance.getOrInitClient(session);
     if (mc != null) {
       final result = await _callMCPTool(mc, resolvedName, arguments, callId);
       // 成功或非连接类错误 → 直接返回
@@ -106,10 +106,10 @@ class ToolExecutionService {
       // 连接失败（SSE 长连接可能因空闲超时被断开），
       // 清理旧客户端并重连重试一次
       debugPrint('🔄 MCP 工具 "$toolName" 连接失败，尝试重连重试...');
-      final svc = session.mcp?.mcpId;
+      final svc = session.mcp;
       if (svc != null) {
-        await McpService.closeClient(svc);
-        final retryMc = await McpService.getOrInitClient(session);
+        await McpController.instance.closeClient(svc);
+        final retryMc = await McpController.instance.getOrInitClient(session);
         if (retryMc != null) {
           final retryResult = await _callMCPTool(
             retryMc,

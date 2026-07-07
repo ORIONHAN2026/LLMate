@@ -1251,8 +1251,8 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                       context,
                       icon: CupertinoIcons.link,
                       label: 'MCP连接器',
-                      value: session.mcp?.name ?? '未绑定',
-                      valueColor: session.mcp != null
+                      value: session.mcpServer?.name ?? '未绑定',
+                      valueColor: session.mcpServer != null
                           ? Theme.of(context).colorScheme.primary
                           : null,
                     ),

@@ -47,10 +47,6 @@ class StoragePaths {
   static String memoryFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'memory.md');
 
-  /// ~/.llmwork/chats/{sessionId}/skill.json
-  static String skillFile(String sessionId) =>
-      p.join(sessionDir(sessionId), 'skill.json');
-
   /// ~/.llmwork/chats/{sessionId}/mcp.json
   static String sessionMcpFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'mcp.json');

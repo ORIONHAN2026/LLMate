@@ -13,8 +13,6 @@ import '../../controllers/session_controller.dart';
 import '../../controllers/domain_controller.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../mcp/mcp_service.dart';
-import '../llm/modes/mode_utils.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/audit_guard.dart';
@@ -200,9 +198,6 @@ class LocalHttpService {
   /// - 会话已找到且模型已配置
   /// - 配额未超限
   /// - request.context['session'] 包含有效的 ChatSession
-  ///
-  /// 当会话配置了 MCP 时，会自动在请求中注入 tools，并在服务端完成
-  /// MCP 工具调用的完整循环（LLM → tool_call → MCP 执行 → LLM 继续）。
   static Future<Response> _handleChatCompletion(
     Request request,
     String sessionId,
@@ -225,15 +220,12 @@ class LocalHttpService {
 
       final isStream = requestBodyMap['stream'] == true;
 
-      // 检查是否需要 MCP 工具调用
-      final hasMcp = session.mcp != null && session.mcp!.tools != null && session.mcp!.tools!.isNotEmpty;
-
       if (isStream) {
-        return _streamProxyResponse(session, requestBodyMap,
-            auditCallback: auditCallback, hasMcp: hasMcp);
+        return _streamDirectProxy(session, requestBodyMap,
+            auditCallback: auditCallback);
       } else {
-        return await _handleNonStreamWithMcp(
-          session, requestBodyMap, auditCallback: auditCallback, hasMcp: hasMcp);
+        return await _handleNonStream(
+          session, requestBodyMap, auditCallback: auditCallback);
       }
     } catch (e) {
       debugPrint('❌ 请求处理失败: $e');
@@ -254,255 +246,50 @@ class LocalHttpService {
     }
   }
 
-  /// 非流式处理（含 MCP tool-calling 循环）
-  static Future<Response> _handleNonStreamWithMcp(
+  /// 非流式透传
+  static Future<Response> _handleNonStream(
     ChatSession session,
     Map<String, dynamic> requestBodyMap, {
     AuditCallback? auditCallback,
-    bool hasMcp = false,
   }) async {
-    if (!hasMcp) {
-      // 无 MCP：直接透传
-      final responseBody = await _proxyToLLM(session, requestBodyMap);
+    final responseBody = await _proxyToLLM(session, requestBodyMap);
 
-      Map<String, dynamic>? llmResponse;
-      String? content;
-      int? promptTokens, completionTokens, totalTokens;
-      try {
-        llmResponse = jsonDecode(responseBody) as Map<String, dynamic>;
-        final choices = llmResponse['choices'] as List?;
-        if (choices != null && choices.isNotEmpty) {
-          content = choices[0]['message']?['content'] as String?;
-        }
-        final usage = llmResponse['usage'] as Map<String, dynamic>?;
-        if (usage != null) {
-          promptTokens = usage['prompt_tokens'] as int?;
-          completionTokens = usage['completion_tokens'] as int?;
-          totalTokens = usage['total_tokens'] as int?;
-        }
-      } catch (_) {}
-
-      final sessionController = Get.find<SessionController>();
-      final updatedSession = session.recordRequest();
-      sessionController.updateSession(updatedSession);
-
-      auditCallback?.call(
-        rawResponse: llmResponse,
-        responseContent: content,
-        promptTokens: promptTokens,
-        completionTokens: completionTokens,
-        totalTokens: totalTokens,
-      );
-
-      return Response.ok(
-        responseBody,
-        headers: {'content-type': 'application/json'},
-      );
-    }
-
-    // 有 MCP：注入 tools 并执行 tool-calling 循环
-    return _executeMcpToolCallingLoop(
-      session, requestBodyMap,
-      auditCallback: auditCallback,
-    );
-  }
-
-  /// MCP Tool-Calling 循环（非流式）
-  ///
-  /// 流程：
-  /// 1. 在请求中注入 MCP tools
-  /// 2. 发送请求到 LLM
-  /// 3. 如果 LLM 返回 tool_calls → 服务端执行 MCP 工具 → 将结果追加到 messages
-  /// 4. 继续请求 LLM，直到 LLM 返回纯文本响应
-  /// 5. 将最终结果返回给客户端
-  static Future<Response> _executeMcpToolCallingLoop(
-    ChatSession session,
-    Map<String, dynamic> originalRequestBody, {
-    AuditCallback? auditCallback,
-    int maxIterations = 10,
-  }) async {
-    // 深拷贝请求体，避免修改原始数据
-    final body = Map<String, dynamic>.from(originalRequestBody);
-    final messages = List<Map<String, dynamic>>.from(
-      (body['messages'] as List?)?.map((m) => Map<String, dynamic>.from(m)) ?? [],
-    );
-
-    // 构建 MCP tools 并注入
-    final tools = buildMcpTools(session);
-    if (tools.isNotEmpty) {
-      body['tools'] = tools;
-      body['tool_choice'] = 'auto';
-    }
-
-    // 确保 MCP 客户端已初始化
-    if (session.mcp != null) {
-      try {
-        await McpService.ensureGlobalConfigsLoaded();
-        await McpService.initializeSessionMcpServices(session);
-      } catch (e) {
-        debugPrint('⚠️ MCP 初始化失败（继续无工具模式）: $e');
+    Map<String, dynamic>? llmResponse;
+    String? content;
+    int? promptTokens, completionTokens, totalTokens;
+    try {
+      llmResponse = jsonDecode(responseBody) as Map<String, dynamic>;
+      final choices = llmResponse['choices'] as List?;
+      if (choices != null && choices.isNotEmpty) {
+        content = choices[0]['message']?['content'] as String?;
       }
-    }
-
-    int totalPromptTokens = 0;
-    int totalCompletionTokens = 0;
-
-    for (int iteration = 0; iteration < maxIterations; iteration++) {
-      body['messages'] = messages;
-      body['stream'] = false;
-
-      debugPrint('🔄 [MCP-Loop] 第 ${iteration + 1} 轮 LLM 请求, 消息数: ${messages.length}');
-
-      final responseBody = await _proxyToLLM(session, body);
-      Map<String, dynamic> llmResponse;
-      try {
-        llmResponse = jsonDecode(responseBody) as Map<String, dynamic>;
-      } catch (e) {
-        debugPrint('❌ [MCP-Loop] 解析 LLM 响应失败: $e');
-        return Response.ok(
-          responseBody,
-          headers: {'content-type': 'application/json'},
-        );
-      }
-
-      // 累积 token 用量
       final usage = llmResponse['usage'] as Map<String, dynamic>?;
       if (usage != null) {
-        totalPromptTokens += (usage['prompt_tokens'] as int?) ?? 0;
-        totalCompletionTokens += (usage['completion_tokens'] as int?) ?? 0;
+        promptTokens = usage['prompt_tokens'] as int?;
+        completionTokens = usage['completion_tokens'] as int?;
+        totalTokens = usage['total_tokens'] as int?;
       }
+    } catch (_) {}
 
-      final choices = llmResponse['choices'] as List?;
-      if (choices == null || choices.isEmpty) {
-        debugPrint('⚠️ [MCP-Loop] LLM 响应无 choices');
-        return Response.ok(
-          responseBody,
-          headers: {'content-type': 'application/json'},
-        );
-      }
+    final sessionController = Get.find<SessionController>();
+    final updatedSession = session.recordRequest();
+    sessionController.updateSession(updatedSession);
 
-      final message = choices[0]['message'] as Map<String, dynamic>?;
-      if (message == null) {
-        debugPrint('⚠️ [MCP-Loop] LLM 响应无 message');
-        return Response.ok(
-          responseBody,
-          headers: {'content-type': 'application/json'},
-        );
-      }
+    auditCallback?.call(
+      rawResponse: llmResponse,
+      responseContent: content,
+      promptTokens: promptTokens,
+      completionTokens: completionTokens,
+      totalTokens: totalTokens,
+    );
 
-      final toolCalls = message['tool_calls'] as List?;
-      final content = message['content'] as String?;
-
-      // 没有工具调用 → 返回最终结果
-      if (toolCalls == null || toolCalls.isEmpty) {
-        debugPrint('✅ [MCP-Loop] 第 ${iteration + 1} 轮: 获得最终文本响应');
-
-        // 更新 llmResponse 的 usage 为累计值
-        llmResponse['usage'] = {
-          'prompt_tokens': totalPromptTokens,
-          'completion_tokens': totalCompletionTokens,
-          'total_tokens': totalPromptTokens + totalCompletionTokens,
-        };
-
-        final finalResponse = jsonEncode(llmResponse);
-
-        // 记录请求 & 更新会话
-        final sessionController = Get.find<SessionController>();
-        final updatedSession = session.recordRequest();
-        sessionController.updateSession(updatedSession);
-
-        auditCallback?.call(
-          rawResponse: llmResponse,
-          responseContent: content,
-          promptTokens: totalPromptTokens,
-          completionTokens: totalCompletionTokens,
-          totalTokens: totalPromptTokens + totalCompletionTokens,
-        );
-
-        return Response.ok(
-          finalResponse,
-          headers: {'content-type': 'application/json'},
-        );
-      }
-
-      // 有工具调用 → 服务端执行 MCP 工具
-      debugPrint('🔧 [MCP-Loop] 第 ${iteration + 1} 轮: LLM 请求调用 ${toolCalls.length} 个工具');
-
-      // 添加 assistant 消息（含 tool_calls）到 messages
-      messages.add({
-        'role': 'assistant',
-        'content': content,
-        'tool_calls': toolCalls,
-      });
-
-      // 逐个执行工具调用
-      for (final tc in toolCalls) {
-        final tcMap = tc as Map<String, dynamic>;
-        final tcId = tcMap['id'] as String? ?? '';
-        final func = tcMap['function'] as Map<String, dynamic>?;
-        final toolName = func?['name'] as String? ?? '';
-        Map<String, dynamic> toolArgs;
-        try {
-          final rawArgs = func?['arguments'];
-          toolArgs = rawArgs is String
-              ? (jsonDecode(rawArgs) as Map<String, dynamic>)
-              : (rawArgs as Map<String, dynamic>?) ?? {};
-        } catch (_) {
-          toolArgs = {};
-        }
-
-        String toolResult;
-        try {
-          // 通过 McpService 执行工具
-          final mcpClient = McpService.getMCPClient(session.mcp!.mcpId);
-          if (mcpClient != null) {
-            final result = await mcpClient.callTool(toolName, toolArgs);
-            final buf = StringBuffer();
-            for (final c in result.content) {
-              try {
-                buf.writeln((c as dynamic).text);
-              } catch (_) {
-                buf.writeln(c.toString());
-              }
-            }
-            toolResult = buf.toString().trim();
-            if (result.isError == true) {
-              toolResult = '错误: $toolResult';
-            }
-            debugPrint('  ✅ 工具 "$toolName" 执行成功');
-          } else {
-            toolResult = 'MCP 客户端未初始化，无法执行工具';
-            debugPrint('  ❌ 工具 "$toolName": MCP 客户端未初始化');
-          }
-        } catch (e) {
-          toolResult = '工具执行异常: $e';
-          debugPrint('  ❌ 工具 "$toolName" 执行异常: $e');
-        }
-
-        // 添加 tool 结果消息
-        messages.add({
-          'role': 'tool',
-          'tool_call_id': tcId,
-          'content': toolResult,
-        });
-      }
-    }
-
-    // 超过最大迭代次数
-    debugPrint('⚠️ [MCP-Loop] 超过最大迭代次数 ($maxIterations)，返回错误');
-    return Response.internalServerError(
-      body: jsonEncode({
-        'error': {
-          'message': 'MCP tool-calling loop exceeded max iterations ($maxIterations)',
-          'type': 'mcp_loop_error',
-          'code': 500,
-        },
-      }),
+    return Response.ok(
+      responseBody,
       headers: {'content-type': 'application/json'},
     );
   }
 
-  /// 非流式透传
+  /// 非流式透传（底层 HTTP 请求）
   static Future<String> _proxyToLLM(
     ChatSession session,
     Map<String, dynamic> requestBodyMap,
@@ -522,7 +309,8 @@ class LocalHttpService {
         );
       }
 
-      httpRequest.write(requestBodyMap);
+      final requestJson = jsonEncode(requestBodyMap);
+      httpRequest.write(requestJson);
 
       final response = await httpRequest.close();
       final responseBody = await response.transform(utf8.decoder).join();
@@ -541,24 +329,6 @@ class LocalHttpService {
   }
 
   /// 流式透传 - 返回 StreamedResponse，同时解析 SSE 并更新本地会话
-  ///
-  /// [hasMcp] 是否启用 MCP tool-calling。启用后会在请求中注入 tools，
-  /// 并在服务端完成完整的 tool-calling 循环，最终将合并后的文本流返回给客户端。
-  static Response _streamProxyResponse(
-    ChatSession session,
-    Map<String, dynamic> requestBodyMap, {
-    AuditCallback? auditCallback,
-    bool hasMcp = false,
-  }) {
-    // 如果启用 MCP，走服务端 tool-calling 循环的流式模式
-    if (hasMcp) {
-      return _streamWithMcpToolCalling(session, requestBodyMap,
-          auditCallback: auditCallback);
-    }
-    return _streamDirectProxy(session, requestBodyMap, auditCallback: auditCallback);
-  }
-
-  /// 直接流式透传（无 MCP）
   static Response _streamDirectProxy(
     ChatSession session,
     Map<String, dynamic> requestBodyMap, {
@@ -770,295 +540,6 @@ class LocalHttpService {
       debugPrint('❌ 更新会话失败: $e');
 
       // 审计回调：记录流式更新失败
-      auditCallback?.call(error: 'Session update failed: $e');
-    }
-  }
-
-  /// 流式 MCP Tool-Calling（服务端完成完整循环后，将最终文本以 SSE 流返回）
-  ///
-  /// 流程：
-  /// 1. 注入 tools 到请求体
-  /// 2. 初始化 MCP 客户端
-  /// 3. 在服务端完成完整的 tool-calling 循环（非流式 LLM 请求）
-  /// 4. 收集所有轮次的文本内容
-  /// 5. 将最终合并的文本以 SSE 流格式返回给客户端
-  static Response _streamWithMcpToolCalling(
-    ChatSession session,
-    Map<String, dynamic> originalRequestBody, {
-    AuditCallback? auditCallback,
-    int maxIterations = 10,
-  }) {
-    final controller = StreamController<List<int>>();
-
-    () async {
-      try {
-        // 深拷贝请求体
-        final body = Map<String, dynamic>.from(originalRequestBody);
-        final messages = List<Map<String, dynamic>>.from(
-          (body['messages'] as List?)?.map((m) => Map<String, dynamic>.from(m)) ?? [],
-        );
-
-        // 注入 MCP tools
-        final tools = buildMcpTools(session);
-        if (tools.isNotEmpty) {
-          body['tools'] = tools;
-          body['tool_choice'] = 'auto';
-        }
-
-        // 初始化 MCP 客户端
-        if (session.mcp != null) {
-          try {
-            await McpService.ensureGlobalConfigsLoaded();
-            await McpService.initializeSessionMcpServices(session);
-          } catch (e) {
-            debugPrint('⚠️ [MCP-Stream] MCP 初始化失败（继续无工具模式）: $e');
-          }
-        }
-
-        final allContentParts = <String>[];
-        int totalPromptTokens = 0;
-        int totalCompletionTokens = 0;
-        final generationStartTime = DateTime.now();
-
-        for (int iteration = 0; iteration < maxIterations; iteration++) {
-          body['messages'] = messages;
-          body['stream'] = false;
-
-          debugPrint('🔄 [MCP-Stream] 第 ${iteration + 1} 轮 LLM 请求');
-
-          final responseBody = await _proxyToLLM(session, body);
-          Map<String, dynamic> llmResponse;
-          try {
-            llmResponse = jsonDecode(responseBody) as Map<String, dynamic>;
-          } catch (e) {
-            _sendSseError(controller, '解析 LLM 响应失败: $e');
-            return;
-          }
-
-          // 累积 token 用量
-          final usage = llmResponse['usage'] as Map<String, dynamic>?;
-          if (usage != null) {
-            totalPromptTokens += (usage['prompt_tokens'] as int?) ?? 0;
-            totalCompletionTokens += (usage['completion_tokens'] as int?) ?? 0;
-          }
-
-          final choices = llmResponse['choices'] as List?;
-          if (choices == null || choices.isEmpty) {
-            _sendSseError(controller, 'LLM 响应无 choices');
-            return;
-          }
-
-          final message = choices[0]['message'] as Map<String, dynamic>?;
-          if (message == null) {
-            _sendSseError(controller, 'LLM 响应无 message');
-            return;
-          }
-
-          final toolCalls = message['tool_calls'] as List?;
-          final content = message['content'] as String?;
-
-          // 收集文本内容
-          if (content != null && content.isNotEmpty) {
-            allContentParts.add(content);
-          }
-
-          // 没有工具调用 → 循环结束
-          if (toolCalls == null || toolCalls.isEmpty) {
-            debugPrint('✅ [MCP-Stream] 第 ${iteration + 1} 轮: 获得最终响应');
-
-            final finalContent = allContentParts.join('\n');
-
-            // 将最终内容以 SSE 流格式发送给客户端
-            final sseChunk = {
-              'id': 'mcp-${DateTime.now().millisecondsSinceEpoch}',
-              'object': 'chat.completion.chunk',
-              'created': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-              'model': session.chatModel!.model,
-              'choices': [
-                {
-                  'index': 0,
-                  'delta': {'content': finalContent},
-                  'finish_reason': 'stop',
-                },
-              ],
-              'usage': {
-                'prompt_tokens': totalPromptTokens,
-                'completion_tokens': totalCompletionTokens,
-                'total_tokens': totalPromptTokens + totalCompletionTokens,
-              },
-            };
-            controller.add(utf8.encode('data: ${jsonEncode(sseChunk)}\n\n'));
-            controller.add(utf8.encode('data: [DONE]\n\n'));
-            await controller.close();
-
-            // 更新会话
-            _updateSessionAfterMcpStream(
-              session: session,
-              requestBodyMap: originalRequestBody,
-              content: finalContent,
-              promptTokens: totalPromptTokens,
-              completionTokens: totalCompletionTokens,
-              totalTokens: totalPromptTokens + totalCompletionTokens,
-              generationStartTime: generationStartTime,
-              auditCallback: auditCallback,
-            );
-            return;
-          }
-
-          // 有工具调用 → 服务端执行
-          debugPrint('🔧 [MCP-Stream] 第 ${iteration + 1} 轮: LLM 请求调用 ${toolCalls.length} 个工具');
-
-          messages.add({
-            'role': 'assistant',
-            'content': content,
-            'tool_calls': toolCalls,
-          });
-
-          for (final tc in toolCalls) {
-            final tcMap = tc as Map<String, dynamic>;
-            final tcId = tcMap['id'] as String? ?? '';
-            final func = tcMap['function'] as Map<String, dynamic>?;
-            final toolName = func?['name'] as String? ?? '';
-            Map<String, dynamic> toolArgs;
-            try {
-              final rawArgs = func?['arguments'];
-              toolArgs = rawArgs is String
-                  ? (jsonDecode(rawArgs) as Map<String, dynamic>)
-                  : (rawArgs as Map<String, dynamic>?) ?? {};
-            } catch (_) {
-              toolArgs = {};
-            }
-
-            String toolResult;
-            try {
-              final mcpClient = McpService.getMCPClient(session.mcp!.mcpId);
-              if (mcpClient != null) {
-                final result = await mcpClient.callTool(toolName, toolArgs);
-                final buf = StringBuffer();
-                for (final c in result.content) {
-                  try {
-                    buf.writeln((c as dynamic).text);
-                  } catch (_) {
-                    buf.writeln(c.toString());
-                  }
-                }
-                toolResult = buf.toString().trim();
-                if (result.isError == true) {
-                  toolResult = '错误: $toolResult';
-                }
-              } else {
-                toolResult = 'MCP 客户端未初始化，无法执行工具';
-              }
-            } catch (e) {
-              toolResult = '工具执行异常: $e';
-            }
-
-            messages.add({
-              'role': 'tool',
-              'tool_call_id': tcId,
-              'content': toolResult,
-            });
-          }
-        }
-
-        // 超过最大迭代次数
-        _sendSseError(controller, 'MCP tool-calling loop exceeded max iterations ($maxIterations)');
-      } catch (e) {
-        debugPrint('❌ [MCP-Stream] 异常: $e');
-        _sendSseError(controller, 'Stream MCP error: $e');
-        auditCallback?.call(error: 'Stream MCP error: $e');
-      }
-    }();
-
-    return Response(
-      200,
-      body: controller.stream,
-      headers: {
-        'content-type': 'text/event-stream',
-        'cache-control': 'no-cache',
-        'connection': 'keep-alive',
-      },
-    );
-  }
-
-  /// 发送 SSE 错误
-  static void _sendSseError(StreamController<List<int>> controller, String message) {
-    final errorChunk = jsonEncode({
-      'error': {
-        'message': message,
-        'type': 'api_error',
-        'code': 500,
-      },
-    });
-    controller.add(utf8.encode('data: $errorChunk\n\n'));
-    controller.add(utf8.encode('data: [DONE]\n\n'));
-    controller.close();
-  }
-
-  /// MCP 流式完成后更新本地会话
-  static void _updateSessionAfterMcpStream({
-    required ChatSession session,
-    required Map<String, dynamic> requestBodyMap,
-    required String content,
-    int? promptTokens,
-    int? completionTokens,
-    int? totalTokens,
-    required DateTime generationStartTime,
-    AuditCallback? auditCallback,
-  }) {
-    try {
-      final sessionController = Get.find<SessionController>();
-      final now = DateTime.now();
-
-      final messages = requestBodyMap['messages'] as List?;
-      final lastUserMsg = messages?.lastOrNull as Map<String, dynamic>?;
-      final userContent = lastUserMsg?['content'] as String? ?? '';
-
-      final userMsgId = '${DateTime.now().millisecondsSinceEpoch}_user';
-      final userMessage = ChatMessage(
-        msgId: userMsgId,
-        role: MessageRole.user,
-        content: userContent,
-        timestamp: now,
-        sessionId: session.sessionId,
-      );
-
-      final botMsgId = '${DateTime.now().millisecondsSinceEpoch}_bot';
-      final botMessage = ChatMessage(
-        msgId: botMsgId,
-        role: MessageRole.bot,
-        content: content,
-        timestamp: now,
-        sessionId: session.sessionId,
-        pairedMsgId: userMsgId,
-        generationStartTime: generationStartTime,
-        generationEndTime: now,
-        inputTokens: promptTokens,
-        outputTokens: completionTokens,
-        totalTokens: totalTokens,
-        generationDuration: now.difference(generationStartTime),
-      );
-
-      final newMessages = [...session.messages, userMessage, botMessage];
-      var updatedSession = session.copyWith(messages: newMessages);
-      updatedSession = updatedSession.recordRequest();
-      sessionController.updateSession(updatedSession);
-
-      debugPrint(
-        '✅ [MCP-Stream] 会话已更新: ${session.sessionId}, '
-        '用户消息: "${userContent.substring(0, userContent.length.clamp(0, 30))}", '
-        'AI回复: "${content.substring(0, content.length.clamp(0, 30))}", '
-        'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
-      );
-
-      auditCallback?.call(
-        responseContent: content,
-        promptTokens: promptTokens,
-        completionTokens: completionTokens,
-        totalTokens: totalTokens,
-      );
-    } catch (e) {
-      debugPrint('❌ [MCP-Stream] 更新会话失败: $e');
       auditCallback?.call(error: 'Session update failed: $e');
     }
   }

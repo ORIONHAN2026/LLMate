@@ -14,6 +14,7 @@ const String _auditLogDir = 'log_request';
 /// 业务层在处理完请求/响应后，调用此回调补全审计条目中的实际内容。
 typedef AuditCallback = void Function({
   Map<String, dynamic>? rawRequest,
+  Map<String, dynamic>? organizedRequest,
   Map<String, dynamic>? rawResponse,
   String? responseContent,
   int? promptTokens,
@@ -39,6 +40,8 @@ Handler auditGuard(Handler innerHandler) {
     final startTime = DateTime.now();
     final session = request.context['session'] as ChatSession?;
     final apiKey = request.context['apiKey'] as String?;
+    // 读取上游注入的唯一 RequestId（由路由层生成）
+    final requestId = request.context['requestId'] as String?;
 
     // 读取请求体
     String? requestBodyStr;
@@ -63,13 +66,15 @@ Handler auditGuard(Handler innerHandler) {
     final auditEntry = <String, dynamic>{
       'timestamp': startTime.toIso8601String(),
       'sessionId': session?.sessionId ?? 'unknown',
+      'requestId': requestId ?? 'unknown',
       'sessionName': session?.name ?? '',
       'model': session?.chatModel?.model ?? (parsedBody?['model'] ?? 'unknown'),
       'clientIp': clientIp,
       'apiKeyProvided': apiKey != null && apiKey.isNotEmpty,
       'apiKeyValid': session != null,
       'quotaEnabled': session?.quotaEnabled ?? false,
-      'request': rawRequest,
+      'rawRequest': rawRequest,
+      'organizedRequest': null,
     };
 
     // 注入审计回调到 context，供业务层补充响应内容
@@ -78,6 +83,7 @@ Handler auditGuard(Handler innerHandler) {
       ...request.context,
       'auditCallback': ({
         Map<String, dynamic>? rawRequest,
+        Map<String, dynamic>? organizedRequest,
         Map<String, dynamic>? rawResponse,
         String? responseContent,
         int? promptTokens,
@@ -88,6 +94,7 @@ Handler auditGuard(Handler innerHandler) {
       }) =>
           completer.complete(
             rawRequest: rawRequest,
+            organizedRequest: organizedRequest,
             rawResponse: rawResponse,
             responseContent: responseContent,
             promptTokens: promptTokens,
@@ -101,7 +108,7 @@ Handler auditGuard(Handler innerHandler) {
     // 执行下游 handler
     final response = await innerHandler(updatedRequest);
 
-    // 补充基础响应信息并写入日志
+    // 补充基础响应信息（状态码、耗时），实际落盘由业务层回调触发
     final duration = DateTime.now().difference(startTime);
     auditEntry['response'] ??= <String, dynamic>{};
     (auditEntry['response'] as Map<String, dynamic>)
@@ -109,9 +116,6 @@ Handler auditGuard(Handler innerHandler) {
           'statusCode': response.statusCode,
           'durationMs': duration.inMilliseconds,
         });
-
-    // 如果业务层已通过回调补充了内容，直接写入；否则写入当前状态
-    _writeAuditLog(auditEntry);
 
     return response;
   };
@@ -128,6 +132,7 @@ class _AuditCompleter {
 
   void complete({
     Map<String, dynamic>? rawRequest,
+    Map<String, dynamic>? organizedRequest,
     Map<String, dynamic>? rawResponse,
     String? responseContent,
     int? promptTokens,
@@ -137,6 +142,9 @@ class _AuditCompleter {
     String? error,
   }) {
     final responseMap = (auditEntry['response'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+
+    if (rawRequest != null) auditEntry['rawRequest'] = rawRequest;
+    if (organizedRequest != null) auditEntry['organizedRequest'] = organizedRequest;
 
     if (rawResponse != null) {
       responseMap['rawResponse'] = rawResponse;
@@ -218,26 +226,49 @@ String _extractClientIp(Request request) {
 }
 
 /// 异步写入审计日志到文件
+///
+/// 目录结构：log_request/{sessionId}/{requestId}/
+///   - request.json           收到的请求（原始）
+///   - request_organized.json 根据会话组织后的请求（注入 model / tools 等）
+///   - response.json          返回的响应内容
 void _writeAuditLog(Map<String, dynamic> entry) {
-  // 使用 scheduleMicrotask 避免阻塞响应
   () async {
     try {
-      final dir = Directory(_auditLogDir);
+      final sessionId = entry['sessionId'] as String? ?? 'unknown';
+      final requestId = entry['requestId'] as String? ?? 'unknown';
+      final dir = Directory('$_auditLogDir/$sessionId/$requestId');
       if (!await dir.exists()) {
         await dir.create(recursive: true);
       }
 
-      final now = DateTime.now();
-      final sessionId = entry['sessionId'] as String;
-      final timestamp = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_'
-          '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}'
-          '_$sessionId';
-
-      final file = File('$_auditLogDir/$timestamp.json');
       final encoder = const JsonEncoder.withIndent('  ');
-      await file.writeAsString(encoder.convert(entry));
 
-      debugPrint('📝 [Audit] 审计日志已写入: $timestamp.json');
+      // 1. 收到的请求（原始）
+      final rawRequest = entry['rawRequest'] ?? {};
+      await File('${dir.path}/request.json')
+          .writeAsString(encoder.convert(rawRequest));
+
+      // 2. 根据会话组织后的请求
+      final organizedRequest = entry['organizedRequest'] ?? {};
+      await File('${dir.path}/request_organized.json')
+          .writeAsString(encoder.convert(organizedRequest));
+
+      // 3. 返回
+      final responseMap = <String, dynamic>{};
+      final resp = entry['response'] as Map<String, dynamic>?;
+      if (resp != null) {
+        if (resp['content'] != null) responseMap['content'] = resp['content'];
+        if (resp['rawResponse'] != null) responseMap['rawResponse'] = resp['rawResponse'];
+        if (resp['usage'] != null) responseMap['usage'] = resp['usage'];
+        if (resp['error'] != null) responseMap['error'] = resp['error'];
+        if (resp['statusCode'] != null) responseMap['statusCode'] = resp['statusCode'];
+        if (resp['cost'] != null) responseMap['cost'] = resp['cost'];
+        responseMap['durationMs'] = resp['durationMs'] ?? 0;
+      }
+      await File('${dir.path}/response.json')
+          .writeAsString(encoder.convert(responseMap));
+
+      debugPrint('📝 [Audit] 请求日志已写入: ${dir.path}');
     } catch (e) {
       debugPrint('⚠️ [Audit] 写入审计日志失败: $e');
     }

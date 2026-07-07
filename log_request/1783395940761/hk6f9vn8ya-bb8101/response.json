@@ -1,0 +1,10 @@
+{
+  "content": "{\"isNewTopic\": true, \"title\": \"打招呼\"}",
+  "usage": {
+    "promptTokens": 523,
+    "completionTokens": 129,
+    "totalTokens": 652
+  },
+  "statusCode": 200,
+  "durationMs": 2016
+}

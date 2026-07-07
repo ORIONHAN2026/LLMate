@@ -611,9 +611,10 @@ class McpController extends GetxController {
 
   // ═══ OpenAI 工具格式 ═══
 
-  /// 根据 Mcp 配置获取 OpenAI 格式的工具列表。
-  /// tools 直接取自 Mcp 结构体（mcp.tools），不再做重连兜底。
-  List<Map<String, dynamic>> getTools(Mcp mcp) {
+  /// 根据 Mcp 名称获取其结构体中存储的 OpenAI 格式工具列表（纯读取）。
+  List<Map<String, dynamic>> getTools(String mcpName) {
+    final mcp = getMcp(mcpName);
+    if (mcp == null) return [];
     final toolInfos = mcp.tools;
     if (toolInfos == null || toolInfos.isEmpty) return [];
 
@@ -640,7 +641,6 @@ class McpController extends GetxController {
       }
       list.add(func);
     }
-
     debugPrint('🔧 生成 OpenAI tools 数量: ${list.length}');
     return list;
   }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Response;
@@ -66,6 +67,19 @@ class LocalHttpService {
     if (!_isRunning) return '';
     final scheme = _isHttps ? 'https' : 'http';
     return '$scheme://$_bindAddress:$_port';
+  }
+
+  /// 用于生成 RequestId 的随机源
+  static final Random _requestIdRandom = Random();
+
+  /// 为每次请求生成唯一 RequestId（用于日志文件命名与链路追踪）
+  static String _generateRequestId() {
+    final ts = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final rnd = _requestIdRandom
+        .nextInt(0xffffff)
+        .toRadixString(16)
+        .padLeft(6, '0');
+    return '$ts-$rnd';
   }
 
   static Future<void> start({
@@ -179,6 +193,12 @@ class LocalHttpService {
       Request request,
       String sessionId,
     ) async {
+      // 每次请求生成唯一 RequestId，注入 context 供审计/日志与链路追踪使用
+      final requestId = _generateRequestId();
+      final requestWithId = request.change(
+        context: {...request.context, 'requestId': requestId},
+      );
+
       // 构建中间件管道：API Key 校验 → 配额检查 → 审计记录 → 业务处理
       final pipeline = const Pipeline()
           .addMiddleware(apiKeyGuard)
@@ -186,8 +206,8 @@ class LocalHttpService {
           .addMiddleware(auditGuard);
 
       return pipeline.addHandler((Request req) {
-        return _handleChatCompletion(req, sessionId);
-      })(request);
+        return _handleChatCompletion(req, sessionId, requestId);
+      })(requestWithId);
     });
 
     return router;
@@ -203,9 +223,11 @@ class LocalHttpService {
   static Future<Response> _handleChatCompletion(
     Request request,
     String sessionId,
+    String requestId,
   ) async {
     // 获取审计回调（由 auditGuard 中间件注入）
     final auditCallback = request.context['auditCallback'] as AuditCallback?;
+    Map<String, dynamic>? rawRequestBodyMap;
 
     try {
       // 从中间件 context 获取已校验的会话
@@ -216,21 +238,25 @@ class LocalHttpService {
         '📨 请求体: $sessionId, ${body.substring(0, body.length.clamp(0, 100))}...',
       );
 
+      // 收到的原始请求（不修改，用于审计落盘）
+      rawRequestBodyMap = jsonDecode(body) as Map<String, dynamic>;
+      // 组织后的请求（注入 model / stream / tools）
       final requestBodyMap = jsonDecode(body) as Map<String, dynamic>;
-      // 使用对话模型
       requestBodyMap['model'] = session.chatModel!.model;
       requestBodyMap['stream'] = true;
 
       return _streamDirectProxy(
         session,
         requestBodyMap,
+        rawRequest: rawRequestBodyMap,
+        requestId: requestId,
         auditCallback: auditCallback,
       );
     } catch (e) {
       debugPrint('❌ 请求处理失败: $e');
 
-      // 审计回调：记录错误
-      auditCallback?.call(error: '$e');
+      // 审计回调：记录错误（含收到的原始请求）
+      auditCallback?.call(rawRequest: rawRequestBodyMap, error: '$e');
 
       return Response.internalServerError(
         body: jsonEncode({
@@ -240,7 +266,10 @@ class LocalHttpService {
             'code': 500,
           },
         }),
-        headers: {'content-type': 'application/json'},
+        headers: {
+          'content-type': 'application/json',
+          'x-request-id': requestId,
+        },
       );
     }
   }
@@ -331,6 +360,8 @@ class LocalHttpService {
   static Response _streamDirectProxy(
     ChatSession session,
     Map<String, dynamic> requestBodyMap, {
+    required Map<String, dynamic> rawRequest,
+    required String requestId,
     AuditCallback? auditCallback,
   }) {
     final controller = StreamController<List<int>>();
@@ -355,15 +386,21 @@ class LocalHttpService {
         }
         requestBodyMap['model'] = session.chatModel!.model;
 
-        final mcp = session.mcpServer;
-        final tools = mcp != null
-            ? McpController.instance.getTools(mcp)
-            : const <Map<String, dynamic>>[];
+        // 获取 MCP 工具（直接读取该 mcp 结构体中存储的 tools）
+        final tools = McpController.instance.getTools(
+          session.mcpServer?.name ?? '',
+        );
         if (tools.isNotEmpty) {
-          requestBodyMap['tools'] = tools;
-          requestBodyMap['tool_choice'] = 'auto';
+          final existing = requestBodyMap['tools'];
+          if (existing is List) {
+            requestBodyMap['tools'] = [...existing, ...tools];
+          } else {
+            requestBodyMap['tools'] = tools;
+          }
           debugPrint('🔧 [Gateway Stream] 注入 ${tools.length} 个 MCP 工具');
         }
+
+        //这里才算完整的
 
         final requestBody = jsonEncode(requestBodyMap);
         httpRequest.write(requestBody);
@@ -386,8 +423,12 @@ class LocalHttpService {
           );
           await controller.close();
 
-          // 审计回调：记录流式错误
-          auditCallback?.call(error: 'LLM API error: ${response.statusCode}');
+          // 审计回调：记录流式错误（含收到的请求与组织后的请求）
+          auditCallback?.call(
+            rawRequest: rawRequest,
+            organizedRequest: requestBodyMap,
+            error: 'LLM API error: ${response.statusCode}',
+          );
           return;
         }
 
@@ -449,15 +490,28 @@ class LocalHttpService {
           completionTokens: completionTokens,
           totalTokens: totalTokens,
           generationStartTime: generationStartTime,
-          auditCallback: auditCallback,
+        );
+
+        // 审计回调：补入「收到的请求 / 组织后的请求 / 返回内容」
+        auditCallback?.call(
+          rawRequest: rawRequest,
+          organizedRequest: requestBodyMap,
+          responseContent: contentBuffer.toString(),
+          promptTokens: promptTokens,
+          completionTokens: completionTokens,
+          totalTokens: totalTokens,
         );
       } catch (e) {
         debugPrint('❌ 流式代理错误: $e');
         controller.addError(e);
         await controller.close();
 
-        // 审计回调：记录流式异常
-        auditCallback?.call(error: 'Stream proxy error: $e');
+        // 审计回调：记录流式异常（含收到的请求与组织后的请求）
+        auditCallback?.call(
+          rawRequest: rawRequest,
+          organizedRequest: requestBodyMap,
+          error: 'Stream proxy error: $e',
+        );
       } finally {
         client.close();
       }
@@ -470,6 +524,7 @@ class LocalHttpService {
         'content-type': 'text/event-stream',
         'cache-control': 'no-cache',
         'connection': 'keep-alive',
+        'x-request-id': requestId,
       },
     );
   }
@@ -483,7 +538,6 @@ class LocalHttpService {
     int? completionTokens,
     int? totalTokens,
     required DateTime generationStartTime,
-    AuditCallback? auditCallback,
   }) {
     try {
       final sessionController = Get.find<SessionController>();
@@ -537,19 +591,8 @@ class LocalHttpService {
         'AI回复: "${content.substring(0, content.length.clamp(0, 30))}", '
         'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
       );
-
-      // 审计回调：流式响应完成后补充实际内容
-      auditCallback?.call(
-        responseContent: content,
-        promptTokens: promptTokens,
-        completionTokens: completionTokens,
-        totalTokens: totalTokens,
-      );
     } catch (e) {
       debugPrint('❌ 更新会话失败: $e');
-
-      // 审计回调：记录流式更新失败
-      auditCallback?.call(error: 'Session update failed: $e');
     }
   }
 

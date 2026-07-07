@@ -1,0 +1,10 @@
+{
+  "content": "{\"isNewTopic\": true, \"title\": \"开始对话\"}",
+  "usage": {
+    "promptTokens": 523,
+    "completionTokens": 95,
+    "totalTokens": 618
+  },
+  "statusCode": 200,
+  "durationMs": 1615
+}

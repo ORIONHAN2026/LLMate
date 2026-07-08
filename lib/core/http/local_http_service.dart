@@ -207,7 +207,7 @@ class LocalHttpService {
           .addMiddleware(modelToolGuard);
 
       return pipeline.addHandler((Request req) {
-        return _handleChatCompletion(req, sessionId, requestId);
+        return _handleChatCompletion(req);
       })(requestWithId);
     });
 
@@ -221,44 +221,19 @@ class LocalHttpService {
   /// - 会话已找到且模型已配置
   /// - 配额未超限
   /// - request.context['session'] 包含有效的 ChatSession
-  static Future<Response> _handleChatCompletion(
-    Request request,
-    String sessionId,
-    String requestId,
-  ) async {
-    // 获取审计回调（由 auditGuard 中间件注入）
-    final auditCallback = request.context['auditCallback'] as AuditCallback?;
-    Map<String, dynamic>? rawRequestBodyMap;
-
+  static Future<Response> _handleChatCompletion(Request request) async {
     try {
-      // 从中间件 context 获取已校验的会话
-      final session = request.context['session'] as ChatSession;
-
-      final body = await request.readAsString();
-      debugPrint(
-        '📨 请求体: $sessionId, ${body.substring(0, body.length.clamp(0, 100))}...',
-      );
-
-      // 收到的原始请求（由 modelToolGuard 透传，未注入 model/tools，用于审计落盘）
-      rawRequestBodyMap =
-          request.context['originalRequest'] as Map<String, dynamic>? ??
-          (jsonDecode(body) as Map<String, dynamic>);
-      // 组织后的请求（已由中间件注入 model / tools，此处仅补 stream）
-      final requestBodyMap = jsonDecode(body) as Map<String, dynamic>;
-      requestBodyMap['stream'] = true;
-
-      return _streamDirectProxy(
-        session,
-        requestBodyMap,
-        rawRequest: rawRequestBodyMap,
-        requestId: requestId,
-        auditCallback: auditCallback,
-      );
+      // session / requestId / 审计回调等均已由前面的中间件注入 request.context，
+      // 直接透传 request 给代理层即可。
+      return _streamDirectProxy(request);
     } catch (e) {
       debugPrint('❌ 请求处理失败: $e');
 
       // 审计回调：记录错误（含收到的原始请求）
-      auditCallback?.call(rawRequest: rawRequestBodyMap, error: '$e');
+      final auditCallback = request.context['auditCallback'] as AuditCallback?;
+      final rawRequest =
+          request.context['originalRequest'] as Map<String, dynamic>?;
+      auditCallback?.call(rawRequest: rawRequest, error: '$e');
 
       return Response.internalServerError(
         body: jsonEncode({
@@ -270,7 +245,7 @@ class LocalHttpService {
         }),
         headers: {
           'content-type': 'application/json',
-          'x-request-id': requestId,
+          'x-request-id': request.context['requestId'] as String? ?? '',
         },
       );
     }
@@ -359,21 +334,33 @@ class LocalHttpService {
   }
 
   /// 流式透传 - 返回 StreamedResponse，同时解析 SSE 并更新本地会话
-  static Response _streamDirectProxy(
-    ChatSession session,
-    Map<String, dynamic> requestBodyMap, {
-    required Map<String, dynamic> rawRequest,
-    required String requestId,
-    AuditCallback? auditCallback,
-  }) {
+  static Response _streamDirectProxy(Request request) {
     final controller = StreamController<List<int>>();
 
+    final session = request.context['session'] as ChatSession;
     // 异步发起请求并透传 SSE 流
     () async {
       final uri = Uri.parse(session.chatModel!.apiUrl!);
       final client = HttpClient();
 
+      // 由中间件注入到 context 的辅助信息（try 中读取请求体后补全）
+      Map<String, dynamic>? rawRequest;
+      AuditCallback? auditCallback;
+
       try {
+        // 读取请求体（中间件已注入 model / tools），仅补 stream
+        final bodyStr = await request.readAsString();
+        debugPrint(
+          '📨 请求体: ${bodyStr.substring(0, bodyStr.length.clamp(0, 100))}...',
+        );
+        final requestBodyMap = jsonDecode(bodyStr) as Map<String, dynamic>;
+        requestBodyMap['stream'] = true;
+        rawRequest =
+            request.context['originalRequest'] as Map<String, dynamic>? ??
+            requestBodyMap;
+        auditCallback =
+            request.context['auditCallback'] as AuditCallback?;
+
         final httpRequest = await client.postUrl(uri);
 
         httpRequest.headers.contentType = ContentType.json;
@@ -410,12 +397,6 @@ class LocalHttpService {
           );
           await controller.close();
 
-          // 审计回调：记录流式错误（含收到的请求与组织后的请求）
-          auditCallback?.call(
-            rawRequest: rawRequest,
-            organizedRequest: requestBodyMap,
-            error: 'LLM API error: ${response.statusCode}',
-          );
           return;
         }
 
@@ -497,7 +478,7 @@ class LocalHttpService {
         // 审计回调：记录流式异常（含收到的请求与组织后的请求）
         auditCallback?.call(
           rawRequest: rawRequest,
-          organizedRequest: requestBodyMap,
+          organizedRequest: rawRequest,
           error: 'Stream proxy error: $e',
         );
       } finally {
@@ -512,7 +493,7 @@ class LocalHttpService {
         'content-type': 'text/event-stream',
         'cache-control': 'no-cache',
         'connection': 'keep-alive',
-        'x-request-id': requestId,
+        'x-request-id': request.context['requestId'] as String? ?? '',
       },
     );
   }

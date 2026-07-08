@@ -1,0 +1,10 @@
+{
+  "content": "周杰伦，华语乐坛无可争议的天王级人物。",
+  "usage": {
+    "promptTokens": 65815,
+    "completionTokens": 3080,
+    "totalTokens": 68895
+  },
+  "statusCode": 200,
+  "durationMs": 38260
+}

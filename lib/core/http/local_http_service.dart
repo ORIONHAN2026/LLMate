@@ -358,8 +358,7 @@ class LocalHttpService {
         rawRequest =
             request.context['originalRequest'] as Map<String, dynamic>? ??
             requestBodyMap;
-        auditCallback =
-            request.context['auditCallback'] as AuditCallback?;
+        auditCallback = request.context['auditCallback'] as AuditCallback?;
 
         final httpRequest = await client.postUrl(uri);
 
@@ -374,10 +373,7 @@ class LocalHttpService {
           );
         }
 
-        //这里才算完整的
-
-        final requestBody = jsonEncode(requestBodyMap);
-        httpRequest.write(requestBody);
+        httpRequest.write(await request.readAsString());
 
         final response = await httpRequest.close();
 

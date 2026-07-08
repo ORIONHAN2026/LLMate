@@ -20,7 +20,9 @@ Handler apiKeyGuard(Handler innerHandler) {
 
     // Step 1: 提取 Bearer Token
     final authHeader =
-        request.headers['Authorization'] ?? request.headers['authorization'] ?? '';
+        request.headers['Authorization'] ??
+        request.headers['authorization'] ??
+        '';
     final apiKey = _extractBearerToken(authHeader);
 
     if (apiKey == null || apiKey.isEmpty) {
@@ -97,11 +99,9 @@ Handler apiKeyGuard(Handler innerHandler) {
     debugPrint('✅ [API Key Guard] 校验通过: session=$sessionId');
 
     // 将会话存入 context 供下游中间件和 handler 使用
-    final updatedRequest = request.change(context: {
-      ...request.context,
-      'session': session,
-      'apiKey': apiKey,
-    });
+    final updatedRequest = request.change(
+      context: {...request.context, 'session': session, 'apiKey': apiKey},
+    );
 
     return innerHandler(updatedRequest);
   };

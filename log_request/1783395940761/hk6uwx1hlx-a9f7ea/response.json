@@ -1,0 +1,10 @@
+{
+  "content": "你好，有什么需要帮忙的直接说。",
+  "usage": {
+    "promptTokens": 52229,
+    "completionTokens": 36,
+    "totalTokens": 52265
+  },
+  "statusCode": 200,
+  "durationMs": 3836
+}

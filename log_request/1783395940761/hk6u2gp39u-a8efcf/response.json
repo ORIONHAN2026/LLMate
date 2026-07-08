@@ -1,0 +1,10 @@
+{
+  "content": "上海，中国最大的经济中心，一座值得好好了解的城市。",
+  "usage": {
+    "promptTokens": 43841,
+    "completionTokens": 2622,
+    "totalTokens": 46463
+  },
+  "statusCode": 200,
+  "durationMs": 85246
+}

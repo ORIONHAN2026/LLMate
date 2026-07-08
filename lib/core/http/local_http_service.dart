@@ -5,7 +5,6 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Response;
-import '../../controllers/mcp_controller.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
@@ -18,6 +17,7 @@ import '../../models/chat/chat_message.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/audit_guard.dart';
+import 'middleware/model_tool_guard.dart';
 
 /// HTTP 服务控制器
 class LocalHttpServiceController extends GetxController {
@@ -199,11 +199,12 @@ class LocalHttpService {
         context: {...request.context, 'requestId': requestId},
       );
 
-      // 构建中间件管道：API Key 校验 → 配额检查 → 审计记录 → 业务处理
+      // 构建中间件管道：API Key 校验 → 配额检查 → 审计记录 → 模型替换/工具注入 → 业务处理
       final pipeline = const Pipeline()
           .addMiddleware(apiKeyGuard)
           .addMiddleware(quotaGuard)
-          .addMiddleware(auditGuard);
+          .addMiddleware(auditGuard)
+          .addMiddleware(modelToolGuard);
 
       return pipeline.addHandler((Request req) {
         return _handleChatCompletion(req, sessionId, requestId);
@@ -238,11 +239,12 @@ class LocalHttpService {
         '📨 请求体: $sessionId, ${body.substring(0, body.length.clamp(0, 100))}...',
       );
 
-      // 收到的原始请求（不修改，用于审计落盘）
-      rawRequestBodyMap = jsonDecode(body) as Map<String, dynamic>;
-      // 组织后的请求（注入 model / stream / tools）
+      // 收到的原始请求（由 modelToolGuard 透传，未注入 model/tools，用于审计落盘）
+      rawRequestBodyMap =
+          request.context['originalRequest'] as Map<String, dynamic>? ??
+          (jsonDecode(body) as Map<String, dynamic>);
+      // 组织后的请求（已由中间件注入 model / tools，此处仅补 stream）
       final requestBodyMap = jsonDecode(body) as Map<String, dynamic>;
-      requestBodyMap['model'] = session.chatModel!.model;
       requestBodyMap['stream'] = true;
 
       return _streamDirectProxy(
@@ -384,21 +386,6 @@ class LocalHttpService {
             'Bearer ${session.chatModel!.apiKey}',
           );
         }
-        requestBodyMap['model'] = session.chatModel!.model;
-
-        // 获取 MCP 工具（直接读取该 mcp 结构体中存储的 tools）
-        final tools = McpController.instance.getTools(
-          session.mcpServer?.name ?? '',
-        );
-        if (tools.isNotEmpty) {
-          final existing = requestBodyMap['tools'];
-          if (existing is List) {
-            requestBodyMap['tools'] = [...existing, ...tools];
-          } else {
-            requestBodyMap['tools'] = tools;
-          }
-          debugPrint('🔧 [Gateway Stream] 注入 ${tools.length} 个 MCP 工具');
-        }
 
         //这里才算完整的
 
@@ -442,6 +429,7 @@ class LocalHttpService {
 
         await for (final chunk in response) {
           // 透传原始数据给客户端
+          debugPrint('chunk: ${utf8.decode(chunk, allowMalformed: true)}');
           controller.add(chunk);
 
           // 解析 SSE 数据提取 content 和 usage

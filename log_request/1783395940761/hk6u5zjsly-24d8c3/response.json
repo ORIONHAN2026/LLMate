@@ -1,0 +1,10 @@
+{
+  "content": "缓存里的 token 已经过期了：\n\n- **Token**: `105_PKbmSIiiReZeyBZUQPsAhgUubS-QHg...`\n- **过期时间**: 1781830495（约 6月18日）\n- **当前时间**: 1783477311（7月8日）\n\n已过期约 19 天。需要我调用微信接口重新获取一个吗？",
+  "usage": {
+    "promptTokens": 51434,
+    "completionTokens": 254,
+    "totalTokens": 51688
+  },
+  "statusCode": 200,
+  "durationMs": 26990
+}

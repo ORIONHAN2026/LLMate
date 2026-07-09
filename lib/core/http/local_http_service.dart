@@ -373,7 +373,7 @@ class LocalHttpService {
           );
         }
 
-        httpRequest.write(await request.readAsString());
+        httpRequest.write(bodyStr);
 
         final response = await httpRequest.close();
 

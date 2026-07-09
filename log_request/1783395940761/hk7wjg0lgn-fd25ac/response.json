@@ -1,0 +1,10 @@
+{
+  "content": "好的，之前你想通过 MCP 的 `writePage` 生成一个测试页面，当时连接断了。现在我直接启本地服务来完成。",
+  "usage": {
+    "promptTokens": 73957,
+    "completionTokens": 223,
+    "totalTokens": 74180
+  },
+  "statusCode": 200,
+  "durationMs": 6637
+}

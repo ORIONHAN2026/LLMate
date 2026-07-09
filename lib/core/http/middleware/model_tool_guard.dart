@@ -59,7 +59,11 @@ Handler modelToolGuard(Handler innerHandler) {
     // 透传原始请求体供审计，并向内游注入增强后的请求体
     final updatedRequest = request.change(
       body: utf8.encode(jsonEncode(enriched)),
-      context: {...request.context, 'originalRequest': original},
+      context: {
+        ...request.context,
+        'originalRequest': original,
+        'enrichedBody': enriched,
+      },
     );
 
     return innerHandler(updatedRequest);

@@ -1,5 +1,0 @@
-{
-  "content": "你好，刚才的 writePage 调用卡在本地 MCP 服务没启动。需要我继续把它启起来再生成页面吗？",
-  "statusCode": 200,
-  "durationMs": 6298
-}

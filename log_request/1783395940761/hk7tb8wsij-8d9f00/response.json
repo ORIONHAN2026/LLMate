@@ -1,5 +1,0 @@
-{
-  "error": "Stream proxy error: Bad state: The 'read' method can only be called once on a shelf.Request/shelf.Response object.",
-  "statusCode": 200,
-  "durationMs": 152
-}

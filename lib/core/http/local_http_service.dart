@@ -23,6 +23,8 @@ import '../tools/tool_execution_service.dart';
 import '../llm/modes/mode_utils.dart' show resolveOriginalToolName;
 import '../../controllers/mcp_controller.dart';
 import '../../models/responses/chunk.dart';
+import '../../models/responses/openai_response.dart'
+    show ToolCall, ToolCallFunction;
 
 /// HTTP 服务控制器
 class LocalHttpServiceController extends GetxController {
@@ -336,45 +338,59 @@ class LocalHttpService {
     }
   }
 
-  /// 检查 LLM 返回的工具调用中是否有匹配会话 MCP 工具的
+  /// 将工具调用分类为会话工具（匹配 MCP 工具）和第三方工具
   ///
-  /// 同时穿透 ToolSearch 等元工具的 arguments.tool_names 进行检查
-  static bool _hasAnyMcpToolMatch(
-    ChatSession session,
-    List<Map<String, dynamic>> toolCalls,
-  ) {
-    if (toolCalls.isEmpty) return false;
+  /// 同时穿透 ToolSearch 等元工具的 arguments.tool_names 进行匹配
+  static ({List<ToolCall> session, List<ToolCall> thirdParty})
+  _classifyToolCalls(ChatSession session, List<ToolCall> toolCalls) {
+    if (toolCalls.isEmpty) return (session: const [], thirdParty: const []);
+
     final mcpTools = McpController.instance.getSessionAvailableTools(session);
     final mcpToolNames = mcpTools.map((t) => t.name).toSet();
-    if (mcpToolNames.isEmpty) return false;
+
+    final sessionTools = <ToolCall>[];
+    final thirdPartyTools = <ToolCall>[];
 
     for (final tc in toolCalls) {
-      final func = tc['function'] as Map<String, dynamic>?;
-      final name = func?['name'] as String?;
-      if (name == null) continue;
+      final name = tc.function?.name;
 
-      // 1) 工具名本身匹配
-      final resolvedName = resolveOriginalToolName(name);
-      if (mcpToolNames.contains(resolvedName)) return true;
+      // 1) 工具名本身匹配 MCP 工具
+      if (name != null) {
+        final resolvedName = resolveOriginalToolName(name);
+        if (mcpToolNames.contains(resolvedName)) {
+          sessionTools.add(tc);
+          continue;
+        }
+      }
 
       // 2) 穿透 arguments.tool_names（ToolSearch 等元工具）
-      final argsStr = func?['arguments'] as String?;
+      final argsStr = tc.function?.arguments;
       if (argsStr != null && argsStr.isNotEmpty) {
         try {
           final args = jsonDecode(argsStr) as Map<String, dynamic>?;
           final toolNames = args?['tool_names'] as List?;
           if (toolNames != null) {
+            bool hasMatch = false;
             for (final tn in toolNames) {
               if (tn is String &&
                   mcpToolNames.contains(resolveOriginalToolName(tn))) {
-                return true;
+                hasMatch = true;
+                break;
               }
+            }
+            if (hasMatch) {
+              sessionTools.add(tc);
+              continue;
             }
           }
         } catch (_) {}
       }
+
+      // 无匹配 → 第三方工具
+      thirdPartyTools.add(tc);
     }
-    return false;
+
+    return (session: sessionTools, thirdParty: thirdPartyTools);
   }
 
   /// 流式透传 - 返回 StreamedResponse，同时解析 SSE 并更新本地会话
@@ -406,12 +422,10 @@ class LocalHttpService {
         int? totalPromptTokens;
         int? totalCompletionTokens;
         int? totalTokens;
-        List<Map<String, dynamic>> allToolCalls = [];
-
+        final List<Map<String, dynamic>> toolCallResults = [];
         // ── 工具调用循环 ──
         int round = 0;
-        const maxRounds = 5;
-        int contentStartIdx = 0; // 用于追踪每轮新增的 content 起始位置
+        const maxRounds = 1;
 
         while (round < maxRounds) {
           final result = await _streamSingleRound(
@@ -432,135 +446,65 @@ class LocalHttpService {
           }
           totalTokens = result.totalTokens ?? totalTokens;
 
-          // 当前轮的新增内容
-          final roundContent = contentBuffer.toString().substring(
-            contentStartIdx,
-          );
-          contentStartIdx = contentBuffer.length;
-
-          if (!result.hasToolCalls) break;
-
-          // 检查是否有匹配会话 MCP 配置的工具
-          final hasMcpMatch = _hasAnyMcpToolMatch(session, result.toolCalls);
-
-          if (!hasMcpMatch) {
-            // 无 MCP 匹配 → 将缓存的工具调用 chunk 透传给客户端
+          // 透传第三方工具 chunk 给客户端（客户端自行处理）
+          if (result.toolCallChunks.isNotEmpty) {
             debugPrint(
-              '📤 [ToolLoop] 无 MCP 匹配，透传 ${result.toolCallChunks.length} 个工具 chunk 给客户端',
+              '📤 [ToolLoop] 透传 ${result.toolCallChunks.length} 个第三方工具 chunk 给客户端',
             );
-            for (final tcChunk in result.toolCallChunks) {
-              controller.add(tcChunk);
+            for (final c in result.toolCallChunks) {
+              controller.add(c.toIntList());
             }
+          }
+
+          // 无会话工具 → 结束本地循环，通知客户端流结束
+          if (result.sessionToolCalls.isEmpty) {
+            debugPrint('📤 [ToolLoop] 没有触发会话工具 结束');
             controller.add(utf8.encode('data: [DONE]\n\n'));
-            allToolCalls = result.toolCalls;
             break;
           }
 
-          // 分离 ToolSearch 元工具 与 真实工具调用
-          final toolSearchCalls = <Map<String, dynamic>>[];
-          final realToolCalls = <Map<String, dynamic>>[];
-
-          for (final tc in result.toolCalls) {
-            final func = tc['function'] as Map<String, dynamic>? ?? {};
-            final callName = func['name'] as String? ?? '';
-            if (callName == 'ToolSearch') {
-              toolSearchCalls.add(tc);
-            } else {
-              realToolCalls.add(tc);
-            }
-          }
-
           final messages = requestBodyMap['messages'] as List;
-          messages.add({
-            'role': 'assistant',
-            'content': roundContent,
-            'tool_calls': result.toolCalls,
-          });
 
-          // ── 处理 ToolSearch：生成工具搜索结果 ──
-          if (toolSearchCalls.isNotEmpty) {
-            final mcpTools = McpController.instance.getSessionAvailableTools(
-              session,
-            );
-            for (final tc in toolSearchCalls) {
-              final func = tc['function'] as Map<String, dynamic>? ?? {};
-              final argsStr = func['arguments'] as String? ?? '{}';
-              Map<String, dynamic> args;
-              try {
-                args = jsonDecode(argsStr) as Map<String, dynamic>;
-              } catch (_) {
-                args = {};
-              }
-              final toolNames =
-                  (args['tool_names'] as List?)?.cast<String>() ?? [];
+          // ── 执行会话工具调用 ──
+          final executionResult = await ToolExecutionService.executeToolCalls(
+            session: session,
+            toolCalls:
+                result.sessionToolCalls.map((tc) {
+                  final argsStr = tc.function?.arguments ?? '{}';
+                  Map<String, dynamic> args;
+                  try {
+                    args = jsonDecode(argsStr) as Map<String, dynamic>;
+                  } catch (_) {
+                    args = {'raw': argsStr};
+                  }
+                  return {
+                    'name': tc.function?.name ?? '',
+                    'arguments': args,
+                    'id': tc.id,
+                    'index': tc.index,
+                  };
+                }).toList(),
+            cleanContent: '',
+          );
 
-              final results = <Map<String, dynamic>>[];
-              for (final tn in toolNames) {
-                final resolved = resolveOriginalToolName(tn);
-                // ignore: unnecessary_cast
-                final matched = (mcpTools as dynamic).where(
-                  (t) => t.name == resolved,
-                );
-                for (final t in matched) {
-                  results.add({
-                    'name': t.name as String,
-                    'description': t.description as String? ?? '',
-                    'inputSchema':
-                        t.inputSchema as Map<String, dynamic>? ??
-                        <String, dynamic>{},
-                  });
-                }
-              }
+          if (executionResult != null) {
+            for (final execResult in executionResult.executionResults) {
               messages.add({
                 'role': 'tool',
-                'tool_call_id': tc['id'] as String,
-                'content': jsonEncode(results),
+                'tool_call_id': execResult['id'] as String,
+                'content': execResult['result'] as String? ?? '',
+              });
+              toolCallResults.add({
+                'name': execResult['name'],
+                'id': execResult['id'],
+                'result': execResult['result'],
               });
               debugPrint(
-                '🔍 [ToolSearch] 找到 ${results.length} 个匹配工具: ${results.map((r) => r['name']).toList()}',
+                '✅ [ToolLoop] 工具 "${execResult['name']}" 执行完成，结果长度：${(execResult['result'] as String? ?? '').length}',
               );
             }
           }
 
-          // ── 执行真实工具调用 ──
-          if (realToolCalls.isNotEmpty) {
-            final executionResult = await ToolExecutionService.executeToolCalls(
-              session: session,
-              toolCalls:
-                  realToolCalls.map((tc) {
-                    final func = tc['function'] as Map<String, dynamic>? ?? {};
-                    final argsStr = func['arguments'] as String? ?? '{}';
-                    Map<String, dynamic> args;
-                    try {
-                      args = jsonDecode(argsStr) as Map<String, dynamic>;
-                    } catch (_) {
-                      args = {'raw': argsStr};
-                    }
-                    return {
-                      'name': func['name'] as String? ?? '',
-                      'arguments': args,
-                      'id': tc['id'] as String?,
-                      'index': tc['index'],
-                    };
-                  }).toList(),
-              cleanContent: roundContent,
-            );
-
-            if (executionResult != null) {
-              for (final execResult in executionResult.executionResults) {
-                messages.add({
-                  'role': 'tool',
-                  'tool_call_id': execResult['id'] as String,
-                  'content': execResult['result'] as String? ?? '',
-                });
-                debugPrint(
-                  '✅ [ToolLoop] 工具 "${execResult['name']}" 执行完成，结果长度：${(execResult['result'] as String? ?? '').length}',
-                );
-              }
-            }
-          }
-
-          allToolCalls = result.toolCalls;
           round++;
         }
 
@@ -579,7 +523,7 @@ class LocalHttpService {
           completionTokens: totalCompletionTokens,
           totalTokens: totalTokens,
           generationStartTime: generationStartTime,
-          toolCalls: allToolCalls,
+          toolCalls: null,
         );
 
         // 审计回调：补入返回内容
@@ -588,6 +532,7 @@ class LocalHttpService {
           promptTokens: totalPromptTokens,
           completionTokens: totalCompletionTokens,
           totalTokens: totalTokens,
+          toolCallResults: toolCallResults,
         );
       } catch (e) {
         debugPrint('❌ 流式代理错误: $e');
@@ -620,7 +565,7 @@ class LocalHttpService {
     int? completionTokens,
     int? totalTokens,
     required DateTime generationStartTime,
-    List<Map<String, dynamic>>? toolCalls,
+    List<ToolCall>? toolCalls,
   }) {
     try {
       final sessionController = Get.find<SessionController>();
@@ -634,13 +579,10 @@ class LocalHttpService {
       // 构建工具调用 contentBlocks（如果有）
       List<ContentBlock> contentBlocks = [];
       final extractedToolCalls =
-          toolCalls != null && toolCalls.isNotEmpty
-              ? toolCalls
-              : <Map<String, dynamic>>[];
+          toolCalls != null && toolCalls.isNotEmpty ? toolCalls : <ToolCall>[];
       for (final tc in extractedToolCalls) {
-        final func = tc['function'] as Map<String, dynamic>?;
-        final name = func?['name'] as String? ?? '';
-        final args = func?['arguments'] as String? ?? '';
+        final name = tc.function?.name ?? '';
+        final args = tc.function?.arguments ?? '';
         contentBlocks.add(
           ContentBlock(type: ContentBlockType.tool, text: '$name\n$args'),
         );
@@ -696,21 +638,54 @@ class LocalHttpService {
   }
 
   /// 打印累积的工具调用清单
-  static void _printToolCalls(Map<int, Map<String, dynamic>> accumulator) {
-    if (accumulator.isNotEmpty) {
-      final toolList = accumulator.entries
+  static void _printToolCalls(List<ToolCall> toolCalls) {
+    if (toolCalls.isNotEmpty) {
+      final toolList = toolCalls
+          .asMap()
+          .entries
           .map(
             (e) =>
-                '  [${e.key}] id=${e.value['id']}, '
-                'type=${e.value['type']}, '
-                'name=${(e.value['function'] as Map<String, dynamic>?)?['name']}, '
-                'args=${(e.value['function'] as Map<String, dynamic>?)?['arguments']}',
+                '  [${e.key}] id=${e.value.id}, '
+                'type=${e.value.type}, '
+                'name=${e.value.function?.name}, '
+                'args=${e.value.function?.arguments}',
           )
           .join('\n');
-      debugPrint('🛠 [ToolCalls] 收到 ${accumulator.length} 个工具调用:\n$toolList');
+      debugPrint('🛠 [ToolCalls] 收到 ${toolCalls.length} 个工具调用:\n$toolList');
     } else {
       debugPrint('🛠 [ToolCalls] 无工具调用');
     }
+  }
+
+  /// 从 Chunk 列表中提取累积的工具调用（按 index 合并增量）
+  static List<ToolCall> _extractToolCalls(List<Chunk> chunks) {
+    final Map<int, ToolCall> acc = {};
+    for (final c in chunks) {
+      final delta = c.choices.isNotEmpty ? c.choices.first.delta : null;
+      if (delta?.toolCalls == null) continue;
+      for (final tc in delta!.toolCalls!) {
+        final idx = tc.index ?? 0;
+        final existing = acc[idx];
+        if (existing == null) {
+          acc[idx] = tc;
+        } else {
+          // 合并：拼接 arguments，保留最新非空 id/type/name
+          final mergedFunc = ToolCallFunction(
+            name: tc.function?.name ?? existing.function?.name,
+            arguments:
+                (existing.function?.arguments ?? '') +
+                (tc.function?.arguments ?? ''),
+          );
+          acc[idx] = ToolCall(
+            index: idx,
+            id: tc.id ?? existing.id,
+            type: tc.type ?? existing.type,
+            function: mergedFunc,
+          );
+        }
+      }
+    }
+    return acc.values.toList();
   }
 
   /// 本地对话调用（对话框使用）
@@ -789,17 +764,15 @@ class LocalHttpService {
 
 /// 单轮流式请求的结果
 class _StreamRoundResult {
-  final bool hasToolCalls;
-  final List<Map<String, dynamic>> toolCalls;
-  final List<List<int>> toolCallChunks;
+  final List<ToolCall> sessionToolCalls;
+  final List<Chunk> toolCallChunks;
   final int? promptTokens;
   final int? completionTokens;
   final int? totalTokens;
   final bool error;
 
   const _StreamRoundResult({
-    required this.hasToolCalls,
-    this.toolCalls = const [],
+    this.sessionToolCalls = const [],
     this.toolCallChunks = const [],
     this.promptTokens,
     this.completionTokens,
@@ -849,7 +822,7 @@ Future<_StreamRoundResult> _streamSingleRound({
           }),
         ),
       );
-      return const _StreamRoundResult(hasToolCalls: false, error: true);
+      return const _StreamRoundResult(error: true);
     }
 
     // SSE 解析状态
@@ -857,9 +830,7 @@ Future<_StreamRoundResult> _streamSingleRound({
     int? completionTokens;
     int? totalTokens;
 
-    final Map<int, Map<String, dynamic>> toolCallAccumulator =
-        <int, Map<String, dynamic>>{};
-    final List<List<int>> toolCallChunkBuffer = [];
+    final List<Chunk> toolCallChunkBuffer = [];
 
     await for (final chunk in response) {
       final raw = utf8.decode(chunk, allowMalformed: true);
@@ -868,10 +839,7 @@ Future<_StreamRoundResult> _streamSingleRound({
       final trimmed = raw.trim();
       if (!trimmed.startsWith('data: ')) continue;
       final dataStr = trimmed.substring(6);
-      if (dataStr == '[DONE]') {
-        LocalHttpService._printToolCalls(toolCallAccumulator);
-        continue;
-      }
+      if (dataStr == '[DONE]') continue;
 
       try {
         final sseChunk = Chunk.fromIntList(chunk);
@@ -885,38 +853,9 @@ Future<_StreamRoundResult> _streamSingleRound({
           contentBuffer.write(delta!.content);
         }
 
-        // tool_calls → 缓冲（不透传）+ 按 index 累积
+        // tool_calls → 缓冲（不透传）
         if (delta?.toolCalls != null) {
-          toolCallChunkBuffer.add(sseChunk.toIntList());
-          for (final tc in delta!.toolCalls!) {
-            final idx = tc.index ?? 0;
-            toolCallAccumulator.putIfAbsent(idx, () => <String, dynamic>{});
-
-            final entry = toolCallAccumulator[idx]!;
-            if (tc.id != null) entry['id'] = tc.id;
-            if (tc.type != null) entry['type'] = tc.type;
-
-            final func = tc.function;
-            if (func != null) {
-              if (func.name != null) {
-                entry['function'] ??= <String, dynamic>{};
-                (entry['function'] as Map<String, dynamic>)['name'] = func.name;
-              }
-              if (func.arguments != null) {
-                entry['function'] ??= <String, dynamic>{};
-                final funcMap = entry['function'] as Map<String, dynamic>;
-                funcMap['arguments'] =
-                    (funcMap['arguments'] as String? ?? '') + func.arguments!;
-              }
-            }
-
-            debugPrint(
-              '🛠 [ToolAccum] idx=$idx, '
-              'id=${entry['id']}, '
-              'name=${(entry['function'] as Map<String, dynamic>?)?['name']}, '
-              'argsLen=${((entry['function'] as Map<String, dynamic>?)?['arguments'] as String? ?? '').length}',
-            );
-          }
+          toolCallChunkBuffer.add(sseChunk);
         }
 
         // usage 信息
@@ -931,15 +870,27 @@ Future<_StreamRoundResult> _streamSingleRound({
       }
     }
 
-    // 兜底打印
-    LocalHttpService._printToolCalls(toolCallAccumulator);
+    // 从缓存的 Chunk 中提取工具调用，并与会话 MCP 工具比对分类
+    final extractedToolCalls = LocalHttpService._extractToolCalls(
+      toolCallChunkBuffer,
+    );
+    final (
+      session: sessionTools,
+      thirdParty: _,
+    ) = LocalHttpService._classifyToolCalls(session, extractedToolCalls);
 
-    final List<Map<String, dynamic>> extractedToolCalls =
-        toolCallAccumulator.entries.map((e) => e.value).toList();
+    // 从 buffer 中移除会话工具对应的 chunk，只保留第三方工具 chunk（用于透传）
+    final sessionIndices = sessionTools.map((tc) => tc.index).toSet();
+    toolCallChunkBuffer.removeWhere((chunk) {
+      final delta = chunk.choices.isNotEmpty ? chunk.choices.first.delta : null;
+      if (delta?.toolCalls == null) return false;
+      return delta!.toolCalls!.any(
+        (tc) => tc.index != null && sessionIndices.contains(tc.index),
+      );
+    });
 
     return _StreamRoundResult(
-      hasToolCalls: extractedToolCalls.isNotEmpty,
-      toolCalls: extractedToolCalls,
+      sessionToolCalls: sessionTools,
       toolCallChunks: toolCallChunkBuffer,
       promptTokens: promptTokens,
       completionTokens: completionTokens,

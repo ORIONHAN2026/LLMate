@@ -1,0 +1,10 @@
+{
+  "content": "让我尝试直接通过 HTTP 调用您配置的 MCP 服务器：",
+  "usage": {
+    "promptTokens": 47008,
+    "completionTokens": 496,
+    "totalTokens": 47504
+  },
+  "statusCode": 200,
+  "durationMs": 12962
+}

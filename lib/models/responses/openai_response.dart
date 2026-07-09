@@ -79,11 +79,13 @@ class OpenAIChoice {
 }
 
 class OpenAIDelta {
+  final String? role;
   final String? content;
   final String? reasoningContent;
-  final List<OpenAIToolCall>? toolCalls;
+  final List<ToolCall>? toolCalls;
 
   const OpenAIDelta({
+    this.role,
     this.content,
     this.reasoningContent,
     this.toolCalls,
@@ -91,16 +93,18 @@ class OpenAIDelta {
 
   factory OpenAIDelta.fromJson(Map<String, dynamic> json) {
     return OpenAIDelta(
+      role: json['role'] as String?,
       content: json['content'] as String?,
       reasoningContent: json['reasoning_content'] as String?,
       toolCalls: (json['tool_calls'] as List<dynamic>?)
           ?.map(
-              (e) => OpenAIToolCall.fromJson(e as Map<String, dynamic>))
+              (e) => ToolCall.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }
 
   Map<String, dynamic> toJson() => {
+        if (role != null) 'role': role,
         if (content != null) 'content': content,
         if (reasoningContent != null) 'reasoning_content': reasoningContent,
         if (toolCalls != null)
@@ -111,26 +115,26 @@ class OpenAIDelta {
   String toString() => jsonEncode(toJson());
 }
 
-class OpenAIToolCall {
+class ToolCall {
   final int? index;
   final String? id;
   final String? type;
-  final OpenAIToolCallFunction? function;
+  final ToolCallFunction? function;
 
-  const OpenAIToolCall({
+  const ToolCall({
     this.index,
     this.id,
     this.type,
     this.function,
   });
 
-  factory OpenAIToolCall.fromJson(Map<String, dynamic> json) {
-    return OpenAIToolCall(
+  factory ToolCall.fromJson(Map<String, dynamic> json) {
+    return ToolCall(
       index: json['index'] as int?,
       id: json['id'] as String?,
       type: json['type'] as String?,
       function: json['function'] != null
-          ? OpenAIToolCallFunction.fromJson(
+          ? ToolCallFunction.fromJson(
               json['function'] as Map<String, dynamic>)
           : null,
     );
@@ -147,14 +151,14 @@ class OpenAIToolCall {
   String toString() => jsonEncode(toJson());
 }
 
-class OpenAIToolCallFunction {
+class ToolCallFunction {
   final String? name;
   final String? arguments;
 
-  const OpenAIToolCallFunction({this.name, this.arguments});
+  const ToolCallFunction({this.name, this.arguments});
 
-  factory OpenAIToolCallFunction.fromJson(Map<String, dynamic> json) {
-    return OpenAIToolCallFunction(
+  factory ToolCallFunction.fromJson(Map<String, dynamic> json) {
+    return ToolCallFunction(
       name: json['name'] as String?,
       arguments: json['arguments'] as String?,
     );

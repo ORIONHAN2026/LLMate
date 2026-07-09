@@ -22,6 +22,7 @@ typedef AuditCallback = void Function({
   int? totalTokens,
   double? cost,
   String? error,
+  List<Map<String, dynamic>>? toolCallResults,
 });
 
 /// 审计中间件
@@ -91,6 +92,7 @@ Handler auditGuard(Handler innerHandler) {
         int? totalTokens,
         double? cost,
         String? error,
+        List<Map<String, dynamic>>? toolCallResults,
       }) =>
           completer.complete(
             rawRequest: rawRequest,
@@ -102,6 +104,7 @@ Handler auditGuard(Handler innerHandler) {
             totalTokens: totalTokens,
             cost: cost,
             error: error,
+            toolCallResults: toolCallResults,
           ),
     });
 
@@ -140,6 +143,7 @@ class _AuditCompleter {
     int? totalTokens,
     double? cost,
     String? error,
+    List<Map<String, dynamic>>? toolCallResults,
   }) {
     final responseMap = (auditEntry['response'] as Map<String, dynamic>?) ?? <String, dynamic>{};
 
@@ -164,6 +168,9 @@ class _AuditCompleter {
     }
     if (error != null) {
       responseMap['error'] = error;
+    }
+    if (toolCallResults != null && toolCallResults.isNotEmpty) {
+      auditEntry['toolCallResults'] = toolCallResults;
     }
 
     final duration = DateTime.now().difference(startTime);
@@ -269,6 +276,13 @@ void _writeAuditLog(Map<String, dynamic> entry) {
       }
       await File('${dir.path}/response.json')
           .writeAsString(encoder.convert(responseMap));
+
+      // 4. 工具调用结果
+      final toolCallResults = entry['toolCallResults'] as List?;
+      if (toolCallResults != null && toolCallResults.isNotEmpty) {
+        await File('${dir.path}/tool_calls.json')
+            .writeAsString(encoder.convert(toolCallResults));
+      }
 
       debugPrint('📝 [Audit] 请求日志已写入: ${dir.path}');
     } catch (e) {

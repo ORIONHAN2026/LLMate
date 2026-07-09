@@ -1,0 +1,10 @@
+{
+  "content": "秦朝，中国历史上第一个大一统王朝，虽然仅存15年，却奠定了此后两千年的帝国底色。",
+  "usage": {
+    "promptTokens": 77236,
+    "completionTokens": 3149,
+    "totalTokens": 80385
+  },
+  "statusCode": 200,
+  "durationMs": 21674
+}

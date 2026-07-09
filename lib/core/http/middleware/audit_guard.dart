@@ -171,8 +171,10 @@ class _AuditCompleter {
 
     auditEntry['response'] = responseMap;
 
-    // 业务层已补全内容，异步写入
-    _writeAuditLog(auditEntry);
+    // 仅当有响应内容或错误时才触发写入（仅有请求信息的调用不写盘）
+    if (responseContent != null || error != null) {
+      _writeAuditLog(auditEntry);
+    }
   }
 }
 

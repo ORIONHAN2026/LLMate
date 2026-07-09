@@ -5,6 +5,7 @@ import 'package:shelf/shelf.dart';
 
 import '../../../controllers/mcp_controller.dart';
 import '../../../models/chat/chat_session.dart';
+import 'audit_guard.dart';
 
 /// 请求增强中间件：模型替换 + 工具注入
 ///
@@ -56,7 +57,11 @@ Handler modelToolGuard(Handler innerHandler) {
       debugPrint('🔧 [ModelTool] 注入 ${tools.length} 个 MCP 工具');
     }
 
-    // 透传原始请求体供审计，并向内游注入增强后的请求体
+    // 审计录入：收到的请求 / 组织后的请求
+    final auditCallback = request.context['auditCallback'] as AuditCallback?;
+    auditCallback?.call(rawRequest: original, organizedRequest: enriched);
+
+    // 透传原始请求体供下游使用，并向内游注入增强后的请求体
     final updatedRequest = request.change(
       body: utf8.encode(jsonEncode(enriched)),
       context: {

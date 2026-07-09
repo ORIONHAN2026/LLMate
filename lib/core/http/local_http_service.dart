@@ -229,11 +229,9 @@ class LocalHttpService {
     } catch (e) {
       debugPrint('❌ 请求处理失败: $e');
 
-      // 审计回调：记录错误（含收到的原始请求）
+      // 审计回调：记录错误（请求审计已在 modelToolGuard 中完成）
       final auditCallback = request.context['auditCallback'] as AuditCallback?;
-      final rawRequest =
-          request.context['originalRequest'] as Map<String, dynamic>?;
-      auditCallback?.call(rawRequest: rawRequest, error: '$e');
+      auditCallback?.call(error: '$e');
 
       return Response.internalServerError(
         body: jsonEncode({
@@ -344,7 +342,6 @@ class LocalHttpService {
       final client = HttpClient();
 
       // 由中间件注入到 context 的辅助信息（try 中读取请求体后补全）
-      Map<String, dynamic>? rawRequest;
       AuditCallback? auditCallback;
 
       try {
@@ -355,9 +352,6 @@ class LocalHttpService {
         );
         final requestBodyMap = jsonDecode(bodyStr) as Map<String, dynamic>;
         requestBodyMap['stream'] = true;
-        rawRequest =
-            request.context['originalRequest'] as Map<String, dynamic>? ??
-            requestBodyMap;
         auditCallback = request.context['auditCallback'] as AuditCallback?;
 
         final httpRequest = await client.postUrl(uri);
@@ -457,10 +451,8 @@ class LocalHttpService {
           generationStartTime: generationStartTime,
         );
 
-        // 审计回调：补入「收到的请求 / 组织后的请求 / 返回内容」
+        // 审计回调：补入返回内容（请求审计已在 modelToolGuard 中完成）
         auditCallback?.call(
-          rawRequest: rawRequest,
-          organizedRequest: requestBodyMap,
           responseContent: contentBuffer.toString(),
           promptTokens: promptTokens,
           completionTokens: completionTokens,
@@ -471,10 +463,8 @@ class LocalHttpService {
         controller.addError(e);
         await controller.close();
 
-        // 审计回调：记录流式异常（含收到的请求与组织后的请求）
+        // 审计回调：记录流式异常（请求审计已在 modelToolGuard 中完成）
         auditCallback?.call(
-          rawRequest: rawRequest,
-          organizedRequest: rawRequest,
           error: 'Stream proxy error: $e',
         );
       } finally {

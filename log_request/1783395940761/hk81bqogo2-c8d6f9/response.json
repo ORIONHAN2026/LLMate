@@ -1,0 +1,10 @@
+{
+  "content": "`writePage` 这个工具确实在系统里列出来了，但需要依赖某个后端服务才能调用。当前环境下所有连接器都处于 **断开状态**（包括腾讯文档、企业微信、知识库等），所以工具不可用。\n\n给你两个选择：\n\n---\n\n**方案A：生成本地测试文件** —— 我直接把 Markdown 文件写到本地目录，你可以随时查看或后续手动发布：",
+  "usage": {
+    "promptTokens": 33619,
+    "completionTokens": 598,
+    "totalTokens": 34217
+  },
+  "statusCode": 200,
+  "durationMs": 6664
+}

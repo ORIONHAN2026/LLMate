@@ -14,6 +14,7 @@ import '../../controllers/session_controller.dart';
 import '../../controllers/domain_controller.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
+import '../../models/chat/content_block.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/audit_guard.dart';
@@ -393,17 +394,22 @@ class LocalHttpService {
         // SSE 解析状态
         final generationStartTime = DateTime.now();
         final contentBuffer = StringBuffer();
+
         int? promptTokens;
         int? completionTokens;
         int? totalTokens;
         String sseBuffer = '';
+
+        // 工具调用累积（按 index 合并增量参数）
+        final Map<int, Map<String, dynamic>> toolCallAccumulator =
+            <int, Map<String, dynamic>>{};
 
         await for (final chunk in response) {
           // 透传原始数据给客户端
           debugPrint('chunk: ${utf8.decode(chunk, allowMalformed: true)}');
           controller.add(chunk);
 
-          // 解析 SSE 数据提取 content 和 usage
+          // 解析 SSE 数据提取 content、tool_calls 和 usage
           sseBuffer += utf8.decode(chunk, allowMalformed: true);
           final lines = sseBuffer.split('\n');
           sseBuffer = lines.removeLast(); // 保留不完整的行
@@ -412,17 +418,65 @@ class LocalHttpService {
             final trimmed = line.trim();
             if (!trimmed.startsWith('data: ')) continue;
             final dataStr = trimmed.substring(6);
-            if (dataStr == '[DONE]') continue;
+            if (dataStr == '[DONE]') {
+              // 流结束标记：打印工具调用清单
+              _printToolCalls(toolCallAccumulator);
+              continue;
+            }
 
             try {
               final json = jsonDecode(dataStr) as Map<String, dynamic>;
 
-              // 提取 content
+              // 提取 content & tool_calls
               final choices = json['choices'] as List?;
               if (choices != null && choices.isNotEmpty) {
                 final delta = choices[0]['delta'] as Map<String, dynamic>?;
-                if (delta != null && delta['content'] != null) {
-                  contentBuffer.write(delta['content']);
+                if (delta != null) {
+                  if (delta['content'] != null) {
+                    contentBuffer.write(delta['content']);
+                  }
+
+                  // 提取 tool_calls（增量累积）
+                  final toolCalls = delta['tool_calls'] as List?;
+                  if (toolCalls != null) {
+                    for (final tc in toolCalls) {
+                      final tcMap = tc as Map<String, dynamic>;
+                      final idx = tcMap['index'] as int? ?? 0;
+                      toolCallAccumulator.putIfAbsent(
+                        idx,
+                        () => <String, dynamic>{},
+                      );
+
+                      final entry = toolCallAccumulator[idx]!;
+                      if (tcMap['id'] != null) entry['id'] = tcMap['id'];
+                      if (tcMap['type'] != null) entry['type'] = tcMap['type'];
+
+                      final func =
+                          tcMap['function'] as Map<String, dynamic>?;
+                      if (func != null) {
+                        if (func['name'] != null) {
+                          entry['function'] ??= <String, dynamic>{};
+                          (entry['function'] as Map<String, dynamic>)[
+                              'name'] = func['name'];
+                        }
+                        if (func['arguments'] != null) {
+                          entry['function'] ??= <String, dynamic>{};
+                          final funcMap =
+                              entry['function'] as Map<String, dynamic>;
+                          funcMap['arguments'] =
+                              (funcMap['arguments'] as String? ?? '') +
+                                  (func['arguments'] as String);
+                        }
+                      }
+
+                      debugPrint(
+                        '🛠 [ToolAccum] idx=$idx, '
+                        'id=${entry['id']}, '
+                        'name=${(entry['function'] as Map<String, dynamic>?)?['name']}, '
+                        'argsLen=${((entry['function'] as Map<String, dynamic>?)?['arguments'] as String? ?? '').length}',
+                      );
+                    }
+                  }
                 }
               }
 
@@ -438,7 +492,14 @@ class LocalHttpService {
             }
           }
         }
+        // 流结束后打印工具清单（兜底，即使 [DONE] 未被识别也能输出）
+        _printToolCalls(toolCallAccumulator);
+
         await controller.close();
+
+        // 构建累积后的工具调用列表
+        final List<Map<String, dynamic>> extractedToolCalls =
+            toolCallAccumulator.entries.map((e) => e.value).toList();
 
         // 流结束后，更新本地会话
         _updateSessionAfterStream(
@@ -449,6 +510,7 @@ class LocalHttpService {
           completionTokens: completionTokens,
           totalTokens: totalTokens,
           generationStartTime: generationStartTime,
+          toolCalls: extractedToolCalls,
         );
 
         // 审计回调：补入返回内容（请求审计已在 modelToolGuard 中完成）
@@ -464,9 +526,7 @@ class LocalHttpService {
         await controller.close();
 
         // 审计回调：记录流式异常（请求审计已在 modelToolGuard 中完成）
-        auditCallback?.call(
-          error: 'Stream proxy error: $e',
-        );
+        auditCallback?.call(error: 'Stream proxy error: $e');
       } finally {
         client.close();
       }
@@ -493,6 +553,7 @@ class LocalHttpService {
     int? completionTokens,
     int? totalTokens,
     required DateTime generationStartTime,
+    List<Map<String, dynamic>>? toolCalls,
   }) {
     try {
       final sessionController = Get.find<SessionController>();
@@ -502,6 +563,24 @@ class LocalHttpService {
       final messages = requestBodyMap['messages'] as List?;
       final lastUserMsg = messages?.lastOrNull as Map<String, dynamic>?;
       final userContent = lastUserMsg?['content'] as String? ?? '';
+
+      // 构建工具调用 contentBlocks（如果有）
+      List<ContentBlock> contentBlocks = [];
+      final extractedToolCalls =
+          toolCalls != null && toolCalls.isNotEmpty
+              ? toolCalls
+              : <Map<String, dynamic>>[];
+      for (final tc in extractedToolCalls) {
+        final func = tc['function'] as Map<String, dynamic>?;
+        final name = func?['name'] as String? ?? '';
+        final args = func?['arguments'] as String? ?? '';
+        contentBlocks.add(
+          ContentBlock(
+            type: ContentBlockType.tool,
+            text: '$name\n$args',
+          ),
+        );
+      }
 
       // 创建用户消息
       final userMsgId = '${DateTime.now().millisecondsSinceEpoch}_user';
@@ -522,6 +601,7 @@ class LocalHttpService {
         timestamp: now,
         sessionId: session.sessionId,
         pairedMsgId: userMsgId,
+        contentBlocks: contentBlocks,
         generationStartTime: generationStartTime,
         generationEndTime: now,
         inputTokens: promptTokens,
@@ -548,6 +628,25 @@ class LocalHttpService {
       );
     } catch (e) {
       debugPrint('❌ 更新会话失败: $e');
+    }
+  }
+
+  /// 打印累积的工具调用清单
+  static void _printToolCalls(
+      Map<int, Map<String, dynamic>> accumulator) {
+    if (accumulator.isNotEmpty) {
+      final toolList = accumulator.entries
+          .map((e) =>
+              '  [${e.key}] id=${e.value['id']}, '
+              'type=${e.value['type']}, '
+              'name=${(e.value['function'] as Map<String, dynamic>?)?['name']}, '
+              'args=${(e.value['function'] as Map<String, dynamic>?)?['arguments']}')
+          .join('\n');
+      debugPrint(
+        '🛠 [ToolCalls] 收到 ${accumulator.length} 个工具调用:\n$toolList',
+      );
+    } else {
+      debugPrint('🛠 [ToolCalls] 无工具调用');
     }
   }
 

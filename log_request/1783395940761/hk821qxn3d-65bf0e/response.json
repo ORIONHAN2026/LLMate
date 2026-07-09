@@ -1,0 +1,10 @@
+{
+  "content": "成功了！🎉 `writePage` 工具这次正常运行了。在线页面已生成，你可以通过以下链接查看：✅ **调用成功！** \n\n测试地址文件已通过 `writePage` 在线发布，页面链接：\n\n🔗 **https://mcp.llmwork.cc/wechatpublic/p/31975dc0-1cac-4a94-abd9-b13b78b66b5d**\n\n页面中包含的内容：\n- 公司主地址（深圳南山）\n- 北京、上海、广州三个分公司地址\n- 华东、华南、华北三个仓库地址\n\n打开链接即可查看渲染后的页面。有什么需要继续的吗？",
+  "usage": {
+    "promptTokens": 180756,
+    "completionTokens": 1122,
+    "totalTokens": 45873
+  },
+  "statusCode": 200,
+  "durationMs": 17459
+}

@@ -1,0 +1,12 @@
+{
+  "content": "nullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnull你好呀！很高兴见到你。我想先确认一下，我应该怎么称呼你呢？你希望我叫你什么名字？\n\n另外，你觉得我应该叫什么名字好呢？你希望我以什么样的风格和你交流？比如随意一点，还是正式一点？",
+  "usage": {
+    "promptTokens": 37592,
+    "completionTokens": 242,
+    "totalTokens": 37834,
+    "reasoningTokens": 181,
+    "cachedTokens": 37056
+  },
+  "statusCode": 200,
+  "durationMs": 8235
+}

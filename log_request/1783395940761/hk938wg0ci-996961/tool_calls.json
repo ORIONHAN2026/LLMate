@@ -1,0 +1,7 @@
+[
+  {
+    "name": "manage.search_file",
+    "id": "call_f4badd04e11f47cb9195f272",
+    "result": "MCP 执行失败: McpError (-32602): Tool \"manage.search_file\" is missing required parameters: [search_key], please use the parameter names defined in the protocol: [\"search_key\"], trace_id:12e31b075c6b4c07ab220977b779dff2"
+  }
+]

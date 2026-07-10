@@ -143,11 +143,15 @@ class ChunkUsage {
   final int? promptTokens;
   final int? completionTokens;
   final int? totalTokens;
+  final CompletionTokensDetails? completionTokensDetails;
+  final PromptTokensDetails? promptTokensDetails;
 
   const ChunkUsage({
     this.promptTokens,
     this.completionTokens,
     this.totalTokens,
+    this.completionTokensDetails,
+    this.promptTokensDetails,
   });
 
   factory ChunkUsage.fromJson(Map<String, dynamic> json) {
@@ -155,6 +159,18 @@ class ChunkUsage {
       promptTokens: json['prompt_tokens'] as int?,
       completionTokens: json['completion_tokens'] as int?,
       totalTokens: json['total_tokens'] as int?,
+      completionTokensDetails:
+          json['completion_tokens_details'] != null
+              ? CompletionTokensDetails.fromJson(
+                  json['completion_tokens_details'] as Map<String, dynamic>,
+                )
+              : null,
+      promptTokensDetails:
+          json['prompt_tokens_details'] != null
+              ? PromptTokensDetails.fromJson(
+                  json['prompt_tokens_details'] as Map<String, dynamic>,
+                )
+              : null,
     );
   }
 
@@ -162,8 +178,44 @@ class ChunkUsage {
         if (promptTokens != null) 'prompt_tokens': promptTokens,
         if (completionTokens != null) 'completion_tokens': completionTokens,
         if (totalTokens != null) 'total_tokens': totalTokens,
+        if (completionTokensDetails != null)
+          'completion_tokens_details': completionTokensDetails!.toJson(),
+        if (promptTokensDetails != null)
+          'prompt_tokens_details': promptTokensDetails!.toJson(),
       };
 
   @override
   String toString() => jsonEncode(toJson());
+}
+
+class CompletionTokensDetails {
+  final int? reasoningTokens;
+
+  const CompletionTokensDetails({this.reasoningTokens});
+
+  factory CompletionTokensDetails.fromJson(Map<String, dynamic> json) {
+    return CompletionTokensDetails(
+      reasoningTokens: json['reasoning_tokens'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        if (reasoningTokens != null) 'reasoning_tokens': reasoningTokens,
+      };
+}
+
+class PromptTokensDetails {
+  final int? cachedTokens;
+
+  const PromptTokensDetails({this.cachedTokens});
+
+  factory PromptTokensDetails.fromJson(Map<String, dynamic> json) {
+    return PromptTokensDetails(
+      cachedTokens: json['cached_tokens'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        if (cachedTokens != null) 'cached_tokens': cachedTokens,
+      };
 }

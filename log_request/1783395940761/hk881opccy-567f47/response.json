@@ -1,0 +1,10 @@
+{
+  "content": "`writePage`工具在当前环境中不可用，我已经通过ToolSearch进行了确认。这个工具可能需要特定的MCP连接器支持才能使用。\n\n不过，我之前已经为你创建了一个完整的测试页面HTML文件，包含了标题、段落、列表、代码块、表格、链接和图片等各种HTML元素。你可以通过预览面板查看这个测试页面的效果。\n\n如果你需要使用`writePage`功能，可能需要先配置相关的MCP连接器。或者，我可以继续用本地HTML文件的方式为你生成网页内容。\n\n需要我帮你检查或配置相关的MCP连接器吗？",
+  "usage": {
+    "promptTokens": 53048,
+    "completionTokens": 182,
+    "totalTokens": 53230
+  },
+  "statusCode": 200,
+  "durationMs": 30105
+}

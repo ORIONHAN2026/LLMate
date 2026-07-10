@@ -316,7 +316,8 @@ class LlmClient {
 
   /// 构建可用的工具列表（MCP）
   List<Map<String, dynamic>> _buildTools(ChatSession? session) {
-    return McpController.instance.getTools(session?.mcp ?? '');
+    final tools = McpController.instance.getTools(session?.mcp ?? '');
+    return tools.map((t) => t.toOpenAIFunction()).toList();
   }
 
   // ======================== 请求日志 ========================

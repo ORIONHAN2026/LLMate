@@ -1,0 +1,10 @@
+{
+  "content": "",
+  "usage": {
+    "promptTokens": 41983,
+    "completionTokens": 252,
+    "totalTokens": 42235
+  },
+  "statusCode": 200,
+  "durationMs": 7246
+}

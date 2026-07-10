@@ -30,19 +30,19 @@ extension McpTransportTypeExt on McpTransportType {
 }
 
 /// MCP工具信息模型
-class McpToolInfo {
+class McpTool {
   final String name;
   final String description;
   final Map<String, dynamic> inputSchema;
 
-  const McpToolInfo({
+  const McpTool({
     required this.name,
     required this.description,
     required this.inputSchema,
   });
 
-  factory McpToolInfo.fromJson(Map<String, dynamic> json) {
-    return McpToolInfo(
+  factory McpTool.fromJson(Map<String, dynamic> json) {
+    return McpTool(
       name: json['name'] as String? ?? '',
       description: json['description'] as String? ?? '',
       inputSchema: json['inputSchema'] as Map<String, dynamic>? ?? {},
@@ -57,9 +57,33 @@ class McpToolInfo {
     };
   }
 
+  /// 转为 OpenAI function calling 格式
+  Map<String, dynamic> toOpenAIFunction() {
+    final func = <String, dynamic>{
+      'type': 'function',
+      'function': <String, dynamic>{
+        'name': name,
+        'description': description,
+      },
+    };
+    if (inputSchema.isNotEmpty) {
+      final schema = Map<String, dynamic>.from(inputSchema);
+      schema.putIfAbsent('type', () => 'object');
+      schema.putIfAbsent('properties', () => <String, dynamic>{});
+      func['function']['parameters'] = schema;
+    } else {
+      func['function']['parameters'] = {
+        'type': 'object',
+        'properties': <String, dynamic>{},
+        'required': <String>[],
+      };
+    }
+    return func;
+  }
+
   @override
   String toString() {
-    return 'McpToolInfo(name: $name, description: $description)';
+    return 'McpTool(name: $name, description: $description)';
   }
 }
 
@@ -92,7 +116,7 @@ class Mcp {
   // ── 元信息（原 config.json）──
   final String? version; // MCP 服务器版本号
   final String? prompt; // LLM 用的工具介绍文本
-  final List<McpToolInfo>? tools; // 工具信息列表
+  final List<McpTool>? tools; // 工具信息列表
   final DateTime? lastUpdated; // 最后更新时间
 
   const Mcp({
@@ -141,7 +165,7 @@ class Mcp {
 
     final toolsList = data['tools'] as List<dynamic>?;
     final tools = toolsList
-        ?.map((tool) => McpToolInfo.fromJson(tool as Map<String, dynamic>))
+        ?.map((tool) => McpTool.fromJson(tool as Map<String, dynamic>))
         .toList();
 
     final lastUpdatedStr = data['lastUpdated'] as String?;
@@ -226,7 +250,7 @@ class Mcp {
     McpTransportType? type,
     String? version,
     String? prompt,
-    List<McpToolInfo>? tools,
+    List<McpTool>? tools,
     DateTime? lastUpdated,
   }) {
     return Mcp(

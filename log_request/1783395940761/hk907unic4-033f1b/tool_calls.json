@@ -1,0 +1,7 @@
+[
+  {
+    "name": "writePage",
+    "id": "call_964e3b881bb64933913e8490",
+    "result": "✅ **页面创建成功**\n\n- **docId**: `c8497a61-9217-4fb4-bcd9-9abbfe072011`\n- **页面链接**: https://mcp.llmwork.cc/wechatpublic/p/c8497a61-9217-4fb4-bcd9-9abbfe072011\n- **内容预览**:\n\n# \n这是一个通过 writePage 工具生成的测试页面。\n\n## 功能测试\n\n- 段落文字\n- **粗体文字**\n- *斜体文字*\n\n## 列表测试\n\n1. 第一项\n2. 第二项\n3. 第三项\n\n---\n\n*生�..."
+  }
+]

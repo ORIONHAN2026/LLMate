@@ -43,7 +43,7 @@ class McpConnectionInfo {
   final String serverName;
   final String? description;
   final String? serverVersion;
-  final List<McpToolInfo> tools;
+  final List<McpTool> tools;
   final String prompt;
 
   const McpConnectionInfo({
@@ -220,7 +220,7 @@ class McpController extends GetxController {
 
   // ═══ 刷新服务工具 ═══
 
-  Future<List<McpToolInfo>> refreshServiceTools(Mcp config) async {
+  Future<List<McpTool>> refreshServiceTools(Mcp config) async {
     final timeoutSec = config.timeout ?? _defaultTimeout;
     debugPrint('🔄 ====== 开始刷新 MCP 服务工具: ${config.name} ======');
     await _cleanupClient(config.name);
@@ -279,7 +279,7 @@ class McpController extends GetxController {
       final toolInfos =
           tools
               .map(
-                (t) => McpToolInfo(
+                (t) => McpTool(
                   name: t.name,
                   description: t.description,
                   inputSchema: t.inputSchema as Map<String, dynamic>? ?? {},
@@ -346,7 +346,7 @@ class McpController extends GetxController {
       final toolInfos =
           tools
               .map(
-                (t) => McpToolInfo(
+                (t) => McpTool(
                   name: t.name,
                   description: t.description,
                   inputSchema: t.inputSchema as Map<String, dynamic>? ?? {},
@@ -397,7 +397,7 @@ class McpController extends GetxController {
 
   Future<Map<String, String>?> summarizeWithLLM({
     required String serverName,
-    required List<McpToolInfo> tools,
+    required List<McpTool> tools,
   }) async {
     try {
       final modelController = Get.find<ModelController>();
@@ -568,7 +568,7 @@ class McpController extends GetxController {
       tools:
           tools
               .map(
-                (t) => McpToolInfo(
+                (t) => McpTool(
                   name: t.name,
                   description: t.description,
                   inputSchema: t.inputSchema as Map<String, dynamic>? ?? {},
@@ -929,37 +929,13 @@ class McpController extends GetxController {
   // ═══ OpenAI 工具格式 ═══
 
   /// 根据 Mcp 名称获取其结构体中存储的 OpenAI 格式工具列表（纯读取）。
-  List<Map<String, dynamic>> getTools(String mcpName) {
+  List<McpTool> getTools(String mcpName) {
     final mcp = getMcp(mcpName);
     if (mcp == null) return [];
-    final toolInfos = mcp.tools;
-    if (toolInfos == null || toolInfos.isEmpty) return [];
-
-    final list = <Map<String, dynamic>>[];
-    for (final t in toolInfos) {
-      final func = <String, dynamic>{
-        'type': 'function',
-        'function': <String, dynamic>{
-          'name': t.name,
-          'description': t.description,
-        },
-      };
-      if (t.inputSchema.isNotEmpty) {
-        final schema = Map<String, dynamic>.from(t.inputSchema);
-        schema.putIfAbsent('type', () => 'object');
-        schema.putIfAbsent('properties', () => <String, dynamic>{});
-        func['function']['parameters'] = schema;
-      } else {
-        func['function']['parameters'] = {
-          'type': 'object',
-          'properties': <String, dynamic>{},
-          'required': <String>[],
-        };
-      }
-      list.add(func);
-    }
-    debugPrint('🔧 生成 OpenAI tools 数量: ${list.length}');
-    return list;
+    final tools = mcp.tools;
+    if (tools == null || tools.isEmpty) return [];
+    debugPrint('🔧 生成 OpenAI tools 数量: ${tools.length}');
+    return tools;
   }
 }
 

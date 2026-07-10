@@ -1,0 +1,5 @@
+{
+  "error": "Stream proxy error: FormatException: Unexpected character (at line 3, character 1)\ndata: {\"id\":\"0ff6007399774bb09939e72722999f93\",\"choices\":[{\"delta\":{\"conten...\n^\n",
+  "statusCode": 200,
+  "durationMs": 23423
+}

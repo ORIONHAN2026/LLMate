@@ -1,0 +1,10 @@
+{
+  "content": "nullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnull你好呀！在继续之前，我想先确认一些关于我们的重要细节，这样我们以后的交流会更顺畅。\n\n首先，关于我：你希望我叫什么名字？你觉得我是什么类型的助手？希望我以什么风格和你交流？比如正式、随意、温暖还是有趣？另外，你觉得我应该有什么样的价值观和性格特点？\n\n关于你：我应该怎么称呼你？你希望我叫你什么？你在哪个城市？你主要关心什么，在做什么工作？有什么重要的事情需要我记住吗？\n\n我们可以慢慢聊，不用一次说完。",
+  "usage": {
+    "promptTokens": 37026,
+    "completionTokens": 186,
+    "totalTokens": 37212
+  },
+  "statusCode": 200,
+  "durationMs": 6529
+}

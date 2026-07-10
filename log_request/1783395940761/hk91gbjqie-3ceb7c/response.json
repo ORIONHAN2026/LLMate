@@ -1,0 +1,10 @@
+{
+  "content": "文件有语法问题，我来重写一下：",
+  "usage": {
+    "promptTokens": 39374,
+    "completionTokens": 390,
+    "totalTokens": 39764
+  },
+  "statusCode": 200,
+  "durationMs": 8047
+}

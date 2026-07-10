@@ -1,0 +1,10 @@
+{
+  "content": "{\"isNewTopic\": true, \"title\": \"用户问候\"}",
+  "usage": {
+    "promptTokens": 928,
+    "completionTokens": 612,
+    "totalTokens": 1540
+  },
+  "statusCode": 200,
+  "durationMs": 14359
+}

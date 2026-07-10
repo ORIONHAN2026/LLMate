@@ -314,7 +314,11 @@ class LocalHttpService {
     File(
       'log_request/request.json',
     ).writeAsString(const JsonEncoder.withIndent('  ').convert(body));
-
+    bool cancel = false;
+    streamController.onCancel = () {
+      cancel = true;
+      debugPrint('🛑 [StreamProxy] 客户端断开连接，取消后端请求${cancel}');
+    };
     // 异步发起请求并透传 SSE 流（支持工具调用循环）
     () async {
       // 由中间件注入到 context 的辅助信息（try 中读取请求体后补全）

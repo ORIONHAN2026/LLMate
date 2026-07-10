@@ -37,9 +37,7 @@ Handler quotaGuard(Handler innerHandler) {
     // Step 2: 检查配额
     final quotaResult = currentSession.checkQuota();
     if (quotaResult.exceeded) {
-      debugPrint(
-        '⛔ [Quota Guard] 配额超限: ${quotaResult.reason} → 429',
-      );
+      debugPrint('⛔ [Quota Guard] 配额超限: ${quotaResult.reason} → 429');
       return Response(
         429,
         body: jsonEncode({
@@ -57,10 +55,9 @@ Handler quotaGuard(Handler innerHandler) {
     debugPrint('✅ [Quota Guard] 配额检查通过: ${currentSession.sessionId}');
 
     // 将可能更新后的 session 存回 context
-    final updatedRequest = request.change(context: {
-      ...request.context,
-      'session': currentSession,
-    });
+    final updatedRequest = request.change(
+      context: {...request.context, 'session': currentSession},
+    );
 
     return innerHandler(updatedRequest);
   };

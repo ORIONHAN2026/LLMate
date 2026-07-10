@@ -1,0 +1,12 @@
+{
+  "content": "nullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnullnull",
+  "usage": {
+    "promptTokens": 119952,
+    "completionTokens": 103,
+    "totalTokens": 120055,
+    "reasoningTokens": 66,
+    "cachedTokens": 16896
+  },
+  "statusCode": 200,
+  "durationMs": 10193
+}

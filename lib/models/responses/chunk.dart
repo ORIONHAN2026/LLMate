@@ -41,24 +41,26 @@ class Chunk {
       object: json['object'] as String? ?? '',
       created: json['created'] as int? ?? 0,
       model: json['model'] as String? ?? '',
-      choices: (json['choices'] as List<dynamic>?)
+      choices:
+          (json['choices'] as List<dynamic>?)
               ?.map((e) => ChunkChoice.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      usage: json['usage'] != null
-          ? ChunkUsage.fromJson(json['usage'] as Map<String, dynamic>)
-          : null,
+      usage:
+          json['usage'] != null
+              ? ChunkUsage.fromJson(json['usage'] as Map<String, dynamic>)
+              : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'object': object,
-        'created': created,
-        'model': model,
-        'choices': choices.map((e) => e.toJson()).toList(),
-        if (usage != null) 'usage': usage!.toJson(),
-      };
+    'id': id,
+    'object': object,
+    'created': created,
+    'model': model,
+    'choices': choices.map((e) => e.toJson()).toList(),
+    if (usage != null) 'usage': usage!.toJson(),
+  };
 
   /// 是否为流结束信号 [DONE]
   bool get isDone => false;
@@ -112,27 +114,24 @@ class ChunkChoice {
   final OpenAIDelta? delta;
   final String? finishReason;
 
-  const ChunkChoice({
-    required this.index,
-    this.delta,
-    this.finishReason,
-  });
+  const ChunkChoice({required this.index, this.delta, this.finishReason});
 
   factory ChunkChoice.fromJson(Map<String, dynamic> json) {
     return ChunkChoice(
       index: json['index'] as int? ?? 0,
-      delta: json['delta'] != null
-          ? OpenAIDelta.fromJson(json['delta'] as Map<String, dynamic>)
-          : null,
+      delta:
+          json['delta'] != null
+              ? OpenAIDelta.fromJson(json['delta'] as Map<String, dynamic>)
+              : null,
       finishReason: json['finish_reason'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'index': index,
-        if (delta != null) 'delta': delta!.toJson(),
-        'finish_reason': finishReason,
-      };
+    'index': index,
+    if (delta != null) 'delta': delta!.toJson(),
+    'finish_reason': finishReason,
+  };
 
   @override
   String toString() => jsonEncode(toJson());
@@ -162,27 +161,27 @@ class ChunkUsage {
       completionTokensDetails:
           json['completion_tokens_details'] != null
               ? CompletionTokensDetails.fromJson(
-                  json['completion_tokens_details'] as Map<String, dynamic>,
-                )
+                json['completion_tokens_details'] as Map<String, dynamic>,
+              )
               : null,
       promptTokensDetails:
           json['prompt_tokens_details'] != null
               ? PromptTokensDetails.fromJson(
-                  json['prompt_tokens_details'] as Map<String, dynamic>,
-                )
+                json['prompt_tokens_details'] as Map<String, dynamic>,
+              )
               : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        if (promptTokens != null) 'prompt_tokens': promptTokens,
-        if (completionTokens != null) 'completion_tokens': completionTokens,
-        if (totalTokens != null) 'total_tokens': totalTokens,
-        if (completionTokensDetails != null)
-          'completion_tokens_details': completionTokensDetails!.toJson(),
-        if (promptTokensDetails != null)
-          'prompt_tokens_details': promptTokensDetails!.toJson(),
-      };
+    if (promptTokens != null) 'prompt_tokens': promptTokens,
+    if (completionTokens != null) 'completion_tokens': completionTokens,
+    if (totalTokens != null) 'total_tokens': totalTokens,
+    if (completionTokensDetails != null)
+      'completion_tokens_details': completionTokensDetails!.toJson(),
+    if (promptTokensDetails != null)
+      'prompt_tokens_details': promptTokensDetails!.toJson(),
+  };
 
   @override
   String toString() => jsonEncode(toJson());
@@ -200,8 +199,8 @@ class CompletionTokensDetails {
   }
 
   Map<String, dynamic> toJson() => {
-        if (reasoningTokens != null) 'reasoning_tokens': reasoningTokens,
-      };
+    if (reasoningTokens != null) 'reasoning_tokens': reasoningTokens,
+  };
 }
 
 class PromptTokensDetails {
@@ -210,12 +209,10 @@ class PromptTokensDetails {
   const PromptTokensDetails({this.cachedTokens});
 
   factory PromptTokensDetails.fromJson(Map<String, dynamic> json) {
-    return PromptTokensDetails(
-      cachedTokens: json['cached_tokens'] as int?,
-    );
+    return PromptTokensDetails(cachedTokens: json['cached_tokens'] as int?);
   }
 
   Map<String, dynamic> toJson() => {
-        if (cachedTokens != null) 'cached_tokens': cachedTokens,
-      };
+    if (cachedTokens != null) 'cached_tokens': cachedTokens,
+  };
 }

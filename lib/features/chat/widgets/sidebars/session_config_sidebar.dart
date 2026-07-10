@@ -968,7 +968,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     final hasPeriod = _session.quotaPeriodStart != null;
     final effectiveTokens = hasPeriod
         ? periodBilling.inputTokens + periodBilling.outputTokens
-        : _session.totalInputTokens + _session.totalOutputTokens;
+        : _session.promptTokens + _session.completionTokens;
     final effectiveCost = hasPeriod ? periodBilling.cost : _session.totalCost;
     final quotaResult = _session.checkQuota();
 
@@ -1285,7 +1285,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                       icon: CupertinoIcons.arrow_down_circle,
                       label: '累计输入Token',
                       value: SessionConfigSidebar._formatTokenCount(
-                        session.totalInputTokens,
+                        session.promptTokens,
                       ),
                       valueColor: Theme.of(context).colorScheme.primary,
                     ),
@@ -1295,7 +1295,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                       icon: CupertinoIcons.arrow_up_circle,
                       label: '累计输出Token',
                       value: SessionConfigSidebar._formatTokenCount(
-                        session.totalOutputTokens,
+                        session.completionTokens,
                       ),
                       valueColor: Theme.of(context).colorScheme.primary,
                     ),

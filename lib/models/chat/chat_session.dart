@@ -14,7 +14,8 @@ import './contract_info.dart';
 String generateSessionApiKey() {
   final random = math.Random.secure();
   final bytes = List<int>.generate(32, (_) => random.nextInt(256));
-  final hexString = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  final hexString =
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   return 'sk-$hexString';
 }
 
@@ -43,7 +44,7 @@ const List<String> kSessionEmojis = [
   '🦊', '🐱', '🐶', '🐻', '🐼', '🐨', '🦁', '🐯', '🐮', '🐷',
   '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇',
   '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜',
-  '🐢', '🐍', '🦎', '🐙',   '🦑', '🦐', '🦀', '🐬', '🐳', '🐋',
+  '🐢', '🐍', '🦎', '🐙', '🦑', '🦐', '🦀', '🐬', '🐳', '🐋',
   '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🐘', '🦏', '🐪', '🐫',
   // 食物
   '🍕', '🍔', '🍟', '🌭', '🍿', '🧀', '🥚', '🍳', '🥞', '🥓',
@@ -105,10 +106,10 @@ class ChatSession {
   // === 计费统计 ===
 
   /// 累计输入token数
-  final int totalInputTokens;
+  int promptTokens;
 
   /// 累计输出token数
-  final int totalOutputTokens;
+  int completionTokens;
 
   /// 累计费用（美元）
   final double totalCost;
@@ -182,8 +183,8 @@ class ChatSession {
     this.sessionQuickCommands = const [],
     this.scheduledTask,
     this.contracts,
-    this.totalInputTokens = 0,
-    this.totalOutputTokens = 0,
+    this.promptTokens = 0,
+    this.completionTokens = 0,
     this.totalCost = 0.0,
     String? emoji,
     String? apiKey,
@@ -239,10 +240,12 @@ class ChatSession {
 
     // 周期模式的用量数据
     final periodBilling = getPeriodBilling();
-    final effectiveTokens = quotaPeriodStart != null
-        ? periodBilling.inputTokens + periodBilling.outputTokens
-        : totalInputTokens + totalOutputTokens;
-    final effectiveCost = quotaPeriodStart != null ? periodBilling.cost : totalCost;
+    final effectiveTokens =
+        quotaPeriodStart != null
+            ? periodBilling.inputTokens + periodBilling.outputTokens
+            : promptTokens + completionTokens;
+    final effectiveCost =
+        quotaPeriodStart != null ? periodBilling.cost : totalCost;
 
     // 检查 Token 用量
     if (quotaTokenLimit != null && effectiveTokens >= quotaTokenLimit!) {
@@ -371,8 +374,8 @@ class ChatSession {
     bool clearScheduledTask = false,
     List<ContractInfo>? contracts,
     bool clearContracts = false,
-    int? totalInputTokens,
-    int? totalOutputTokens,
+    int? promptTokens,
+    int? completionTokens,
     double? totalCost,
     String? emoji,
     String? apiKey,
@@ -438,24 +441,31 @@ class ChatSession {
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
       scheduledTask:
           clearScheduledTask ? null : (scheduledTask ?? this.scheduledTask),
-      contracts:
-          clearContracts ? null : (contracts ?? this.contracts),
-      totalInputTokens: totalInputTokens ?? this.totalInputTokens,
-      totalOutputTokens: totalOutputTokens ?? this.totalOutputTokens,
+      contracts: clearContracts ? null : (contracts ?? this.contracts),
+      promptTokens: promptTokens ?? this.promptTokens,
+      completionTokens: completionTokens ?? this.completionTokens,
       totalCost: totalCost ?? this.totalCost,
       emoji: emoji ?? this.emoji,
       apiKey: apiKey ?? this.apiKey,
       quotaEnabled: quotaEnabled ?? this.quotaEnabled,
       quotaTokenLimit:
-          clearQuotaTokenLimit ? null : (quotaTokenLimit ?? this.quotaTokenLimit),
+          clearQuotaTokenLimit
+              ? null
+              : (quotaTokenLimit ?? this.quotaTokenLimit),
       quotaCostLimit:
           clearQuotaCostLimit ? null : (quotaCostLimit ?? this.quotaCostLimit),
       quotaRequestLimit:
-          clearQuotaRequestLimit ? null : (quotaRequestLimit ?? this.quotaRequestLimit),
+          clearQuotaRequestLimit
+              ? null
+              : (quotaRequestLimit ?? this.quotaRequestLimit),
       quotaResetPeriod:
-          clearQuotaResetPeriod ? null : (quotaResetPeriod ?? this.quotaResetPeriod),
+          clearQuotaResetPeriod
+              ? null
+              : (quotaResetPeriod ?? this.quotaResetPeriod),
       quotaPeriodStart:
-          clearQuotaPeriodStart ? null : (quotaPeriodStart ?? this.quotaPeriodStart),
+          clearQuotaPeriodStart
+              ? null
+              : (quotaPeriodStart ?? this.quotaPeriodStart),
       quotaRequestCount: quotaRequestCount ?? this.quotaRequestCount,
     );
   }
@@ -474,14 +484,16 @@ class ChatSession {
     } else if (mcpField is Map<String, dynamic>) {
       parsedMcpServer = Mcp.fromMap(mcpField);
       final legacyId = (mcpField['mcpId'] as String? ?? '');
-      mcpFolder = legacyId.startsWith('mcp_')
-          ? legacyId.substring(4)
-          : (legacyId.isNotEmpty ? legacyId : null);
+      mcpFolder =
+          legacyId.startsWith('mcp_')
+              ? legacyId.substring(4)
+              : (legacyId.isNotEmpty ? legacyId : null);
     } else {
       final old = json['mcpId'] as String?;
-      mcpFolder = old == null
-          ? null
-          : (old.startsWith('mcp_') ? old.substring(4) : old);
+      mcpFolder =
+          old == null
+              ? null
+              : (old.startsWith('mcp_') ? old.substring(4) : old);
       parsedMcpServer = null;
     }
 
@@ -525,12 +537,10 @@ class ChatSession {
               : null,
       contracts:
           (json['contracts'] as List<dynamic>?)
-              ?.map(
-                (c) => ContractInfo.fromJson(c as Map<String, dynamic>),
-              )
+              ?.map((c) => ContractInfo.fromJson(c as Map<String, dynamic>))
               .toList(),
-      totalInputTokens: json['totalInputTokens'] as int? ?? 0,
-      totalOutputTokens: json['totalOutputTokens'] as int? ?? 0,
+      promptTokens: json['totalInputTokens'] as int? ?? 0,
+      completionTokens: json['totalOutputTokens'] as int? ?? 0,
       totalCost: (json['totalCost'] as num?)?.toDouble() ?? 0.0,
       modelId: modelId,
       mcp: mcpFolder,
@@ -543,9 +553,10 @@ class ChatSession {
       quotaCostLimit: (json['quotaCostLimit'] as num?)?.toDouble(),
       quotaRequestLimit: json['quotaRequestLimit'] as int?,
       quotaResetPeriod: json['quotaResetPeriod'] as String?,
-      quotaPeriodStart: json['quotaPeriodStart'] != null
-          ? DateTime.tryParse(json['quotaPeriodStart'] as String)
-          : null,
+      quotaPeriodStart:
+          json['quotaPeriodStart'] != null
+              ? DateTime.tryParse(json['quotaPeriodStart'] as String)
+              : null,
       quotaRequestCount: json['quotaRequestCount'] as int? ?? 0,
     );
   }
@@ -572,8 +583,8 @@ class ChatSession {
       if (scheduledTask != null) 'scheduledTask': scheduledTask!.toJson(),
       if (contracts != null)
         'contracts': contracts!.map((c) => c.toJson()).toList(),
-      'totalInputTokens': totalInputTokens,
-      'totalOutputTokens': totalOutputTokens,
+      'totalInputTokens': promptTokens,
+      'totalOutputTokens': completionTokens,
       'totalCost': totalCost,
       if (modelId != null) 'modelId': modelId,
       if (mcp != null) 'mcp': mcp!,
@@ -617,9 +628,5 @@ class QuotaCheckResult {
   /// 详细信息
   final String? detail;
 
-  const QuotaCheckResult({
-    required this.exceeded,
-    this.reason,
-    this.detail,
-  });
+  const QuotaCheckResult({required this.exceeded, this.reason, this.detail});
 }

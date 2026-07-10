@@ -143,12 +143,12 @@ class SessionController extends GetxController {
     }
 
     // 只有值发生变化时才创建新对象
-    if (inputTotal != session.totalInputTokens ||
-        outputTotal != session.totalOutputTokens ||
+    if (inputTotal != session.promptTokens ||
+        outputTotal != session.completionTokens ||
         cost != session.totalCost) {
       return session.copyWith(
-        totalInputTokens: inputTotal,
-        totalOutputTokens: outputTotal,
+        promptTokens: inputTotal,
+        completionTokens: outputTotal,
         totalCost: cost,
       );
     }
@@ -498,8 +498,8 @@ class SessionController extends GetxController {
       'attachments':
           session.attachments.map((a) => a.toJson()).toList(),
       'emoji': session.emoji,
-      'totalInputTokens': session.totalInputTokens,
-      'totalOutputTokens': session.totalOutputTokens,
+      'totalInputTokens': session.promptTokens,
+      'totalOutputTokens': session.completionTokens,
       'totalCost': session.totalCost,
       'apiKey': session.apiKey,
       'quotaEnabled': session.quotaEnabled,

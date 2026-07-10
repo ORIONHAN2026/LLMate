@@ -1,0 +1,5 @@
+{
+  "error": "Stream proxy error: type 'List<dynamic>' is not a subtype of type 'List<Map<String, dynamic>>'",
+  "statusCode": 200,
+  "durationMs": 21975
+}

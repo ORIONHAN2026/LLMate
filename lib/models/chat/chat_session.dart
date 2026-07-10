@@ -111,6 +111,9 @@ class ChatSession {
   /// 累计输出token数
   int completionTokens;
 
+  /// 累计总token数
+  int totalTokens;
+
   /// 累计费用（美元）
   final double totalCost;
 
@@ -153,13 +156,13 @@ class ChatSession {
   /// - 'daily': 每天重置
   /// - 'monthly': 每月重置
   /// - null: 不自动重置
-  final String? quotaResetPeriod;
+  String? quotaResetPeriod;
 
   /// 配额周期起始时间（用于判断是否该重置了）
-  final DateTime? quotaPeriodStart;
+  DateTime? quotaPeriodStart;
 
   /// 当前周期已使用的请求次数（增量计数，跟随重置周期清零）
-  final int quotaRequestCount;
+  int quotaRequestCount;
 
   ChatSession({
     required this.sessionId,
@@ -185,6 +188,7 @@ class ChatSession {
     this.contracts,
     this.promptTokens = 0,
     this.completionTokens = 0,
+    this.totalTokens = 0,
     this.totalCost = 0.0,
     String? emoji,
     String? apiKey,
@@ -329,8 +333,8 @@ class ChatSession {
 
     for (final msg in messages) {
       if (msg.timestamp.isAfter(quotaPeriodStart!)) {
-        if (msg.inputTokens != null) inputTotal += msg.inputTokens!;
-        if (msg.outputTokens != null) outputTotal += msg.outputTokens!;
+        if (msg.promptTokens != null) inputTotal += msg.promptTokens!;
+        if (msg.completionTokens != null) outputTotal += msg.completionTokens!;
       }
     }
 
@@ -376,6 +380,7 @@ class ChatSession {
     bool clearContracts = false,
     int? promptTokens,
     int? completionTokens,
+    int? totalTokens,
     double? totalCost,
     String? emoji,
     String? apiKey,
@@ -444,6 +449,7 @@ class ChatSession {
       contracts: clearContracts ? null : (contracts ?? this.contracts),
       promptTokens: promptTokens ?? this.promptTokens,
       completionTokens: completionTokens ?? this.completionTokens,
+      totalTokens: totalTokens ?? this.totalTokens,
       totalCost: totalCost ?? this.totalCost,
       emoji: emoji ?? this.emoji,
       apiKey: apiKey ?? this.apiKey,
@@ -541,6 +547,7 @@ class ChatSession {
               .toList(),
       promptTokens: json['totalInputTokens'] as int? ?? 0,
       completionTokens: json['totalOutputTokens'] as int? ?? 0,
+      totalTokens: json['totalTokens'] as int? ?? 0,
       totalCost: (json['totalCost'] as num?)?.toDouble() ?? 0.0,
       modelId: modelId,
       mcp: mcpFolder,
@@ -585,6 +592,7 @@ class ChatSession {
         'contracts': contracts!.map((c) => c.toJson()).toList(),
       'totalInputTokens': promptTokens,
       'totalOutputTokens': completionTokens,
+      'totalTokens': totalTokens,
       'totalCost': totalCost,
       if (modelId != null) 'modelId': modelId,
       if (mcp != null) 'mcp': mcp!,

@@ -126,8 +126,8 @@ class SessionController extends GetxController {
     double cost = 0.0;
 
     for (final msg in session.messages) {
-      if (msg.inputTokens != null) inputTotal += msg.inputTokens!;
-      if (msg.outputTokens != null) outputTotal += msg.outputTokens!;
+      if (msg.promptTokens != null) inputTotal += msg.promptTokens!;
+      if (msg.completionTokens != null) outputTotal += msg.completionTokens!;
     }
 
     // 根据模型价格计算费用（美元/百万token）

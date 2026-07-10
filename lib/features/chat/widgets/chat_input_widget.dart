@@ -2967,7 +2967,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         msgId: botMessageId,
         role: MessageRole.bot,
         content: '',
-        think: '',
+        reason: '',
         timestamp: DateTime.now(),
         sessionId: updateSession.sessionId,
         isError: false,
@@ -3079,7 +3079,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
           if (messageIndex != -1) {
             botMessage.content = accumulatedContent;
-            botMessage.think = accumulatedThink;
+            botMessage.reason = accumulatedThink;
             botMessage.contentBlocks = List<ContentBlock>.from(blocks);
 
             final updatedMessages = List<ChatMessage>.from(
@@ -3127,8 +3127,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           generationStartTime: startTime,
           generationEndTime: endTime,
           generationDuration: generationDuration,
-          inputTokens: estimatedInputTokens,
-          outputTokens: estimatedOutputTokens,
+          promptTokens: estimatedInputTokens,
+          completionTokens: estimatedOutputTokens,
           totalTokens: estimatedTotalTokens,
         );
         updateSession = updateSession.copyWith(messages: updatedMessages);

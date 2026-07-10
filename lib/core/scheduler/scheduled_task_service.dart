@@ -120,7 +120,7 @@ class ScheduledTaskService {
 
           botMessage.content = accumulatedContent;
           if (thinkChunk.isNotEmpty) {
-            botMessage.think += thinkChunk;
+            botMessage.reason += thinkChunk;
           }
 
           final msgIndex = updatedSession.messages.indexWhere(

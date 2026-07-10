@@ -10,22 +10,18 @@ import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart' as cors;
 
-import '../../controllers/session_controller.dart';
 import '../../controllers/domain_controller.dart';
+import '../../controllers/session_controller.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../../models/chat/content_block.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/audit_guard.dart';
 import 'middleware/model_tool_guard.dart';
+import 'middleware/user_message_guard.dart';
+import 'stream_round.dart' show streamSingleRound;
 import '../tools/tool_execution_service.dart';
-import '../llm/modes/mode_utils.dart' show resolveOriginalToolName;
-import '../../controllers/mcp_controller.dart';
-import '../../models/chat/mcp_config.dart' show McpTool;
 import '../../models/responses/chunk.dart';
-import '../../models/responses/openai_response.dart'
-    show OpenAIDelta, ToolCall, ToolCallFunction;
 
 /// HTTP 服务控制器
 class LocalHttpServiceController extends GetxController {
@@ -207,12 +203,15 @@ class LocalHttpService {
         context: {...request.context, 'requestId': requestId},
       );
 
-      // 构建中间件管道：API Key 校验 → 配额检查 → 审计记录 → 模型替换/工具注入 → 业务处理
+      // 构建中间件管道（洋葱模型）：
+      // 请求进入：apiKey → quota → modelTool → audit → userMessage → 业务处理
+      // 响应返回：业务处理（直接更新会话/审计） → userMessage → audit → modelTool → quota → apiKey
       final pipeline = const Pipeline()
-          .addMiddleware(apiKeyGuard)
-          .addMiddleware(quotaGuard)
-          .addMiddleware(auditGuard)
-          .addMiddleware(modelToolGuard);
+          .addMiddleware(apiKeyGuard) //api判断,装载session
+          .addMiddleware(quotaGuard) //配额判断
+          .addMiddleware(modelToolGuard) //模型工具判断，装载body
+          .addMiddleware(auditGuard) //审计
+          .addMiddleware(userMessageGuard); //创建用户消息
 
       return pipeline.addHandler((Request req) {
         return _handleChatCompletion(req);
@@ -222,20 +221,268 @@ class LocalHttpService {
     return router;
   }
 
-  /// 处理 Chat Completion 请求（核心业务逻辑）
+  /// 处理 Chat Completion 请求（流式透传）
   ///
   /// 前置条件（由中间件保证）：
   /// - API Key 已校验通过
   /// - 会话已找到且模型已配置
   /// - 配额未超限
   /// - request.context['session'] 包含有效的 ChatSession
+  /// - request.context['body'] 包含已注入 model/tools 的请求体
+  ///
+  /// 后置任务（由 sessionGuard 中间件处理）：
+  /// - 更新本地会话（消息 + token 统计 + 计费）
+  /// - 审计回调补全响应内容
+  ///
+  /// 支持工具调用循环：LLM 返回 tool_calls → 执行 MCP 工具 → 结果回填 →
+  /// 继续调用 LLM，直到无工具调用（最多 20 轮）。
   static Future<Response> _handleChatCompletion(Request request) async {
     try {
-      return _streamDirectProxy(request);
+      // ──────────────────────────────────────────
+      // 1. 初始化：创建流控制器，提取上下文数据
+      // ──────────────────────────────────────────
+
+      // SSE 流控制器：后续异步 IIFE 中逐步写入 chunk，shelf 框架从 stream 读取并发送给客户端
+      final streamController = StreamController<List<int>>();
+
+      // 从中间件注入的 context 中提取会话和增强后的请求体
+      final session = request.context['session'] as ChatSession;
+      final body = request.context['body'] as Map<String, dynamic>;
+
+      // 将最终请求体写入磁盘，便于调试/回放
+      File(
+        'log_request/request.json',
+      ).writeAsString(const JsonEncoder.withIndent('  ').convert(body));
+
+      // 客户端断开时取消后端请求
+      bool cancelStream = false;
+      streamController.onCancel = () {
+        cancelStream = true;
+        debugPrint('🛑 [StreamProxy] 客户端断开连接，取消后端请求');
+      };
+
+      // ──────────────────────────────────────────
+      // 2. 异步 IIFE：发起 LLM 请求 + 工具调用循环
+      //    不 await，立即返回 Response，流内容异步写入
+      // ──────────────────────────────────────────
+      () async {
+        // 记录生成开始时间，用于计算耗时
+        final generationStartTime = DateTime.now();
+
+        try {
+          // ── 工具调用循环状态 ──
+          final contentBuffer = StringBuffer(); // 累积所有轮次的 LLM 文本回复
+          final reasonBuffer = StringBuffer();
+          int promptTokens = 0;
+          int completionTokens = 0;
+
+          int toolIteration = 0; // 当前工具调用轮次
+          const maxToolIterations = 20; // 防止无限循环
+
+          // ── 工具调用循环 ──
+          // 每一轮：请求 LLM → 解析响应 → 如果有 MCP 工具调用则执行 → 结果回填 → 继续下一轮
+          while (true) {
+            // 单轮流式请求：post LLM API，解析 SSE chunk
+            final round = await streamSingleRound(
+              session: session,
+              body: jsonEncode(body),
+              controller: streamController,
+            );
+            final sessionTools = round.sessionToolChunks;
+            final thirdTools = round.thirdToolChunks;
+            final hasError = round.error;
+
+            contentBuffer.write(round.contentBuffer);
+            reasonBuffer.write(round.reasonBuffer);
+            promptTokens += round.promptTokens!;
+            completionTokens += round.completionTokens!;
+
+            // LLM 返回错误 或 客户端断开 → 退出循环
+            if (hasError || cancelStream) break;
+
+            // 第三方工具 chunk 直接透传给客户端（客户端自行解析执行）
+            if (thirdTools.isNotEmpty) {
+              debugPrint(
+                '📤 [ToolLoop] 透传 ${thirdTools.length} 个第三方工具 chunk 给客户端',
+              );
+              for (final c in thirdTools) {
+                streamController.add(c.toIntList());
+              }
+            }
+
+            // 无会话工具（MCP）调用 → LLM 正常回复完毕，退出循环
+            if (sessionTools.isEmpty) break;
+
+            // 达到最大轮次 → 强制退出，防止死循环
+            toolIteration++;
+            if (toolIteration >= maxToolIterations) {
+              debugPrint('⚠️ [ToolLoop] 工具调用已达最大轮次 $maxToolIterations');
+              break;
+            }
+
+            for (final c in sessionTools) {
+              debugPrint('[ToolLoop] 第 $toolIteration 轮，执行工具: ${c.toString()}');
+            }
+
+            // ── 提取工具调用参数 ──
+            // 从累积的 Chunk 中解析 tool_calls：name、arguments、id、index
+            final toolCallParams =
+                sessionTools.map((chunk) {
+                  final tc =
+                      chunk.choices
+                          .expand((c) => c.delta?.toolCalls ?? [])
+                          .firstOrNull;
+                  final argsStr = tc?.function?.arguments ?? '{}';
+                  Map<String, dynamic> args;
+                  try {
+                    args = jsonDecode(argsStr) as Map<String, dynamic>;
+                  } catch (_) {
+                    // arguments 可能不是合法 JSON（如纯文本），用 raw 兜底
+                    args = {'raw': argsStr};
+                  }
+                  return {
+                    'name': tc?.function?.name ?? '',
+                    'arguments': args,
+                    'id': tc?.id,
+                    'index': tc?.index,
+                  };
+                }).toList();
+
+            // 通知客户端：工具正在执行
+            streamController.add(Chunk.fromReason("大模型正在执行MCP服务").toIntList());
+
+            // ── 执行 MCP 工具 ──
+            final executionResult = await ToolExecutionService.executeToolCalls(
+              session: session,
+              toolCalls: toolCallParams,
+              cleanContent: '',
+            );
+
+            if (executionResult != null &&
+                executionResult.executionResults.isNotEmpty) {
+              // 回填 assistant 消息（含 tool_calls）到对话历史
+              // 符合 OpenAI Chat Completions 协议：tool 消息必须紧跟 assistant(tool_calls)
+              (body['messages'] as List<dynamic>).add({
+                'role': 'assistant',
+                'content': null,
+                'tool_calls':
+                    toolCallParams.map((tc) {
+                      return {
+                        'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
+                        'type': 'function',
+                        'function': {
+                          'name': tc['name'] ?? '',
+                          'arguments':
+                              tc['arguments'] is String
+                                  ? tc['arguments']
+                                  : jsonEncode(tc['arguments'] ?? {}),
+                        },
+                      };
+                    }).toList(),
+              });
+
+              // 回填 tool 结果消息到对话历史（每个工具一条）
+              for (final r in executionResult.executionResults) {
+                (body['messages'] as List<dynamic>).add({
+                  'role': 'tool',
+                  'tool_call_id': r['id'],
+                  'content':
+                      r['isError'] == true ? '错误: ${r['result']}' : r['result'],
+                });
+              }
+
+              debugPrint('🔄 [ToolLoop] 第 $toolIteration 轮工具完成，继续请求 LLM');
+              // 下一轮循环：带着更新后的 body（含工具调用历史和结果）再次请求 LLM
+              // 执行过程中客户端可能断开
+              if (cancelStream) break;
+            } else {
+              break;
+            }
+            // 工具执行无结果（所有工具都匹配失败等） → 退出循环
+          }
+
+          // ── 流结束：发送 DONE 标记，关闭控制器 ──
+          streamController.add(utf8.encode('data: [DONE]\n\n'));
+          await streamController.close();
+
+          debugPrint('🔄 [ToolLoop] 流式请求完成，总内容长度：${contentBuffer.length}');
+
+          // ── 更新本地会话：创建 AI 消息 + token 统计 + 计费 ──
+          final sessionController = Get.find<SessionController>();
+          final userMessage = request.context['userMessage'] as ChatMessage?;
+          final now = DateTime.now();
+
+          final totalTokens = promptTokens + completionTokens;
+
+          // 创建 AI 回复消息
+          final botMsgId = '${now.millisecondsSinceEpoch}_bot';
+          final botMessage = ChatMessage(
+            msgId: botMsgId,
+            role: MessageRole.bot,
+            content: contentBuffer.toString(),
+            reason: reasonBuffer.toString(),
+            timestamp: now,
+            sessionId: session.sessionId,
+            pairedMsgId: userMessage?.msgId,
+            generationStartTime: generationStartTime,
+            generationEndTime: now,
+            promptTokens: promptTokens,
+            completionTokens: completionTokens,
+            totalTokens: totalTokens > 0 ? totalTokens : null,
+            generationDuration: now.difference(generationStartTime),
+          );
+          session.messages.add(userMessage!);
+          session.messages.add(botMessage);
+          // 追加用户消息 + AI 回复到会话
+
+          session.quotaRequestCount++;
+          session.promptTokens += promptTokens;
+          session.completionTokens += completionTokens;
+          session.totalTokens += totalTokens;
+          // updateSession 内部会调用 _recalculateBilling 自动计算费用
+          sessionController.updateSession(session);
+
+          debugPrint(
+            '✅ 会话已更新: ${session.sessionId}, '
+            'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
+          );
+
+          // ── 审计回调：补全响应内容 ──
+          final auditCallback =
+              request.context['auditCallback'] as AuditCallback?;
+          auditCallback?.call(responseContent: contentBuffer.toString());
+        } catch (e) {
+          // ── 异步 IIFE 内部异常 ──
+          debugPrint('❌ 流式代理错误: $e');
+          streamController.addError(e);
+          await streamController.close();
+
+          // 审计回调：记录流式异常
+          final auditCallback =
+              request.context['auditCallback'] as AuditCallback?;
+          auditCallback?.call(error: 'Stream proxy error: $e');
+        }
+      }(); // ← 立即执行，不 await
+
+      // ──────────────────────────────────────────
+      // 3. 立即返回 SSE 流式响应给 shelf
+      //    异步 IIFE 中的内容会逐步写入 streamController.stream
+      // ──────────────────────────────────────────
+      return Response(
+        200,
+        body: streamController.stream,
+        headers: {
+          'content-type': 'text/event-stream',
+          'cache-control': 'no-cache',
+          'connection': 'keep-alive',
+          'x-request-id': request.context['requestId'] as String? ?? '',
+        },
+      );
     } catch (e) {
+      // ── 同步异常（如 StreamController 构造失败）──
+      // 此时流还未建立，直接返回 500，不经过 sessionGuard
       debugPrint('❌ 请求处理失败: $e');
 
-      // 审计回调：记录错误（请求审计已在 modelToolGuard 中完成）
       final auditCallback = request.context['auditCallback'] as AuditCallback?;
       auditCallback?.call(error: '$e');
 
@@ -255,567 +502,7 @@ class LocalHttpService {
     }
   }
 
-  /// 将工具调用分类为会话工具（匹配 MCP 工具）和第三方工具
-  ///
-  /// 从累积的 Chunk 中匹配 MCP 工具名，两边均返回原始 Chunk
-  static ({List<Chunk> session, List<Chunk> thirdParty}) _classifyToolCalls(
-    ChatSession session,
-    Map<int, Chunk> toolCallChunks,
-  ) {
-    if (toolCallChunks.isEmpty)
-      return (session: const [], thirdParty: const []);
-
-    final mcpName = session.mcp;
-    final mcpTools =
-        mcpName != null && mcpName.isNotEmpty
-            ? McpController.instance.getTools(mcpName)
-            : <McpTool>[];
-    final mcpToolNames = mcpTools.map((t) => t.name).toSet();
-    debugPrint('🔧 [Classify] 会话 MCP 工具: $mcpToolNames');
-
-    final sessionChunks = <Chunk>[];
-    final thirdToolChunks = <Chunk>[];
-
-    for (final entry in toolCallChunks.entries) {
-      final chunk = entry.value;
-      final tc = chunk.choices
-          .expand((c) => c.delta?.toolCalls ?? [])
-          .firstWhere((t) => (t.index ?? 0) == entry.key);
-      final name = tc.function?.name;
-
-      if (name != null) {
-        final resolvedName = resolveOriginalToolName(name);
-        debugPrint(
-          '🔧 [Classify] 工具 "$name" → 解析后 "$resolvedName"，会话含: $mcpToolNames',
-        );
-        if (mcpToolNames.contains(resolvedName)) {
-          sessionChunks.add(chunk);
-          continue;
-        }
-      }
-
-      // 无匹配 → 第三方工具
-      thirdToolChunks.add(chunk);
-    }
-
-    return (session: sessionChunks, thirdParty: thirdToolChunks);
-  }
-
-  /// 流式透传 - 返回 StreamedResponse，同时解析 SSE 并更新本地会话
-  ///
-  /// 支持工具调用循环：LLM 返回 tool_calls → 执行 MCP 工具 → 结果回填 →
-  /// 继续调用 LLM，直到无工具调用（最多 5 轮）。
-  static Response _streamDirectProxy(Request request) {
-    final streamController = StreamController<List<int>>();
-    final session = request.context['session'] as ChatSession;
-    final body = request.context['body'] as Map<String, dynamic>;
-    final sessionController = Get.find<SessionController>();
-    sessionController.updateSession(session);
-    File(
-      'log_request/request.json',
-    ).writeAsString(const JsonEncoder.withIndent('  ').convert(body));
-    bool cancelStream = false;
-    streamController.onCancel = () {
-      cancelStream = true;
-      debugPrint('🛑 [StreamProxy] 客户端断开连接，取消后端请求${cancelStream}');
-    };
-    // 异步发起请求并透传 SSE 流（支持工具调用循环）
-    () async {
-      // 由中间件注入到 context 的辅助信息（try 中读取请求体后补全）
-      AuditCallback? auditCallback;
-
-      try {
-        // 读取请求体（中间件已注入 model / tools），仅补 stream
-
-        auditCallback = request.context['auditCallback'] as AuditCallback?;
-
-        // 工具注入完成后，优先透传服务端工具清单给客户端，
-
-        // ── 工具调用循环状态 ──
-        final generationStartTime = DateTime.now();
-        final contentBuffer = StringBuffer();
-
-        final thinkBuffer = StringBuffer();
-
-        int toolIteration = 0;
-        const maxToolIterations = 20;
-
-        // ── 工具调用循环 ──
-        while (true) {
-          final result = await _streamSingleRound(
-            session: session,
-            body: jsonEncode(body),
-            controller: streamController,
-          );
-          contentBuffer.write(result.contentBuffer);
-          thinkBuffer.write(result.reasonBuffer);
-
-          // 错误或取消 → 退出循环
-          if (result.error || cancelStream) break;
-
-          // 透传第三方工具 chunk 给客户端（客户端自行处理）
-          if (result.thirdToolChunks.isNotEmpty) {
-            debugPrint(
-              '📤 [ToolLoop] 透传 ${result.thirdToolChunks.length} 个第三方工具 chunk 给客户端',
-            );
-            for (final c in result.thirdToolChunks) {
-              debugPrint('[ToolLoop] 透传 sseChunk: ${c.toString()}');
-              streamController.add(c.toIntList());
-            }
-          }
-
-          // 无会话工具 → 正常结束
-          if (result.sessionToolChunks.isEmpty) break;
-
-          // 达到最大轮次 → 结束
-          toolIteration++;
-          if (toolIteration >= maxToolIterations) {
-            debugPrint('⚠️ [ToolLoop] 工具调用已达最大轮次 $maxToolIterations');
-            break;
-          }
-
-          for (final c in result.sessionToolChunks) {
-            debugPrint('[ToolLoop] 第 $toolIteration 轮，执行工具: ${c.toString()}');
-          }
-
-          // 直接从 Chunk 中提取调用参数
-          final toolCallParams =
-              result.sessionToolChunks.map((chunk) {
-                final tc =
-                    chunk.choices
-                        .expand((c) => c.delta?.toolCalls ?? [])
-                        .firstOrNull;
-                final argsStr = tc?.function?.arguments ?? '{}';
-                Map<String, dynamic> args;
-                try {
-                  args = jsonDecode(argsStr) as Map<String, dynamic>;
-                } catch (_) {
-                  args = {'raw': argsStr};
-                }
-                return {
-                  'name': tc?.function?.name ?? '',
-                  'arguments': args,
-                  'id': tc?.id,
-                  'index': tc?.index,
-                };
-              }).toList();
-          streamController.add(
-            Chunk.fromReason("发现大模型后端工具调用，正在执行，请稍后").toIntList(),
-          );
-
-          final executionResult = await ToolExecutionService.executeToolCalls(
-            session: session,
-            toolCalls: toolCallParams,
-            cleanContent: '',
-          );
-
-          if (executionResult != null &&
-              executionResult.executionResults.isNotEmpty) {
-            if (cancelStream) return;
-
-            // 通知客户端工具正在执行
-
-            // 追加 assistant 消息（含 tool_calls）到对话历史
-            (body['messages'] as List<dynamic>).add({
-              'role': 'assistant',
-              'content': null,
-              'tool_calls':
-                  toolCallParams.map((tc) {
-                    return {
-                      'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
-                      'type': 'function',
-                      'function': {
-                        'name': tc['name'] ?? '',
-                        'arguments':
-                            tc['arguments'] is String
-                                ? tc['arguments']
-                                : jsonEncode(tc['arguments'] ?? {}),
-                      },
-                    };
-                  }).toList(),
-            });
-
-            // 追加 tool 结果消息到对话历史
-            for (final r in executionResult.executionResults) {
-              (body['messages'] as List<dynamic>).add({
-                'role': 'tool',
-                'tool_call_id': r['id'],
-                'content':
-                    r['isError'] == true ? '错误: ${r['result']}' : r['result'],
-              });
-            }
-
-            debugPrint('🔄 [ToolLoop] 第 $toolIteration 轮工具完成，继续请求 LLM');
-            // 循环继续：用更新后的 body 再次请求 LLM
-            continue;
-          }
-          // 工具执行无结果 → 退出循环
-          break;
-        }
-
-        streamController.add(utf8.encode('data: [DONE]\n\n'));
-        await streamController.close();
-
-        debugPrint('🔄 [ToolLoop] 流式请求完成，总内容长度：${contentBuffer.length}');
-
-        // 流结束后，更新本地会话
-        _updateSessionAfterStream(
-          session: session,
-          requestBodyMap: body,
-          content: contentBuffer.toString(),
-
-          generationStartTime: generationStartTime,
-          toolCalls: null,
-        );
-
-        // 审计回调：补入返回内容
-        auditCallback?.call(responseContent: contentBuffer.toString());
-      } catch (e) {
-        debugPrint('❌ 流式代理错误: $e');
-        streamController.addError(e);
-        await streamController.close();
-
-        // 审计回调：记录流式异常（请求审计已在 modelToolGuard 中完成）
-        auditCallback?.call(error: 'Stream proxy error: $e');
-      }
-    }();
-
-    return Response(
-      200,
-      body: streamController.stream,
-      headers: {
-        'content-type': 'text/event-stream',
-        'cache-control': 'no-cache',
-        'connection': 'keep-alive',
-        'x-request-id': request.context['requestId'] as String? ?? '',
-      },
-    );
-  }
-
-  /// 流结束后更新本地会话：添加用户消息 + AI 回复 + token 统计 + 计费
-  static void _updateSessionAfterStream({
-    required ChatSession session,
-    required Map<String, dynamic> requestBodyMap,
-    required String content,
-    int? promptTokens,
-    int? completionTokens,
-    int? totalTokens,
-    required DateTime generationStartTime,
-    List<ToolCall>? toolCalls,
-  }) {
-    try {
-      final sessionController = Get.find<SessionController>();
-      final now = DateTime.now();
-
-      // 从请求体中提取用户消息内容
-      final messages = requestBodyMap['messages'] as List?;
-      final lastUserMsg = messages?.lastOrNull as Map<String, dynamic>?;
-      final userContent = lastUserMsg?['content'] as String? ?? '';
-
-      // 构建工具调用 contentBlocks（如果有）
-      List<ContentBlock> contentBlocks = [];
-      final extractedToolCalls =
-          toolCalls != null && toolCalls.isNotEmpty ? toolCalls : <ToolCall>[];
-      for (final tc in extractedToolCalls) {
-        final name = tc.function?.name ?? '';
-        final args = tc.function?.arguments ?? '';
-        contentBlocks.add(
-          ContentBlock(type: ContentBlockType.tool, text: '$name\n$args'),
-        );
-      }
-
-      // 创建用户消息
-      final userMsgId = '${DateTime.now().millisecondsSinceEpoch}_user';
-      final userMessage = ChatMessage(
-        msgId: userMsgId,
-        role: MessageRole.user,
-        content: userContent,
-        timestamp: now,
-        sessionId: session.sessionId,
-      );
-
-      // 创建 AI 回复消息
-      final botMsgId = '${DateTime.now().millisecondsSinceEpoch}_bot';
-      final botMessage = ChatMessage(
-        msgId: botMsgId,
-        role: MessageRole.bot,
-        content: content,
-        timestamp: now,
-        sessionId: session.sessionId,
-        pairedMsgId: userMsgId,
-        contentBlocks: contentBlocks,
-        generationStartTime: generationStartTime,
-        generationEndTime: now,
-        inputTokens: promptTokens,
-        outputTokens: completionTokens,
-        totalTokens: totalTokens,
-        generationDuration: now.difference(generationStartTime),
-      );
-
-      // 更新会话消息列表
-      final newMessages = [...session.messages, userMessage, botMessage];
-      var updatedSession = session.copyWith(messages: newMessages);
-
-      // 记录一次请求（配额计数）
-      updatedSession = updatedSession.recordRequest();
-
-      // updateSession 内部会调用 _recalculateBilling 自动计算费用
-      sessionController.updateSession(updatedSession);
-
-      debugPrint(
-        '✅ 会话已更新: ${session.sessionId}, '
-        '用户消息: "${userContent.substring(0, userContent.length.clamp(0, 30))}", '
-        'AI回复: "${content.substring(0, content.length.clamp(0, 30))}", '
-        'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
-      );
-    } catch (e) {
-      debugPrint('❌ 更新会话失败: $e');
-    }
-  }
-
   /// 本地对话调用（对话框使用）
   ///
   /// 组装请求体，通过 HTTP 服务透传
-  static Stream<Map<String, dynamic>> chatLocally({
-    required ChatSession session,
-    required ChatMessage userMessage,
-  }) async* {
-    debugPrint(
-      '💬 本地对话: ${userMessage.content.substring(0, userMessage.content.length.clamp(0, 50))}...',
-    );
-
-    final model = session.chatModel;
-    if (model == null) {
-      debugPrint('❌ 会话未配置模型');
-      yield {'error': 'No model configured'};
-      return;
-    }
-
-    final requestBody = jsonEncode({
-      'model': model.model,
-      'messages': [
-        {'role': 'user', 'content': userMessage.content},
-      ],
-      'stream': true,
-    });
-
-    final uri = Uri.parse(model.apiUrl!);
-    final client = HttpClient();
-
-    try {
-      final httpRequest = await client.postUrl(uri);
-
-      httpRequest.headers.contentType = ContentType.json;
-      if (model.apiKey != null && model.apiKey!.isNotEmpty) {
-        httpRequest.headers.set('Authorization', 'Bearer ${model.apiKey}');
-      }
-
-      httpRequest.write(requestBody);
-
-      final response = await httpRequest.close();
-
-      if (response.statusCode >= 400) {
-        final errorBody = await response.transform(utf8.decoder).join();
-        debugPrint('❌ LLM 返回错误: ${response.statusCode}\n$errorBody');
-        yield {'error': 'LLM API error: ${response.statusCode} - $errorBody'};
-        return;
-      }
-
-      await for (final chunk in response.transform(utf8.decoder)) {
-        final lines = chunk.split('\n');
-        for (final line in lines) {
-          if (line.startsWith('data: ')) {
-            final data = line.substring(6);
-            if (data == '[DONE]') continue;
-            try {
-              final json = jsonDecode(data);
-              final choices = json['choices'] as List?;
-              if (choices != null && choices.isNotEmpty) {
-                final delta = choices[0]['delta'] as Map<String, dynamic>?;
-                if (delta != null && delta['content'] != null) {
-                  yield {'content': delta['content']};
-                }
-              }
-            } catch (_) {}
-          }
-        }
-      }
-    } finally {
-      client.close();
-    }
-  }
-}
-// ── 工具调用循环 ──
-
-/// 单轮流式请求的结果
-class _StreamRoundResult {
-  List<Chunk> sessionToolChunks;
-  List<Chunk> thirdToolChunks;
-  StringBuffer contentBuffer;
-  StringBuffer reasonBuffer;
-  bool error;
-
-  _StreamRoundResult({
-    this.sessionToolChunks = const [],
-    this.thirdToolChunks = const [],
-    StringBuffer? contentBuffer,
-    StringBuffer? reasonBuffer,
-    this.error = false,
-  }) : contentBuffer = contentBuffer ?? StringBuffer(),
-       reasonBuffer = reasonBuffer ?? StringBuffer();
-}
-
-/// 执行一轮 LLM 流式请求，解析 SSE 并累积 content 与 tool_calls
-///
-/// 将 SSE chunk 透传给 [controller]，同时：
-/// - 将文本内容追加到 [contentBuffer]
-/// - 按 index 累积 tool_calls 增量
-/// - 提取 usage 信息
-Future<_StreamRoundResult> _streamSingleRound({
-  required ChatSession session,
-  required String body,
-  required StreamController<List<int>> controller,
-}) async {
-  final client = HttpClient();
-  StringBuffer contentBuffer = StringBuffer();
-  StringBuffer reasonBuffer = StringBuffer();
-  final httpRequest = await client.postUrl(
-    Uri.parse(session.chatModel!.apiUrl!),
-  );
-  httpRequest.headers.contentType = ContentType.json;
-  httpRequest.headers.set(
-    'Authorization',
-    'Bearer ${session.chatModel!.apiKey}',
-  );
-
-  try {
-    httpRequest.write(body);
-    final response = await httpRequest.close();
-
-    if (response.statusCode >= 400) {
-      final errorBody = await response.transform(utf8.decoder).join();
-      debugPrint('❌ LLM 返回错误: ${response.statusCode}\n$errorBody');
-      controller.add(
-        utf8.encode(
-          jsonEncode({
-            'error': {
-              'message': 'LLM API error: ${response.statusCode} - $errorBody',
-              'code': response.statusCode,
-            },
-          }),
-        ),
-      );
-      return _StreamRoundResult(error: true);
-    }
-
-    final Map<int, Chunk> toolCallList = {};
-
-    await for (final chunk in response) {
-      // controller.add(chunk);
-      final raw = utf8.decode(chunk, allowMalformed: true);
-      debugPrint('chunk: $raw');
-
-      final trimmed = raw.trim();
-      if (!trimmed.startsWith('data:')) {
-        //
-        controller.add(chunk);
-        continue;
-      }
-
-      try {
-        final sseChunk = Chunk.fromIntList(chunk);
-        final choice =
-            sseChunk.choices.isNotEmpty ? sseChunk.choices.first : null;
-        final delta = choice?.delta;
-
-        // content → 透传并累积 ,思考也炖鱼
-        if (delta?.content != null) {
-          controller.add(sseChunk.toIntList());
-          final raw = utf8.decode(chunk, allowMalformed: true);
-          debugPrint('sseChunk: $raw');
-          contentBuffer.write(delta!.content);
-        }
-        // reasoningContent → 透传并累积 ,思考也炖鱼
-        if (delta?.reasoningContent != null) {
-          controller.add(sseChunk.toIntList());
-          debugPrint('sseChunk: $raw');
-          reasonBuffer.write(delta!.reasoningContent);
-        }
-        //usage 统计信息
-        if (sseChunk.usage != null) {
-          final sessionController = Get.find<SessionController>();
-          session.promptTokens = sseChunk.usage!.promptTokens!;
-          session.completionTokens += sseChunk.usage!.completionTokens!;
-          sessionController.updateSession(session);
-        }
-        // tool_calls → 按 index 累加合并（不透传）
-        if (delta?.toolCalls != null) {
-          for (final tc in delta!.toolCalls!) {
-            final idx = tc.index ?? 0;
-            if (toolCallList[idx] == null) {
-              // 首次出现该 index，直接存储整个 Chunk
-              toolCallList[idx] = sseChunk;
-            } else {
-              // 后续增量：从已存储的 Chunk 中取出原有 ToolCall，合并 arguments
-              final existingChunk = toolCallList[idx]!;
-              final existingChoice = existingChunk.choices.firstOrNull;
-              final existingTc = existingChoice?.delta?.toolCalls?.firstWhere(
-                (t) => (t.index ?? 0) == idx,
-                orElse: () => tc,
-              );
-
-              final mergedId = tc.id ?? existingTc?.id;
-              final mergedType = tc.type ?? existingTc?.type;
-              final mergedName =
-                  tc.function?.name ?? existingTc?.function?.name;
-              final mergedArgs =
-                  (existingTc?.function?.arguments ?? '') +
-                  (tc.function?.arguments ?? '');
-
-              final mergedTc = ToolCall(
-                index: idx,
-                id: mergedId,
-                type: mergedType,
-                function: ToolCallFunction(
-                  name: mergedName,
-                  arguments: mergedArgs,
-                ),
-              );
-
-              final mergedDelta = OpenAIDelta(toolCalls: [mergedTc]);
-              final mergedChoice = ChunkChoice(
-                index: existingChoice?.index ?? 0,
-                delta: mergedDelta,
-                finishReason: existingChoice?.finishReason,
-              );
-              toolCallList[idx] = Chunk(
-                id: existingChunk.id,
-                object: existingChunk.object,
-                created: existingChunk.created,
-                model: existingChunk.model,
-                choices: [mergedChoice],
-              );
-            }
-          }
-        }
-      } catch (_) {
-        // 忽略解析失败的行
-      }
-    }
-
-    // 直接根据累积的 Chunk Map 进行分类，两边都返回 Chunk
-    final (
-      session: sessionToolChunks,
-      thirdParty: thirdToolChunks,
-    ) = LocalHttpService._classifyToolCalls(session, toolCallList);
-
-    return _StreamRoundResult(
-      sessionToolChunks: sessionToolChunks,
-      thirdToolChunks: thirdToolChunks,
-      contentBuffer: contentBuffer,
-      reasonBuffer: reasonBuffer,
-    );
-  } finally {
-    client.close();
-  }
 }

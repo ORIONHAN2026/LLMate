@@ -7,8 +7,8 @@ class ChatMessage {
   final String msgId;
   final MessageRole role;
   String content;
-  String think; // 思考内容，必填字段，默认为空字符串
-  List<ContentBlock> contentBlocks; // 按时间顺序排列的内容块（think/tool/content）
+  String reason; // 思考内容，必填字段，默认为空字符串
+  List<ContentBlock> contentBlocks; // 按时间顺序排列的内容块（reason/tool/content）
   final DateTime timestamp;
   final String? sessionId;
   final bool isError;
@@ -26,15 +26,15 @@ class ChatMessage {
   final DateTime? generationStartTime; // 生成开始时间
   final DateTime? generationEndTime; // 生成结束时间
   final int? totalTokens; // 总token数（输入+输出）
-  final int? inputTokens; // 输入token数
-  final int? outputTokens; // 输出token数
+  final int? promptTokens; // 输入token数
+  final int? completionTokens; // 输出token数
   final Duration? generationDuration; // 生成耗时
 
   ChatMessage({
     required this.msgId,
     required this.role,
     required this.content,
-    this.think = '', // 思考内容，默认为空字符串
+    this.reason = '', // 思考内容，默认为空字符串
     this.contentBlocks = const [], // 内容块列表，默认为空
     required this.timestamp,
     this.sessionId,
@@ -47,19 +47,19 @@ class ChatMessage {
     this.generationStartTime,
     this.generationEndTime,
     this.totalTokens,
-    this.inputTokens,
-    this.outputTokens,
+    this.promptTokens,
+    this.completionTokens,
     this.generationDuration,
   });
 
   /// 计算生成速度（token/秒）
   double? get tokensPerSecond {
-    if (outputTokens == null ||
+    if (completionTokens == null ||
         generationDuration == null ||
         generationDuration!.inMilliseconds == 0) {
       return null;
     }
-    return outputTokens! / (generationDuration!.inMilliseconds / 1000.0);
+    return completionTokens! / (generationDuration!.inMilliseconds / 1000.0);
   }
 
   /// 获取格式化的耗时字符串
@@ -81,7 +81,7 @@ class ChatMessage {
       msgId: json['id'] ?? '',
       role: _parseRole(json['role']),
       content: json['content'] ?? '',
-      think: json['think'] ?? '', // 思考内容，默认为空字符串
+      reason: json['think'] ?? '', // 思考内容，默认为空字符串
       timestamp:
           json['timestamp'] != null
               ? DateTime.tryParse(json['timestamp']) ?? DateTime.now()
@@ -106,8 +106,8 @@ class ChatMessage {
               ? DateTime.tryParse(json['generationEndTime'])
               : null,
       totalTokens: json['totalTokens'],
-      inputTokens: json['inputTokens'],
-      outputTokens: json['outputTokens'],
+      promptTokens: json['inputTokens'],
+      completionTokens: json['outputTokens'],
       generationDuration:
           json['generationDurationMs'] != null
               ? Duration(milliseconds: json['generationDurationMs'])
@@ -138,7 +138,7 @@ class ChatMessage {
       'id': msgId,
       'role': _roleToString(role),
       'content': content,
-      'think': think, // 思考内容
+      'reason': reason, // 思考内容
       'timestamp': timestamp.toIso8601String(),
       'sessionId': sessionId,
       'isError': isError,
@@ -151,8 +151,8 @@ class ChatMessage {
       'generationStartTime': generationStartTime?.toIso8601String(),
       'generationEndTime': generationEndTime?.toIso8601String(),
       'totalTokens': totalTokens,
-      'inputTokens': inputTokens,
-      'outputTokens': outputTokens,
+      'promptTokens': promptTokens,
+      'completionTokens': completionTokens,
       'generationDurationMs': generationDuration?.inMilliseconds,
       'contentBlocks': contentBlocks.map((b) => b.toJson()).toList(),
     };
@@ -173,7 +173,7 @@ class ChatMessage {
     String? msgId,
     MessageRole? role,
     String? content,
-    String? think, // 思考内容
+    String? reason, // 思考内容
     List<ContentBlock>? contentBlocks, // 内容块列表
     DateTime? timestamp,
     String? sessionId,
@@ -186,15 +186,15 @@ class ChatMessage {
     DateTime? generationStartTime,
     DateTime? generationEndTime,
     int? totalTokens,
-    int? inputTokens,
-    int? outputTokens,
+    int? promptTokens,
+    int? completionTokens,
     Duration? generationDuration,
   }) {
     return ChatMessage(
       msgId: msgId ?? this.msgId,
       role: role ?? this.role,
       content: content ?? this.content,
-      think: think ?? this.think, // 思考内容
+      reason: reason ?? this.reason, // 思考内容
       contentBlocks: contentBlocks ?? this.contentBlocks, // 内容块列表
       timestamp: timestamp ?? this.timestamp,
       sessionId: sessionId ?? this.sessionId,
@@ -207,8 +207,8 @@ class ChatMessage {
       generationStartTime: generationStartTime ?? this.generationStartTime,
       generationEndTime: generationEndTime ?? this.generationEndTime,
       totalTokens: totalTokens ?? this.totalTokens,
-      inputTokens: inputTokens ?? this.inputTokens,
-      outputTokens: outputTokens ?? this.outputTokens,
+      promptTokens: promptTokens ?? this.promptTokens,
+      completionTokens: completionTokens ?? this.completionTokens,
       generationDuration: generationDuration ?? this.generationDuration,
     );
   }

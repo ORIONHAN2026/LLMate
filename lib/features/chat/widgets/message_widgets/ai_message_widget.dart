@@ -223,7 +223,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         // 消息内容区域 - 统一布局避免跳动
                         if (_isStreaming &&
                             widget.message.content.isEmpty &&
-                            widget.message.think.isEmpty &&
+                            widget.message.reason.isEmpty &&
                             !widget.message.isToolCalling)
                           // 流式传输时显示呼吸动画，保持最小高度
                           Container(
@@ -876,8 +876,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           generationStartTime: startTime, // 更新开始时间
           generationEndTime: null,
           generationDuration: null,
-          inputTokens: null,
-          outputTokens: null,
+          promptTokens: null,
+          completionTokens: null,
           totalTokens: null,
         );
       } else {
@@ -987,7 +987,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             msgId: botMessageId,
             role: MessageRole.bot,
             content: accumulatedContent,
-            think:
+            reason:
                 accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
             contentBlocks: List<ContentBlock>.from(blocks),
             isToolCalling: botMessage.isToolCalling,
@@ -1032,7 +1032,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           msgId: botMessageId,
           role: MessageRole.bot,
           content: accumulatedContent,
-          think: accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
+          reason: accumulatedThink.isNotEmpty ? accumulatedThink : '', // 保存思考内容
           contentBlocks: List<ContentBlock>.from(blocks),
           timestamp: botMessage.timestamp,
           sessionId: session.sessionId,
@@ -1044,8 +1044,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           generationStartTime: startTime,
           generationEndTime: endTime,
           generationDuration: generationDuration,
-          inputTokens: estimatedInputTokens,
-          outputTokens: estimatedOutputTokens,
+          promptTokens: estimatedInputTokens,
+          completionTokens: estimatedOutputTokens,
           totalTokens: estimatedTotalTokens,
         );
 
@@ -1462,8 +1462,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.message.think.isNotEmpty)
-            _buildThinkBlock(widget.message.think),
+          if (widget.message.reason.isNotEmpty)
+            _buildThinkBlock(widget.message.reason),
 
           if (widget.message.content.isNotEmpty)
             MarkdownBody(
@@ -2012,9 +2012,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                               ),
                             ),
                           const SizedBox(height: 2),
-                          if (widget.message.outputTokens != null)
+                          if (widget.message.completionTokens != null)
                             Text(
-                              '${l10n.outputTokensLabel}: ${widget.message.outputTokens}',
+                              '${l10n.outputTokensLabel}: ${widget.message.completionTokens}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:

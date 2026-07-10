@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
+import 'package:shelf/shelf.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
@@ -263,6 +264,206 @@ class LlmClient {
 
       for (final r in toolResult.executionResults) {
         messages.add({
+          'role': 'tool',
+          'tool_call_id': r['id'],
+          'content': r['isError'] == true ? '错误: ${r['result']}' : r['result'],
+        });
+      }
+    }
+  }
+
+  Stream<Map<String, dynamic>> LLMChatHttp(Request request) async* {
+    _cancelled = false;
+    bool doneReceived = false;
+
+    var session = request.context['session'] as ChatSession;
+    final bodyStr = await request.readAsString();
+    debugPrint(
+      '📨 请求体: ${bodyStr.substring(0, bodyStr.length.clamp(0, 100))}...',
+    );
+    final requestData = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+    final tools = _buildTools(session);
+
+    final responseBuffer = StringBuffer();
+    final thinkBuffer = StringBuffer();
+    final toolCallLog = <Map<String, dynamic>>[];
+    String? rawRequestData;
+
+    int toolIteration = 0;
+
+    while (true) {
+      String loopAccContent = '';
+      final nativeToolCallDeltas = <int, Map<String, dynamic>>{};
+      List<Map<String, dynamic>>? completedTextToolCalls;
+      final announcedToolNames = <int, String>{};
+
+      final stream = _provider.sendMessageStreamHttp(
+        requestData: requestData,
+        session: _session,
+      );
+      await for (final chunk in stream) {
+        if (_cancelled) return;
+
+        // 捕获原始请求报文（仅第一次迭代）
+        if (rawRequestData == null && chunk.containsKey('__requestData')) {
+          rawRequestData = chunk['__requestData'];
+          continue;
+        }
+
+        final tc = chunk['toolcall'];
+        if (tc != null && tc.isNotEmpty) {
+          yield {'tool': 'true'};
+          final parsed = _parseToolCallChunk(tc);
+          if (parsed != null && parsed.isNotEmpty) {
+            final isNativeDelta = parsed.any(
+              (call) =>
+                  call.containsKey('function') ||
+                  call.containsKey('index') ||
+                  call.containsKey('type'),
+            );
+            if (isNativeDelta) {
+              _mergeNativeToolCallDeltas(nativeToolCallDeltas, parsed);
+              yield {
+                'toolcall': _buildToolCallProgress(parsed, announcedToolNames),
+              };
+            } else {
+              completedTextToolCalls = parsed;
+            }
+          } else {
+            yield {'toolcall': '🔧 正在接收工具调用参数...\n'};
+          }
+        }
+
+        final c = chunk['content'] ?? '';
+        if (c.isNotEmpty) {
+          loopAccContent += c;
+          responseBuffer.write(c);
+          if (kDebugMode) debugPrint('📤 [LLMChat] content: $c');
+          yield {'content': c};
+        }
+
+        final t = chunk['think'] ?? '';
+        if (t.isNotEmpty) {
+          thinkBuffer.write(t);
+          if (kDebugMode) debugPrint('📤 [LLMChat] think: $t');
+          yield {'think': t};
+        }
+
+        final done = chunk['done'] ?? '';
+        if (done == 'true') {
+          doneReceived = true;
+        }
+      }
+
+      final parsedCalls =
+          completedTextToolCalls ??
+          _finalizeNativeToolCalls(nativeToolCallDeltas);
+
+      // HTTP API 模式不执行工具调用，直接返回结果
+      if (_cancelled || parsedCalls.isEmpty) {
+        if (!_cancelled) {
+          _writeRequestLog(
+            requestMessages: requestData["messages"],
+            rawRequestData: rawRequestData,
+            responseContent: responseBuffer.toString(),
+            responseThink: thinkBuffer.toString(),
+            toolCalls: toolCallLog,
+            sessionId: _session.sessionId,
+            modelName: _session.chatModel?.model ?? 'unknown',
+          );
+        }
+        if (doneReceived) {
+          yield {'done': 'true'};
+        }
+        return;
+      }
+
+      toolIteration++;
+
+      final toolNames = parsedCalls.map((c) => c['name'] ?? '?').join(', ');
+
+      if (kDebugMode) {
+        debugPrint('🔄 [LLMChat] 工具调用第 $toolIteration 轮: $toolNames');
+      }
+
+      final cleanContent = _stripToolCallTags(loopAccContent);
+
+      final toolResult = await ToolExecutionService.executeToolCalls(
+        session: _session,
+        toolCalls: parsedCalls,
+        cleanContent: cleanContent,
+      );
+
+      if (toolResult == null || _cancelled) {
+        return;
+      }
+
+      for (int i = 0; i < toolResult.toolCallList.length; i++) {
+        final tc = toolResult.toolCallList[i];
+        final name = tc['name'] ?? '';
+        final args = tc['arguments'];
+        final er =
+            i < toolResult.executionResults.length
+                ? toolResult.executionResults[i]
+                : null;
+        final ok = !(er?['isError'] == true);
+        final resultText = er?['result'] ?? '';
+
+        toolCallLog.add({
+          'name': name,
+          'arguments': args,
+          'success': ok,
+          'result':
+              resultText.length > 2000
+                  ? '${resultText.substring(0, 2000)}...(truncated)'
+                  : resultText,
+        });
+
+        final buf = StringBuffer();
+        buf.writeln('${ok ? '✅' : '❌'} $name');
+        buf.writeln();
+        buf.writeln('📤 参数:');
+        if (args is Map && args.isNotEmpty) {
+          for (final e in args.entries) {
+            buf.writeln('  ${e.key}: ${e.value}');
+          }
+        } else {
+          buf.writeln('  (无)');
+        }
+        buf.writeln();
+        if (resultText.isNotEmpty) {
+          buf.writeln('${ok ? '📥' : '⚠'} 结果:');
+          buf.writeln(_linkifyFilePaths(resultText));
+        }
+
+        yield {'toolcall': buf.toString().trim()};
+      }
+
+      yield {'tool': 'false'};
+
+      requestData['messages'].add({
+        'role': 'assistant',
+        'content':
+            toolResult.cleanContent.isNotEmpty ? toolResult.cleanContent : null,
+        'tool_calls':
+            toolResult.toolCallList.map((tc) {
+              return {
+                'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
+                'type': 'function',
+                'function': {
+                  'name': tc['name'] ?? '',
+                  'arguments':
+                      tc['arguments'] is String
+                          ? tc['arguments']
+                          : jsonEncode(tc['arguments'] ?? {}),
+                },
+              };
+            }).toList(),
+      });
+
+      for (final r in toolResult.executionResults) {
+        requestData['messages'].add({
           'role': 'tool',
           'tool_call_id': r['id'],
           'content': r['isError'] == true ? '错误: ${r['result']}' : r['result'],

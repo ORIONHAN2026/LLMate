@@ -130,6 +130,44 @@ class OpenAiProvider {
     }
   }
 
+  Stream<Map<String, String?>> sendMessageStreamHttp({
+    required Map<String, dynamic> requestData,
+    required ChatSession session,
+  }) async* {
+    if (_model == null) throw StateError('$providerName 未配置');
+
+    try {
+      if (kDebugMode) {
+        debugPrint('$providerName 发送请求到: ${_model!.apiUrl}');
+        debugPrint('📤 请求报文: ${jsonEncode(requestData)}');
+      }
+
+      // 将原始请求报文传递给上层用于日志记录
+      yield {'__requestData': jsonEncode(requestData)};
+
+      final response = await _dio.post<ResponseBody>(
+        _model!.apiUrl!,
+        options: Options(
+          headers: buildAuthHeaders(),
+          responseType: ResponseType.stream,
+        ),
+        data: requestData,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        yield* _transformStreamResponse(response.data!.stream);
+      } else {
+        yield {
+          'content': 'API 请求失败：${response.statusCode}${response.statusMessage}',
+          'think': null,
+        };
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('$providerName 流式响应错误: $e');
+      yield {'content': '错误: ${handleApiError(e)}', 'think': null};
+    }
+  }
+
   // ── 非流式请求 ──
 
   Future<String?> sendMessage({

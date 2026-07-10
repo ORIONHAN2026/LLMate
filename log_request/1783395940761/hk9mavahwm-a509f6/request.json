@@ -1,0 +1,20 @@
+{
+  "stream": true,
+  "model": "mimo-v2.5-pro",
+  "messages": [
+    {
+      "role": "user",
+      "content": "请将 https://docs.qq.com/doc/DZkVOSVpUUmZCdWxo  里面的申通地铁替换为通驰"
+    },
+    {
+      "role": "assistant",
+      "content": "文档替换已完成！已成功更新到最新版本（版本号：1）。",
+      "reasoning_content": "把一个在线文档中的\"申通地铁\"替换为\"通驰\"。我需要先读取这个文档的内容，然后找到所有\"申通地铁\"的位置并替换。不过，我需要知道这个文档是腾讯文档还是智能文档。从URL来看，docs.qq.com/doc/... 这很可能是腾讯在线文档（DOC格式）。那么我应该使用 doc.find工具来查找所有\"申通地铁\"的位置，然后用 doc.replace_text 进行替换。但首先，我需要获取文档结构以确定位置索引。或者，也可以使用 doc.find_and_replace 工具直接进行查找替换，这可能更简单。让我先尝试用 doc.find_and_replace。如果不行，再逐步操作。那么，开始吧。发现大模型后端工具调用，正在执行，请稍后"
+    },
+    {
+      "role": "user",
+      "content": "检查下文件里面有没有不合适的内容如果发现有请调账并修改"
+    }
+  ],
+  "temperature": 0.1
+}

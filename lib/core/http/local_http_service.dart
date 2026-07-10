@@ -347,6 +347,12 @@ class LocalHttpService {
         contentBuffer.write(result.contentBuffer);
         thinkBuffer.write(result.reasonBuffer);
 
+        if (result.sessionToolChunks.isNotEmpty) {
+          for (final c in result.sessionToolChunks) {
+            debugPrint('要执行的[McpTools] sseChunk: ${c.toString()}');
+          }
+        }
+
         if (!result.error) {
           // 透传第三方工具 chunk 给客户端（客户端自行处理）
           if (result.thirdToolChunks.isNotEmpty) {
@@ -354,6 +360,7 @@ class LocalHttpService {
               '📤 [ToolLoop] 透传 ${result.thirdToolChunks.length} 个第三方工具 chunk 给客户端',
             );
             for (final c in result.thirdToolChunks) {
+              debugPrint('[ToolLoop] 透传 sseChunk: ${c.toString()}');
               streamController.add(c.toIntList());
             }
           }
@@ -390,6 +397,8 @@ class LocalHttpService {
 
             if (executionResult != null &&
                 executionResult.executionResults.isNotEmpty) {
+              var toolThink = Chunk.fromReason("发现大模型后端工具调用，正在执行，请稍后");
+              streamController.add(toolThink.toIntList());
               // 收集结果并构建总结请求
               final List<String> resultTexts = [];
               for (final execResult in executionResult.executionResults) {
@@ -463,6 +472,9 @@ class LocalHttpService {
                             finishReason: null,
                           ),
                         ],
+                      );
+                      debugPrint(
+                        '✅ [ToolLoop] 工具 执行完成，总结：${summaryChunk.toString()}',
                       );
                       streamController.add(summaryChunk.toIntList());
                       contentBuffer.write(content);
@@ -744,6 +756,7 @@ Future<_StreamRoundResult> _streamSingleRound({
 
       final trimmed = raw.trim();
       if (!trimmed.startsWith('data:')) {
+        //
         controller.add(chunk);
         continue;
       }

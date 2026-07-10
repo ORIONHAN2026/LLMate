@@ -1,0 +1,7 @@
+[
+  {
+    "name": "doc.find_and_replace",
+    "id": "call_28e1e173100740fbaeb81e99",
+    "result": "MCP 执行失败: McpError (-32602): Tool \"doc.find_and_replace\" is missing required parameters: [new_text], please use the parameter names defined in the protocol: [\"file_url\", \"old_text\", \"new_text\"], trace_id:35903997f0674f338193962f0d420e34"
+  }
+]

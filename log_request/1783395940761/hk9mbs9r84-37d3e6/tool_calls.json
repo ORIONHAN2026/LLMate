@@ -1,0 +1,7 @@
+[
+  {
+    "name": "get_content",
+    "id": "call_cd43a97825f548da8b90ea36",
+    "result": "MCP 执行失败: McpError (-32603): tool execution failed (tool: get_content): type:business, code:400001, msg:invalid file_id, trace_id:d4c237b329144322a8a85fdf76da6054"
+  }
+]

@@ -1,0 +1,7 @@
+[
+  {
+    "name": "doc.find_and_replace",
+    "id": "call_a9330dd5608040ceae08f3d1",
+    "result": "{\"data\":{\"edit_result\":{\"new_version\":\"1\",\"trace_id\":\"47cd9cfe474640c49a1330876991cf7a\"},\"trace_id\":\"47cd9cfe474640c49a1330876991cf7a\",\"version\":\"1\"},\"trace_id\":\"47cd9cfe474640c49a1330876991cf7a\"}"
+  }
+]

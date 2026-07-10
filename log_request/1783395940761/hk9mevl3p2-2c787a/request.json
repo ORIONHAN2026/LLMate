@@ -1,0 +1,11 @@
+{
+  "stream": true,
+  "model": "mimo-v2.5-pro",
+  "messages": [
+    {
+      "role": "user",
+      "content": "https://docs.qq.com/doc/DZm5nZ0tyaU95a2d6  按照标准的运维巡检报告，修改下此文档"
+    }
+  ],
+  "temperature": 0.1
+}

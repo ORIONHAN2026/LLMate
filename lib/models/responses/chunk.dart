@@ -53,6 +53,38 @@ class Chunk {
     );
   }
 
+  /// 根据纯文本 content 创建 Chunk
+  factory Chunk.fromContent(String content, {String model = ''}) {
+    return Chunk(
+      id: '',
+      object: 'chat.completion.chunk',
+      created: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      model: model,
+      choices: [
+        ChunkChoice(
+          index: 0,
+          delta: OpenAIDelta(content: content),
+        ),
+      ],
+    );
+  }
+
+  /// 根据推理内容 (reasoning_content) 创建 Chunk
+  factory Chunk.fromReason(String reason, {String model = ''}) {
+    return Chunk(
+      id: '',
+      object: 'chat.completion.chunk',
+      created: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      model: model,
+      choices: [
+        ChunkChoice(
+          index: 0,
+          delta: OpenAIDelta(reasoningContent: reason),
+        ),
+      ],
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'object': object,

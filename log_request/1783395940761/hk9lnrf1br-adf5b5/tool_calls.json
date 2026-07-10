@@ -1,0 +1,7 @@
+[
+  {
+    "name": "sheet.get_sheet_info",
+    "id": "call_fe1054c842f34a90b44ef8f5",
+    "result": "{\"error\":\"\",\"sheets\":[{\"col_count\":23,\"row_count\":797,\"sheet_id\":\"a1bs18\",\"sheet_name\":\"2026第2季度日常退款申请表\",\"sheet_type\":\"worksheet\"},{\"col_count\":27,\"row_count\":280,\"sheet_id\":\"BB08J2\",\"sheet_name\":\"2026第2季度计次票退款申请\",\"sheet_type\":\"worksheet\"}],\"trace_id\":\"525d485462f348fd82904124a5423a16\"}"
+  }
+]

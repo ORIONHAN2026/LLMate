@@ -1,0 +1,11 @@
+{
+  "stream": true,
+  "model": "mimo-v2.5-pro",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Generate a concise chat title for the provided conversation.\n  \n  Rules: \n  - think about the language of the user's message first, you must generate title in the same languages as user's message \n  - return the language and title in JSON format: { \"language\": \"the language\", \"title\": \"...title\" }\n  - do not include any other text in your response, only the JSON object is allowed\n  \n  [conversation start]\n  User: 你好\n\nAssistant: \n\n@message_part::step_start-by0k5\n\n\n\n@message_part::reasoning-by0k5_reasoning-0\n\n你好！很高兴！😊\n\n我是MiMo，一\n  [conversation end]"
+    }
+  ],
+  "temperature": 0.1
+}

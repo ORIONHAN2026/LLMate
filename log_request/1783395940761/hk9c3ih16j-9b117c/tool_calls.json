@@ -1,0 +1,7 @@
+[
+  {
+    "name": "get_content",
+    "id": "call_1fceacc2f1864eaea8a37612",
+    "result": "MCP 执行失败: McpError (-32602): Tool \"get_content\" is missing required parameters: [file_id], please use the parameter names defined in the protocol: [\"file_id\"], trace_id:a90963005c3c455f8c1a6d1aafe0f797"
+  }
+]

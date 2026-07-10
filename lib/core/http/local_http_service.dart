@@ -311,8 +311,9 @@ class LocalHttpService {
     final body = request.context['body'] as Map<String, dynamic>;
     final sessionController = Get.find<SessionController>();
     sessionController.updateSession(session);
-    File('log_request/request.json')
-        .writeAsString(const JsonEncoder.withIndent('  ').convert(body));
+    File(
+      'log_request/request.json',
+    ).writeAsString(const JsonEncoder.withIndent('  ').convert(body));
 
     // 异步发起请求并透传 SSE 流（支持工具调用循环）
     () async {
@@ -733,13 +734,16 @@ Future<_StreamRoundResult> _streamSingleRound({
     final Map<int, Chunk> toolCallList = {};
 
     await for (final chunk in response) {
+      // controller.add(chunk);
       final raw = utf8.decode(chunk, allowMalformed: true);
       debugPrint('chunk: $raw');
 
       final trimmed = raw.trim();
-      if (!trimmed.startsWith('data: ')) continue;
-      final dataStr = trimmed.substring(6);
-      if (dataStr == '[DONE]') continue;
+      if (!trimmed.startsWith('data:')) {
+        controller.add(chunk);
+        continue;
+      }
+
       try {
         final sseChunk = Chunk.fromIntList(chunk);
         final choice =
@@ -749,11 +753,14 @@ Future<_StreamRoundResult> _streamSingleRound({
         // content → 透传并累积 ,思考也炖鱼
         if (delta?.content != null) {
           controller.add(sseChunk.toIntList());
+          final raw = utf8.decode(chunk, allowMalformed: true);
+          debugPrint('sseChunk: $raw');
           contentBuffer.write(delta!.content);
         }
         // reasoningContent → 透传并累积 ,思考也炖鱼
         if (delta?.reasoningContent != null) {
           controller.add(sseChunk.toIntList());
+          debugPrint('sseChunk: $raw');
           reasonBuffer.write(delta!.reasoningContent);
         }
         //usage 统计信息

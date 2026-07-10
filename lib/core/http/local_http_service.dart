@@ -314,10 +314,10 @@ class LocalHttpService {
     File(
       'log_request/request.json',
     ).writeAsString(const JsonEncoder.withIndent('  ').convert(body));
-    bool cancel = false;
+    bool cancelStream = false;
     streamController.onCancel = () {
-      cancel = true;
-      debugPrint('🛑 [StreamProxy] 客户端断开连接，取消后端请求${cancel}');
+      cancelStream = true;
+      debugPrint('🛑 [StreamProxy] 客户端断开连接，取消后端请求${cancelStream}');
     };
     // 异步发起请求并透传 SSE 流（支持工具调用循环）
     () async {
@@ -337,23 +337,22 @@ class LocalHttpService {
 
         final thinkBuffer = StringBuffer();
 
-        final List<Map<String, dynamic>> toolCallResults = [];
-        // ── 单轮 LLM 请求 ──
-        final result = await _streamSingleRound(
-          session: session,
-          body: jsonEncode(body),
-          controller: streamController,
-        );
-        contentBuffer.write(result.contentBuffer);
-        thinkBuffer.write(result.reasonBuffer);
+        int toolIteration = 0;
+        const maxToolIterations = 20;
 
-        if (result.sessionToolChunks.isNotEmpty) {
-          for (final c in result.sessionToolChunks) {
-            debugPrint('要执行的[McpTools] sseChunk: ${c.toString()}');
-          }
-        }
+        // ── 工具调用循环 ──
+        while (true) {
+          final result = await _streamSingleRound(
+            session: session,
+            body: jsonEncode(body),
+            controller: streamController,
+          );
+          contentBuffer.write(result.contentBuffer);
+          thinkBuffer.write(result.reasonBuffer);
 
-        if (!result.error) {
+          // 错误或取消 → 退出循环
+          if (result.error || cancelStream) break;
+
           // 透传第三方工具 chunk 给客户端（客户端自行处理）
           if (result.thirdToolChunks.isNotEmpty) {
             debugPrint(
@@ -365,131 +364,96 @@ class LocalHttpService {
             }
           }
 
-          // 有会话工具 → 执行并总结
-          if (result.sessionToolChunks.isNotEmpty) {
-            // 直接从 Chunk 中提取调用参数
-            final toolCallParams =
-                result.sessionToolChunks.map((chunk) {
-                  final tc =
-                      chunk.choices
-                          .expand((c) => c.delta?.toolCalls ?? [])
-                          .firstOrNull;
-                  final argsStr = tc?.function?.arguments ?? '{}';
-                  Map<String, dynamic> args;
-                  try {
-                    args = jsonDecode(argsStr) as Map<String, dynamic>;
-                  } catch (_) {
-                    args = {'raw': argsStr};
-                  }
-                  return {
-                    'name': tc?.function?.name ?? '',
-                    'arguments': args,
-                    'id': tc?.id,
-                    'index': tc?.index,
-                  };
-                }).toList();
+          // 无会话工具 → 正常结束
+          if (result.sessionToolChunks.isEmpty) break;
 
-            final executionResult = await ToolExecutionService.executeToolCalls(
-              session: session,
-              toolCalls: toolCallParams,
-              cleanContent: '',
-            );
-
-            if (executionResult != null &&
-                executionResult.executionResults.isNotEmpty) {
-              var toolThink = Chunk.fromReason("发现大模型后端工具调用，正在执行，请稍后");
-              streamController.add(toolThink.toIntList());
-              // 收集结果并构建总结请求
-              final List<String> resultTexts = [];
-              for (final execResult in executionResult.executionResults) {
-                resultTexts.add(
-                  '工具 "${execResult['name']}" 执行结果：\n${execResult['result']}',
-                );
-                toolCallResults.add({
-                  'name': execResult['name'],
-                  'id': execResult['id'],
-                  'result': execResult['result'],
-                });
-                debugPrint(
-                  '✅ [ToolLoop] 工具 "${execResult['name']}" 执行完成，结果长度：${(execResult['result'] as String? ?? '').length}',
-                );
-              }
-
-              // 单次发给大模型进行总结（非流式，关闭深度思考）
-              final summaryBody = jsonEncode({
-                'model': session.chatModel!.model,
-                'messages': [
-                  {
-                    'role': 'user',
-                    'content':
-                        '请根据以下工具执行结果，用自然语言向用户汇报：\n\n${resultTexts.join('\n\n')}',
-                  },
-                ],
-                'stream': false,
-                'thinking': {'type': 'disabled'},
-              });
-
-              final summaryUri = Uri.parse(session.chatModel!.apiUrl!);
-              final summaryClient = HttpClient();
-              try {
-                final summaryReq = await summaryClient.postUrl(summaryUri);
-                summaryReq.headers.contentType = ContentType.json;
-                if (session.chatModel!.apiKey != null &&
-                    session.chatModel!.apiKey!.isNotEmpty) {
-                  summaryReq.headers.set(
-                    'Authorization',
-                    'Bearer ${session.chatModel!.apiKey}',
-                  );
-                }
-                summaryReq.write(summaryBody);
-                final summaryResp = await summaryReq.close();
-
-                if (summaryResp.statusCode < 400) {
-                  final summaryBytes = await summaryResp.fold<List<int>>(
-                    <int>[],
-                    (prev, chunk) => prev..addAll(chunk),
-                  );
-                  final summaryRaw = utf8.decode(summaryBytes);
-                  try {
-                    final summaryJson =
-                        jsonDecode(summaryRaw) as Map<String, dynamic>;
-                    final choices = summaryJson['choices'] as List<dynamic>?;
-                    final message =
-                        choices != null && choices.isNotEmpty
-                            ? choices.first['message'] as Map<String, dynamic>?
-                            : null;
-                    final content = message?['content'] as String?;
-                    if (content != null && content.isNotEmpty) {
-                      final summaryChunk = Chunk(
-                        id: summaryJson['id'] as String? ?? '',
-                        object: summaryJson['object'] as String? ?? '',
-                        created: summaryJson['created'] as int? ?? 0,
-                        model: summaryJson['model'] as String? ?? '',
-                        choices: [
-                          ChunkChoice(
-                            index: 0,
-                            delta: OpenAIDelta(content: content),
-                            finishReason: null,
-                          ),
-                        ],
-                      );
-                      debugPrint(
-                        '✅ [ToolLoop] 工具 执行完成，总结：${summaryChunk.toString()}',
-                      );
-                      streamController.add(summaryChunk.toIntList());
-                      contentBuffer.write(content);
-                    }
-                  } catch (_) {}
-                }
-              } finally {
-                summaryClient.close();
-              }
-            }
+          // 达到最大轮次 → 结束
+          toolIteration++;
+          if (toolIteration >= maxToolIterations) {
+            debugPrint('⚠️ [ToolLoop] 工具调用已达最大轮次 $maxToolIterations');
+            break;
           }
 
-          streamController.add(utf8.encode('data: [DONE]\n\n'));
+          for (final c in result.sessionToolChunks) {
+            debugPrint('[ToolLoop] 第 $toolIteration 轮，执行工具: ${c.toString()}');
+          }
+
+          // 直接从 Chunk 中提取调用参数
+          final toolCallParams =
+              result.sessionToolChunks.map((chunk) {
+                final tc =
+                    chunk.choices
+                        .expand((c) => c.delta?.toolCalls ?? [])
+                        .firstOrNull;
+                final argsStr = tc?.function?.arguments ?? '{}';
+                Map<String, dynamic> args;
+                try {
+                  args = jsonDecode(argsStr) as Map<String, dynamic>;
+                } catch (_) {
+                  args = {'raw': argsStr};
+                }
+                return {
+                  'name': tc?.function?.name ?? '',
+                  'arguments': args,
+                  'id': tc?.id,
+                  'index': tc?.index,
+                };
+              }).toList();
+          streamController.add(
+            Chunk.fromReason("发现大模型后端工具调用，正在执行，请稍后").toIntList(),
+          );
+
+          final executionResult = await ToolExecutionService.executeToolCalls(
+            session: session,
+            toolCalls: toolCallParams,
+            cleanContent: '',
+          );
+
+          if (executionResult != null &&
+              executionResult.executionResults.isNotEmpty) {
+            if (cancelStream) return;
+
+            // 通知客户端工具正在执行
+
+            // 追加 assistant 消息（含 tool_calls）到对话历史
+            (body['messages'] as List<dynamic>).add({
+              'role': 'assistant',
+              'content': null,
+              'tool_calls':
+                  toolCallParams.map((tc) {
+                    return {
+                      'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
+                      'type': 'function',
+                      'function': {
+                        'name': tc['name'] ?? '',
+                        'arguments':
+                            tc['arguments'] is String
+                                ? tc['arguments']
+                                : jsonEncode(tc['arguments'] ?? {}),
+                      },
+                    };
+                  }).toList(),
+            });
+
+            // 追加 tool 结果消息到对话历史
+            for (final r in executionResult.executionResults) {
+              (body['messages'] as List<dynamic>).add({
+                'role': 'tool',
+                'tool_call_id': r['id'],
+                'content':
+                    r['isError'] == true ? '错误: ${r['result']}' : r['result'],
+              });
+            }
+
+            debugPrint('🔄 [ToolLoop] 第 $toolIteration 轮工具完成，继续请求 LLM');
+            // 循环继续：用更新后的 body 再次请求 LLM
+            continue;
+          }
+          // 工具执行无结果 → 退出循环
+          break;
         }
 
+        streamController.add(utf8.encode('data: [DONE]\n\n'));
         await streamController.close();
 
         debugPrint('🔄 [ToolLoop] 流式请求完成，总内容长度：${contentBuffer.length}');
@@ -505,11 +469,7 @@ class LocalHttpService {
         );
 
         // 审计回调：补入返回内容
-        auditCallback?.call(
-          responseContent: contentBuffer.toString(),
-
-          toolCallResults: toolCallResults,
-        );
+        auditCallback?.call(responseContent: contentBuffer.toString());
       } catch (e) {
         debugPrint('❌ 流式代理错误: $e');
         streamController.addError(e);
@@ -722,12 +682,13 @@ Future<_StreamRoundResult> _streamSingleRound({
   final httpRequest = await client.postUrl(
     Uri.parse(session.chatModel!.apiUrl!),
   );
+  httpRequest.headers.contentType = ContentType.json;
+  httpRequest.headers.set(
+    'Authorization',
+    'Bearer ${session.chatModel!.apiKey}',
+  );
+
   try {
-    httpRequest.headers.contentType = ContentType.json;
-    httpRequest.headers.set(
-      'Authorization',
-      'Bearer ${session.chatModel!.apiKey}',
-    );
     httpRequest.write(body);
     final response = await httpRequest.close();
 

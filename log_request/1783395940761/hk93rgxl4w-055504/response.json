@@ -1,0 +1,12 @@
+{
+  "content": "{\"isNewTopic\": true, \"title\": \"查询第三季度退款\"}",
+  "usage": {
+    "promptTokens": 87043,
+    "completionTokens": 670,
+    "totalTokens": 87713,
+    "reasoningTokens": 649,
+    "cachedTokens": 448
+  },
+  "statusCode": 200,
+  "durationMs": 24036
+}

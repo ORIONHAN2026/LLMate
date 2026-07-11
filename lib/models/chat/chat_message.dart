@@ -106,8 +106,8 @@ class ChatMessage {
               ? DateTime.tryParse(json['generationEndTime'])
               : null,
       totalTokens: json['totalTokens'],
-      promptTokens: json['inputTokens'],
-      completionTokens: json['outputTokens'],
+      promptTokens: json['promptTokens'],
+      completionTokens: json['completionTokens'],
       generationDuration:
           json['generationDurationMs'] != null
               ? Duration(milliseconds: json['generationDurationMs'])

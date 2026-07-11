@@ -22,7 +22,8 @@ class ModelConfigTab extends StatefulWidget {
   State<ModelConfigTab> createState() => _ModelConfigTabState();
 }
 
-class _ModelConfigTabState extends State<ModelConfigTab> {
+class _ModelConfigTabState extends State<ModelConfigTab>
+    with SingleTickerProviderStateMixin {
   late ChatModel _currentModel;
   bool _isEditingModelName = false;
   bool _isHoveringModelName = false; // 新增：鼠标悬停状态
@@ -30,6 +31,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
   late TextEditingController _modelNameController;
   late TextEditingController _systemPromptController;
   Timer? _debounceTimer;
+  late TabController _tabController;
 
   @override
   void initState() {
@@ -38,6 +40,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     _apiKeyController = TextEditingController();
     _modelNameController = TextEditingController();
     _systemPromptController = TextEditingController();
+    _tabController = TabController(length: 3, vsync: this);
     _initializeData();
   }
 
@@ -47,6 +50,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     _apiKeyController.dispose();
     _modelNameController.dispose();
     _systemPromptController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -66,69 +70,87 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          unselectedLabelStyle: const TextStyle(fontSize: 13),
+          indicatorSize: TabBarIndicatorSize.label,
+          tabs: const [
+            Tab(text: '基本信息'),
+            Tab(text: '计费设置'),
+            Tab(text: '模型参数'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Tab 1: 基本信息
+              _buildBasicInfoTab(),
+              // Tab 2: 计费设置
+              _buildBillingTab(),
+              // Tab 3: 模型参数
+              _buildModelParamsTab(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBasicInfoTab() {
     return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildConfigCard(AppLocalizations.of(context)!.basicInfo, CupertinoIcons.info, [
-            _buildEditableModelNameItem(),
-            _buildConfigItem(AppLocalizations.of(context)!.modelLabel, _currentModel.model),
-            _buildConfigItem(AppLocalizations.of(context)!.platformLabel, _currentModel.platform ?? AppLocalizations.of(context)!.unknown),
-            _buildConfigItem(AppLocalizations.of(context)!.apiAddress, _currentModel.apiUrl ?? widget.apiUrl),
-          ]),
-          const SizedBox(height: 12),
-          _buildConfigCard('计费设置', CupertinoIcons.money_dollar_circle, [
-            _buildCurrencySelector(),
-            const SizedBox(height: 12),
-            _buildPromptPriceField(),
-            const SizedBox(height: 12),
-            _buildCompletionPriceField(),
-            const SizedBox(height: 8),
-            Text(
-              _buildPriceUnitDesc(),
-              style: TextStyle(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 12),
-          _buildConfigCard(AppLocalizations.of(context)!.modelParams, CupertinoIcons.slider_horizontal_3, [
-            _buildTemperatureSlider(),
-            const SizedBox(height: 12),
-            _buildSystemPromptField(),
-          ]),
+          _buildEditableModelNameItem(),
+          const SizedBox(height: 8),
+          _buildConfigItem(AppLocalizations.of(context)!.modelLabel, _currentModel.model),
+          const SizedBox(height: 8),
+          _buildConfigItem(AppLocalizations.of(context)!.platformLabel, _currentModel.platform ?? AppLocalizations.of(context)!.unknown),
+          const SizedBox(height: 8),
+          _buildConfigItem(AppLocalizations.of(context)!.apiAddress, _currentModel.apiUrl ?? widget.apiUrl),
         ],
       ),
     );
   }
 
-  Widget _buildConfigCard(String title, IconData icon, List<Widget> children) {
-    return Container(
-      width: double.infinity,
+  Widget _buildBillingTab() {
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
+          _buildCurrencySelector(),
           const SizedBox(height: 12),
-          ...children,
+          _buildPromptPriceField(),
+          const SizedBox(height: 12),
+          _buildCompletionPriceField(),
+          const SizedBox(height: 8),
+          Text(
+            _buildPriceUnitDesc(),
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModelParamsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTemperatureSlider(),
+          const SizedBox(height: 12),
+          _buildSystemPromptField(),
         ],
       ),
     );

@@ -10,39 +10,16 @@ import '../../../controllers/session_controller.dart';
 ///
 /// 1. 从 Authorization header 提取 Bearer Token
 /// 2. 根据 URL 中的 sessionId 查找会话
-/// 3. 校验 apiKey 是否匹配
-/// 4. 检查会话是否配置了模型
+/// 3. 如果会话开启了免授权模式，跳过 API Key 校验
+/// 4. 否则校验 apiKey 是否匹配
+/// 5. 检查会话是否配置了模型
 ///
 /// 将校验通过的 [ChatSession] 存入 `request.context['session']` 供下游使用。
 Handler apiKeyGuard(Handler innerHandler) {
   return (Request request) async {
     final sessionId = _extractSessionIdFromPath(request.url.path);
 
-    // Step 1: 提取 Bearer Token
-    final authHeader =
-        request.headers['Authorization'] ??
-        request.headers['authorization'] ??
-        '';
-    final apiKey = _extractBearerToken(authHeader);
-
-    if (apiKey == null || apiKey.isEmpty) {
-      debugPrint('🔒 [API Key Guard] 缺少 API Key → 401');
-      return Response(
-        401,
-        body: jsonEncode({
-          'error': {
-            'message':
-                'Invalid or missing API key. '
-                'Please provide a valid API key via Authorization: Bearer sk-xxx',
-            'type': 'invalid_request_error',
-            'code': 'invalid_api_key',
-          },
-        }),
-        headers: {'content-type': 'application/json'},
-      );
-    }
-
-    // Step 2: 查找会话
+    // Step 1: 查找会话
     final sessionController = Get.find<SessionController>();
     final session = sessionController.sessions.firstWhereOrNull(
       (s) => s.sessionId == sessionId,
@@ -62,25 +39,54 @@ Handler apiKeyGuard(Handler innerHandler) {
       );
     }
 
-    // Step 3: 校验 API Key 是否匹配
-    if (apiKey != session.apiKey) {
-      debugPrint('🔒 [API Key Guard] API Key 不匹配 → 401');
-      return Response(
-        401,
-        body: jsonEncode({
-          'error': {
-            'message':
-                'Incorrect API key provided. '
-                'You can find your API key in the session settings.',
-            'type': 'invalid_request_error',
-            'code': 'invalid_api_key',
-          },
-        }),
-        headers: {'content-type': 'application/json'},
-      );
+    // Step 2: 免授权模式 — 跳过 API Key 校验
+    if (session.noAuthEnabled) {
+      debugPrint('🔓 [API Key Guard] 免授权模式，跳过 API Key 校验: session=$sessionId');
+    } else {
+      // Step 3: 提取 Bearer Token
+      final authHeader =
+          request.headers['Authorization'] ??
+          request.headers['authorization'] ??
+          '';
+      final apiKey = _extractBearerToken(authHeader);
+
+      if (apiKey == null || apiKey.isEmpty) {
+        debugPrint('🔒 [API Key Guard] 缺少 API Key → 401');
+        return Response(
+          401,
+          body: jsonEncode({
+            'error': {
+              'message':
+                  'Invalid or missing API key. '
+                  'Please provide a valid API key via Authorization: Bearer sk-xxx',
+              'type': 'invalid_request_error',
+              'code': 'invalid_api_key',
+            },
+          }),
+          headers: {'content-type': 'application/json'},
+        );
+      }
+
+      // Step 4: 校验 API Key 是否匹配
+      if (apiKey != session.apiKey) {
+        debugPrint('🔒 [API Key Guard] API Key 不匹配 → 401');
+        return Response(
+          401,
+          body: jsonEncode({
+            'error': {
+              'message':
+                  'Incorrect API key provided. '
+                  'You can find your API key in the session settings.',
+              'type': 'invalid_request_error',
+              'code': 'invalid_api_key',
+            },
+          }),
+          headers: {'content-type': 'application/json'},
+        );
+      }
     }
 
-    // Step 4: 模型检查
+    // Step 5: 模型检查
     if (session.chatModel == null) {
       debugPrint('🔒 [API Key Guard] 会话未配置模型 → 400');
       return Response(
@@ -100,7 +106,7 @@ Handler apiKeyGuard(Handler innerHandler) {
 
     // 将会话存入 context 供下游中间件和 handler 使用
     final updatedRequest = request.change(
-      context: {...request.context, 'session': session, 'apiKey': apiKey},
+      context: {...request.context, 'session': session},
     );
 
     return innerHandler(updatedRequest);

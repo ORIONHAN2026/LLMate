@@ -16,7 +16,6 @@ import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/quota_guard.dart';
-import 'middleware/audit_guard.dart';
 import 'middleware/model_tool_guard.dart';
 import 'middleware/user_message_guard.dart';
 import 'stream_round.dart' show streamSingleRound;
@@ -101,10 +100,7 @@ class LocalHttpService {
     return '$ts-$rnd';
   }
 
-  static Future<void> start({
-    int port = 80,
-    bool allowExternal = true,
-  }) async {
+  static Future<void> start({int port = 80, bool allowExternal = true}) async {
     if (_isRunning) return;
     _port = port;
     try {
@@ -225,7 +221,6 @@ class LocalHttpService {
           .addMiddleware(apiKeyGuard) //api判断,装载session
           .addMiddleware(quotaGuard) //配额判断
           .addMiddleware(modelToolGuard) //模型工具判断，装载body
-          .addMiddleware(auditGuard) //审计
           .addMiddleware(userMessageGuard); //创建用户消息
 
       return pipeline.addHandler((Request req) {
@@ -456,26 +451,18 @@ class LocalHttpService {
           session.totalTokens += totalTokens;
           // updateSession 内部会调用 _recalculateBilling 自动计算费用
           sessionController.updateSession(session);
+          // 强制通知所有监听者刷新 UI（确保非当前 session 的变更也能反映到侧边栏等位置）
+          sessionController.update();
 
           debugPrint(
             '✅ 会话已更新: ${session.sessionId}, '
             'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
           );
-
-          // ── 审计回调：补全响应内容 ──
-          final auditCallback =
-              request.context['auditCallback'] as AuditCallback?;
-          auditCallback?.call(responseContent: contentBuffer.toString());
         } catch (e) {
           // ── 异步 IIFE 内部异常 ──
           debugPrint('❌ 流式代理错误: $e');
           streamController.addError(e);
           await streamController.close();
-
-          // 审计回调：记录流式异常
-          final auditCallback =
-              request.context['auditCallback'] as AuditCallback?;
-          auditCallback?.call(error: 'Stream proxy error: $e');
         }
       }(); // ← 立即执行，不 await
 
@@ -497,9 +484,6 @@ class LocalHttpService {
       // ── 同步异常（如 StreamController 构造失败）──
       // 此时流还未建立，直接返回 500，不经过 sessionGuard
       debugPrint('❌ 请求处理失败: $e');
-
-      final auditCallback = request.context['auditCallback'] as AuditCallback?;
-      auditCallback?.call(error: '$e');
 
       return Response.internalServerError(
         body: jsonEncode({

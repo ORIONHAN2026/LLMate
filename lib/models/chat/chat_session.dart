@@ -138,6 +138,9 @@ class ChatSession {
   /// 格式: sk-{64位随机hex字符串}，类似 DeepSeek/OpenAI 风格
   final String apiKey;
 
+  /// 免授权模式：开启后外部请求无需提供 API Key 即可访问
+  final bool noAuthEnabled;
+
   // === 用量配额设置 ===
 
   /// 是否启用用量限制
@@ -199,6 +202,7 @@ class ChatSession {
     this.quotaResetPeriod,
     this.quotaPeriodStart,
     this.quotaRequestCount = 0,
+    this.noAuthEnabled = false,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcp = mcp ?? mcpServer?.name,
        emoji = emoji ?? randomEmoji(),
@@ -396,6 +400,7 @@ class ChatSession {
     DateTime? quotaPeriodStart,
     bool clearQuotaPeriodStart = false,
     int? quotaRequestCount,
+    bool? noAuthEnabled,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -473,6 +478,7 @@ class ChatSession {
               ? null
               : (quotaPeriodStart ?? this.quotaPeriodStart),
       quotaRequestCount: quotaRequestCount ?? this.quotaRequestCount,
+      noAuthEnabled: noAuthEnabled ?? this.noAuthEnabled,
     );
   }
 
@@ -565,6 +571,7 @@ class ChatSession {
               ? DateTime.tryParse(json['quotaPeriodStart'] as String)
               : null,
       quotaRequestCount: json['quotaRequestCount'] as int? ?? 0,
+      noAuthEnabled: json['noAuthEnabled'] as bool? ?? false,
     );
   }
 
@@ -608,6 +615,7 @@ class ChatSession {
       if (quotaPeriodStart != null)
         'quotaPeriodStart': quotaPeriodStart!.toIso8601String(),
       'quotaRequestCount': quotaRequestCount,
+      'noAuthEnabled': noAuthEnabled,
     };
   }
 

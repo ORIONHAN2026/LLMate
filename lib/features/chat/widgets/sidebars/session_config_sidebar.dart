@@ -681,7 +681,53 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
         // 启用开关
         _buildToggleRow(context),
 
+        // 计费信息（始终显示，置于配额配置前面）
+        const SizedBox(height: 12),
+        SessionConfigSidebar._buildSectionTitle(context, '计费信息'),
+        const SizedBox(height: 8),
+        SessionConfigSidebar._buildConfigItem(
+          context,
+          icon: CupertinoIcons.arrow_down_circle,
+          label: '累计输入Token',
+          value: SessionConfigSidebar._formatTokenCount(
+            _session.promptTokens,
+          ),
+          valueColor: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(height: 8),
+        SessionConfigSidebar._buildConfigItem(
+          context,
+          icon: CupertinoIcons.arrow_up_circle,
+          label: '累计输出Token',
+          value: SessionConfigSidebar._formatTokenCount(
+            _session.completionTokens,
+          ),
+          valueColor: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(height: 8),
+        SessionConfigSidebar._buildConfigItem(
+          context,
+          icon: CupertinoIcons.money_dollar_circle,
+          label: '累计费用',
+          value: '${SessionConfigSidebar._getCurrencySymbol(_session.chatModel)}${_session.totalCost.toStringAsFixed(6)}',
+          valueColor: _session.totalCost > 0
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).colorScheme.onSurface,
+        ),
+        if (_session.chatModel?.promptPrice != null ||
+            _session.chatModel?.completionPrice != null) ...[
+          const SizedBox(height: 8),
+          SessionConfigSidebar._buildPriceCard(
+            context,
+            promptPrice: _session.chatModel?.promptPrice,
+            completionPrice: _session.chatModel?.completionPrice,
+            chatModel: _session.chatModel,
+          ),
+        ],
+
         if (_session.quotaEnabled) ...[
+          const SizedBox(height: 12),
+          SessionConfigSidebar._buildSectionTitle(context, '用量配额'),
           const SizedBox(height: 8),
 
           // Token 用量上限
@@ -740,50 +786,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
 
           // 当前用量状态
           _buildQuotaStatusCard(context),
-        ],
-
-        // 计费信息（始终显示）
-        const SizedBox(height: 12),
-        SessionConfigSidebar._buildSectionTitle(context, '计费信息'),
-        const SizedBox(height: 8),
-        SessionConfigSidebar._buildConfigItem(
-          context,
-          icon: CupertinoIcons.arrow_down_circle,
-          label: '累计输入Token',
-          value: SessionConfigSidebar._formatTokenCount(
-            _session.promptTokens,
-          ),
-          valueColor: Theme.of(context).colorScheme.primary,
-        ),
-        const SizedBox(height: 8),
-        SessionConfigSidebar._buildConfigItem(
-          context,
-          icon: CupertinoIcons.arrow_up_circle,
-          label: '累计输出Token',
-          value: SessionConfigSidebar._formatTokenCount(
-            _session.completionTokens,
-          ),
-          valueColor: Theme.of(context).colorScheme.primary,
-        ),
-        const SizedBox(height: 8),
-        SessionConfigSidebar._buildConfigItem(
-          context,
-          icon: CupertinoIcons.money_dollar_circle,
-          label: '累计费用',
-          value: '${SessionConfigSidebar._getCurrencySymbol(_session.chatModel)}${_session.totalCost.toStringAsFixed(6)}',
-          valueColor: _session.totalCost > 0
-              ? Theme.of(context).colorScheme.error
-              : Theme.of(context).colorScheme.onSurface,
-        ),
-        if (_session.chatModel?.promptPrice != null ||
-            _session.chatModel?.completionPrice != null) ...[
-          const SizedBox(height: 8),
-          SessionConfigSidebar._buildPriceCard(
-            context,
-            promptPrice: _session.chatModel?.promptPrice,
-            completionPrice: _session.chatModel?.completionPrice,
-            chatModel: _session.chatModel,
-          ),
         ],
       ],
     );
@@ -1234,6 +1236,80 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
     super.dispose();
   }
 
+  /// 构建免授权开关
+  Widget _buildNoAuthToggle(BuildContext context, ChatSession session) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: session.noAuthEnabled
+            ? Theme.of(context).colorScheme.error.withValues(alpha: 0.08)
+            : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: session.noAuthEnabled
+            ? Border.all(
+                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
+                width: 1,
+              )
+            : null,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            session.noAuthEnabled
+                ? CupertinoIcons.lock_open
+                : CupertinoIcons.lock_shield,
+            size: 16,
+            color: session.noAuthEnabled
+                ? Theme.of(context).colorScheme.error
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '免授权访问',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: session.noAuthEnabled
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                Text(
+                  session.noAuthEnabled
+                      ? '⚠️ 已关闭认证，任何人均可访问'
+                      : '开启后不需要 API Key 即可访问',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: session.noAuthEnabled
+                        ? Theme.of(context).colorScheme.error.withValues(alpha: 0.7)
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.75,
+            child: CupertinoSwitch(
+              value: session.noAuthEnabled,
+              activeTrackColor: Theme.of(context).colorScheme.error,
+              onChanged: (val) {
+                final sessionController = Get.find<SessionController>();
+                sessionController.updateSession(
+                  session.copyWith(noAuthEnabled: val),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
@@ -1393,6 +1469,9 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                       label: 'API 密钥',
                       value: session.apiKey,
                     ),
+                    const SizedBox(height: 8),
+                    // 免授权开关
+                    _buildNoAuthToggle(context, session),
                   ],
                 ),
               ),

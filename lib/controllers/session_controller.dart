@@ -122,6 +122,9 @@ class SessionController extends GetxController {
 
   /// 自动计算会话的累计计费信息
   ChatSession _recalculateBilling(ChatSession session) {
+    // 如果消息列表为空（懒加载未完成），保留现有的 token 值，避免覆盖为 0
+    if (session.messages.isEmpty) return session;
+
     int inputTotal = 0;
     int outputTotal = 0;
     double cost = 0.0;
@@ -502,6 +505,7 @@ class SessionController extends GetxController {
       'emoji': session.emoji,
       'promptTokens': session.promptTokens,
       'completionTokens': session.completionTokens,
+      'totalTokens': session.totalTokens,
       'totalCost': session.totalCost,
       'apiKey': session.apiKey,
       'quotaEnabled': session.quotaEnabled,
@@ -511,6 +515,7 @@ class SessionController extends GetxController {
       'quotaResetPeriod': session.quotaResetPeriod,
       'quotaPeriodStart': session.quotaPeriodStart?.toIso8601String(),
       'quotaRequestCount': session.quotaRequestCount,
+      'noAuthEnabled': session.noAuthEnabled,
     };
   }
 
@@ -602,6 +607,11 @@ class SessionController extends GetxController {
               ? DateTime.tryParse(entity['quotaPeriodStart'] as String)
               : null,
       quotaRequestCount: entity['quotaRequestCount'] as int? ?? 0,
+      promptTokens: entity['promptTokens'] as int? ?? 0,
+      completionTokens: entity['completionTokens'] as int? ?? 0,
+      totalTokens: entity['totalTokens'] as int? ?? 0,
+      totalCost: (entity['totalCost'] as num?)?.toDouble() ?? 0.0,
+      noAuthEnabled: entity['noAuthEnabled'] as bool? ?? false,
     );
   }
 

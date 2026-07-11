@@ -20,6 +20,9 @@ class StoragePaths {
   /// ~/.llmwork/mcps/
   static String get mcpsDir => p.join(root, 'mcps');
 
+  /// ~/.llmwork/ssl/
+  static String get sslDir => p.join(root, 'ssl');
+
   /// ~/.llmwork/models.json
   static String get modelsFile => p.join(root, 'models.json');
 
@@ -246,6 +249,11 @@ class StoragePaths {
   /// 确保 MCPs 目录存在
   static Future<void> ensureMcpsDir() async {
     await Directory(mcpsDir).create(recursive: true);
+  }
+
+  /// 确保 SSL 目录存在
+  static Future<void> ensureSslDir() async {
+    await Directory(sslDir).create(recursive: true);
   }
 
   /// 确保会话目录存在

@@ -9,37 +9,27 @@ class DomainConfig {
   String? certPath; // 证书文件路径
   String? keyPath; // 私钥文件路径
   bool httpsEnabled; // 是否开启 HTTPS（上传证书后自动开启）
+  int httpPort; // HTTP 端口（默认 80）
+  int httpsPort; // HTTPS 端口（默认 443）
 
   DomainConfig({
     this.domain = '',
     this.certPath,
     this.keyPath,
     this.httpsEnabled = false,
+    this.httpPort = 80,
+    this.httpsPort = 443,
   });
 
   /// 获取完整的 base URL（含协议和端口）
   String get baseUrl {
     if (domain.isEmpty) return '';
     final scheme = httpsEnabled ? 'https' : 'http';
-    final port = httpsEnabled ? 443 : 80;
+    final port = httpsEnabled ? httpsPort : httpPort;
     return '$scheme://$domain:$port';
   }
 
   bool get isEmpty => domain.isEmpty;
-
-  Map<String, dynamic> toJson() => {
-        'domain': domain,
-        'certPath': certPath,
-        'keyPath': keyPath,
-        'httpsEnabled': httpsEnabled,
-      };
-
-  factory DomainConfig.fromJson(Map<String, dynamic> json) => DomainConfig(
-        domain: json['domain'] as String? ?? '',
-        certPath: json['certPath'] as String?,
-        keyPath: json['keyPath'] as String?,
-        httpsEnabled: json['httpsEnabled'] as bool? ?? false,
-      );
 }
 
 /// 域名管理 Controller
@@ -47,7 +37,12 @@ class DomainConfig {
 /// 负责域名配置的持久化（存储到 settings.json），
 /// 以及为 LLM 请求提供 base URL。
 class DomainController extends GetxController {
-  static const _keyDomainConfig = 'domainConfig';
+  static const _keyDomain = 'domainConfig_domain';
+  static const _keyHttpPort = 'domainConfig_httpPort';
+  static const _keyHttpsPort = 'domainConfig_httpsPort';
+  static const _keyCertPath = 'domainConfig_certPath';
+  static const _keyKeyPath = 'domainConfig_keyPath';
+  static const _keyHttpsEnabled = 'domainConfig_httpsEnabled';
 
   final domainConfig = DomainConfig().obs;
 
@@ -66,17 +61,15 @@ class DomainController extends GetxController {
   /// 保存域名配置
   Future<void> saveConfig(DomainConfig config) async {
     domainConfig.value = config;
-    // 上传证书后自动开启 HTTPS
-    if (config.certPath != null &&
-        config.certPath!.isNotEmpty &&
-        config.keyPath != null &&
-        config.keyPath!.isNotEmpty) {
-      domainConfig.value = config; // httpsEnabled 已在外部设置
-    }
     try {
       final store = StorageService.instance.store;
       await store.isarSettings.putAll({
-        _keyDomainConfig: _encodeConfig(config),
+        _keyDomain: config.domain,
+        _keyHttpPort: config.httpPort.toString(),
+        _keyHttpsPort: config.httpsPort.toString(),
+        _keyCertPath: config.certPath ?? '',
+        _keyKeyPath: config.keyPath ?? '',
+        _keyHttpsEnabled: config.httpsEnabled.toString(),
       });
       debugPrint('✅ 域名配置已保存: ${config.baseUrl}');
     } catch (e) {
@@ -89,7 +82,12 @@ class DomainController extends GetxController {
     domainConfig.value = DomainConfig();
     try {
       final store = StorageService.instance.store;
-      await store.isarSettings.delete(_keyDomainConfig);
+      await store.isarSettings.delete(_keyDomain);
+      await store.isarSettings.delete(_keyHttpPort);
+      await store.isarSettings.delete(_keyHttpsPort);
+      await store.isarSettings.delete(_keyCertPath);
+      await store.isarSettings.delete(_keyKeyPath);
+      await store.isarSettings.delete(_keyHttpsEnabled);
       debugPrint('✅ 域名配置已清除');
     } catch (e) {
       debugPrint('❌ 清除域名配置失败: $e');
@@ -100,28 +98,34 @@ class DomainController extends GetxController {
   Future<void> _loadConfig() async {
     try {
       final store = StorageService.instance.store;
-      final setting = await store.isarSettings.getByKey(_keyDomainConfig);
-      if (setting != null) {
-        final config = _decodeConfig(setting['value'] as String);
-        domainConfig.value = config;
-        debugPrint('✅ 域名配置已加载: ${config.baseUrl}');
+
+      final domainEntry = await store.isarSettings.getByKey(_keyDomain);
+      final httpPortEntry = await store.isarSettings.getByKey(_keyHttpPort);
+      final httpsPortEntry = await store.isarSettings.getByKey(_keyHttpsPort);
+      final certEntry = await store.isarSettings.getByKey(_keyCertPath);
+      final keyEntry = await store.isarSettings.getByKey(_keyKeyPath);
+      final httpsEntry = await store.isarSettings.getByKey(_keyHttpsEnabled);
+
+      final domain = domainEntry?['value'] as String? ?? '';
+      final httpPort = int.tryParse(httpPortEntry?['value'] as String? ?? '') ?? 80;
+      final httpsPort = int.tryParse(httpsPortEntry?['value'] as String? ?? '') ?? 443;
+      final certPath = certEntry?['value'] as String?;
+      final keyPath = keyEntry?['value'] as String?;
+      final httpsEnabled = httpsEntry?['value'] == 'true';
+
+      if (domain.isNotEmpty || certPath != null || keyPath != null) {
+        domainConfig.value = DomainConfig(
+          domain: domain,
+          httpPort: httpPort,
+          httpsPort: httpsPort,
+          certPath: certPath?.isNotEmpty == true ? certPath : null,
+          keyPath: keyPath?.isNotEmpty == true ? keyPath : null,
+          httpsEnabled: httpsEnabled,
+        );
+        debugPrint('✅ 域名配置已加载: ${domainConfig.value.baseUrl}');
       }
     } catch (e) {
       debugPrint('❌ 加载域名配置失败: $e');
     }
-  }
-
-  String _encodeConfig(DomainConfig config) {
-    return '${config.domain}|${config.certPath ?? ''}|${config.keyPath ?? ''}|${config.httpsEnabled}';
-  }
-
-  DomainConfig _decodeConfig(String raw) {
-    final parts = raw.split('|');
-    return DomainConfig(
-      domain: parts.isNotEmpty ? parts[0] : '',
-      certPath: parts.length > 1 && parts[1].isNotEmpty ? parts[1] : null,
-      keyPath: parts.length > 2 && parts[2].isNotEmpty ? parts[2] : null,
-      httpsEnabled: parts.length > 3 ? parts[3] == 'true' : false,
-    );
   }
 }

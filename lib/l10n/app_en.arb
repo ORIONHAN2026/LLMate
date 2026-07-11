@@ -456,7 +456,7 @@
   "workModeLegalDesc": "Legal drafting, compliance review, risk assessment",
   "workModeMarketing": "Marketing",
   "workModeMarketingDesc": "Marketing planning, brand promotion, competitive analysis",
-  "domainSettings": "Service Settings",
+  "domainSettings": "Domain Settings",
   "serviceStatus": "Local Service",
   "localService": "Local Service",
   "serviceStopped": "Service stopped",
@@ -465,9 +465,13 @@
   "restart": "Restart",
   "certificateSettings": "Certificate Settings",
   "httpsStatus": "HTTPS Status",
-  "domainAddress": "Service Address",
+  "domainAddress": "Domain Address",
   "domainHint": "e.g. api.example.com",
   "domainDesc": "After setting, the session service URL will use this address. HTTP default port 80, HTTPS default port 443.",
+  "portSettings": "Port Settings",
+  "httpPort": "HTTP Port",
+  "httpsPort": "HTTPS Port",
+  "portDesc": "HTTP listening port, default 80. HTTPS listening port, default 443. Restart the service to apply changes.",
   "sslCertificate": "SSL Certificate",
   "sslPrivateKey": "Private Key",
   "enabled": "Enabled",
@@ -477,5 +481,8 @@
   "httpsDisabledDesc": "Upload certificate (crt/cert + key) to auto-enable HTTPS",
   "domainInfoDesc": "After configuring the service address, the session service URL will display this address. External clients can access the session API (/llmwork/chat/completions etc.) through this address.",
   "pleaseEnterDomain": "Please enter service address",
-  "domainSaved": "Service configuration saved"
+  "domainSaved": "Service configuration saved",
+  "currencyLabel": "Currency",
+  "cny": "CNY",
+  "usd": "USD"
 }

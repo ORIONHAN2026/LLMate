@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,7 @@ import 'package:get/get.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../../controllers/domain_controller.dart';
 import '../../../../models/chat/chat_session.dart';
+import '../../../../models/bigmodel/chat_model.dart';
 import '../../../../utils/snackbar_utils.dart';
 
 /// 会话配置侧边栏内容
@@ -404,7 +407,7 @@ class SessionConfigSidebar {
       if (domainController.isConfigured) {
         final config = domainController.domainConfig.value;
         final scheme = config.httpsEnabled ? 'https' : 'http';
-        final port = config.httpsEnabled ? 443 : 80;
+        final port = config.httpsEnabled ? config.httpsPort : config.httpPort;
         // 默认端口不显示
         final host = '$scheme://${config.domain}${(scheme == 'http' && port != 80) || (scheme == 'https' && port != 443) ? ':$port' : ''}';
         return '$host/$sessionId/llmwork';
@@ -412,15 +415,38 @@ class SessionConfigSidebar {
     } catch (_) {
       // DomainController 未初始化，使用默认地址
     }
-    return 'http://127.0.0.1:8899/$sessionId/llmwork';
+    return 'http://127.0.0.1:80/$sessionId/llmwork';
+  }
+
+  /// 构建本地地址
+  static String _buildLocalUrl(String sessionId, String host) {
+    int port = 80;
+    try {
+      final domainController = Get.find<DomainController>();
+      port = domainController.domainConfig.value.httpPort;
+    } catch (_) {}
+    return 'http://$host:$port/$sessionId/llmwork';
+  }
+
+  /// 获取货币符号
+  static String _getCurrencySymbol(ChatModel? model) {
+    return model?.currency == 'CNY' ? '¥' : '\$';
+  }
+
+  /// 获取货币单位名称
+  static String _getCurrencyName(ChatModel? model) {
+    return model?.currency == 'CNY' ? '元' : '美元';
   }
 
   /// 构建价格卡片
   static Widget _buildPriceCard(
     BuildContext context, {
-    double? inputPrice,
-    double? outputPrice,
+    double? promptPrice,
+    double? completionPrice,
+    ChatModel? chatModel,
   }) {
+    final symbol = _getCurrencySymbol(chatModel);
+    final currencyName = _getCurrencyName(chatModel);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -443,7 +469,7 @@ class SessionConfigSidebar {
               ),
               const SizedBox(width: 6),
               Text(
-                '模型定价（美元/百万Token）',
+                '模型定价（$currencyName/百万Token）',
                 style: TextStyle(
                   fontSize: 10,
                   color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
@@ -452,19 +478,19 @@ class SessionConfigSidebar {
             ],
           ),
           const SizedBox(height: 8),
-          if (inputPrice != null)
+          if (promptPrice != null)
             Text(
-              '输入: \$${inputPrice.toStringAsFixed(2)}',
+              '输入: $symbol${promptPrice.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-          if (inputPrice != null && outputPrice != null)
+          if (promptPrice != null && completionPrice != null)
             const SizedBox(height: 4),
-          if (outputPrice != null)
+          if (completionPrice != null)
             Text(
-              '输出: \$${outputPrice.toStringAsFixed(2)}',
+              '输出: $symbol${completionPrice.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -678,7 +704,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           _buildNumberField(
             context,
             icon: CupertinoIcons.money_dollar_circle,
-            label: '费用预算上限（美元）',
+            label: '费用预算上限（${SessionConfigSidebar._getCurrencyName(_session.chatModel)}）',
             value: _session.quotaCostLimit,
             hint: '不限制',
             isDouble: true,
@@ -714,6 +740,50 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
 
           // 当前用量状态
           _buildQuotaStatusCard(context),
+        ],
+
+        // 计费信息（始终显示）
+        const SizedBox(height: 12),
+        SessionConfigSidebar._buildSectionTitle(context, '计费信息'),
+        const SizedBox(height: 8),
+        SessionConfigSidebar._buildConfigItem(
+          context,
+          icon: CupertinoIcons.arrow_down_circle,
+          label: '累计输入Token',
+          value: SessionConfigSidebar._formatTokenCount(
+            _session.promptTokens,
+          ),
+          valueColor: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(height: 8),
+        SessionConfigSidebar._buildConfigItem(
+          context,
+          icon: CupertinoIcons.arrow_up_circle,
+          label: '累计输出Token',
+          value: SessionConfigSidebar._formatTokenCount(
+            _session.completionTokens,
+          ),
+          valueColor: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(height: 8),
+        SessionConfigSidebar._buildConfigItem(
+          context,
+          icon: CupertinoIcons.money_dollar_circle,
+          label: '累计费用',
+          value: '${SessionConfigSidebar._getCurrencySymbol(_session.chatModel)}${_session.totalCost.toStringAsFixed(6)}',
+          valueColor: _session.totalCost > 0
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).colorScheme.onSurface,
+        ),
+        if (_session.chatModel?.promptPrice != null ||
+            _session.chatModel?.completionPrice != null) ...[
+          const SizedBox(height: 8),
+          SessionConfigSidebar._buildPriceCard(
+            context,
+            promptPrice: _session.chatModel?.promptPrice,
+            completionPrice: _session.chatModel?.completionPrice,
+            chatModel: _session.chatModel,
+          ),
         ],
       ],
     );
@@ -770,10 +840,12 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               ],
             ),
           ),
-          CupertinoSwitch(
-            value: _session.quotaEnabled,
-            activeTrackColor: Theme.of(context).colorScheme.primary,
-            onChanged: (val) {
+          Transform.scale(
+            scale: 0.75,
+            child: CupertinoSwitch(
+              value: _session.quotaEnabled,
+              activeTrackColor: Theme.of(context).colorScheme.primary,
+              onChanged: (val) {
               final updated = _session.copyWith(quotaEnabled: val);
               if (val && _session.quotaPeriodStart == null) {
                 // 开启时按自然时间边界初始化
@@ -788,6 +860,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                 _updateSession(updated);
               }
             },
+            ),
           ),
         ],
       ),
@@ -1029,7 +1102,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               used: effectiveCost,
               limit: _session.quotaCostLimit!,
               isDouble: true,
-              suffix: '\$',
+              suffix: SessionConfigSidebar._getCurrencySymbol(_session.chatModel),
             ),
           ],
           if (_session.quotaRequestLimit != null) ...[
@@ -1130,11 +1203,29 @@ class _SessionConfigTabs extends StatefulWidget {
 class _SessionConfigTabsState extends State<_SessionConfigTabs>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  String _localIp = '127.0.0.1';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _resolveLocalIp();
+  }
+
+  Future<void> _resolveLocalIp() async {
+    try {
+      final interfaces = await NetworkInterface.list();
+      for (final interface in interfaces) {
+        for (final addr in interface.addresses) {
+          if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
+            if (mounted) {
+              setState(() => _localIp = addr.address);
+            }
+            return;
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -1217,23 +1308,12 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                       context,
                       icon: CupertinoIcons.globe,
                       label: '绑定模型',
-                      value: session.chatModel?.name ?? '未设置',
+                      value: session.chatModel != null
+                          ? '${session.chatModel!.name} (${session.chatModel!.model})'
+                          : '未设置',
                       valueColor: session.chatModel != null
                           ? Theme.of(context).colorScheme.primary
                           : null,
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: CupertinoIcons.lightbulb,
-                      label: '深度思考',
-                      value: session.deepThink ? '已开启' : '已关闭',
-                      valueColor: session.deepThink
-                          ? Colors.green
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.5),
                     ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildConfigItem(
@@ -1277,48 +1357,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                       label: '消息数量',
                       value: '${session.messages.length}条',
                     ),
-                    const SizedBox(height: 12),
-                    SessionConfigSidebar._buildSectionTitle(context, '计费信息'),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: CupertinoIcons.arrow_down_circle,
-                      label: '累计输入Token',
-                      value: SessionConfigSidebar._formatTokenCount(
-                        session.promptTokens,
-                      ),
-                      valueColor: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: CupertinoIcons.arrow_up_circle,
-                      label: '累计输出Token',
-                      value: SessionConfigSidebar._formatTokenCount(
-                        session.completionTokens,
-                      ),
-                      valueColor: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: CupertinoIcons.money_dollar_circle,
-                      label: '累计费用',
-                      value: '\$${session.totalCost.toStringAsFixed(6)}',
-                      valueColor: session.totalCost > 0
-                          ? Theme.of(context).colorScheme.error
-                          : Theme.of(context).colorScheme.onSurface,
-                    ),
-                    if (session.chatModel?.inputPrice != null ||
-                        session.chatModel?.outputPrice != null) ...[
-                      const SizedBox(height: 8),
-                      SessionConfigSidebar._buildPriceCard(
-                        context,
-                        inputPrice: session.chatModel?.inputPrice,
-                        outputPrice: session.chatModel?.outputPrice,
-                      ),
-                    ],
-                    const SizedBox(height: 8),
+
                   ],
                 ),
               ),
@@ -1332,9 +1371,19 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                     SessionConfigSidebar._buildCopyableConfigItem(
                       context,
                       icon: CupertinoIcons.link,
-                      label: '服务地址',
+                      label: '服务地址[外部]',
                       value: SessionConfigSidebar._buildServiceUrl(
                         session.sessionId,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SessionConfigSidebar._buildCopyableConfigItem(
+                      context,
+                      icon: CupertinoIcons.house,
+                      label: '服务地址[本地]',
+                      value: SessionConfigSidebar._buildLocalUrl(
+                        session.sessionId,
+                        _localIp,
                       ),
                     ),
                     const SizedBox(height: 8),

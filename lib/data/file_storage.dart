@@ -80,23 +80,13 @@ class FileStorage {
   static Future<void> _writeFile(String path, String content) async {
     try {
       final file = File(path);
-      // 确保父目录存在
       final parent = file.parent;
       await parent.create(recursive: true);
       if (!await parent.exists()) {
         debugPrint('⚠️ FileStorage._writeFile($path) 父目录创建后仍不存在，跳过写入');
         return;
       }
-      // 原子写入：先写临时文件再 rename，避免进程中断导致目标文件半写完而损坏
-      final tmp = File('$path.tmp');
-      await tmp.writeAsString(content);
-      try {
-        await tmp.rename(file.path);
-      } catch (renameError) {
-        // rename 失败时（如目录不存在等边界情况），回退直接写入
-        debugPrint('⚠️ FileStorage._writeFile 原子写入失败，回退直接写入: $renameError');
-        await file.writeAsString(content);
-      }
+      await file.writeAsString(content);
     } catch (e) {
       debugPrint('⚠️ FileStorage._writeFile($path) 失败: $e');
     }

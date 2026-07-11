@@ -1354,11 +1354,13 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
       final String protocol;
       final String platformName;
+      final String currency;
 
       if (_isCustomProvider) {
-        // 自定义提供商：默认 OpenAI 协议
+        // 自定义提供商：默认 OpenAI 协议，默认人民币
         protocol = 'openai';
         platformName = AppLocalizations.of(context)!.customProvider;
+        currency = 'CNY';
 
         // OpenAI 协议自动补全端点
         if (!finalApiUrl.endsWith('/chat/completions')) {
@@ -1374,6 +1376,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
         protocol = selectedProviderData['protocol'];
         platformName = _resolveProviderPlatformName(_selectedProvider);
+        currency = selectedProviderData['currency'] as String? ?? 'CNY';
 
         // 根据协议自动补全API端点路径
         switch (protocol) {
@@ -1419,6 +1422,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         'type': 'online',
         'protocol': protocol,
         'platform': platformName,
+        'currency': currency,
         'apiKey': inputApiKey,
         'apiUrl': finalApiUrl,
         'chatSettings': {

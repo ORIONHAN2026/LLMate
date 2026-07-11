@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:llmwork/l10n/app_localizations.dart';
 import 'package:llmwork/models/bigmodel/chat_model.dart';
 import 'package:llmwork/utils/snackbar_utils.dart';
-import 'package:llmwork/models/bigmodel/model_data.dart';
 import 'package:llmwork/models/chat/chat_setting.dart';
 
 class ModelConfigTab extends StatefulWidget {
@@ -73,18 +72,20 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         children: [
           _buildConfigCard(AppLocalizations.of(context)!.basicInfo, CupertinoIcons.info, [
             _buildEditableModelNameItem(),
-            _buildEditableModelItem(),
+            _buildConfigItem(AppLocalizations.of(context)!.modelLabel, _currentModel.model),
             _buildConfigItem(AppLocalizations.of(context)!.platformLabel, _currentModel.platform ?? AppLocalizations.of(context)!.unknown),
             _buildConfigItem(AppLocalizations.of(context)!.apiAddress, _currentModel.apiUrl ?? widget.apiUrl),
           ]),
           const SizedBox(height: 12),
           _buildConfigCard('计费设置', CupertinoIcons.money_dollar_circle, [
-            _buildInputPriceField(),
+            _buildCurrencySelector(),
             const SizedBox(height: 12),
-            _buildOutputPriceField(),
+            _buildPromptPriceField(),
+            const SizedBox(height: 12),
+            _buildCompletionPriceField(),
             const SizedBox(height: 8),
             Text(
-              '价格单位：美元/百万Token。用于计算会话累计费用。',
+              _buildPriceUnitDesc(),
               style: TextStyle(
                 fontSize: 11,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
@@ -278,157 +279,6 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     );
   }
 
-  Widget _buildEditableModelItem() {
-    // 获取当前模型的显示名称
-    String currentModelName = _getCurrentModelDisplayName();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '${AppLocalizations.of(context)!.modelLabel}:',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    currentModelName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.8),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: _showModelSelectionDialog,
-                  child: Icon(
-                    Icons.edit,
-                    size: 12,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 获取当前模型的显示名称
-  String _getCurrentModelDisplayName() {
-    // 从所有供应商数据中查找当前模型的显示名称
-    for (var provider in onlineProviders) {
-      if (provider['models'] != null) {
-        for (var model in provider['models']) {
-          if (model['id'] == _currentModel.model) {
-            return model['name'] ?? _currentModel.model;
-          }
-        }
-      }
-    }
-
-    // 如果没找到，返回原始模型ID
-    return _currentModel.model.isNotEmpty ? _currentModel.model : AppLocalizations.of(context)!.notSet;
-  }
-
-  // 显示模型选择对话框
-  void _showModelSelectionDialog() {
-    // 从所有供应商收集模型
-    List<Map<String, dynamic>> availableModels = [];
-    for (var provider in onlineProviders) {
-      if (provider['models'] != null) {
-        for (var model in provider['models']) {
-          availableModels.add({'id': model['id'], 'name': model['name']});
-        }
-      }
-    }
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            AppLocalizations.of(context)!.selectModel,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: availableModels.length,
-              itemBuilder: (context, index) {
-                final model = availableModels[index];
-                final isSelected = model['id'] == _currentModel.model;
-
-                return ListTile(
-                  title: Text(
-                    model['name'],
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w400,
-                      color:
-                          isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  leading: Icon(
-                    isSelected
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_unchecked,
-                    color:
-                        isSelected
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
-                    size: 20,
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _saveModel(model['id']);
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text(
-                AppLocalizations.of(context)!.cancel,
-                style: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void _startEditModelName() {
     setState(() {
       _isEditingModelName = true;
@@ -462,17 +312,6 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.modelNameSaved);
   }
 
-  void _saveModel(String newModelId) {
-    setState(() {
-      _currentModel = _currentModel.copyWith(model: newModelId);
-    });
-
-    // 保存到本地存储
-    widget.onModelUpdated(_currentModel);
-
-    // 显示保存成功提示
-    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.modelSaved);
-  }
 
   // ========== 模型参数 (Temperature + System Prompt) ==========
 
@@ -870,7 +709,97 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     );
   }
 
-  Widget _buildInputPriceField() {
+  /// 获取当前价格单位描述
+  String _buildPriceUnitDesc() {
+    final unitText = _currentModel.currency == 'CNY' ? '元' : '美元';
+    return '价格单位：$unitText/百万Token。用于计算会话累计费用。';
+  }
+
+  Widget _buildCurrencySelector() {
+    final isCNY = _currentModel.currency == 'CNY';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '货币类型',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            _buildCurrencyChip('人民币', '¥', isCNY, () {
+              setState(() {
+                _currentModel = _currentModel.copyWith(currency: 'CNY');
+              });
+              widget.onModelUpdated(_currentModel);
+            }),
+            const SizedBox(width: 8),
+            _buildCurrencyChip('美元', '\$', !isCNY, () {
+              setState(() {
+                _currentModel = _currentModel.copyWith(currency: 'USD');
+              });
+              widget.onModelUpdated(_currentModel);
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCurrencyChip(
+      String label, String symbol, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).dividerColor,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              symbol,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _buildCurrencyUnitText() => _currentModel.currency == 'CNY' ? '元/百万Token' : '美元/百万Token';
+
+  Widget _buildPromptPriceField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -886,7 +815,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
               ),
             ),
             Text(
-              '美元/百万Token',
+              _buildCurrencyUnitText(),
               style: TextStyle(
                 fontSize: 10,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
@@ -897,7 +826,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         const SizedBox(height: 6),
         TextField(
           controller: TextEditingController(
-            text: _currentModel.inputPrice?.toString() ?? '',
+            text: _currentModel.promptPrice?.toString() ?? '',
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
@@ -922,7 +851,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
             _debounceTimer = Timer(const Duration(seconds: 1), () {
               final price = double.tryParse(value);
               setState(() {
-                _currentModel = _currentModel.copyWith(inputPrice: price);
+                _currentModel = _currentModel.copyWith(promptPrice: price);
               });
               widget.onModelUpdated(_currentModel);
             });
@@ -932,7 +861,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
     );
   }
 
-  Widget _buildOutputPriceField() {
+  Widget _buildCompletionPriceField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -948,7 +877,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
               ),
             ),
             Text(
-              '美元/百万Token',
+              _buildCurrencyUnitText(),
               style: TextStyle(
                 fontSize: 10,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
@@ -959,7 +888,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         const SizedBox(height: 6),
         TextField(
           controller: TextEditingController(
-            text: _currentModel.outputPrice?.toString() ?? '',
+            text: _currentModel.completionPrice?.toString() ?? '',
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
@@ -984,7 +913,7 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
             _debounceTimer = Timer(const Duration(seconds: 1), () {
               final price = double.tryParse(value);
               setState(() {
-                _currentModel = _currentModel.copyWith(outputPrice: price);
+                _currentModel = _currentModel.copyWith(completionPrice: price);
               });
               widget.onModelUpdated(_currentModel);
             });

@@ -19,11 +19,14 @@ class ChatModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  /// 输入价格（美元/百万token）
-  final double? inputPrice;
+  /// 输入价格（价格单位由 currency 字段决定，/百万token）
+  final double? promptPrice;
 
-  /// 输出价格（美元/百万token）
-  final double? outputPrice;
+  /// 输出价格（价格单位由 currency 字段决定，/百万token）
+  final double? completionPrice;
+
+  /// 货币类型：'CNY'（人民币）或 'USD'（美元），默认美元
+  final String? currency;
 
   // 对话设置 - 使用ChatSettings对象
   final ChatSettings? chatSettings;
@@ -39,8 +42,9 @@ class ChatModel {
     this.apiUrl,
     this.createdAt,
     this.updatedAt,
-    this.inputPrice,
-    this.outputPrice,
+    this.promptPrice,
+    this.completionPrice,
+    this.currency,
     this.chatSettings,
   });
 
@@ -84,8 +88,9 @@ class ChatModel {
           map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
       updatedAt:
           map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
-      inputPrice: map['inputPrice']?.toDouble(),
-      outputPrice: map['outputPrice']?.toDouble(),
+      promptPrice: map['promptPrice']?.toDouble() ?? map['inputPrice']?.toDouble(),
+      completionPrice: map['completionPrice']?.toDouble() ?? map['outputPrice']?.toDouble(),
+      currency: map['currency'] as String?,
       chatSettings: settings,
     );
   }
@@ -103,8 +108,9 @@ class ChatModel {
       'apiUrl': apiUrl,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
-      if (inputPrice != null) 'inputPrice': inputPrice,
-      if (outputPrice != null) 'outputPrice': outputPrice,
+      if (promptPrice != null) 'promptPrice': promptPrice,
+      if (completionPrice != null) 'completionPrice': completionPrice,
+      if (currency != null) 'currency': currency,
     };
 
     // 保存 ChatSettings 对象
@@ -140,8 +146,9 @@ class ChatModel {
     String? protocol,
     String? apiKey,
     String? apiUrl,
-    double? inputPrice,
-    double? outputPrice,
+    double? promptPrice,
+    double? completionPrice,
+    String? currency,
     ChatSettings? chatSettings,
   }) {
     return ChatModel(
@@ -155,8 +162,9 @@ class ChatModel {
       apiUrl: apiUrl,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      inputPrice: inputPrice,
-      outputPrice: outputPrice,
+      promptPrice: promptPrice,
+      completionPrice: completionPrice,
+      currency: currency,
       chatSettings: chatSettings,
     );
   }
@@ -173,8 +181,9 @@ class ChatModel {
     String? apiUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
-    double? inputPrice,
-    double? outputPrice,
+    double? promptPrice,
+    double? completionPrice,
+    String? currency,
     ChatSettings? chatSettings,
   }) {
     return ChatModel(
@@ -188,8 +197,9 @@ class ChatModel {
       apiUrl: apiUrl ?? this.apiUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      inputPrice: inputPrice ?? this.inputPrice,
-      outputPrice: outputPrice ?? this.outputPrice,
+      promptPrice: promptPrice ?? this.promptPrice,
+      completionPrice: completionPrice ?? this.completionPrice,
+      currency: currency ?? this.currency,
       chatSettings: chatSettings ?? this.chatSettings,
     );
   }

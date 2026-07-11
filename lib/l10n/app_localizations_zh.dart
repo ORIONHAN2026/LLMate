@@ -21,7 +21,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get modelManagement => '模型管理';
 
   @override
-  String get connectorManagement => '连接器管理(MCP)';
+  String get connectorManagement => 'MCP管理';
 
   @override
   String get domainManagement => '服务管理';
@@ -1126,7 +1126,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get connectorManagementTitle => '连接器管理(MCP)';
+  String get connectorManagementTitle => 'MCP管理';
 
   @override
   String get marketplace => '应用市场';
@@ -1479,7 +1479,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get workModeMarketingDesc => '面向市场营销策划、品牌推广、竞品分析等场景';
 
   @override
-  String get domainSettings => '服务设置';
+  String get domainSettings => '域名设置';
 
   @override
   String get serviceStatus => '本地服务';
@@ -1506,13 +1506,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get httpsStatus => 'HTTPS 状态';
 
   @override
-  String get domainAddress => '服务地址';
+  String get domainAddress => '域名地址';
 
   @override
   String get domainHint => '例如: api.example.com';
 
   @override
   String get domainDesc => '设置后，会话的服务地址将使用此地址。HTTP 默认端口 80，HTTPS 默认端口 443。';
+
+  @override
+  String get portSettings => '端口设置';
+
+  @override
+  String get httpPort => 'HTTP 端口';
+
+  @override
+  String get httpsPort => 'HTTPS 端口';
+
+  @override
+  String get portDesc => 'HTTP 服务监听端口，默认 80。HTTPS 服务监听端口，默认 443。修改后需重启服务生效。';
 
   @override
   String get sslCertificate => 'SSL 证书';
@@ -1544,4 +1556,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get domainSaved => '服务配置已保存';
+
+  @override
+  String get currencyLabel => '货币类型';
+
+  @override
+  String get cny => '人民币';
+
+  @override
+  String get usd => '美元';
 }

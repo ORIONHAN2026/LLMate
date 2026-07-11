@@ -1512,7 +1512,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Marketing planning, brand promotion, competitive analysis';
 
   @override
-  String get domainSettings => 'Service Settings';
+  String get domainSettings => 'Domain Settings';
 
   @override
   String get serviceStatus => 'Local Service';
@@ -1539,7 +1539,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get httpsStatus => 'HTTPS Status';
 
   @override
-  String get domainAddress => 'Service Address';
+  String get domainAddress => 'Domain Address';
 
   @override
   String get domainHint => 'e.g. api.example.com';
@@ -1547,6 +1547,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get domainDesc =>
       'After setting, the session service URL will use this address. HTTP default port 80, HTTPS default port 443.';
+
+  @override
+  String get portSettings => 'Port Settings';
+
+  @override
+  String get httpPort => 'HTTP Port';
+
+  @override
+  String get httpsPort => 'HTTPS Port';
+
+  @override
+  String get portDesc =>
+      'HTTP listening port, default 80. HTTPS listening port, default 443. Restart the service to apply changes.';
 
   @override
   String get sslCertificate => 'SSL Certificate';
@@ -1579,4 +1592,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get domainSaved => 'Service configuration saved';
+
+  @override
+  String get currencyLabel => 'Currency';
+
+  @override
+  String get cny => 'CNY';
+
+  @override
+  String get usd => 'USD';
 }

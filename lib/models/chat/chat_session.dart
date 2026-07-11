@@ -114,7 +114,7 @@ class ChatSession {
   /// 累计总token数
   int totalTokens;
 
-  /// 累计费用（美元）
+  /// 累计费用（货币类型由绑定的模型决定）
   final double totalCost;
 
   /// 合约要点列表（商务模式下，由 contract_inspect 工具写入）
@@ -146,7 +146,7 @@ class ChatSession {
   /// Token 用量上限（null = 不限制）
   final int? quotaTokenLimit;
 
-  /// 费用预算上限，美元（null = 不限制）
+  /// 费用预算上限（货币类型由绑定的模型决定，null = 不限制）
   final double? quotaCostLimit;
 
   /// 请求次数上限（null = 不限制）
@@ -339,13 +339,13 @@ class ChatSession {
     }
 
     double cost = 0.0;
-    final inputPrice = chatModel!.inputPrice;
-    final outputPrice = chatModel!.outputPrice;
-    if (inputPrice != null) {
-      cost += inputTotal * inputPrice / 1000000.0;
+    final promptPrice = chatModel!.promptPrice;
+    final completionPrice = chatModel!.completionPrice;
+    if (promptPrice != null) {
+      cost += inputTotal * promptPrice / 1000000.0;
     }
-    if (outputPrice != null) {
-      cost += outputTotal * outputPrice / 1000000.0;
+    if (completionPrice != null) {
+      cost += outputTotal * completionPrice / 1000000.0;
     }
 
     return (inputTokens: inputTotal, outputTokens: outputTotal, cost: cost);
@@ -545,8 +545,8 @@ class ChatSession {
           (json['contracts'] as List<dynamic>?)
               ?.map((c) => ContractInfo.fromJson(c as Map<String, dynamic>))
               .toList(),
-      promptTokens: json['totalInputTokens'] as int? ?? 0,
-      completionTokens: json['totalOutputTokens'] as int? ?? 0,
+      promptTokens: json['promptTokens'] as int? ?? 0,
+      completionTokens: json['completionTokens'] as int? ?? 0,
       totalTokens: json['totalTokens'] as int? ?? 0,
       totalCost: (json['totalCost'] as num?)?.toDouble() ?? 0.0,
       modelId: modelId,
@@ -590,8 +590,8 @@ class ChatSession {
       if (scheduledTask != null) 'scheduledTask': scheduledTask!.toJson(),
       if (contracts != null)
         'contracts': contracts!.map((c) => c.toJson()).toList(),
-      'totalInputTokens': promptTokens,
-      'totalOutputTokens': completionTokens,
+      'promptTokens': promptTokens,
+      'completionTokens': completionTokens,
       'totalTokens': totalTokens,
       'totalCost': totalCost,
       if (modelId != null) 'modelId': modelId,

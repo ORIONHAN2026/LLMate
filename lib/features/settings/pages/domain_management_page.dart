@@ -1,9 +1,12 @@
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:path/path.dart' as p;
 
+import '../../../data/storage_paths.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../controllers/domain_controller.dart';
 import '../../../core/http/local_http_service.dart';
@@ -22,6 +25,8 @@ class DomainManagementPage extends StatefulWidget {
 class _DomainManagementPageState extends State<DomainManagementPage> {
   late final DomainController _controller;
   late final TextEditingController _domainController;
+  late final TextEditingController _httpPortController;
+  late final TextEditingController _httpsPortController;
   String? _certPath;
   String? _keyPath;
   bool _isStarting = false;
@@ -32,6 +37,8 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
     _controller = Get.find<DomainController>();
     final config = _controller.domainConfig.value;
     _domainController = TextEditingController(text: config.domain);
+    _httpPortController = TextEditingController(text: config.httpPort.toString());
+    _httpsPortController = TextEditingController(text: config.httpsPort.toString());
     _certPath = config.certPath;
     _keyPath = config.keyPath;
   }
@@ -39,6 +46,8 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
   @override
   void dispose() {
     _domainController.dispose();
+    _httpPortController.dispose();
+    _httpsPortController.dispose();
     super.dispose();
   }
 
@@ -97,6 +106,13 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
             _buildSectionTitle(l10n.domainSettings, colorScheme),
             const SizedBox(height: 8),
             _buildDomainSection(colorScheme, l10n),
+
+            const SizedBox(height: 32),
+
+            // 端口设置区域
+            _buildSectionTitle(l10n.portSettings, colorScheme),
+            const SizedBox(height: 8),
+            _buildPortSection(colorScheme, l10n),
 
             const SizedBox(height: 32),
 
@@ -310,6 +326,123 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
           const SizedBox(height: 8),
           Text(
             l10n.domainDesc,
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPortSection(ColorScheme colorScheme, AppLocalizations l10n) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // HTTP 端口
+          Text(
+            l10n.httpPort,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _httpPortController,
+            keyboardType: TextInputType.number,
+            onSubmitted: (_) => _autoSave(),
+            decoration: InputDecoration(
+              hintText: '80',
+              hintStyle: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurface.withValues(alpha: 0.3),
+              ),
+              filled: true,
+              fillColor: colorScheme.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: colorScheme.primary, width: 1),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+            style: TextStyle(fontSize: 14, color: colorScheme.onSurface),
+          ),
+          const SizedBox(height: 16),
+          // HTTPS 端口
+          Text(
+            l10n.httpsPort,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _httpsPortController,
+            keyboardType: TextInputType.number,
+            onSubmitted: (_) => _autoSave(),
+            decoration: InputDecoration(
+              hintText: '443',
+              hintStyle: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurface.withValues(alpha: 0.3),
+              ),
+              filled: true,
+              fillColor: colorScheme.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: colorScheme.primary, width: 1),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+            style: TextStyle(fontSize: 14, color: colorScheme.onSurface),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.portDesc,
             style: TextStyle(
               fontSize: 12,
               color: colorScheme.onSurface.withValues(alpha: 0.5),
@@ -559,10 +692,13 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
         allowMultiple: false,
       );
       if (result != null && result.files.isNotEmpty) {
-        final path = result.files.single.path;
-        if (path != null) {
+        final srcPath = result.files.single.path;
+        if (srcPath != null) {
+          await StoragePaths.ensureSslDir();
+          final destPath = p.join(StoragePaths.sslDir, 'server.crt');
+          await File(srcPath).copy(destPath);
           setState(() {
-            _certPath = path;
+            _certPath = destPath;
           });
           _autoSave();
         }
@@ -580,10 +716,13 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
         allowMultiple: false,
       );
       if (result != null && result.files.isNotEmpty) {
-        final path = result.files.single.path;
-        if (path != null) {
+        final srcPath = result.files.single.path;
+        if (srcPath != null) {
+          await StoragePaths.ensureSslDir();
+          final destPath = p.join(StoragePaths.sslDir, 'server.key');
+          await File(srcPath).copy(destPath);
           setState(() {
-            _keyPath = path;
+            _keyPath = destPath;
           });
           _autoSave();
         }
@@ -594,6 +733,11 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
   }
 
   void _clearCert() {
+    if (_certPath != null) {
+      try {
+        File(_certPath!).deleteSync();
+      } catch (_) {}
+    }
     setState(() {
       _certPath = null;
     });
@@ -601,6 +745,11 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
   }
 
   void _clearKey() {
+    if (_keyPath != null) {
+      try {
+        File(_keyPath!).deleteSync();
+      } catch (_) {}
+    }
     setState(() {
       _keyPath = null;
     });
@@ -616,6 +765,9 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
         .replaceFirst(RegExp(r':\d+$'), '')
         .replaceFirst(RegExp(r'/$'), '');
 
+    final httpPort = int.tryParse(_httpPortController.text.trim()) ?? 80;
+    final httpsPort = int.tryParse(_httpsPortController.text.trim()) ?? 443;
+
     final hasCert =
         _certPath != null &&
         _certPath!.isNotEmpty &&
@@ -627,6 +779,8 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
       certPath: _certPath,
       keyPath: _keyPath,
       httpsEnabled: hasCert,
+      httpPort: httpPort,
+      httpsPort: httpsPort,
     );
 
     await _controller.saveConfig(config);

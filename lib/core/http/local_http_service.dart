@@ -26,13 +26,27 @@ import '../../models/responses/chunk.dart';
 /// HTTP 服务控制器
 class LocalHttpServiceController extends GetxController {
   final isRunning = false.obs;
-  final port = 8899.obs;
+  final port = 80.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _syncPortFromDomain();
+  }
+
+  void _syncPortFromDomain() {
+    try {
+      final domainController = Get.find<DomainController>();
+      port.value = domainController.domainConfig.value.httpPort;
+    } catch (_) {}
+  }
 
   void toggleService() {
     if (isRunning.value) {
       LocalHttpService.stop();
       isRunning.value = false;
     } else {
+      _syncPortFromDomain();
       LocalHttpService.start(port: port.value);
       isRunning.value = true;
     }
@@ -45,6 +59,7 @@ class LocalHttpServiceController extends GetxController {
       // 短暂等待端口释放
       await Future.delayed(const Duration(milliseconds: 300));
     }
+    _syncPortFromDomain();
     LocalHttpService.start(port: port.value);
     isRunning.value = true;
   }
@@ -59,7 +74,7 @@ class LocalHttpService {
   static HttpServer? _server;
   static bool _isRunning = false;
   static bool _isHttps = false;
-  static int _port = 8899;
+  static int _port = 80;
   static String _bindAddress = '0.0.0.0';
 
   static bool get isRunning => _isRunning;
@@ -87,7 +102,7 @@ class LocalHttpService {
   }
 
   static Future<void> start({
-    int port = 8899,
+    int port = 80,
     bool allowExternal = true,
   }) async {
     if (_isRunning) return;

@@ -1145,7 +1145,7 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
-  String get connectorManagementTitle => '连接器管理(MCP)';
+  String get connectorManagementTitle => 'MCP管理';
 
   @override
   String get marketplace => '应用市场';
@@ -1513,7 +1513,7 @@ class AppLocalizationsTh extends AppLocalizations {
       'Marketing planning, brand promotion, competitive analysis';
 
   @override
-  String get domainSettings => 'Service Settings';
+  String get domainSettings => 'Domain Settings';
 
   @override
   String get serviceStatus => 'Local Service';
@@ -1550,6 +1550,19 @@ class AppLocalizationsTh extends AppLocalizations {
       'After setting, the session service URL will use this address. HTTP default port 80, HTTPS default port 443.';
 
   @override
+  String get portSettings => 'Port Settings';
+
+  @override
+  String get httpPort => 'HTTP Port';
+
+  @override
+  String get httpsPort => 'HTTPS Port';
+
+  @override
+  String get portDesc =>
+      'HTTP listening port, default 80. HTTPS listening port, default 443. Restart the service to apply changes.';
+
+  @override
   String get sslCertificate => 'SSL Certificate';
 
   @override
@@ -1580,4 +1593,13 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get domainSaved => 'Service configuration saved';
+
+  @override
+  String get currencyLabel => 'Currency';
+
+  @override
+  String get cny => 'CNY';
+
+  @override
+  String get usd => 'USD';
 }

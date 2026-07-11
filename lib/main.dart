@@ -75,13 +75,17 @@ void main() async {
   Get.put(LocaleController());
 
   // 初始化 DomainController（域名管理）
-  Get.put(DomainController());
+  final domainController = Get.put(DomainController());
+
+  // 确保域名配置加载完成
+  await Future.delayed(const Duration(milliseconds: 100));
 
   // 初始化 LocalHttpServiceController（本地服务控制）
   Get.put(LocalHttpServiceController());
 
-  // 启动 HTTP 服务（大模型统一请求接口）
-  LocalHttpService.start(port: 8899, allowExternal: true);
+  // 启动 HTTP 服务（使用配置的 HTTP 端口，默认 80）
+  final port = domainController.domainConfig.value.httpPort;
+  LocalHttpService.start(port: port, allowExternal: true);
 
   runApp(const MyApp());
 }

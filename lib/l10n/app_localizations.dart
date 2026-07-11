@@ -2841,7 +2841,7 @@ abstract class AppLocalizations {
   /// No description provided for @domainSettings.
   ///
   /// In en, this message translates to:
-  /// **'Service Settings'**
+  /// **'Domain Settings'**
   String get domainSettings;
 
   /// No description provided for @serviceStatus.
@@ -2895,7 +2895,7 @@ abstract class AppLocalizations {
   /// No description provided for @domainAddress.
   ///
   /// In en, this message translates to:
-  /// **'Service Address'**
+  /// **'Domain Address'**
   String get domainAddress;
 
   /// No description provided for @domainHint.
@@ -2909,6 +2909,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'After setting, the session service URL will use this address. HTTP default port 80, HTTPS default port 443.'**
   String get domainDesc;
+
+  /// No description provided for @portSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Port Settings'**
+  String get portSettings;
+
+  /// No description provided for @httpPort.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP Port'**
+  String get httpPort;
+
+  /// No description provided for @httpsPort.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTPS Port'**
+  String get httpsPort;
+
+  /// No description provided for @portDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP listening port, default 80. HTTPS listening port, default 443. Restart the service to apply changes.'**
+  String get portDesc;
 
   /// No description provided for @sslCertificate.
   ///
@@ -2969,6 +2993,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Service configuration saved'**
   String get domainSaved;
+
+  /// No description provided for @currencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get currencyLabel;
+
+  /// No description provided for @cny.
+  ///
+  /// In en, this message translates to:
+  /// **'CNY'**
+  String get cny;
+
+  /// No description provided for @usd.
+  ///
+  /// In en, this message translates to:
+  /// **'USD'**
+  String get usd;
 }
 
 class _AppLocalizationsDelegate

@@ -328,7 +328,7 @@
   "clickAddModelHint": "点击左下角\"添加模型\"按钮开始添加",
   "modelUpdatedNotify": "模型 \"{name}\" 已更新，相关会话设置已同步",
   "serviceRemoved": "已移除服务: {name}",
-  "connectorManagementTitle": "连接器管理(MCP)",
+  "connectorManagementTitle": "MCP管理",
   "marketplace": "应用市场",
   "noMcpServices": "暂无 MCP 服务",
   "clickToEnterMarketplace": "点击右上角 + 号进入应用市场",
@@ -441,7 +441,7 @@
   "workModeMarketing": "Marketing",
   "workModeMarketingDesc": "Marketing planning, brand promotion, competitive analysis",
   "domainManagement": "Service Management",
-  "domainSettings": "Service Settings",
+  "domainSettings": "Domain Settings",
   "serviceStatus": "Local Service",
   "localService": "Local Service",
   "serviceStopped": "Service stopped",
@@ -462,5 +462,8 @@
   "pleaseEnterDomain": "Please enter service address",
   "serviceRunning": "Running",
   "serviceStarting": "Starting...",
-  "domainSaved": "Service configuration saved"
+  "domainSaved": "Service configuration saved",
+  "currencyLabel": "Currency",
+  "cny": "CNY",
+  "usd": "USD"
 }

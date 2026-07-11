@@ -110,7 +110,8 @@ class SessionController extends GetxController {
     if (idx != -1) {
       sessions[idx] = updatedSession;
     }
-    final isCurrent = currentSession.value?.sessionId == updatedSession.sessionId;
+    final isCurrent =
+        currentSession.value?.sessionId == updatedSession.sessionId;
     if (isCurrent) {
       currentSession.value = updatedSession;
     }
@@ -130,15 +131,15 @@ class SessionController extends GetxController {
       if (msg.completionTokens != null) outputTotal += msg.completionTokens!;
     }
 
-    // 根据模型价格计算费用（美元/百万token）
+    // 根据模型价格计算费用（价格/百万token，货币类型由模型的currency字段决定）
     if (session.chatModel != null) {
-      final inputPrice = session.chatModel!.inputPrice;
-      final outputPrice = session.chatModel!.outputPrice;
-      if (inputPrice != null) {
-        cost += inputTotal * inputPrice / 1000000.0;
+      final promptPrice = session.chatModel!.promptPrice;
+      final completionPrice = session.chatModel!.completionPrice;
+      if (promptPrice != null) {
+        cost += inputTotal * promptPrice / 1000000.0;
       }
-      if (outputPrice != null) {
-        cost += outputTotal * outputPrice / 1000000.0;
+      if (completionPrice != null) {
+        cost += outputTotal * completionPrice / 1000000.0;
       }
     }
 
@@ -156,8 +157,10 @@ class SessionController extends GetxController {
   }
 
   /// 合并持久化：session.json + message.json + memory.md + 相关文件
-  Future<void> _persistSessionAndCurrent(ChatSession updatedSession,
-      {required bool isCurrent}) async {
+  Future<void> _persistSessionAndCurrent(
+    ChatSession updatedSession, {
+    required bool isCurrent,
+  }) async {
     try {
       final store = StorageService.instance.store;
 
@@ -182,16 +185,19 @@ class SessionController extends GetxController {
       // === 2. 持久化当前会话的消息 ===
       if (isCurrent) {
         final messages = updatedSession.messages;
-        final messagesJson =
-            messages.map((m) => m.toJson()).toList();
+        final messagesJson = messages.map((m) => m.toJson()).toList();
         await store.isarChatMessages.putAll(
-            updatedSession.sessionId, messagesJson);
+          updatedSession.sessionId,
+          messagesJson,
+        );
       }
 
       // === 3. 持久化 MCP 绑定到 mcp.json ===
       if (updatedSession.mcpServer != null) {
         await SessionFileStore.writeMcp(
-            updatedSession.sessionId, updatedSession.mcpServer!.toFullJson());
+          updatedSession.sessionId,
+          updatedSession.mcpServer!.toFullJson(),
+        );
       }
     } catch (e) {
       debugPrint('合并持久化失败: $e');
@@ -216,8 +222,7 @@ class SessionController extends GetxController {
     final updatedSession = session.copyWith(messages: newMessages);
     sessions[sessionIndex] = updatedSession;
 
-    final isCurrent =
-        currentSession.value?.sessionId == session.sessionId;
+    final isCurrent = currentSession.value?.sessionId == session.sessionId;
     if (isCurrent) {
       currentSession.value = updatedSession;
     }
@@ -242,8 +247,7 @@ class SessionController extends GetxController {
     final updatedSession = session.copyWith(messages: newMessages);
     sessions[sessionIndex] = updatedSession;
 
-    final isCurrent =
-        currentSession.value?.sessionId == session.sessionId;
+    final isCurrent = currentSession.value?.sessionId == session.sessionId;
     if (isCurrent) {
       currentSession.value = updatedSession;
     }
@@ -259,8 +263,9 @@ class SessionController extends GetxController {
       final target = sessions[targetIndex];
       currentSession.value = target;
       McpController.instance.initForSession(target);
-      Future.microtask(() =>
-          _persistSessionAndCurrent(target, isCurrent: true));
+      Future.microtask(
+        () => _persistSessionAndCurrent(target, isCurrent: true),
+      );
     }
   }
 
@@ -344,8 +349,7 @@ class SessionController extends GetxController {
       if (idx != -1) {
         final updated = sessions[idx].copyWith(messages: messages);
         sessions[idx] = updated;
-        final isCurrent =
-            currentSession.value?.sessionId == sessionId;
+        final isCurrent = currentSession.value?.sessionId == sessionId;
         if (isCurrent) {
           currentSession.value = updated;
         }
@@ -395,8 +399,9 @@ class SessionController extends GetxController {
   Future<List<ChatMessage>> loadMessages(String sessionId) async {
     try {
       final store = StorageService.instance.store;
-      final messagesData =
-          await store.isarChatMessages.getBySessionId(sessionId);
+      final messagesData = await store.isarChatMessages.getBySessionId(
+        sessionId,
+      );
 
       return messagesData
           .map((m) {
@@ -455,11 +460,9 @@ class SessionController extends GetxController {
       final store = StorageService.instance.store;
       final ids = await StoragePaths.listSessionIds();
       for (final sid in ids) {
-        final messagesData =
-            await store.isarChatMessages.getBySessionId(sid);
+        final messagesData = await store.isarChatMessages.getBySessionId(sid);
         if (messagesData.any((m) => m['id'] == messageId)) {
-          final sessionData =
-              await store.isarChatSessions.getBySessionId(sid);
+          final sessionData = await store.isarChatSessions.getBySessionId(sid);
           if (sessionData != null) {
             return await _mapToSession(sessionData);
           }
@@ -495,11 +498,10 @@ class SessionController extends GetxController {
       'sessionQuickCommands':
           session.sessionQuickCommands.map((c) => c.toJson()).toList(),
       'scheduledTask': session.scheduledTask?.toJson(),
-      'attachments':
-          session.attachments.map((a) => a.toJson()).toList(),
+      'attachments': session.attachments.map((a) => a.toJson()).toList(),
       'emoji': session.emoji,
-      'totalInputTokens': session.promptTokens,
-      'totalOutputTokens': session.completionTokens,
+      'promptTokens': session.promptTokens,
+      'completionTokens': session.completionTokens,
       'totalCost': session.totalCost,
       'apiKey': session.apiKey,
       'quotaEnabled': session.quotaEnabled,
@@ -519,8 +521,9 @@ class SessionController extends GetxController {
     if (modelId != null && modelId.isNotEmpty) {
       try {
         final modelController = Get.find<ModelController>();
-        chatModel =
-            modelController.models.firstWhere((m) => m.modelId == modelId);
+        chatModel = modelController.models.firstWhere(
+          (m) => m.modelId == modelId,
+        );
       } catch (_) {}
     }
 
@@ -528,8 +531,9 @@ class SessionController extends GetxController {
     ScheduledTask? scheduledTask;
     if (entity['scheduledTask'] is Map<String, dynamic>) {
       try {
-        scheduledTask =
-            ScheduledTask.fromJson(entity['scheduledTask'] as Map<String, dynamic>);
+        scheduledTask = ScheduledTask.fromJson(
+          entity['scheduledTask'] as Map<String, dynamic>,
+        );
       } catch (_) {}
     }
 
@@ -537,9 +541,10 @@ class SessionController extends GetxController {
     List<ChatCommand> commands = [];
     if (entity['sessionQuickCommands'] is List) {
       try {
-        commands = (entity['sessionQuickCommands'] as List)
-            .map((c) => ChatCommand.fromJson(c as Map<String, dynamic>))
-            .toList();
+        commands =
+            (entity['sessionQuickCommands'] as List)
+                .map((c) => ChatCommand.fromJson(c as Map<String, dynamic>))
+                .toList();
       } catch (_) {}
     }
 
@@ -547,26 +552,30 @@ class SessionController extends GetxController {
     List<ChatAttachment> attachments = [];
     if (entity['attachments'] is List) {
       try {
-        attachments = (entity['attachments'] as List)
-            .map((a) => ChatAttachment.fromJson(a as Map<String, dynamic>))
-            .toList();
+        attachments =
+            (entity['attachments'] as List)
+                .map((a) => ChatAttachment.fromJson(a as Map<String, dynamic>))
+                .toList();
       } catch (_) {}
     }
 
     return ChatSession(
       sessionId: entity['sessionId'] as String? ?? '',
       name: entity['name'] as String? ?? '新对话',
-      createdAt: entity['createdAt'] != null
-          ? DateTime.tryParse(entity['createdAt'] as String) ?? DateTime.now()
-          : DateTime.now(),
+      createdAt:
+          entity['createdAt'] != null
+              ? DateTime.tryParse(entity['createdAt'] as String) ??
+                  DateTime.now()
+              : DateTime.now(),
       messages: [], // 消息懒加载
       modelId: modelId,
       mcp: _resolveMcpFolder(entity),
-      mcpServer: entity['mcpServer'] is Map<String, dynamic>
-          ? Mcp.fromMap(entity['mcpServer'])
-          : (entity['mcpConfig'] is Map<String, dynamic>
-              ? Mcp.fromMap(entity['mcpConfig'])
-              : null),
+      mcpServer:
+          entity['mcpServer'] is Map<String, dynamic>
+              ? Mcp.fromMap(entity['mcpServer'])
+              : (entity['mcpConfig'] is Map<String, dynamic>
+                  ? Mcp.fromMap(entity['mcpConfig'])
+                  : null),
       chatModel: chatModel,
       isFavorite: entity['isFavorite'] as bool? ?? false,
       inputContent: entity['inputContent'] as String? ?? '',
@@ -588,9 +597,10 @@ class SessionController extends GetxController {
       quotaCostLimit: (entity['quotaCostLimit'] as num?)?.toDouble(),
       quotaRequestLimit: entity['quotaRequestLimit'] as int?,
       quotaResetPeriod: entity['quotaResetPeriod'] as String?,
-      quotaPeriodStart: entity['quotaPeriodStart'] != null
-          ? DateTime.tryParse(entity['quotaPeriodStart'] as String)
-          : null,
+      quotaPeriodStart:
+          entity['quotaPeriodStart'] != null
+              ? DateTime.tryParse(entity['quotaPeriodStart'] as String)
+              : null,
       quotaRequestCount: entity['quotaRequestCount'] as int? ?? 0,
     );
   }
@@ -657,12 +667,16 @@ class SessionController extends GetxController {
         }
 
         // 签署方: - **角色**: 名称
-        final partyMatch = RegExp(r'^-\s*\*\*(.+?)\*\*:\s*(.+)').firstMatch(line);
+        final partyMatch = RegExp(
+          r'^-\s*\*\*(.+?)\*\*:\s*(.+)',
+        ).firstMatch(line);
         if (partyMatch != null) {
-          parties.add(ContractParty(
-            role: partyMatch.group(1)!,
-            name: partyMatch.group(2)!.trim(),
-          ));
+          parties.add(
+            ContractParty(
+              role: partyMatch.group(1)!,
+              name: partyMatch.group(2)!.trim(),
+            ),
+          );
           continue;
         }
 
@@ -671,24 +685,29 @@ class SessionController extends GetxController {
         if (periodMatch != null) {
           final label = periodMatch.group(1)!;
           final value = periodMatch.group(2)!.trim();
-          if (label.contains('起始')) startDate = value;
-          else if (label.contains('结束')) endDate = value;
-          else if (label.contains('签订') || label.contains('签署')) signingDate = value;
+          if (label.contains('起始'))
+            startDate = value;
+          else if (label.contains('结束'))
+            endDate = value;
+          else if (label.contains('签订') || label.contains('签署'))
+            signingDate = value;
         }
       }
 
-      contracts.add(ContractInfo(
-        name: name,
-        parties: parties,
-        contractType: contractType,
-        startDate: startDate,
-        endDate: endDate,
-        signingDate: signingDate,
-        paymentClause: paymentClause,
-        paymentSchedule: paymentSchedule,
-        breachClause: breachClause,
-        liabilityClause: liabilityClause,
-      ));
+      contracts.add(
+        ContractInfo(
+          name: name,
+          parties: parties,
+          contractType: contractType,
+          startDate: startDate,
+          endDate: endDate,
+          signingDate: signingDate,
+          paymentClause: paymentClause,
+          paymentSchedule: paymentSchedule,
+          breachClause: breachClause,
+          liabilityClause: liabilityClause,
+        ),
+      );
     }
 
     return contracts;

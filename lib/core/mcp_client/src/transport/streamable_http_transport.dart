@@ -7,7 +7,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
-import '../../logger.dart';
+import 'package:logging/logging.dart';
+
 import '../auth/oauth.dart';
 import '../auth/oauth_client.dart';
 import '../models/models.dart';

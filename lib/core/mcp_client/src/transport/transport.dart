@@ -3,9 +3,17 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:io' show Process, HttpClient, ContentType;
 
-import '../../logger.dart';
+import 'package:logging/logging.dart';
+
 import '../models/models.dart';
 import 'event_source.dart';
+
+/// Extension methods for backward compatibility with Logger
+extension LoggerExtensions on Logger {
+  void debug(String message) => fine(message);
+  void error(String message) => severe(message);
+  void warn(String message) => warning(message);
+}
 
 final Logger _logger = Logger('mcp_client.transport');
 

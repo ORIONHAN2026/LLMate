@@ -12,7 +12,7 @@ import 'dart:io'
         HttpClientRequest,
         HttpClientResponse;
 
-import '../../logger.dart';
+import 'package:logging/logging.dart';
 import '../models/models.dart';
 import 'transport.dart';
 

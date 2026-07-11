@@ -198,46 +198,6 @@ class StoragePaths {
   );
 
   // ═══════════════════════════════════════════════════
-  // 旧接口兼容（标记为 deprecated）
-  // ═══════════════════════════════════════════════════
-
-  /// @deprecated 使用 contractContentFile(sessionId:, workDirectory:) 代替
-  static String contractContentFileLegacy(String sessionId) =>
-      p.join(sessionDir(sessionId), 'contract_content.md');
-
-  /// @deprecated 使用 contractProcessFile(sessionId:, workDirectory:) 代替
-  static String contractProcessFileLegacy(String sessionId) =>
-      p.join(sessionDir(sessionId), 'contract_process.md');
-
-  /// @deprecated 使用 contractDisgussFile(sessionId:, workDirectory:) 代替
-  static String contractDisgussFileLegacy(String sessionId) =>
-      p.join(sessionDir(sessionId), 'contract_disguss.md');
-
-  /// @deprecated 使用 noteFile(sessionId:, workMode:, workDirectory:) 代替
-  static String noteFileLegacy(String sessionId) =>
-      p.join(sessionDir(sessionId), 'note.md');
-
-  /// @deprecated 使用 invoiceSummaryFile(sessionId:, workDirectory:) 代替
-  static String invoiceSummaryFileLegacy(String sessionId) =>
-      p.join(sessionDir(sessionId), 'invoice_summary.md');
-
-  /// @deprecated 使用 invoiceDetailFile(sessionId:, workDirectory:) 代替
-  static String invoiceDetailFileLegacy(String sessionId) =>
-      p.join(sessionDir(sessionId), 'invoice_detail.md');
-
-  /// @deprecated 使用 reimbursementFile(sessionId:, workDirectory:) 代替
-  static String reimbursementFileLegacy(String sessionId) =>
-      p.join(sessionDir(sessionId), 'reimbursement.md');
-
-  /// @deprecated 使用 rolesDir(sessionId:, workDirectory:) 代替
-  static String rolesDirLegacy(String sessionId) =>
-      p.join(sessionDir(sessionId), 'roles');
-
-  /// @deprecated 使用 roleFile(sessionId:, roleName:, workDirectory:) 代替
-  static String roleFileLegacy(String sessionId, String roleName) =>
-      p.join(rolesDirLegacy(sessionId), '$roleName.md');
-
-  // ═══════════════════════════════════════════════════
   // 通用工具
   // ═══════════════════════════════════════════════════
 

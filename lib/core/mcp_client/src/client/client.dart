@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import '../../logger.dart';
+import 'package:logging/logging.dart';
+
 import '../models/models.dart';
 import '../protocol/protocol.dart';
 import '../transport/transport.dart';

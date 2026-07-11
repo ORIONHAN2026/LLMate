@@ -276,14 +276,11 @@ class LlmClient {
     _cancelled = false;
     bool doneReceived = false;
 
-    var session = request.context['session'] as ChatSession;
     final bodyStr = await request.readAsString();
     debugPrint(
       '📨 请求体: ${bodyStr.substring(0, bodyStr.length.clamp(0, 100))}...',
     );
     final requestData = jsonDecode(bodyStr) as Map<String, dynamic>;
-
-    final tools = _buildTools(session);
 
     final responseBuffer = StringBuffer();
     final thinkBuffer = StringBuffer();

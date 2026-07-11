@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'dart:io'
     show HttpClient, HttpClientRequest, HttpClientResponse, ContentType;
 
-import '../../logger.dart';
+import 'package:logging/logging.dart';
 import '../auth/oauth.dart';
 import '../models/models.dart';
 import 'transport.dart';

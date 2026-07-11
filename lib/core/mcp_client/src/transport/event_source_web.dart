@@ -3,9 +3,14 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../../logger.dart';
+import 'package:logging/logging.dart';
 import '../models/models.dart';
 import 'event_source_stub.dart' as stub;
+
+extension _LoggerExtensions on Logger {
+  void debug(String message) => fine(message);
+  void error(String message) => severe(message);
+}
 
 final Logger _logger = Logger('mcp_client.event_source_web');
 

@@ -11,5 +11,3 @@ export 'src/auth/oauth.dart';
 export 'src/auth/oauth_client.dart';
 export 'src/common/result.dart';
 export 'src/common/connection_state.dart';
-export 'logger.dart';
-

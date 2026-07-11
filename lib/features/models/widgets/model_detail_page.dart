@@ -34,11 +34,6 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
   late TextEditingController _systemPromptController;
   late TextEditingController _quickCommandController; // 快捷指令输入控制器
   Timer? _debounceTimer; // 防抖定时器
-  // 当前选择的快捷指令图标
-
-  // 快捷指令图标选项 - 使用 CupertinoIcons
-
-  // IconData 和 String 之间的转换映射
 
   @override
   void initState() {
@@ -168,16 +163,11 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
 
   Widget _buildModelHeader() {
     return Container(
-      padding: const EdgeInsets.all(16), // 从24减少到16
-      // decoration: BoxDecoration(
-      //   color: Colors.white,
-      //   borderRadius: BorderRadius.circular(12), // 从16减少到12
-      //   border: Border.all(color: const Color(0xFFE5E5E5), width: 1),
-      // ),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           // 模型图标和信息
-          const SizedBox(width: 12), // 从20减少到12
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,12 +177,12 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 18, // 从24减少到18
-                    fontWeight: FontWeight.w600, // 从w700减少到w600
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 6), // 从8减少到6
+                const SizedBox(height: 6),
                 Text(
                   _currentModel.platform ?? '',
                   maxLines: 1,
@@ -202,7 +192,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                     color: Theme.of(
                       context,
                     ).colorScheme.onSurface.withOpacity(0.6),
-                  ), // 从14减少到12
+                  ),
                 ),
               ],
             ),
@@ -210,33 +200,6 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
           // 操作按钮
           Column(
             children: [
-              // Elevates
-              //   onPressed: _toggleModelStatus,
-              //   icon: Icon(
-              //     _currentModel.status == 'active'
-              //         ? CupertinoIcons.pause
-              //         : CupertinoIcons.play,
-              //     size: 10,
-              //   ),
-              //   label: Text(_currentModel.status == 'active' ? '停用' : '启用'),
-              //   style: ElevatedButton.styleFrom(
-              //     backgroundColor:
-              //         _currentModel.status == 'active'
-              //             ? Colors.orange
-              //             : const Color(0xFF10B981),
-              //     foregroundColor: Colors.white,
-              //     padding: const EdgeInsets.symmetric(
-              //       horizontal: 8,
-              //       vertical: 4,
-              //     ),
-              //     minimumSize: const Size(60, 28),
-              //     textStyle: const TextStyle(fontSize: 11),
-              //     shape: RoundedRectangleBorder(
-              //       borderRadius: BorderRadius.circular(6),
-              //     ),
-              //   ),
-              // ),
-              // const SizedBox(height: 4),
               OutlinedButton.icon(
                 onPressed: () {
                   // 删除模型
@@ -267,7 +230,6 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
       ),
     );
   }
-
 
   void _showDeleteConfirmation() async {
     final loc = AppLocalizations.of(context)!;

@@ -501,7 +501,4 @@ class LocalHttpService {
     }
   }
 
-  /// 本地对话调用（对话框使用）
-  ///
-  /// 组装请求体，通过 HTTP 服务透传
 }

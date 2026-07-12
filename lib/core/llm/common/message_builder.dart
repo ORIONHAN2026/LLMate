@@ -1,5 +1,6 @@
 import '../../../models/bigmodel/chat_model.dart';
 import '../../../models/chat/chat_session.dart';
+import '../../../controllers/mcp_controller.dart';
 
 import './system_prompts.dart';
 
@@ -48,9 +49,12 @@ class MessageBuilder {
       'content': CommonSystemPrompts.noWebSearch,
     });
 
-    // 4. MCP 工具描述注入（添加/刷新时已生成 prompt，直接读取）
-    if (session?.mcpServer?.prompt != null && session!.mcpServer!.prompt!.isNotEmpty) {
-      systemMessages.add({'role': 'system', 'content': session.mcpServer!.prompt!});
+    // 4. MCP 工具描述注入（合并 session MCP + model MCP，去重）
+    if (session != null) {
+      final mergedPrompt = McpController.instance.buildMergedMcpPrompt(session);
+      if (mergedPrompt.isNotEmpty) {
+        systemMessages.add({'role': 'system', 'content': mergedPrompt});
+      }
     }
 
     // 5. 连接器关系描述提示词
@@ -63,7 +67,7 @@ class MessageBuilder {
       });
     }
 
-    // 5. 深度思考模式：注入推理增强提示词
+    // 6. 深度思考模式：注入推理增强提示词
     if (session?.deepThink == true) {
       systemMessages.add({
         'role': 'system',

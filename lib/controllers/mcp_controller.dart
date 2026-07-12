@@ -574,9 +574,22 @@ class McpController extends GetxController {
   // ═══ 会话级管理 ═══
 
   List<Mcp> _getEnabledServices(ChatSession s) {
-    if (s.mcp == null || s.mcp!.isEmpty) return [];
-    final cfg = getMcp(s.mcp!);
-    return cfg != null ? [cfg] : [];
+    final services = <Mcp>[];
+    // session-level MCP
+    if (s.mcp != null && s.mcp!.isNotEmpty) {
+      final cfg = getMcp(s.mcp!);
+      if (cfg != null) services.add(cfg);
+    }
+    // model-level MCPs
+    final modelMcps = s.chatModel?.mcps;
+    if (modelMcps != null && modelMcps.isNotEmpty) {
+      for (final name in modelMcps) {
+        if (name.isEmpty || name == s.mcp) continue;
+        final cfg = getMcp(name);
+        if (cfg != null) services.add(cfg);
+      }
+    }
+    return services;
   }
 
   Future<Mcp?> initializeSessionMcpServices(ChatSession s) async {
@@ -603,70 +616,241 @@ class McpController extends GetxController {
     return all;
   }
 
-  Future<Client?> getOrInitClient(ChatSession s) async {
-    final svc = s.mcp;
-    if (svc == null || svc.isEmpty) return null;
-    Client? mc = getMCPClient(svc);
+  Future<Client?> getOrInitClient(ChatSession s, {String? toolName}) async {
+    // Find the MCP that has the requested tool
+    if (toolName != null && toolName.isNotEmpty) {
+      for (final mcpName in _effectiveMcpNames(s)) {
+        if (_hasTool(mcpName, toolName)) {
+          final mc = await _getOrInitSingleClient(mcpName);
+          if (mc != null) return mc;
+        }
+      }
+      return null;
+    }
+
+    // No specific tool requested, return first available client
+    for (final mcpName in _effectiveMcpNames(s)) {
+      final mc = await _getOrInitSingleClient(mcpName);
+      if (mc != null) return mc;
+    }
+    return null;
+  }
+
+  /// Find the MCP name that owns a specific tool
+  String? findMcpOwner(ChatSession s, String toolName) {
+    for (final mcpName in _effectiveMcpNames(s)) {
+      if (_hasTool(mcpName, toolName)) return mcpName;
+    }
+    return null;
+  }
+
+  Future<Client?> _getOrInitSingleClient(String mcpName) async {
+    Client? mc = getMCPClient(mcpName);
     if (mc == null) {
       try {
         await ensureLoaded();
-        final inited = await initializeSessionMcpServices(s);
-        if (inited == null) return null;
-        mc = getMCPClient(svc);
+        await _initSingleMcp(mcpName);
+        mc = getMCPClient(mcpName);
       } on TimeoutException {
-        debugPrint('⏱ getOrInitClient 超时: $svc');
-        return null;
+        debugPrint('⏱ _getOrInitSingleClient 超时: $mcpName');
       } catch (e) {
-        debugPrint('❌ getOrInitClient 失败: $svc, $e');
-        return null;
+        debugPrint('❌ _getOrInitSingleClient 失败: $mcpName, $e');
       }
     }
     return mc;
   }
 
-  void initForSession(ChatSession s) {
-    if (s.mcp == null || s.mcp!.isEmpty) return;
-    final svc = s.mcp!;
-    if (_clients.containsKey(svc)) {
-      debugPrint('📡 MCP 已存在: $svc');
-      return;
-    }
-    debugPrint('🚀 预初始化 MCP: $svc');
-    Future.microtask(() async {
-      try {
-        await ensureLoaded();
-        await initializeSessionMcpServices(s);
-      } on TimeoutException {
-        debugPrint('⏱ 预初始化超时: $svc');
-      } catch (e) {
-        debugPrint('❌ 预初始化失败: $svc, $e');
+  bool _hasTool(String mcpName, String toolName) {
+    final mcp = getMcp(mcpName);
+    if (mcp?.tools == null) return false;
+    return mcp!.tools!.any((t) => t.name == toolName);
+  }
+
+  /// Get all effective MCP names for a session (session MCP + model MCPs, deduplicated)
+  Iterable<String> _effectiveMcpNames(ChatSession s) sync* {
+    if (s.mcp != null && s.mcp!.isNotEmpty) yield s.mcp!;
+    final modelMcps = s.chatModel?.mcps;
+    if (modelMcps != null) {
+      for (final name in modelMcps) {
+        if (name.isNotEmpty && name != s.mcp) yield name;
       }
-    });
+    }
+  }
+
+  /// Initialize a single MCP by name
+  Future<void> _initSingleMcp(String mcpName) async {
+    if (_clients.containsKey(mcpName)) return;
+    final cfg = getMcp(mcpName);
+    if (cfg == null) return;
+    await initializeClient(cfg);
+  }
+
+  /// Get merged tools from session MCP + model MCP, deduplicated by name
+  List<McpTool> getMergedTools(ChatSession s) {
+    final seen = <String>{};
+    final merged = <McpTool>[];
+
+    for (final mcpName in _effectiveMcpNames(s)) {
+      final tools = getTools(mcpName);
+      for (final t in tools) {
+        if (seen.add(t.name)) merged.add(t);
+      }
+    }
+    return merged;
+  }
+
+  /// Get merged MCP servers list (for prompt building)
+  List<Mcp> getMergedMcpServers(ChatSession s) {
+    final servers = <Mcp>[];
+    for (final mcpName in _effectiveMcpNames(s)) {
+      final mcp = getMcp(mcpName);
+      if (mcp != null) servers.add(mcp);
+    }
+    return servers;
+  }
+
+  /// Build MCP prompt from merged tools (deduplicated across all MCPs)
+  String buildMergedMcpPrompt(ChatSession s) {
+    final mergedTools = getMergedTools(s);
+    if (mergedTools.isEmpty) return '';
+    final buf = StringBuffer();
+    buf.writeln('## 可用的MCP工具\n');
+    for (int i = 0; i < mergedTools.length; i++) {
+      final tool = mergedTools[i];
+      buf.writeln('#### ${i + 1}. **${tool.name}**');
+      buf.writeln('**功能描述**: ${tool.description}\n');
+      if (tool.inputSchema.isNotEmpty) {
+        final schema = tool.inputSchema;
+        final properties = schema['properties'] as Map<String, dynamic>? ?? {};
+        final required = (schema['required'] as List<dynamic>?) ?? [];
+        if (properties.isNotEmpty) {
+          buf.writeln('**参数详情**:');
+          for (final entry in properties.entries) {
+            final propName = entry.key;
+            final propInfo = entry.value as Map<String, dynamic>? ?? {};
+            final type = propInfo['type'] ?? 'string';
+            final desc = propInfo['description'] ?? '无描述';
+            final mark = required.contains(propName) ? '🔴 必需' : '⚪ 可选';
+            buf.writeln('- **$propName** ($type) - $mark');
+            buf.writeln('  说明: $desc');
+            if (propInfo.containsKey('enum')) {
+              final ev = propInfo['enum'] as List<dynamic>? ?? [];
+              if (ev.isNotEmpty) buf.writeln('  可选值: ${ev.join(', ')}');
+            }
+            if (propInfo.containsKey('default'))
+              buf.writeln('  默认值: ${propInfo['default']}');
+            buf.writeln();
+          }
+        }
+        buf.writeln('**📋 标准调用示例**:');
+        final exampleArgs = <String, dynamic>{};
+        for (final entry in properties.entries) {
+          final propName = entry.key;
+          final propInfo = entry.value as Map<String, dynamic>? ?? {};
+          final type = propInfo['type'] ?? 'string';
+          if (required.contains(propName)) {
+            switch (type) {
+              case 'string':
+                if (propInfo.containsKey('enum')) {
+                  final ev = propInfo['enum'] as List<dynamic>? ?? [];
+                  exampleArgs[propName] =
+                      ev.isNotEmpty ? ev.first.toString() : 'example_string';
+                } else if (propName.toLowerCase().contains('path')) {
+                  exampleArgs[propName] = '/path/to/file';
+                } else if (propName.toLowerCase().contains('query')) {
+                  exampleArgs[propName] = '搜索关键词';
+                } else {
+                  exampleArgs[propName] = 'example_string';
+                }
+              case 'number':
+              case 'integer':
+                exampleArgs[propName] = 42;
+              case 'boolean':
+                exampleArgs[propName] = true;
+              case 'array':
+                exampleArgs[propName] = ['item1', 'item2'];
+              case 'object':
+                exampleArgs[propName] = {'key': 'value'};
+              default:
+                exampleArgs[propName] = 'example_value';
+            }
+          }
+        }
+        buf.writeln('```xml');
+        buf.writeln('<tool_calls>');
+        buf.writeln('<invoke name="${tool.name}">');
+        if (exampleArgs.isNotEmpty) {
+          buf.writeln('<arguments>');
+          try {
+            buf.writeln(
+              const JsonEncoder.withIndent('  ').convert(exampleArgs),
+            );
+          } catch (_) {
+            buf.writeln('{}');
+          }
+          buf.writeln('</arguments>');
+        }
+        buf.writeln('</invoke>');
+        buf.writeln('</tool_calls>');
+        buf.writeln('```\n');
+      }
+      buf.writeln('---\n');
+    }
+    return buf.toString();
+  }
+
+  void initForSession(ChatSession s) {
+    // init both session and model MCPs
+    for (final mcpName in _effectiveMcpNames(s)) {
+      if (_clients.containsKey(mcpName)) {
+        debugPrint('📡 MCP 已存在: $mcpName');
+        continue;
+      }
+      debugPrint('🚀 预初始化 MCP: $mcpName');
+      Future.microtask(() async {
+        try {
+          await ensureLoaded();
+          await _initSingleMcp(mcpName);
+        } on TimeoutException {
+          debugPrint('⏱ 预初始化超时: $mcpName');
+        } catch (e) {
+          debugPrint('❌ 预初始化失败: $mcpName, $e');
+        }
+      });
+    }
   }
 
   Future<Mcp?> initForSessionSync(ChatSession s) async {
-    if (s.mcp == null || s.mcp!.isEmpty) return null;
-    final svc = s.mcp!;
-    if (_clients.containsKey(svc) && _availableTools.containsKey(svc)) {
-      debugPrint('📡 MCP 已就绪: $svc');
-      return null;
+    // init all effective MCPs (session + model)
+    Mcp? lastServer;
+    for (final mcpName in _effectiveMcpNames(s)) {
+      if (_clients.containsKey(mcpName) && _availableTools.containsKey(mcpName)) {
+        debugPrint('📡 MCP 已就绪: $mcpName');
+        continue;
+      }
+      debugPrint('🚀 同步初始化 MCP: $mcpName');
+      try {
+        await ensureLoaded();
+        final cfg = getMcp(mcpName);
+        if (cfg != null) {
+          lastServer = await initializeClient(cfg);
+        }
+      } on TimeoutException {
+        debugPrint('⏱ 同步初始化超时: $mcpName');
+      } catch (e) {
+        debugPrint('❌ 同步初始化失败: $mcpName, $e');
+      }
     }
-    debugPrint('🚀 同步初始化 MCP: $svc');
-    try {
-      await ensureLoaded();
-      return await initializeSessionMcpServices(s);
-    } on TimeoutException {
-      debugPrint('⏱ 同步初始化超时: $svc');
-      return null;
-    } catch (e) {
-      debugPrint('❌ 同步初始化失败: $svc, $e');
-      return null;
-    }
+    return lastServer;
   }
 
   bool hasAvailableTools(ChatSession s) {
-    if (s.mcp == null || !hasGlobalMcpServices) return false;
-    return getSessionAvailableTools(s).isNotEmpty;
+    if (!hasGlobalMcpServices) return false;
+    // check if any MCP (session or model) has tools
+    for (final mcpName in _effectiveMcpNames(s)) {
+      if (_availableTools[mcpName]?.isNotEmpty == true) return true;
+    }
+    return false;
   }
 
   // ═══ Prompt 构建 ═══

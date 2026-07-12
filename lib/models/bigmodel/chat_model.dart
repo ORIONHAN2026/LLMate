@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../chat/chat_setting.dart';
+import '../chat/mcp_config.dart';
 import '../../core/utils/model_icon_utils.dart';
 
 /// 聊天模型数据结构
@@ -31,6 +32,12 @@ class ChatModel {
   // 对话设置 - 使用ChatSettings对象
   final ChatSettings? chatSettings;
 
+  /// 模型级 MCP 服务文件夹名列表（~/.llmwork/mcps/{name}），null/empty = 未绑定
+  final List<String>? mcps;
+
+  /// 模型级 MCP 服务（运行时解析，不持久化于 model 自身）
+  final List<Mcp>? mcpServers;
+
   const ChatModel({
     required this.modelId,
     required this.name,
@@ -46,6 +53,8 @@ class ChatModel {
     this.completionPrice,
     this.currency,
     this.chatSettings,
+    this.mcps,
+    this.mcpServers,
   });
 
   /// 生成唯一的模型ID
@@ -92,6 +101,7 @@ class ChatModel {
       completionPrice: map['completionPrice']?.toDouble() ?? map['outputPrice']?.toDouble(),
       currency: map['currency'] as String?,
       chatSettings: settings,
+      mcps: (map['mcps'] as List<dynamic>?)?.cast<String>() ?? (map['mcp'] is String ? [map['mcp'] as String] : null),
     );
   }
 
@@ -111,6 +121,7 @@ class ChatModel {
       if (promptPrice != null) 'promptPrice': promptPrice,
       if (completionPrice != null) 'completionPrice': completionPrice,
       if (currency != null) 'currency': currency,
+      if (mcps != null && mcps!.isNotEmpty) 'mcps': mcps,
     };
 
     // 保存 ChatSettings 对象
@@ -150,6 +161,7 @@ class ChatModel {
     double? completionPrice,
     String? currency,
     ChatSettings? chatSettings,
+    List<String>? mcps,
   }) {
     return ChatModel(
       modelId: generateModelId(),
@@ -166,6 +178,7 @@ class ChatModel {
       completionPrice: completionPrice,
       currency: currency,
       chatSettings: chatSettings,
+      mcps: mcps,
     );
   }
 
@@ -185,6 +198,9 @@ class ChatModel {
     double? completionPrice,
     String? currency,
     ChatSettings? chatSettings,
+    List<String>? mcps,
+    List<Mcp>? mcpServers,
+    bool clearMcp = false,
   }) {
     return ChatModel(
       modelId: modelId ?? this.modelId,
@@ -201,6 +217,8 @@ class ChatModel {
       completionPrice: completionPrice ?? this.completionPrice,
       currency: currency ?? this.currency,
       chatSettings: chatSettings ?? this.chatSettings,
+      mcps: clearMcp ? null : (mcps ?? this.mcps),
+      mcpServers: clearMcp ? null : (mcpServers ?? this.mcpServers),
     );
   }
 

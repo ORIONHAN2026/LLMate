@@ -512,9 +512,10 @@ class LlmClient {
     return messages;
   }
 
-  /// 构建可用的工具列表（MCP）
+  /// 构建可用的工具列表（合并 session MCP + model MCP，去重）
   List<Map<String, dynamic>> _buildTools(ChatSession? session) {
-    final tools = McpController.instance.getTools(session?.mcp ?? '');
+    if (session == null) return [];
+    final tools = McpController.instance.getMergedTools(session);
     return tools.map((t) => t.toOpenAIFunction()).toList();
   }
 

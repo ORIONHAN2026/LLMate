@@ -37,10 +37,8 @@ Handler modelToolGuard(Handler innerHandler) {
     // 1. 模型替换
     body['model'] = session.chatModel!.model;
 
-    // 2. 工具注入（直接读取该 mcp 结构体中存储的 tools）
-    final mcpTools = McpController.instance.getTools(
-      session.mcpServer?.name ?? '',
-    );
+    // 2. 工具注入（合并 session MCP + model MCP，去重）
+    final mcpTools = McpController.instance.getMergedTools(session);
     if (mcpTools.isNotEmpty) {
       final tools = mcpTools.map((t) => t.toOpenAIFunction()).toList();
       final existing = body['tools'];
@@ -50,7 +48,7 @@ Handler modelToolGuard(Handler innerHandler) {
         body['tools'] = tools;
       }
       body['tool_choice'] = 'auto';
-      debugPrint('🔧 [ModelTool] 注入 ${tools.length} 个 MCP 工具');
+      debugPrint('🔧 [ModelTool] 注入 ${tools.length} 个 MCP 工具 (含 session + model)');
     }
 
     final updatedRequest = request.change(

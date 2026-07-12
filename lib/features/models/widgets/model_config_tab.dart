@@ -3,8 +3,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:llmwork/l10n/app_localizations.dart';
 import 'package:llmwork/models/bigmodel/chat_model.dart';
+import 'package:llmwork/models/chat/mcp_config.dart';
 import 'package:llmwork/utils/snackbar_utils.dart';
 import 'package:llmwork/models/chat/chat_setting.dart';
+import 'package:llmwork/controllers/mcp_controller.dart';
 
 class ModelConfigTab extends StatefulWidget {
   final ChatModel model;
@@ -33,6 +35,13 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   Timer? _debounceTimer;
   late TabController _tabController;
 
+  // MCP 相关
+  List<String> _selectedMcpNames = [];
+  List<Mcp> _selectedMcpServers = [];
+  List<Mcp> _mcpServices = [];
+
+  McpController get _mcpController => McpController.instance;
+
   @override
   void initState() {
     super.initState();
@@ -40,8 +49,24 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     _apiKeyController = TextEditingController();
     _modelNameController = TextEditingController();
     _systemPromptController = TextEditingController();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
+    _selectedMcpNames = List<String>.from(_currentModel.mcps ?? []);
     _initializeData();
+    _loadMcpServices();
+  }
+
+  Future<void> _loadMcpServices() async {
+    await _mcpController.ensureLoaded();
+    if (mounted) {
+      setState(() {
+        _mcpServices = List<Mcp>.from(_mcpController.configs);
+        // 解析已绑定的 MCP 信息
+        _selectedMcpServers = _selectedMcpNames
+            .map((n) => _mcpController.getMcp(n))
+            .whereType<Mcp>()
+            .toList();
+      });
+    }
   }
 
   @override
@@ -59,6 +84,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.model != widget.model) {
       _currentModel = widget.model;
+      _selectedMcpNames = List<String>.from(_currentModel.mcps ?? []);
       _initializeData();
     }
   }
@@ -77,10 +103,12 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontSize: 13),
           indicatorSize: TabBarIndicatorSize.label,
+          isScrollable: true,
           tabs: const [
             Tab(text: '基本信息'),
             Tab(text: '计费设置'),
             Tab(text: '模型参数'),
+            Tab(text: 'MCP设置'),
           ],
         ),
         Expanded(
@@ -93,6 +121,8 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               _buildBillingTab(),
               // Tab 3: 模型参数
               _buildModelParamsTab(),
+              // Tab 4: MCP 设置
+              _buildMcpSettingsTab(),
             ],
           ),
         ),
@@ -943,5 +973,314 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         ),
       ],
     );
+  }
+
+  // ========== MCP 设置 Tab ==========
+
+  Widget _buildMcpSettingsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 说明文字
+          Text(
+            '为模型绑定 MCP 服务后，使用该模型的会话将自动注入这些 MCP 的工具。\n会话自身的 MCP 和模型的 MCP 会自动合并去重。',
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 已绑定的 MCP 芯片列表
+          if (_selectedMcpServers.isNotEmpty) ...[
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _selectedMcpServers.map((mcp) {
+                return Chip(
+                  avatar: const Icon(Icons.link, size: 14),
+                  label: Text(mcp.name, style: const TextStyle(fontSize: 12)),
+                  deleteIcon: const Icon(Icons.close, size: 14),
+                  onDeleted: () => _toggleMcpBinding(mcp.name),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // MCP 服务选择按钮
+          OutlinedButton.icon(
+            onPressed: _showMcpSelectionDialog,
+            icon: const Icon(Icons.add, size: 16),
+            label: Text(
+              _selectedMcpNames.isEmpty ? '添加 MCP 服务' : '管理 MCP 服务 (${_selectedMcpNames.length})',
+              style: const TextStyle(fontSize: 12),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+          ),
+
+          if (_selectedMcpNames.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            // 全部取消绑定按钮
+            TextButton.icon(
+              onPressed: _clearMcpBinding,
+              icon: const Icon(Icons.link_off, size: 14),
+              label: const Text('取消全部 MCP 绑定', style: TextStyle(fontSize: 12)),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ],
+
+          // 已绑定 MCP 的详情卡片
+          if (_selectedMcpServers.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            ..._selectedMcpServers.map((mcp) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildMcpInfoCard(mcp),
+            )),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMcpInfoCard(Mcp mcp) {
+    final toolCount = mcp.tools?.length ?? 0;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  mcp.name,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, size: 16),
+                onPressed: () => _toggleMcpBinding(mcp.name),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                splashRadius: 14,
+              ),
+            ],
+          ),
+          if (mcp.description != null && mcp.description!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              mcp.description!,
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              _buildInfoChip(Icons.build, '$toolCount 个工具'),
+              if (mcp.url != null && mcp.url!.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: _buildInfoChip(Icons.link, mcp.url!),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMcpSelectionDialog() {
+    // local snapshot for dialog
+    final dialogSelected = List<String>.from(_selectedMcpNames);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        final searchController = TextEditingController();
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final query = searchController.text.toLowerCase();
+            final filtered = _mcpServices.where((s) {
+              if (query.isEmpty) return true;
+              return s.name.toLowerCase().contains(query) ||
+                  (s.description?.toLowerCase().contains(query) ?? false);
+            }).toList();
+
+            return AlertDialog(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              title: const Text('选择 MCP 服务（可多选）', style: TextStyle(fontSize: 15)),
+              content: SizedBox(
+                width: 350,
+                height: 400,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: searchController,
+                      decoration: InputDecoration(
+                        hintText: '搜索 MCP 服务...',
+                        hintStyle: const TextStyle(fontSize: 12),
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        isDense: true,
+                      ),
+                      style: const TextStyle(fontSize: 12),
+                      onChanged: (_) => setDialogState(() {}),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                _mcpServices.isEmpty ? '暂无 MCP 服务，请先在 MCP 管理中添加' : '无匹配结果',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.4),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final service = filtered[index];
+                                final isSelected = dialogSelected.contains(service.name);
+                                return CheckboxListTile(
+                                  dense: true,
+                                  controlAffinity: ListTileControlAffinity.leading,
+                                  value: isSelected,
+                                  onChanged: (checked) {
+                                    setDialogState(() {
+                                      if (checked == true) {
+                                        if (!dialogSelected.contains(service.name)) {
+                                          dialogSelected.add(service.name);
+                                        }
+                                      } else {
+                                        dialogSelected.remove(service.name);
+                                      }
+                                    });
+                                  },
+                                  title: Text(service.name,
+                                      style: const TextStyle(fontSize: 13)),
+                                  subtitle: service.description?.isNotEmpty == true
+                                      ? Text(service.description!,
+                                          style: const TextStyle(fontSize: 11),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis)
+                                      : null,
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('取消', style: TextStyle(fontSize: 12)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    _applyMcpSelection(dialogSelected);
+                  },
+                  child: Text(
+                    '确定 (${dialogSelected.length})',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _toggleMcpBinding(String mcpName) {
+    final newList = List<String>.from(_selectedMcpNames);
+    newList.remove(mcpName);
+    _applyMcpSelection(newList);
+  }
+
+  void _applyMcpSelection(List<String> selectedNames) {
+    final servers = selectedNames
+        .map((n) => _mcpController.getMcp(n))
+        .whereType<Mcp>()
+        .toList();
+
+    setState(() {
+      _selectedMcpNames = List<String>.from(selectedNames);
+      _selectedMcpServers = servers;
+    });
+
+    // persist to model
+    final updatedModel = _currentModel.copyWith(
+      mcps: selectedNames.isEmpty ? null : selectedNames,
+      mcpServers: servers.isEmpty ? null : servers,
+      clearMcp: selectedNames.isEmpty,
+    );
+    _currentModel = updatedModel;
+    widget.onModelUpdated(updatedModel);
+  }
+
+  void _clearMcpBinding() {
+    _applyMcpSelection([]);
   }
 }

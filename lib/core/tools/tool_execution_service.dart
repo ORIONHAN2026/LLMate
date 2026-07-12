@@ -96,8 +96,8 @@ class ToolExecutionService {
     // 还原被转义的工具名（OpenAI function calling 不允许函数名含点号等特殊字符）
     final resolvedName = resolveOriginalToolName(toolName);
 
-    // ── MCP 工具：尝试 MCP 客户端 ──
-    final mc = await McpController.instance.getOrInitClient(session);
+    // ── MCP 工具：尝试 MCP 客户端（按工具名路由到正确的 MCP） ──
+    final mc = await McpController.instance.getOrInitClient(session, toolName: resolvedName);
     if (mc != null) {
       final result = await _callMCPTool(mc, resolvedName, arguments, callId);
       // 成功或非连接类错误 → 直接返回
@@ -106,10 +106,10 @@ class ToolExecutionService {
       // 连接失败（SSE 长连接可能因空闲超时被断开），
       // 清理旧客户端并重连重试一次
       debugPrint('🔄 MCP 工具 "$toolName" 连接失败，尝试重连重试...');
-      final svc = session.mcp;
-      if (svc != null) {
-        await McpController.instance.closeClient(svc);
-        final retryMc = await McpController.instance.getOrInitClient(session);
+      final ownerMcpName = McpController.instance.findMcpOwner(session, resolvedName);
+      if (ownerMcpName != null) {
+        await McpController.instance.closeClient(ownerMcpName);
+        final retryMc = await McpController.instance.getOrInitClient(session, toolName: resolvedName);
         if (retryMc != null) {
           final retryResult = await _callMCPTool(
             retryMc,

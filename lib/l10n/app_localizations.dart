@@ -2979,7 +2979,7 @@ abstract class AppLocalizations {
   /// No description provided for @domainInfoDesc.
   ///
   /// In en, this message translates to:
-  /// **'After configuring the service address, the session service URL will display this address. External clients can access the session API (/llmwork/chat/completions etc.) through this address.'**
+  /// **'After configuring the service address, the session service URL will display this address. External clients can access the session API (/chat/completions etc.) through this address.'**
   String get domainInfoDesc;
 
   /// No description provided for @pleaseEnterDomain.

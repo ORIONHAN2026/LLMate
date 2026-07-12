@@ -114,7 +114,7 @@ Handler apiKeyGuard(Handler innerHandler) {
 }
 
 /// 从 URL path 中提取 sessionId
-/// path 格式: /{sessionId}/llmwork/chat/completions
+/// path 格式: /{sessionId}/chat/completions
 String _extractSessionIdFromPath(String path) {
   final clean = path.startsWith('/') ? path.substring(1) : path;
   final slashIdx = clean.indexOf('/');

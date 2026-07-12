@@ -1566,7 +1566,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get domainInfoDesc =>
-      'After configuring the service address, the session service URL will display this address. External clients can access the session API (/llmwork/chat/completions etc.) through this address.';
+      'After configuring the service address, the session service URL will display this address. External clients can access the session API (/chat/completions etc.) through this address.';
 
   @override
   String get pleaseEnterDomain => 'Please enter service address';

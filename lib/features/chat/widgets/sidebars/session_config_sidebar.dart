@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -410,12 +408,12 @@ class SessionConfigSidebar {
         final port = config.httpsEnabled ? config.httpsPort : config.httpPort;
         // 默认端口不显示
         final host = '$scheme://${config.domain}${(scheme == 'http' && port != 80) || (scheme == 'https' && port != 443) ? ':$port' : ''}';
-        return '$host/$sessionId/llmwork';
+        return '$host/$sessionId';
       }
     } catch (_) {
       // DomainController 未初始化，使用默认地址
     }
-    return 'http://127.0.0.1:80/$sessionId/llmwork';
+    return 'http://127.0.0.1/$sessionId';
   }
 
   /// 构建本地地址
@@ -425,7 +423,9 @@ class SessionConfigSidebar {
       final domainController = Get.find<DomainController>();
       port = domainController.domainConfig.value.httpPort;
     } catch (_) {}
-    return 'http://$host:$port/$sessionId/llmwork';
+    // 默认端口不显示
+    final portPart = port != 80 ? ':$port' : '';
+    return 'http://$host$portPart/$sessionId';
   }
 
   /// 获取货币符号
@@ -1205,29 +1205,11 @@ class _SessionConfigTabs extends StatefulWidget {
 class _SessionConfigTabsState extends State<_SessionConfigTabs>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _localIp = '127.0.0.1';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _resolveLocalIp();
-  }
-
-  Future<void> _resolveLocalIp() async {
-    try {
-      final interfaces = await NetworkInterface.list();
-      for (final interface in interfaces) {
-        for (final addr in interface.addresses) {
-          if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-            if (mounted) {
-              setState(() => _localIp = addr.address);
-            }
-            return;
-          }
-        }
-      }
-    } catch (_) {}
   }
 
   @override
@@ -1459,7 +1441,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                       label: '服务地址[本地]',
                       value: SessionConfigSidebar._buildLocalUrl(
                         session.sessionId,
-                        _localIp,
+                        '127.0.0.1',
                       ),
                     ),
                     const SizedBox(height: 8),

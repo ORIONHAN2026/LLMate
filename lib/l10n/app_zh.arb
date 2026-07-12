@@ -479,7 +479,7 @@
   "httpsEnabled": "HTTPS",
   "httpsEnabledDesc": "证书已上传，HTTPS 已自动开启",
   "httpsDisabledDesc": "上传证书（crt/cert + key）后自动开启 HTTPS",
-  "domainInfoDesc": "配置服务地址后，会话的服务地址将显示为此地址。外部客户端可通过该地址访问会话的 API 接口（/llmwork/chat/completions 等）。",
+  "domainInfoDesc": "配置服务地址后，会话的服务地址将显示为此地址。外部客户端可通过该地址访问会话的 API 接口（/chat/completions 等）。",
   "pleaseEnterDomain": "请输入服务地址",
   "domainSaved": "服务配置已保存",
   "currencyLabel": "货币类型",

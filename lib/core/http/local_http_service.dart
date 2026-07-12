@@ -145,7 +145,8 @@ class LocalHttpService {
         debugPrint('🚀 HTTP 服务已启动: http://$_bindAddress:$port');
       }
       _isRunning = true;
-      debugPrint('📡 API: POST /{sessionId}/llmwork/chat/completions');
+      debugPrint('📡 API: POST /{sessionId}/chat/completions');
+      debugPrint('📡 API: GET /{sessionId}/models');
     } catch (e) {
       debugPrint('❌ HTTP 服务启动失败: $e');
       _isRunning = false;
@@ -203,8 +204,21 @@ class LocalHttpService {
       );
     });
 
+    // 模型列表路由（返回当前会话绑定的模型，兼容 OpenAI /v1/models 格式）
+    router.get('/<segment>/models', (
+      Request request,
+      String sessionId,
+    ) async {
+      final pipeline = const Pipeline()
+          .addMiddleware(apiKeyGuard); // API Key 校验，装载 session
+
+      return pipeline.addHandler((Request req) {
+        return _handleModelsList(req);
+      })(request);
+    });
+
     // Chat Completion 路由（内联中间件链）
-    router.post('/<segment>/llmwork/chat/completions', (
+    router.post('/<segment>/chat/completions', (
       Request request,
       String sessionId,
     ) async {
@@ -229,6 +243,57 @@ class LocalHttpService {
     });
 
     return router;
+  }
+
+  /// 返回当前会话绑定的模型（OpenAI /v1/models 兼容格式）
+  static Response _handleModelsList(Request request) {
+    try {
+      final session = request.context['session'] as ChatSession?;
+      if (session == null) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': {
+              'message': 'Session not found',
+              'type': 'invalid_request_error',
+              'code': 400,
+            },
+          }),
+          headers: {'content-type': 'application/json'},
+        );
+      }
+
+      final model = session.chatModel;
+      final data = <Map<String, dynamic>>[];
+      if (model != null) {
+        data.add({
+          'id': model.model,
+          'object': 'model',
+          'created': model.createdAt?.millisecondsSinceEpoch ?? 0,
+          'owned_by': model.platform ?? model.type ?? 'custom',
+        });
+      }
+
+      return Response.ok(
+        jsonEncode({
+          'object': 'list',
+          'data': data,
+        }),
+        headers: {'content-type': 'application/json'},
+      );
+    } catch (e) {
+      debugPrint('❌ 获取模型列表失败: $e');
+      return Response.internalServerError(
+        body: jsonEncode({
+          'error': {
+            'message': 'Failed to retrieve model list',
+            'type': 'api_error',
+            'code': 500,
+          },
+        }),
+        headers: {'content-type': 'application/json'},
+      );
+    }
   }
 
   /// 处理 Chat Completion 请求（流式透传）

@@ -1549,7 +1549,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get domainInfoDesc =>
-      '配置服务地址后，会话的服务地址将显示为此地址。外部客户端可通过该地址访问会话的 API 接口（/llmwork/chat/completions 等）。';
+      '配置服务地址后，会话的服务地址将显示为此地址。外部客户端可通过该地址访问会话的 API 接口（/chat/completions 等）。';
 
   @override
   String get pleaseEnterDomain => '请输入服务地址';

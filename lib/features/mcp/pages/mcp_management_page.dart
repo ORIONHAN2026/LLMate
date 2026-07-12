@@ -639,9 +639,15 @@ class _McpManagementPageState extends State<McpManagementPage> {
         await Get.find<McpController>().removeService(service.name);
         final sessionController = Get.find<SessionController>();
         for (final session in sessionController.sessions) {
-          if (session.mcp == service.name) {
+          if (session.mcps != null && session.mcps!.contains(service.name)) {
+            final newMcps = List<String>.from(session.mcps!)
+                ..remove(service.name);
             await sessionController.updateSession(
-              session.copyWith(clearMcp: true, clearConnectPrompt: true),
+              session.copyWith(
+                mcps: newMcps.isNotEmpty ? newMcps : null,
+                clearMcp: newMcps.isEmpty,
+                clearConnectPrompt: true,
+              ),
             );
           }
         }

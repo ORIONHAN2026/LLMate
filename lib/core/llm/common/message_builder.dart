@@ -60,10 +60,12 @@ class MessageBuilder {
     // 5. 连接器关系描述提示词
     if (session?.connectPrompt != null &&
         session!.connectPrompt!.isNotEmpty) {
-      final mcpName = session.mcpServer?.name ?? '未选择连接器';
+      final mcpNames = session.mcps != null && session.mcps!.isNotEmpty
+          ? session.mcps!.join(', ')
+          : '未选择连接器';
       systemMessages.add({
         'role': 'system',
-        'content': '连接器【$mcpName】的使用关系：${session.connectPrompt}',
+        'content': '连接器【$mcpNames】的使用关系：${session.connectPrompt}',
       });
     }
 

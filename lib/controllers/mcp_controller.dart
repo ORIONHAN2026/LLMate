@@ -575,16 +575,21 @@ class McpController extends GetxController {
 
   List<Mcp> _getEnabledServices(ChatSession s) {
     final services = <Mcp>[];
-    // session-level MCP
-    if (s.mcp != null && s.mcp!.isNotEmpty) {
-      final cfg = getMcp(s.mcp!);
-      if (cfg != null) services.add(cfg);
+    final sessionMcpNames = <String>{};
+    // session-level MCPs
+    if (s.mcps != null && s.mcps!.isNotEmpty) {
+      for (final name in s.mcps!) {
+        if (name.isEmpty) continue;
+        sessionMcpNames.add(name);
+        final cfg = getMcp(name);
+        if (cfg != null) services.add(cfg);
+      }
     }
-    // model-level MCPs
+    // model-level MCPs (dedup)
     final modelMcps = s.chatModel?.mcps;
     if (modelMcps != null && modelMcps.isNotEmpty) {
       for (final name in modelMcps) {
-        if (name.isEmpty || name == s.mcp) continue;
+        if (name.isEmpty || sessionMcpNames.contains(name)) continue;
         final cfg = getMcp(name);
         if (cfg != null) services.add(cfg);
       }
@@ -666,13 +671,17 @@ class McpController extends GetxController {
     return mcp!.tools!.any((t) => t.name == toolName);
   }
 
-  /// Get all effective MCP names for a session (session MCP + model MCPs, deduplicated)
+  /// Get all effective MCP names for a session (session MCPs + model MCPs, deduplicated)
   Iterable<String> _effectiveMcpNames(ChatSession s) sync* {
-    if (s.mcp != null && s.mcp!.isNotEmpty) yield s.mcp!;
+    if (s.mcps != null) {
+      for (final name in s.mcps!) {
+        if (name.isNotEmpty) yield name;
+      }
+    }
     final modelMcps = s.chatModel?.mcps;
     if (modelMcps != null) {
       for (final name in modelMcps) {
-        if (name.isNotEmpty && name != s.mcp) yield name;
+        if (name.isNotEmpty && !(s.mcps?.contains(name) == true)) yield name;
       }
     }
   }

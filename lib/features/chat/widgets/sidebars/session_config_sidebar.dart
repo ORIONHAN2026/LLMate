@@ -1388,9 +1388,23 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                     SessionConfigSidebar._buildConfigItem(
                       context,
                       icon: CupertinoIcons.link,
-                      label: 'MCP连接器',
-                      value: session.mcpServer?.name ?? '未绑定',
-                      valueColor: session.mcpServer != null
+                      label: '模型MCP',
+                      value: session.chatModel?.mcps != null && session.chatModel!.mcps!.isNotEmpty
+                          ? session.chatModel!.mcps!.join(', ')
+                          : '未绑定',
+                      valueColor: session.chatModel?.mcps != null && session.chatModel!.mcps!.isNotEmpty
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    const SizedBox(height: 8),
+                    SessionConfigSidebar._buildConfigItem(
+                      context,
+                      icon: CupertinoIcons.link,
+                      label: '会话MCP',
+                      value: session.mcps != null && session.mcps!.isNotEmpty
+                          ? session.mcps!.join(', ')
+                          : '未绑定',
+                      valueColor: session.mcps != null && session.mcps!.isNotEmpty
                           ? Theme.of(context).colorScheme.primary
                           : null,
                     ),

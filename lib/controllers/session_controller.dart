@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../models/chat/chat_session.dart';
-import '../models/chat/mcp_config.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../data/storage_service.dart';
 import '../data/storage_paths.dart';
@@ -26,6 +25,17 @@ String? _resolveMcpFolder(Map<String, dynamic> entity) {
     return id.startsWith('mcp_') ? id.substring(4) : id;
   }
   return null;
+}
+
+/// 从会话存储实体中解析 MCP 文件夹名列表（兼容旧格式）
+List<String>? _resolveMcpFolders(Map<String, dynamic> entity) {
+  // 新格式: mcps 列表
+  if (entity['mcps'] is List) {
+    return (entity['mcps'] as List).cast<String>();
+  }
+  // 旧格式: 单个 mcp
+  final single = _resolveMcpFolder(entity);
+  return single != null ? [single] : null;
 }
 
 class SessionController extends GetxController {
@@ -68,17 +78,6 @@ class SessionController extends GetxController {
         s = s.copyWith(chatModel: m);
         updated = true;
       } catch (_) {}
-    }
-
-    // 根据 mcp 文件夹名解析 server.json / config.json
-    if (s.mcp != null && s.mcp!.isNotEmpty) {
-      final mcpController = Get.find<McpController>();
-      await mcpController.ensureLoaded();
-      final mcp = mcpController.getMcp(s.mcp!) ?? s.mcpServer;
-      if (mcp != null) {
-        s = s.copyWith(mcpServer: mcp);
-        updated = true;
-      }
     }
 
     if (updated) {
@@ -195,13 +194,6 @@ class SessionController extends GetxController {
         );
       }
 
-      // === 3. 持久化 MCP 绑定到 mcp.json ===
-      if (updatedSession.mcpServer != null) {
-        await SessionFileStore.writeMcp(
-          updatedSession.sessionId,
-          updatedSession.mcpServer!.toFullJson(),
-        );
-      }
     } catch (e) {
       debugPrint('合并持久化失败: $e');
     }
@@ -494,8 +486,7 @@ class SessionController extends GetxController {
       'lastSelectedDirectory': session.lastSelectedDirectory,
       'workDirectory': session.workDirectory,
       'modelId': session.modelId,
-      if (session.mcp != null) 'mcp': session.mcp!,
-      if (session.mcpServer != null) 'mcpServer': session.mcpServer!.toJson(),
+      if (session.mcps != null && session.mcps!.isNotEmpty) 'mcps': session.mcps,
       'deepThink': session.deepThink,
       'connectPrompt': session.connectPrompt,
       'sessionQuickCommands':
@@ -574,13 +565,7 @@ class SessionController extends GetxController {
               : DateTime.now(),
       messages: [], // 消息懒加载
       modelId: modelId,
-      mcp: _resolveMcpFolder(entity),
-      mcpServer:
-          entity['mcpServer'] is Map<String, dynamic>
-              ? Mcp.fromMap(entity['mcpServer'])
-              : (entity['mcpConfig'] is Map<String, dynamic>
-                  ? Mcp.fromMap(entity['mcpConfig'])
-                  : null),
+      mcps: _resolveMcpFolders(entity),
       chatModel: chatModel,
       isFavorite: entity['isFavorite'] as bool? ?? false,
       inputContent: entity['inputContent'] as String? ?? '',

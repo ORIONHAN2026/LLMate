@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../controllers/mcp_controller.dart';
 import '../../models/chat/chat_session.dart';
-import '../../models/chat/mcp_config.dart';
 import '../../models/responses/chunk.dart';
 import '../../models/responses/openai_response.dart'
     show OpenAIDelta, ToolCall, ToolCallFunction;
@@ -212,11 +211,7 @@ Future<StreamRoundResult> streamSingleRound({
     return (session: const [], thirdParty: const []);
   }
 
-  final mcpName = session.mcp;
-  final mcpTools =
-      mcpName != null && mcpName.isNotEmpty
-          ? McpController.instance.getTools(mcpName)
-          : <McpTool>[];
+  final mcpTools = McpController.instance.getMergedTools(session);
   final mcpToolNames = mcpTools.map((t) => t.name).toSet();
   debugPrint('🔧 [Classify] 会话 MCP 工具: $mcpToolNames');
 

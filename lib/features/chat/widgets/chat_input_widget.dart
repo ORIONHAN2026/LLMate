@@ -1915,13 +1915,16 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // MCP 服务已全局存储，不依赖 ChatModel
     final hasMcpServices = McpController.instance.hasGlobalMcpServices;
-    final mcpServer = currentSession?.mcpServer;
-    final hasSelectedService = mcpServer != null;
+    final mcpsNames = currentSession?.mcps;
+    final hasSelectedService = mcpsNames != null && mcpsNames.isNotEmpty;
+    final mcpCount = mcpsNames?.length ?? 0;
 
-    // 统一按钮：图标 + 文字（未选：请选择，已选：服务名）
+    // 统一按钮：图标 + 文字（未选：请选择，已选：服务名或数量）
     final displayText =
         hasSelectedService
-            ? mcpServer?.name ?? ''
+            ? (mcpCount == 1
+                ? mcpsNames!.first
+                : '$mcpCount 个 MCP')
             : (hasMcpServices
                 ? AppLocalizations.of(context)!.selectMcpTool
                 : AppLocalizations.of(context)!.noMcpTool);
@@ -1929,15 +1932,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     return Tooltip(
       message:
           hasSelectedService
-              ? '${AppLocalizations.of(context)!.viewMcpToolDetail}\n长按移除'
+              ? '${mcpCount == 1 ? '查看 MCP 工具详情' : '$mcpCount 个 MCP 已绑定'}\n长按移除'
               : (hasMcpServices
                   ? AppLocalizations.of(context)!.clickToSelectMcpTool
                   : AppLocalizations.of(context)!.noMcpToolConfigured),
       child: GestureDetector(
         onTap:
             hasMcpServices && !_isSending
-                ? (hasSelectedService
-                    ? () => _showMcpDetail(mcpServer)
+                ? (hasSelectedService && mcpCount == 1
+                    ? () => _showMcpDetailByName(mcpsNames!.first)
                     : _showMcpServiceSelection)
                 : null,
         onLongPress:
@@ -2059,93 +2062,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 命令面板通用列表项组件
-  Widget _buildCommandItem({
-    required String title,
-    String? subtitle,
-    String? tag,
-    bool isSelected = false,
-    bool isClearAction = false,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration:
-            isSelected && !isClearAction
-                ? BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primaryContainer.withOpacity(0.4),
-                )
-                : null,
-        child: Row(
-          crossAxisAlignment:
-              subtitle != null
-                  ? CrossAxisAlignment.start
-                  : CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight:
-                          isSelected ? FontWeight.w500 : FontWeight.normal,
-                      color:
-                          isClearAction
-                              ? Theme.of(
-                                context,
-                              ).colorScheme.error.withOpacity(0.75)
-                              : Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            if (isSelected)
-              Icon(
-                CupertinoIcons.checkmark_alt,
-                size: 14,
-                color: Theme.of(context).colorScheme.primary,
-              )
-            else if (tag != null)
-              Text(
-                tag,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.35),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  /// 显示MCP服务选择弹窗，点击服务直接绑定
+  /// 显示MCP服务选择弹窗（多选）
   Future<void> _showMcpServiceSelection() async {
     // MCP 服务从 McpController 读取
     final mcpc = Get.find<McpController>();
@@ -2161,7 +2079,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
 
     final session = sessionController.currentSession.value;
-    final selectedName = session?.mcp;
+    final selectedNames = List<String>.from(session?.mcps ?? []);
     final searchController = TextEditingController();
 
     showDialog(
@@ -2169,6 +2087,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       barrierColor: Colors.black.withOpacity(0.15),
       barrierDismissible: true,
       builder: (dialogContext) {
+        final localSelected = List<String>.from(selectedNames);
+
         return Dialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           elevation: 8,
@@ -2194,27 +2114,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               false);
                     }).toList();
 
-                final clearCount =
-                    selectedName != null &&
-                            (query.isEmpty ||
-                                '清空'.contains(query) ||
-                                '取消'.contains(query) ||
-                                '清空mcp'.contains(query))
-                        ? 1
-                        : 0;
-
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildCommandPaletteSearchBar(
                       controller: searchController,
-                      title: AppLocalizations.of(context)!.mcpServiceTitle,
+                      title: '多选 MCP 服务',
                       onChanged: () => setDialogState(() {}),
                     ),
                     Flexible(
                       child:
-                          filtered.isEmpty && clearCount == 0
+                          filtered.isEmpty
                               ? Center(
                                 child: Padding(
                                   padding: const EdgeInsets.all(24),
@@ -2233,59 +2144,92 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               )
                               : ListView.builder(
                                 shrinkWrap: true,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                ),
-                                itemCount: filtered.length + clearCount,
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                itemCount: filtered.length,
                                 itemBuilder: (context, index) {
-                                  if (clearCount > 0 && index == 0) {
-                                    return _buildCommandItem(
-                                      title:
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.clearMcpService,
-                                      tag:
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.unbindAction,
-                                      isClearAction: true,
-                                      onTap: () {
-                                        Navigator.of(dialogContext).pop();
-                                        _applyMcpSelection(null);
-                                      },
-                                    );
-                                  }
-                                  final serviceIndex = index - clearCount;
-                                  final service = filtered[serviceIndex];
+                                  final service = filtered[index];
                                   final isSelected =
-                                      service.name == selectedName;
-                                  final toolCount = service.name == selectedName
-                                      ? (session?.mcpServer?.tools?.length ?? 0)
-                                      : 0;
-                                  return _buildCommandItem(
-                                    title: service.name,
+                                      localSelected.contains(service.name);
+
+                                  return CheckboxListTile(
+                                    dense: true,
+                                    value: isSelected,
+                                    onChanged: (checked) {
+                                      if (checked == true) {
+                                        if (!localSelected.contains(
+                                          service.name,
+                                        )) {
+                                          localSelected.add(service.name);
+                                        }
+                                      } else {
+                                        localSelected.remove(service.name);
+                                      }
+                                      setDialogState(() {});
+                                    },
+                                    title: Text(
+                                      service.name,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
                                     subtitle:
                                         service.description?.isNotEmpty == true
-                                            ? service.description
-                                            : service.url?.isNotEmpty == true
-                                            ? service.url
-                                            : '${service.command ?? ''} ${service.args?.join(' ') ?? ''}',
-                                    tag:
-                                        toolCount > 0
-                                            ? AppLocalizations.of(
-                                              context,
-                                            )!.xTools(toolCount)
+                                            ? Text(
+                                              service.description!,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurface.withOpacity(0.5),
+                                              ),
+                                            )
                                             : null,
-                                    isSelected: isSelected,
-                                    onTap: () {
-                                      Navigator.of(dialogContext).pop();
-                                      _applyMcpSelection(
-                                        isSelected ? null : service,
-                                      );
-                                    },
+                                    controlAffinity:
+                                        ListTileControlAffinity.leading,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                        ),
                                   );
                                 },
                               ),
+                    ),
+                    // 底部按钮
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: Theme.of(context).dividerColor,
+                            width: 0.5,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(),
+                              child: const Text('取消'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop();
+                                _applyMcpSelection(
+                                  List<String>.from(localSelected),
+                                );
+                              },
+                              child: Text('确定 (${localSelected.length})'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 );
@@ -2303,43 +2247,49 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     });
   }
 
-  /// 应用MCP服务选择
-  void _applyMcpSelection(Mcp? service) async {
+  /// 应用MCP服务选择（多选）
+  void _applyMcpSelection(List<String> selectedNames) async {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
 
+    final mcpc = Get.find<McpController>();
+    await mcpc.ensureLoaded();
+
+    // 解析选中的 MCP 服务对象
+    final selectedServers = <Mcp>[];
+    for (final name in selectedNames) {
+      final cfg = mcpc.getMcp(name);
+      if (cfg != null) selectedServers.add(cfg);
+    }
+
     var updatedSession = currentSession.copyWith(
-      mcp: service == null ? null : service.name,
-      mcpServer: service,
-      clearMcp: service == null,
+      mcps: selectedNames.isNotEmpty ? selectedNames : null,
+      clearMcp: selectedNames.isEmpty,
     );
 
-    // 如果会话名是默认的"新对话"，自动改为 MCP 服务名
-    if (service != null &&
+    // 如果会话名是默认的"新对话"，自动改为第一个 MCP 服务名
+    if (selectedServers.isNotEmpty &&
         updatedSession.name == AppLocalizations.of(context)!.newSession) {
-      updatedSession = updatedSession.copyWith(title: service.name);
+      updatedSession = updatedSession.copyWith(title: selectedServers.first.name);
     }
 
     await sessionController.updateSession(updatedSession);
 
     if (mounted) {
-      if (service != null) {
+      if (selectedServers.isNotEmpty) {
         SnackBarUtils.showInfo(
           context,
-          AppLocalizations.of(context)!.mcpServiceSelected(service.name),
+          '已绑定 ${selectedServers.length} 个 MCP 服务',
         );
-        // 等待 MCP 初始化完成，确保 tools 已填充到 session.mcp 中
-        final refreshed = await McpController.instance.initForSessionSync(updatedSession);
-        if (refreshed != null && refreshed.tools != null && refreshed.tools!.isNotEmpty) {
-          // 将刷新后的 McpServer（含 tools）同步到 session
-          final syncedSession = updatedSession.copyWith(mcpServer: refreshed);
-          await sessionController.updateSession(syncedSession);
-        }
+        // 初始化 MCP 连接
+        McpController.instance.initForSession(updatedSession);
       } else {
-        // 关闭 MCP 时清理客户端
-        final oldServiceName = currentSession.mcp;
-        if (oldServiceName != null) {
-          McpController.instance.closeClient(oldServiceName);
+        // 清空 MCP 时清理所有客户端
+        final oldNames = currentSession.mcps;
+        if (oldNames != null) {
+          for (final name in oldNames) {
+            McpController.instance.closeClient(name);
+          }
         }
         SnackBarUtils.showInfo(
           context,
@@ -2933,19 +2883,37 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     final currentSession = sessionController.currentSession.value;
     if (currentSession == null) return;
 
+    final mcpCount = currentSession.mcps?.length ?? 0;
+    if (mcpCount == 0) return;
+
     final bool? shouldRemove = await ConfirmDeleteDialog.show(
       context: context,
       title: '移除 MCP',
-      itemName: currentSession.mcpServer?.name ?? '',
-      description: '确定要移除当前 MCP',
+      itemName: mcpCount == 1
+          ? (currentSession.mcps?.first ?? '')
+          : '$mcpCount 个 MCP 服务',
+      description: '确定要移除当前绑定的 MCP${mcpCount > 1 ? '（全部）' : ''}',
       warningMessage: '此操作无法撤销',
       icon: CupertinoIcons.link,
       iconColor: Theme.of(context).colorScheme.error,
     );
 
     if (shouldRemove == true) {
+      // 清理所有 MCP 客户端
+      final oldNames = currentSession.mcps;
+      if (oldNames != null) {
+        for (final name in oldNames) {
+          McpController.instance.closeClient(name);
+        }
+      }
       sessionController.updateSession(currentSession.copyWith(clearMcp: true));
     }
+  }
+
+  /// 通过名称显示 MCP 服务详情弹窗
+  void _showMcpDetailByName(String name) {
+    final mcp = McpController.instance.getMcp(name);
+    if (mcp != null) _showMcpDetail(mcp);
   }
 
   /// 显示 MCP 服务详情弹窗（与 MCP 管理页面保持一致）

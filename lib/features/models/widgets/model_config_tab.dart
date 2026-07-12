@@ -993,31 +993,12 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           ),
           const SizedBox(height: 16),
 
-          // 已绑定的 MCP 芯片列表
-          if (_selectedMcpServers.isNotEmpty) ...[
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: _selectedMcpServers.map((mcp) {
-                return Chip(
-                  avatar: const Icon(Icons.link, size: 14),
-                  label: Text(mcp.name, style: const TextStyle(fontSize: 12)),
-                  deleteIcon: const Icon(Icons.close, size: 14),
-                  onDeleted: () => _toggleMcpBinding(mcp.name),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 12),
-          ],
-
           // MCP 服务选择按钮
           OutlinedButton.icon(
             onPressed: _showMcpSelectionDialog,
             icon: const Icon(Icons.add, size: 16),
             label: Text(
-              _selectedMcpNames.isEmpty ? '添加 MCP 服务' : '管理 MCP 服务 (${_selectedMcpNames.length})',
+              '添加 MCP 服务',
               style: const TextStyle(fontSize: 12),
             ),
             style: OutlinedButton.styleFrom(

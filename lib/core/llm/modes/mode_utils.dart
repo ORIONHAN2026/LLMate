@@ -4,6 +4,8 @@ import '../../../models/bigmodel/chat_model.dart';
 import '../../../models/chat/chat_session.dart';
 import '../../../models/chat/chat_message.dart';
 import '../../../models/chat/chat_attachment.dart';
+import '../../../models/chat/mcp_config.dart';
+import '../../../controllers/mcp_controller.dart';
 
 import '../../../data/storage_paths.dart';
 import '../common/system_prompts.dart';
@@ -254,17 +256,15 @@ String _formatFileSize(int bytes) {
   return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
 }
 
-/// 构建 MCP 服务工具列表（工具来自 session.mcpServer）
+/// 构建 MCP 服务工具列表（合并 session MCP + model MCP，去重）
 List<Map<String, dynamic>> buildMcpTools(ChatSession? session) {
   final tools = <Map<String, dynamic>>[];
-  final mcp = session?.mcpServer;
-  if (mcp == null) return tools;
+  if (session == null) return tools;
 
-  final toolInfos = mcp.tools ?? [];
+  final allTools = McpController.instance.getMergedTools(session);
+  if (allTools.isEmpty) return tools;
 
-  if (toolInfos.isEmpty) return tools;
-
-  for (final tool in toolInfos) {
+  for (final tool in allTools) {
     final safeName = tool.name.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
     if (safeName != tool.name) {
       _safeNameToOriginal[safeName] = tool.name;

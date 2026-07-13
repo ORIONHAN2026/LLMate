@@ -101,7 +101,12 @@ class LocalHttpService {
   }
 
   static Future<void> start({int port = 80, bool allowExternal = true}) async {
-    if (_isRunning) return;
+    // 先停止旧服务，避免端口被占用
+    await _server?.close(force: true);
+    _server = null;
+    _isRunning = false;
+    _isHttps = false;
+
     _port = port;
     try {
       final address =

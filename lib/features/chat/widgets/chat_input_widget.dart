@@ -1913,40 +1913,31 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Widget _buildMcpToolsToggle() {
     final currentSession = sessionController.currentSession.value;
 
-    // MCP 服务已全局存储，不依赖 ChatModel
     final hasMcpServices = McpController.instance.hasGlobalMcpServices;
-    final mcpsNames = currentSession?.mcps;
-    final hasSelectedService = mcpsNames != null && mcpsNames.isNotEmpty;
-    final mcpCount = mcpsNames?.length ?? 0;
+    final sessionMcps = currentSession?.mcps;
+    final modelMcps = currentSession?.chatModel?.mcps;
+    final allMcps = <String>{};
+    if (modelMcps != null) allMcps.addAll(modelMcps);
+    if (sessionMcps != null) allMcps.addAll(sessionMcps);
+    final mcpCount = allMcps.length;
 
-    // 统一按钮：图标 + 文字（未选：请选择，已选：服务名或数量）
     final displayText =
-        hasSelectedService
-            ? (mcpCount == 1
-                ? mcpsNames!.first
-                : '$mcpCount 个 MCP')
+        mcpCount > 0
+            ? '$mcpCount 个 MCP'
             : (hasMcpServices
                 ? AppLocalizations.of(context)!.selectMcpTool
                 : AppLocalizations.of(context)!.noMcpTool);
 
     return Tooltip(
       message:
-          hasSelectedService
-              ? '${mcpCount == 1 ? '查看 MCP 工具详情' : '$mcpCount 个 MCP 已绑定'}\n长按移除'
+          mcpCount > 0
+              ? '点击管理 MCP 服务'
               : (hasMcpServices
                   ? AppLocalizations.of(context)!.clickToSelectMcpTool
                   : AppLocalizations.of(context)!.noMcpToolConfigured),
       child: GestureDetector(
         onTap:
-            hasMcpServices && !_isSending
-                ? (hasSelectedService && mcpCount == 1
-                    ? () => _showMcpDetailByName(mcpsNames!.first)
-                    : _showMcpServiceSelection)
-                : null,
-        onLongPress:
-            hasSelectedService && !_isSending
-                ? () => _showRemoveMcpDialog()
-                : null,
+            hasMcpServices && !_isSending ? _showMcpServiceSelection : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
@@ -1957,18 +1948,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     _isSending
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
-                        : hasSelectedService
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        : mcpCount > 0
                         ? Theme.of(context).colorScheme.onSurface
                         : hasMcpServices
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6)
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3),
+                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -1980,21 +1965,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight:
-                        hasSelectedService ? FontWeight.w700 : FontWeight.w500,
+                        mcpCount > 0 ? FontWeight.w700 : FontWeight.w500,
                     color:
                         _isSending
-                            ? Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.3)
-                            : hasSelectedService
+                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                            : mcpCount > 0
                             ? Theme.of(context).colorScheme.onSurface
                             : hasMcpServices
-                            ? Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.6)
-                            : Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.3),
+                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                   ),
                 ),
               ),
@@ -2079,7 +2058,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
 
     final session = sessionController.currentSession.value;
-    final selectedNames = List<String>.from(session?.mcps ?? []);
+    final sessionMcpNames = List<String>.from(session?.mcps ?? []);
+    final modelMcpNames = List<String>.from(session?.chatModel?.mcps ?? []);
     final searchController = TextEditingController();
 
     showDialog(
@@ -2087,7 +2067,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       barrierColor: Colors.black.withOpacity(0.15),
       barrierDismissible: true,
       builder: (dialogContext) {
-        final localSelected = List<String>.from(selectedNames);
+        final localSelected = List<String>.from(sessionMcpNames);
 
         return Dialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
@@ -2114,15 +2094,32 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               false);
                     }).toList();
 
+                // 模型MCP说明
+                final hasModelMcp = modelMcpNames.isNotEmpty;
+
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildCommandPaletteSearchBar(
                       controller: searchController,
-                      title: '多选 MCP 服务',
+                      title: '选择 MCP 服务',
                       onChanged: () => setDialogState(() {}),
                     ),
+                    if (hasModelMcp)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        child: Text(
+                          '模型 MCP（默认启用，不可更改）：${modelMcpNames.join('、')}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          ),
+                        ),
+                      ),
                     Flexible(
                       child:
                           filtered.isEmpty
@@ -2148,27 +2145,57 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 itemCount: filtered.length,
                                 itemBuilder: (context, index) {
                                   final service = filtered[index];
-                                  final isSelected =
-                                      localSelected.contains(service.name);
+                                  final isModelMcp = modelMcpNames.contains(service.name);
+                                  final isSessionMcp = localSelected.contains(service.name);
+                                  final isSelected = isModelMcp || isSessionMcp;
 
                                   return CheckboxListTile(
                                     dense: true,
                                     value: isSelected,
-                                    onChanged: (checked) {
-                                      if (checked == true) {
-                                        if (!localSelected.contains(
-                                          service.name,
-                                        )) {
-                                          localSelected.add(service.name);
-                                        }
-                                      } else {
-                                        localSelected.remove(service.name);
-                                      }
-                                      setDialogState(() {});
-                                    },
-                                    title: Text(
-                                      service.name,
-                                      style: const TextStyle(fontSize: 13),
+                                    onChanged: isModelMcp
+                                        ? null // 模型MCP不可更改
+                                        : (checked) {
+                                            if (checked == true) {
+                                              if (!localSelected.contains(service.name)) {
+                                                localSelected.add(service.name);
+                                              }
+                                            } else {
+                                              localSelected.remove(service.name);
+                                            }
+                                            setDialogState(() {});
+                                          },
+                                    title: Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            service.name,
+                                            style: const TextStyle(fontSize: 13),
+                                          ),
+                                        ),
+                                        if (isModelMcp) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary
+                                                  .withOpacity(0.1),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              '模型',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: Theme.of(context).colorScheme.primary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                     subtitle:
                                         service.description?.isNotEmpty == true
@@ -2878,536 +2905,4 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     });
   }
 
-  /// 显示移除MCP确认弹窗
-  void _showRemoveMcpDialog() async {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final mcpCount = currentSession.mcps?.length ?? 0;
-    if (mcpCount == 0) return;
-
-    final bool? shouldRemove = await ConfirmDeleteDialog.show(
-      context: context,
-      title: '移除 MCP',
-      itemName: mcpCount == 1
-          ? (currentSession.mcps?.first ?? '')
-          : '$mcpCount 个 MCP 服务',
-      description: '确定要移除当前绑定的 MCP${mcpCount > 1 ? '（全部）' : ''}',
-      warningMessage: '此操作无法撤销',
-      icon: CupertinoIcons.link,
-      iconColor: Theme.of(context).colorScheme.error,
-    );
-
-    if (shouldRemove == true) {
-      // 清理所有 MCP 客户端
-      final oldNames = currentSession.mcps;
-      if (oldNames != null) {
-        for (final name in oldNames) {
-          McpController.instance.closeClient(name);
-        }
-      }
-      sessionController.updateSession(currentSession.copyWith(clearMcp: true));
-    }
-  }
-
-  /// 通过名称显示 MCP 服务详情弹窗
-  void _showMcpDetailByName(String name) {
-    final mcp = McpController.instance.getMcp(name);
-    if (mcp != null) _showMcpDetail(mcp);
-  }
-
-  /// 显示 MCP 服务详情弹窗（与 MCP 管理页面保持一致）
-  void _showMcpDetail(Mcp service) {
-    final mcpc = Get.find<McpController>();
-    final config = mcpc.getMcp(service.name);
-
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: AppLocalizations.of(context)!.mcpDetail,
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (ctx, anim1, anim2) {
-        Mcp mutableService = service;
-        return Center(
-          child: FadeTransition(
-            opacity: anim1,
-            child: StatefulBuilder(
-              builder: (ctx, setSheetState) {
-                final tools = mutableService.tools;
-                final hasTools = tools != null && tools.isNotEmpty;
-
-                return ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: 700,
-                    maxHeight: MediaQuery.of(ctx).size.height * 0.75,
-                  ),
-                  child: Material(
-                    color: Theme.of(ctx).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // 头部
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            mutableService.name,
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            _getMcpTypeLabel(config),
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w600,
-                                              color:
-                                                  Theme.of(
-                                                    context,
-                                                  ).colorScheme.primary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      mutableService.description?.isNotEmpty ==
-                                              true
-                                          ? mutableService.description!
-                                          : _buildMcpSubtitle(config),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.6),
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 工具列表
-                          if (hasTools) ...[
-                            Row(
-                              children: [
-                                Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.toolList(tools.length),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                                const Spacer(),
-                                GestureDetector(
-                                  onTap: () async {
-                                    try {
-                                      final cfg = config ??
-                                          McpController.instance.getMcp(
-                                            mutableService.name,
-                                          );
-                                      if (cfg == null) {
-                                        throw Exception(
-                                            '未找到 MCP 配置: ${mutableService.name}');
-                                      }
-                                      final newTools =
-                                          await McpController.instance.refreshServiceTools(
-                                            cfg,
-                                          );
-                                      final base = mutableService;
-                                      final prompt = McpController.instance
-                                          .buildMcpPrompt(
-                                            base.copyWith(tools: newTools),
-                                          );
-                                      final updatedService = base.copyWith(
-                                        tools: newTools,
-                                        prompt: prompt,
-                                        lastUpdated: DateTime.now(),
-                                      );
-                                      await mcpc.updateService(
-                                        cfg.name,
-                                        cfg.copyWith(
-                                          description: updatedService.description,
-                                        ),
-                                      );
-                                      mutableService = updatedService;
-                                      final sess =
-                                          sessionController.currentSession.value;
-                                      if (sess != null) {
-                                        await sessionController.updateSession(
-                                          sess.copyWith(mcpServer: updatedService),
-                                        );
-                                      }
-                                      setSheetState(() {});
-                                      SnackBarUtils.showSuccess(
-                                        ctx,
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.toolsRefreshed(newTools.length),
-                                      );
-                                    } catch (e) {
-                                      if (ctx.mounted) {
-                                        SnackBarUtils.showError(
-                                          ctx,
-                                          AppLocalizations.of(
-                                            context,
-                                          )!.refreshFailed(
-                                            e.toString().substring(
-                                              0,
-                                              e.toString().length.clamp(0, 80),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        CupertinoIcons.refresh,
-                                        size: 13,
-                                        color:
-                                            Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.refreshAction,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color:
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.primary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children:
-                                  tools.take(50).map((t) {
-                                    final label =
-                                        t.description.isNotEmpty
-                                            ? '${t.name}: ${t.description}'
-                                            : t.name;
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary.withOpacity(0.08),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withOpacity(0.15),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        label,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color:
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.primary,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                            ),
-                            if (tools.length > 50)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  )!.moreXTools(tools.length - 50),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(height: 6),
-                            const Divider(),
-                            const SizedBox(height: 12),
-                          ],
-
-                          // 未获取工具时的获取按钮
-                          if (!hasTools) ...[
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  try {
-                                    final cfg = config ??
-                                        McpController.instance.getMcp(
-                                          mutableService.name,
-                                        );
-                                    if (cfg == null) {
-                                      throw Exception(
-                                          '未找到 MCP 配置: ${mutableService.name}');
-                                    }
-                                    final newTools =
-                                        await McpController.instance.refreshServiceTools(
-                                          cfg,
-                                        );
-                                    final base = mutableService;
-                                    final prompt = McpController.instance
-                                        .buildMcpPrompt(
-                                          base.copyWith(tools: newTools),
-                                        );
-                                    final updatedService = base.copyWith(
-                                      tools: newTools,
-                                      prompt: prompt,
-                                      lastUpdated: DateTime.now(),
-                                    );
-                                    await mcpc.updateService(
-                                      cfg.name,
-                                      cfg.copyWith(
-                                        description: updatedService.description,
-                                      ),
-                                    );
-                                    mutableService = updatedService;
-                                    final sess =
-                                        sessionController.currentSession.value;
-                                    if (sess != null) {
-                                      await sessionController.updateSession(
-                                        sess.copyWith(mcpServer: updatedService),
-                                      );
-                                    }
-                                    setSheetState(() {});
-                                    SnackBarUtils.showSuccess(
-                                      ctx,
-                                      AppLocalizations.of(
-                                        context,
-                                      )!.toolsFetched(newTools.length),
-                                    );
-                                  } catch (e) {
-                                    if (ctx.mounted) {
-                                      SnackBarUtils.showError(
-                                        ctx,
-                                        AppLocalizations.of(
-                                          context,
-                                        )!.fetchFailed(
-                                          e.toString().substring(
-                                            0,
-                                            e.toString().length.clamp(0, 80),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                icon: const Icon(
-                                  CupertinoIcons.arrow_down_to_line_alt,
-                                  size: 15,
-                                ),
-                                label: Text(
-                                  AppLocalizations.of(context)!.fetchTools,
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-
-                          // JSON 配置
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // 代码块标题栏
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  color: const Color(0xFFF0F0F0),
-                                  child: Row(
-                                    children: [
-                                      const Text(
-                                        '{ }',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontFamily: 'monospace',
-                                          color: Color(0xFF999999),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      const Text(
-                                        'JSON',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontFamily: 'monospace',
-                                          color: Color(0xFF999999),
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      GestureDetector(
-                                        onTap: () {
-                                          Clipboard.setData(
-                                            ClipboardData(
-                                              text:
-                                                  const JsonEncoder.withIndent(
-                                                    '  ',
-                                                  ).convert(
-                                                    mutableService.toJson(),
-                                                  ),
-                                            ),
-                                          );
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                AppLocalizations.of(
-                                                  context,
-                                                )!.jsonCopied,
-                                              ),
-                                              duration: const Duration(
-                                                seconds: 1,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        child: const Icon(
-                                          CupertinoIcons.doc_on_clipboard,
-                                          size: 12,
-                                          color: Color(0xFF999999),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // 代码内容
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  color: const Color(0xFFF5F5F5),
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Text(
-                                      const JsonEncoder.withIndent(
-                                        '  ',
-                                      ).convert(mutableService.toJson()),
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontFamily: 'monospace',
-                                        color: Color(0xFF333333),
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// MCP 服务类型标签
-  String _getMcpTypeLabel(Mcp? service) {
-    if (service == null) return '';
-    if (service.url != null && service.url!.isNotEmpty) {
-      switch (service.type) {
-        case McpTransportType.sse:
-          return 'SSE';
-        case McpTransportType.http:
-        case McpTransportType.streamableHttp:
-          return 'HTTP';
-        default:
-          return 'URL';
-      }
-    }
-    return 'Stdio';
-  }
-
-  /// MCP 服务副标题（URL 或 命令）
-  String _buildMcpSubtitle(Mcp? service) {
-    if (service == null) return '';
-    if (service.url != null && service.url!.isNotEmpty) {
-      final typeLabel =
-          (service.type == McpTransportType.http ||
-                  service.type == McpTransportType.streamableHttp)
-              ? ' [HTTP]'
-              : (service.type == McpTransportType.sse ? ' [SSE]' : '');
-      return '${service.url!}$typeLabel';
-    }
-    return '${service.command ?? ''} ${service.args?.join(' ') ?? ''}';
-  }
-
-  /// 将 MCP 工具调用结果发送回 LLM 并流式获取最终回复
 }

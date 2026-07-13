@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/session_controller.dart';
@@ -500,6 +501,53 @@ class SessionConfigSidebar {
       ),
     );
   }
+
+  /// 构建计费信息区域（独立使用）
+  static Widget buildBillingInfo(BuildContext context, ChatSession session) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, '计费信息'),
+        const SizedBox(height: 8),
+        _buildConfigItem(
+          context,
+          icon: CupertinoIcons.arrow_down_circle,
+          label: '累计输入Token',
+          value: _formatTokenCount(session.promptTokens),
+          valueColor: theme.colorScheme.primary,
+        ),
+        const SizedBox(height: 8),
+        _buildConfigItem(
+          context,
+          icon: CupertinoIcons.arrow_up_circle,
+          label: '累计输出Token',
+          value: _formatTokenCount(session.completionTokens),
+          valueColor: theme.colorScheme.primary,
+        ),
+        const SizedBox(height: 8),
+        _buildConfigItem(
+          context,
+          icon: CupertinoIcons.money_dollar_circle,
+          label: '累计费用',
+          value: '${_getCurrencySymbol(session.chatModel)}${session.totalCost.toStringAsFixed(6)}',
+          valueColor: session.totalCost > 0
+              ? theme.colorScheme.error
+              : theme.colorScheme.onSurface,
+        ),
+        if (session.chatModel?.promptPrice != null ||
+            session.chatModel?.completionPrice != null) ...[
+          const SizedBox(height: 8),
+          _buildPriceCard(
+            context,
+            promptPrice: session.chatModel?.promptPrice,
+            completionPrice: session.chatModel?.completionPrice,
+            chatModel: session.chatModel,
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 /// 可双击编辑的配置项组件
@@ -680,50 +728,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
       children: [
         // 启用开关
         _buildToggleRow(context),
-
-        // 计费信息（始终显示，置于配额配置前面）
-        const SizedBox(height: 12),
-        SessionConfigSidebar._buildSectionTitle(context, '计费信息'),
-        const SizedBox(height: 8),
-        SessionConfigSidebar._buildConfigItem(
-          context,
-          icon: CupertinoIcons.arrow_down_circle,
-          label: '累计输入Token',
-          value: SessionConfigSidebar._formatTokenCount(
-            _session.promptTokens,
-          ),
-          valueColor: Theme.of(context).colorScheme.primary,
-        ),
-        const SizedBox(height: 8),
-        SessionConfigSidebar._buildConfigItem(
-          context,
-          icon: CupertinoIcons.arrow_up_circle,
-          label: '累计输出Token',
-          value: SessionConfigSidebar._formatTokenCount(
-            _session.completionTokens,
-          ),
-          valueColor: Theme.of(context).colorScheme.primary,
-        ),
-        const SizedBox(height: 8),
-        SessionConfigSidebar._buildConfigItem(
-          context,
-          icon: CupertinoIcons.money_dollar_circle,
-          label: '累计费用',
-          value: '${SessionConfigSidebar._getCurrencySymbol(_session.chatModel)}${_session.totalCost.toStringAsFixed(6)}',
-          valueColor: _session.totalCost > 0
-              ? Theme.of(context).colorScheme.error
-              : Theme.of(context).colorScheme.onSurface,
-        ),
-        if (_session.chatModel?.promptPrice != null ||
-            _session.chatModel?.completionPrice != null) ...[
-          const SizedBox(height: 8),
-          SessionConfigSidebar._buildPriceCard(
-            context,
-            promptPrice: _session.chatModel?.promptPrice,
-            completionPrice: _session.chatModel?.completionPrice,
-            chatModel: _session.chatModel,
-          ),
-        ],
 
         if (_session.quotaEnabled) ...[
           const SizedBox(height: 12),
@@ -1142,10 +1146,10 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   }) {
     final progress = limit > 0 ? (used.toDouble() / limit.toDouble()).clamp(0.0, 1.0) : 0.0;
     final usedStr = isDouble
-        ? '${used.toStringAsFixed(4)}'
+        ? used.toStringAsFixed(4)
         : SessionConfigSidebar.sFormatTokenCount(used.toInt());
     final limitStr = isDouble
-        ? '${limit.toStringAsFixed(2)}'
+        ? limit.toStringAsFixed(2)
         : SessionConfigSidebar.sFormatTokenCount(limit.toInt());
     final progressColor = progress >= 0.9
         ? Theme.of(context).colorScheme.error
@@ -1192,7 +1196,15 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   }
 }
 
-/// 会话配置 Tab 切换组件
+/// 导航标签项
+class _NavSection {
+  final GlobalKey key;
+  final String label;
+  final IconData icon;
+  const _NavSection({required this.key, required this.label, required this.icon});
+}
+
+/// 会话配置内容组件（单列表 + 右侧导航）
 class _SessionConfigTabs extends StatefulWidget {
   final ChatSession session;
 
@@ -1202,20 +1214,79 @@ class _SessionConfigTabs extends StatefulWidget {
   State<_SessionConfigTabs> createState() => _SessionConfigTabsState();
 }
 
-class _SessionConfigTabsState extends State<_SessionConfigTabs>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _SessionConfigTabsState extends State<_SessionConfigTabs> {
+  final ScrollController _scrollController = ScrollController();
+
+  final GlobalKey _basicInfoKey = GlobalKey();
+  final GlobalKey _serviceKey = GlobalKey();
+  final GlobalKey _mcpKey = GlobalKey();
+  final GlobalKey _quotaKey = GlobalKey();
+  final GlobalKey _billingKey = GlobalKey();
+
+  late final List<_NavSection> _navSections;
+  String _activeSection = '基础信息';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _navSections = [
+      _NavSection(key: _basicInfoKey, label: '基础信息', icon: CupertinoIcons.info_circle),
+      _NavSection(key: _serviceKey, label: '服务配置', icon: CupertinoIcons.gear_alt),
+      _NavSection(key: _mcpKey, label: 'MCP', icon: CupertinoIcons.rectangle_3_offgrid),
+      _NavSection(key: _quotaKey, label: '用量配额', icon: CupertinoIcons.gauge),
+      _NavSection(key: _billingKey, label: '计费信息', icon: CupertinoIcons.money_dollar_circle),
+    ];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _scrollController.addListener(_onScroll);
+      }
+    });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final scrollOffset = _scrollController.offset;
+    String? newActive = _navSections.first.label;
+
+    for (int i = _navSections.length - 1; i >= 0; i--) {
+      final ctx = _navSections[i].key.currentContext;
+      if (ctx != null) {
+        final RenderBox? box = ctx.findRenderObject() as RenderBox?;
+        if (box != null) {
+          final viewport = RenderAbstractViewport.of(box);
+          final offset = viewport.getOffsetToReveal(box, 0.0);
+          if (offset.offset <= scrollOffset + 5) {
+            newActive = _navSections[i].label;
+            break;
+          }
+        }
+      }
+    }
+
+    if (newActive != null && newActive != _activeSection) {
+      _activeSection = newActive;
+      setState(() {});
+    }
+  }
+
+  void _scrollToSection(_NavSection section) {
+    final ctx = section.key.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        alignment: 0.05,
+      );
+      setState(() => _activeSection = section.label);
+    }
   }
 
   /// 构建免授权开关
@@ -1292,36 +1363,89 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
     );
   }
 
+  Widget _buildNavBar(BuildContext context) {
+    return Container(
+      width: 30,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(8),
+          bottomLeft: Radius.circular(8),
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: _navSections.map((section) {
+          final isActive = section.label == _activeSection;
+          return Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _scrollToSection(section),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  bottomLeft: Radius.circular(8),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: isActive
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.transparent,
+                        width: 2.5,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        section.label,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                          color: isActive
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
 
-    return Column(
+    return Row(
       children: [
-        TabBar(
-          controller: _tabController,
-          labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w400,
-          ),
-          indicatorSize: TabBarIndicatorSize.label,
-          tabs: const [
-            Tab(text: '基础信息'),
-            Tab(text: '服务配置'),
-            Tab(text: '用量配额'),
-          ],
-        ),
+        // 主内容区
         Expanded(
-          child: TabBarView(
-            controller: _tabController,
+          child: ListView(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
             children: [
-              // Tab 1: 基础信息
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(12),
+              // ── 基础信息 ──
+              Container(
+                key: _basicInfoKey,
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    SessionConfigSidebar._buildSectionTitle(context, '基础信息'),
+                    const SizedBox(height: 8),
                     SessionConfigSidebar._buildEditableConfigItem(
                       context,
                       icon: CupertinoIcons.chat_bubble,
@@ -1384,30 +1508,6 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                           ? Theme.of(context).colorScheme.primary
                           : null,
                     ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: CupertinoIcons.link,
-                      label: '模型MCP',
-                      value: session.chatModel?.mcps != null && session.chatModel!.mcps!.isNotEmpty
-                          ? session.chatModel!.mcps!.join(', ')
-                          : '未绑定',
-                      valueColor: session.chatModel?.mcps != null && session.chatModel!.mcps!.isNotEmpty
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: CupertinoIcons.link,
-                      label: '会话MCP',
-                      value: session.mcps != null && session.mcps!.isNotEmpty
-                          ? session.mcps!.join(', ')
-                          : '未绑定',
-                      valueColor: session.mcps != null && session.mcps!.isNotEmpty
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
                     // 关联提示词
                     if (session.connectPrompt != null &&
                         session.connectPrompt!.isNotEmpty) ...[
@@ -1429,17 +1529,21 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                       label: '消息数量',
                       value: '${session.messages.length}条',
                     ),
-
                   ],
                 ),
               ),
 
-              // Tab 2: 服务配置
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(12),
+              const SizedBox(height: 16),
+
+              // ── 服务配置 ──
+              Container(
+                key: _serviceKey,
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    SessionConfigSidebar._buildSectionTitle(context, '服务配置'),
+                    const SizedBox(height: 8),
                     SessionConfigSidebar._buildCopyableConfigItem(
                       context,
                       icon: CupertinoIcons.link,
@@ -1466,20 +1570,99 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs>
                       value: session.apiKey,
                     ),
                     const SizedBox(height: 8),
-                    // 免授权开关
                     _buildNoAuthToggle(context, session),
                   ],
                 ),
               ),
 
-              // Tab 3: 用量配额
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(12),
-                child: _QuotaConfigSection(session: session),
+              const SizedBox(height: 16),
+
+              // ── MCP ──
+              Container(
+                key: _mcpKey,
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SessionConfigSidebar._buildSectionTitle(context, 'MCP'),
+                    const SizedBox(height: 8),
+                    SessionConfigSidebar._buildConfigItem(
+                      context,
+                      icon: CupertinoIcons.rectangle_3_offgrid,
+                      label: '模型MCP',
+                      value: session.chatModel?.mcps != null &&
+                              session.chatModel!.mcps!.isNotEmpty
+                          ? session.chatModel!.mcps!.join(', ')
+                          : '未绑定',
+                      valueColor:
+                          session.chatModel?.mcps != null &&
+                                  session.chatModel!.mcps!.isNotEmpty
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                    ),
+                    const SizedBox(height: 8),
+                    SessionConfigSidebar._buildConfigItem(
+                      context,
+                      icon: CupertinoIcons.rectangle_stack,
+                      label: '会话MCP',
+                      value: session.mcps != null && session.mcps!.isNotEmpty
+                          ? session.mcps!.join(', ')
+                          : '未绑定',
+                      valueColor: session.mcps != null && session.mcps!.isNotEmpty
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    if ((session.chatModel?.mcps == null ||
+                            session.chatModel!.mcps!.isEmpty) &&
+                        (session.mcps == null || session.mcps!.isEmpty))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '可在模型管理或聊天输入框处添加 MCP 服务',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.3),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
+
+              const SizedBox(height: 16),
+
+              // ── 用量配额 ──
+              Container(
+                key: _quotaKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SessionConfigSidebar._buildSectionTitle(context, '用量配额'),
+                    const SizedBox(height: 8),
+                    _QuotaConfigSection(session: session),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── 计费信息 ──
+              Container(
+                key: _billingKey,
+                child: SessionConfigSidebar.buildBillingInfo(context, session),
+              ),
+
+              // 底部留白，确保最后一个 section 能被滚到顶部
+              const SizedBox(height: 100),
             ],
           ),
         ),
+
+        // 右侧导航条
+        _buildNavBar(context),
       ],
     );
   }

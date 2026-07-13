@@ -8,6 +8,7 @@ import '../../../../controllers/domain_controller.dart';
 import '../../../../models/chat/chat_session.dart';
 import '../../../../models/bigmodel/chat_model.dart';
 import '../../../../utils/snackbar_utils.dart';
+import '../../../../widgets/common/confirm_delete_dialog.dart';
 
 /// 会话配置侧边栏内容
 class SessionConfigSidebar {
@@ -701,10 +702,31 @@ class _QuotaConfigSection extends StatefulWidget {
 class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   late ChatSession _session;
 
+  late final TextEditingController _tokenLimitController;
+  late final TextEditingController _costLimitController;
+  late final TextEditingController _requestLimitController;
+
   @override
   void initState() {
     super.initState();
     _session = widget.session;
+    _tokenLimitController = TextEditingController(
+      text: _session.quotaTokenLimit != null ? _session.quotaTokenLimit.toString() : '',
+    );
+    _costLimitController = TextEditingController(
+      text: _session.quotaCostLimit != null ? _session.quotaCostLimit.toString() : '',
+    );
+    _requestLimitController = TextEditingController(
+      text: _session.quotaRequestLimit != null ? _session.quotaRequestLimit.toString() : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _tokenLimitController.dispose();
+    _costLimitController.dispose();
+    _requestLimitController.dispose();
+    super.dispose();
   }
 
   @override
@@ -712,6 +734,31 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     super.didUpdateWidget(oldWidget);
     if (widget.session != oldWidget.session) {
       _session = widget.session;
+      // 外部更新时同步 controller 文本
+      _syncTokenLimitText();
+      _syncCostLimitText();
+      _syncRequestLimitText();
+    }
+  }
+
+  void _syncTokenLimitText() {
+    final newText = _session.quotaTokenLimit != null ? _session.quotaTokenLimit.toString() : '';
+    if (_tokenLimitController.text != newText) {
+      _tokenLimitController.text = newText;
+    }
+  }
+
+  void _syncCostLimitText() {
+    final newText = _session.quotaCostLimit != null ? _session.quotaCostLimit.toString() : '';
+    if (_costLimitController.text != newText) {
+      _costLimitController.text = newText;
+    }
+  }
+
+  void _syncRequestLimitText() {
+    final newText = _session.quotaRequestLimit != null ? _session.quotaRequestLimit.toString() : '';
+    if (_requestLimitController.text != newText) {
+      _requestLimitController.text = newText;
     }
   }
 
@@ -737,6 +784,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           // Token 用量上限
           _buildNumberField(
             context,
+            controller: _tokenLimitController,
             icon: CupertinoIcons.text_bubble,
             label: 'Token 用量上限',
             value: _session.quotaTokenLimit,
@@ -753,6 +801,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           // 费用预算上限
           _buildNumberField(
             context,
+            controller: _costLimitController,
             icon: CupertinoIcons.money_dollar_circle,
             label: '费用预算上限（${SessionConfigSidebar._getCurrencyName(_session.chatModel)}）',
             value: _session.quotaCostLimit,
@@ -770,6 +819,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           // 请求次数上限
           _buildNumberField(
             context,
+            controller: _requestLimitController,
             icon: CupertinoIcons.repeat,
             label: '请求次数上限',
             value: _session.quotaRequestLimit,
@@ -790,6 +840,11 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
 
           // 当前用量状态
           _buildQuotaStatusCard(context),
+
+          const SizedBox(height: 8),
+
+          // 手动重置按钮
+          _buildManualResetButton(context),
         ],
       ],
     );
@@ -875,6 +930,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
 
   Widget _buildNumberField(
     BuildContext context, {
+    required TextEditingController controller,
     required IconData icon,
     required String label,
     required num? value,
@@ -882,9 +938,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     required ValueChanged<num?> onChanged,
     bool isDouble = false,
   }) {
-    final controller = TextEditingController(
-      text: value != null ? (isDouble ? value.toString() : value.toInt().toString()) : '',
-    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1132,6 +1185,70 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  void _handleManualReset(BuildContext context) async {
+    final bool? shouldReset = await ConfirmDeleteDialog.show(
+      context: context,
+      title: '手动重置用量',
+      itemName: '用量配额',
+      description: '确定要手动重置',
+      warningMessage: '重置后当前周期的 Token 用量、费用和请求次数将清零，周期起始时间更新为当前时间。',
+      icon: CupertinoIcons.arrow_counterclockwise,
+      iconColor: Colors.orange,
+      confirmText: '重置',
+      cancelText: '取消',
+    );
+
+    if (shouldReset == true) {
+      final now = DateTime.now();
+      final periodStart = _session.quotaResetPeriod == 'daily'
+          ? DateTime(now.year, now.month, now.day)
+          : _session.quotaResetPeriod == 'monthly'
+              ? DateTime(now.year, now.month, 1)
+              : now;
+      _updateSession(_session.copyWith(
+        quotaRequestCount: 0,
+        quotaPeriodStart: periodStart,
+      ));
+    }
+  }
+
+  Widget _buildManualResetButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _handleManualReset(context),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              CupertinoIcons.arrow_counterclockwise,
+              size: 14,
+              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.7),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '手动重置用量',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

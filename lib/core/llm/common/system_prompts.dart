@@ -65,7 +65,7 @@ class CommonSystemPrompts {
         '\n4. **仅限工作目录**：读取和修改用户文件时，仅限工作目录下的文件'
         '\n\n### ⚠️ 重要说明'
         '\n- **工作模式文件**（合同要点、履约跟踪、争议记录、备忘录、脑图、日程等）使用专用工具（如 `contract_content_update`）写入，工具会自动保存到**工作目录**下'
-        '\n- **会话数据**（session.json、messages.json、memory.md）由系统自动管理，存储在会话目录（~/.llmwork/chats/会话ID/），无需手动操作';
+        '\n- **会话数据**（session.json、messages.json、memory.md）由系统自动管理，存储在会话目录（~/.llmate/chats/会话ID/），无需手动操作';
   }
 
   /// 合同模式提示词
@@ -80,7 +80,7 @@ class CommonSystemPrompts {
    - 使用 `file_read` 读取用户文件
    - 使用专用工具写入合同数据
 
-2. **会话目录** = `~/.llmwork/chats/会话ID/`
+2. **会话目录** = `~/.llmate/chats/会话ID/`
    - 由系统自动管理
    - 存储会话数据（session.json、messages.json、memory.md）
    - 无需手动操作
@@ -111,10 +111,10 @@ contract_disguss_update({"content": "争议记录Markdown内容"})
 | 工具 | 用途 | 写入位置 |
 |------|------|----------|
 | `file_read` | 读取工作目录文件 | 只读 |
-| `contract_content_update` | 合同要点 | `$workDir/.llmwork/contract/` |
-| `contract_process_update` | 合同履约 | `$workDir/.llmwork/contract/` |
-| `contract_disguss_update` | 合同争议 | `$workDir/.llmwork/contract/` |
-| `note_update` | 备忘录 | `$workDir/.llmwork/contract/` |
+| `contract_content_update` | 合同要点 | `$workDir/.llmate/contract/` |
+| `contract_process_update` | 合同履约 | `$workDir/.llmate/contract/` |
+| `contract_disguss_update` | 合同争议 | `$workDir/.llmate/contract/` |
+| `note_update` | 备忘录 | `$workDir/.llmate/contract/` |
 
 ### ⚠️ 严格格式要求
 
@@ -454,7 +454,7 @@ $rolesInfo
 - 规划章节/场景/情节
 
 #### 3. 创作阶段
-- 调用 `file_write` 写入草稿（路径：`$workDir/.llmwork/creative/drafts/文件名.md`）
+- 调用 `file_write` 写入草稿（路径：`$workDir/.llmate/creative/drafts/文件名.md`）
 - 分章节/场景逐步创作
 - 每完成一部分就保存
 
@@ -467,9 +467,9 @@ $rolesInfo
 
 | 工具 | 用途 | 存储位置 |
 |------|------|----------|
-| `mindmap_update` | 创建/更新脑图 | `$workDir/.llmwork/creative/mindmap.md` |
-| `note_update` | 更新灵感笔记 | `$workDir/.llmwork/creative/note.md` |
-| `file_write` | 写入草稿 | `$workDir/.llmwork/creative/drafts/文件名.md` |
+| `mindmap_update` | 创建/更新脑图 | `$workDir/.llmate/creative/mindmap.md` |
+| `note_update` | 更新灵感笔记 | `$workDir/.llmate/creative/note.md` |
+| `file_write` | 写入草稿 | `$workDir/.llmate/creative/drafts/文件名.md` |
 
 ### 脑图格式
 

@@ -8,15 +8,15 @@ weight: 5
 
 ## 无限扩展 AI 能力边界
 
-MCP (Model Context Protocol) 让 AI 连接外部工具与数据源。LLMWork 内置专属 MCP 服务，同时支持接入海量第三方 MCP 市场，从搜索到开发、从文件操作到云端协作，让 AI 成为真正的全能助手。
+MCP (Model Context Protocol) 让 AI 连接外部工具与数据源。LLMate 内置专属 MCP 服务，同时支持接入海量第三方 MCP 市场，从搜索到开发、从文件操作到云端协作，让 AI 成为真正的全能助手。
 
 ---
 
-### LLMWork 专属 MCP 服务
+### LLMate 专属 MCP 服务
 
 #### 💬 微信公众号 Token 管理
 
-LLMWork 专属 MCP 服务，实现微信服务号的 AccessToken 自动获取与刷新，用于在 LLMWork 上操作微信服务号接口。
+LLMate 专属 MCP 服务，实现微信服务号的 AccessToken 自动获取与刷新，用于在 LLMate 上操作微信服务号接口。
 
 - **传输协议**：HTTP
 - **版本**：v1.0.0
@@ -27,7 +27,7 @@ LLMWork 专属 MCP 服务，实现微信服务号的 AccessToken 自动获取与
   "mcpServers": {
     "wechatpublic": {
       "headers": {
-        "Authorization": "请联系LLMWork获取授权码",
+        "Authorization": "请联系LLMate获取授权码",
         "X-Appid": "您的微信服务号的AppID",
         "X-Secret": "您的微信服务号的AppSecret"
       },
@@ -37,13 +37,13 @@ LLMWork 专属 MCP 服务，实现微信服务号的 AccessToken 自动获取与
 }
 ```
 
-> ⚠️ 此 MCP 服务为 LLMWork 专属服务，需要联系 LLMWork 团队获取使用权限。
+> ⚠️ 此 MCP 服务为 LLMate 专属服务，需要联系 LLMate 团队获取使用权限。
 
 ---
 
 ### 第三方 MCP 服务生态
 
-LLMWork 兼容所有标准 MCP 协议服务，以下为常用分类：
+LLMate 兼容所有标准 MCP 协议服务，以下为常用分类：
 
 | 分类 | 典型服务 | 说明 |
 |------|---------|------|

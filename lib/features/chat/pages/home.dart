@@ -663,11 +663,11 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   // 发送反馈邮件
   Future<void> _sendFeedbackEmail() async {
     const String feedbackEmail = 'hanxinyc@gmail.com';
-    const String subject = 'ChatHub App Feedback';
+    const String subject = 'LLMate App Feedback';
     const String body = '''
 
 -----------------------------
-Thank you for your feedback on ChatHub. We take every feedback seriously.
+Thank you for your feedback on LLMate. We take every feedback seriously.
 
 Thanks!
 ''';

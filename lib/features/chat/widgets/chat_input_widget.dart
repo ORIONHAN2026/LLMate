@@ -1782,12 +1782,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     String sessionId,
     String targetDir,
   ) async {
-    // 检查目标目录是否有 .llmwork 目录
-    final llmworkDir = Directory(p.join(targetDir, '.llmwork'));
-    final hasLlmwork = await llmworkDir.exists();
-    debugPrint('🔍 检查 .llmwork 目录: ${llmworkDir.path}, 存在: $hasLlmwork');
+    // 检查目标目录是否有 .llmate 目录
+    final llmateDir = Directory(p.join(targetDir, '.llmate'));
+    final hasLlmate = await llmateDir.exists();
+    debugPrint('🔍 检查 .llmate 目录: ${llmateDir.path}, 存在: $hasLlmate');
 
-    if (!hasLlmwork) return null;
+    if (!hasLlmate) return null;
 
     // 检查会话目录是否有模式文件
     final sessionHasModeFiles = await _sessionHasModeFiles(sessionId);
@@ -1795,7 +1795,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 如果会话已有模式文件，拒绝
     if (sessionHasModeFiles) {
-      return '该目录已存在 LLM 工作文件（.llmwork），请选择其他目录';
+      return '该目录已存在 LLM 工作文件（.llmate），请选择其他目录';
     }
 
     // 允许（首次设置）

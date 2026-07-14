@@ -78,7 +78,7 @@ class StoragePaths {
   }
 
   /// 获取 .llmate 根目录
-  static String llmworkDir({
+  static String llmateDir({
     required String sessionId,
     String? workDirectory,
   }) {

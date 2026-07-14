@@ -1,15 +1,15 @@
 ---
-title: LLMWork - 企业AI安全治理
+title: LLMate - 企业AI安全治理
 toc: false
 ---
 
-# LLMWork
+# LLMate
 
 **可视化安装**，安装后实现大模型接口的代理功能，对企业大模型接口进行管理，**根据岗位、职业进行按需、按量分配**。可以灵活配置不同的**MCP服务**，对企业资源的访问进行管理。实时统计每个组织或者员工的**使用量**。可以自定义**企业系统提示词**，杜绝违规行为，对使用发送的内容进行**审计**。
 
 <div style="text-align:center;margin:32px 0;">
 
-<img src="/images/index.jpg" alt="LLMWork界面" style="width:70%;height:70%;border:1px solid #494747ff;border-radius:2px;">
+<img src="/images/index.jpg" alt="LLMate界面" style="width:70%;height:70%;border:1px solid #494747ff;border-radius:2px;">
 
 </div>
 
@@ -61,6 +61,6 @@ DeepSeek &nbsp;|&nbsp; OpenAI (GPT-4o / GPT-4 Turbo) &nbsp;|&nbsp; Google Gemini
 
 ---
 
-> LLMWork —— 不只是聊天客户端，更是你的 AI 生产力工作台。
+> LLMate —— 不只是聊天客户端，更是你的 AI 生产力工作台。
 >
 > [立即下载 →](/docs/07-download/)

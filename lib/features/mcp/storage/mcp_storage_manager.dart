@@ -8,7 +8,7 @@ import 'package:llmate/models/chat/mcp_config.dart';
 
 /// MCP 存储结构管理器
 ///
-/// 目录结构: ~/.llmwork/mcps/{mcp_name}/
+/// 目录结构: ~/.llmate/mcps/{mcp_name}/
 ///   └── server.json     # 合并后的完整配置（连接配置 + 元信息）
 ///
 /// 旧版本中元信息存放在独立的 config.json，现已合并进 server.json，

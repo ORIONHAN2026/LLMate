@@ -1,4 +1,4 @@
-# lib/ - LLMWork 项目源码根目录
+# lib/ - LLMate 项目源码根目录
 
 ## 目录结构
 
@@ -42,6 +42,6 @@ lib/
 
 - **状态管理**: GetX
 - **网络**: Dio (HTTP/SSE)
-- **存储**: JSON 文件持久化（~/.llmwork/）
+- **存储**: JSON 文件持久化（~/.llmate/）
 - **UI**: Material Design 3
 - **国际化**: flutter_localizations + ARB

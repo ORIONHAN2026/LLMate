@@ -6,7 +6,7 @@ next: docs/03-feature-guide
 weight: 2
 ---
 
-## 为什么选择 LLMWork？
+## 为什么选择 LLMate？
 
 不只是聊天客户端，更是你的 AI 生产力工作台。从多模型管理到文件操作，从 MCP 扩展到技能系统，一站式满足所有 AI 工作需求。
 

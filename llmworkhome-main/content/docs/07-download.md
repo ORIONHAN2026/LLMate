@@ -6,7 +6,7 @@ next: docs/08-use-cases
 weight: 7
 ---
 
-## 获取 LLMWork
+## 获取 LLMate
 
 智能检测你的平台，一键下载。完全免费，持续更新。
 
@@ -16,7 +16,7 @@ weight: 7
 
 **最新版本 v1.1.0** · Apple Silicon / Intel
 
-[🍎 免费下载 · DMG](cloud://cloud1-1gqqkl7s9ff46343.636c-cloud1-1gqqkl7s9ff46343-1402725619/LLMWorkRelease/LLMWork.dmg)
+[🍎 免费下载 · DMG](cloud://cloud1-1gqqkl7s9ff46343.636c-cloud1-1gqqkl7s9ff46343-1402725619/LLMateRelease/LLMate.dmg)
 
 文件大小：~120 MB
 
@@ -48,4 +48,4 @@ weight: 7
 
 ---
 
-如有问题，请联系 LLMWork 团队：<llmwork@example.com>
+如有问题，请联系 LLMate 团队：<llmate@example.com>

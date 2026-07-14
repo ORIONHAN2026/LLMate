@@ -115,8 +115,8 @@ class MyApp extends StatelessWidget {
             ],
               theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                primary: const Color(0xFF3B82F6),
-                seedColor: const Color(0xFF3B82F6), // 使用更深更鲜明的蓝色 (blue-700)
+                primary: const Color(0xFF2D6A4F),
+                seedColor: const Color(0xFF2D6A4F), // 墨绿色主色调
                 brightness: Brightness.light,
               ).copyWith(
                 surface: Colors.white,
@@ -146,31 +146,31 @@ class MyApp extends StatelessWidget {
               ),
               cardColor: Colors.white,
               dividerColor: const Color(0xFFE5E7EB),
-              primaryColor: const Color(0xFF3B82F6),
+              primaryColor: const Color(0xFF2D6A4F),
 
               // 按钮主题配置
               elevatedButtonTheme: ElevatedButtonThemeData(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6), // 主按钮蓝色
+                  backgroundColor: const Color(0xFF2D6A4F), // 主按钮墨绿色
                   foregroundColor: Colors.white, // 文字颜色
                   elevation: 2,
                 ),
               ),
               filledButtonTheme: FilledButtonThemeData(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6), // 填充按钮蓝色
+                  backgroundColor: const Color(0xFF2D6A4F), // 填充按钮墨绿色
                   foregroundColor: Colors.white, // 文字颜色
                 ),
               ),
               outlinedButtonTheme: OutlinedButtonThemeData(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF3B82F6), // 边框按钮蓝色
-                  side: const BorderSide(color: Color(0xFF3B82F6)),
+                  foregroundColor: const Color(0xFF2D6A4F), // 边框按钮墨绿色
+                  side: const BorderSide(color: Color(0xFF2D6A4F)),
                 ),
               ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF3B82F6), // 文本按钮蓝色
+                  foregroundColor: const Color(0xFF2D6A4F), // 文本按钮墨绿色
                 ),
               ),
 
@@ -183,14 +183,14 @@ class MyApp extends StatelessWidget {
             ),
             darkTheme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                primary: const Color(0xFF3B82F6),
-                seedColor: const Color(0xFF3B82F6),
+                primary: const Color(0xFF2D6A4F),
+                seedColor: const Color(0xFF2D6A4F),
                 brightness: Brightness.dark,
               ),
               useMaterial3: true,
               scaffoldBackgroundColor: const Color(0xFF1F1F1F),
               canvasColor: const Color(0xFF1F1F1F),
-              primaryColor: const Color(0xFF3B82F6),
+              primaryColor: const Color(0xFF2D6A4F),
               appBarTheme: const AppBarTheme(
                 backgroundColor: Color(0xFF1F1F1F),
                 surfaceTintColor: Colors.transparent,
@@ -208,26 +208,26 @@ class MyApp extends StatelessWidget {
               ),
               elevatedButtonTheme: ElevatedButtonThemeData(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
+                  backgroundColor: const Color(0xFF2D6A4F),
                   foregroundColor: Colors.white,
                   elevation: 2,
                 ),
               ),
               filledButtonTheme: FilledButtonThemeData(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
+                  backgroundColor: const Color(0xFF2D6A4F),
                   foregroundColor: Colors.white,
                 ),
               ),
               outlinedButtonTheme: OutlinedButtonThemeData(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF60A5FA),
-                  side: const BorderSide(color: Color(0xFF60A5FA)),
+                  foregroundColor: const Color(0xFF52B788),
+                  side: const BorderSide(color: Color(0xFF52B788)),
                 ),
               ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF60A5FA),
+                  foregroundColor: const Color(0xFF52B788),
                 ),
               ),
               cardColor: const Color(0xFF262626),

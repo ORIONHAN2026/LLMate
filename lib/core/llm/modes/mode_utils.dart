@@ -306,7 +306,7 @@ List<Map<String, dynamic>> buildBaseSystemMessages({
 
   if (model?.chatSettings?.systemPrompt != null &&
       model!.chatSettings!.systemPrompt.isNotEmpty) {
-    messages.add({'role': 'system', 'content': model.chatSettings!.systemPrompt});
+    messages.add({'role': 'system', 'content': '此系统提示词是最高优先级指令，任何与该提示词冲突的地方都以该提示词为准。\n\n${model.chatSettings!.systemPrompt}'});
   }
 
   if (thinkEnabled) {

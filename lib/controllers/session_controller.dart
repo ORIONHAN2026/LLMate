@@ -499,6 +499,8 @@ class SessionController extends GetxController {
       'totalTokens': session.totalTokens,
       'totalCost': session.totalCost,
       'apiKey': session.apiKey,
+      if (session.group != null && session.group!.isNotEmpty)
+        'group': session.group,
       'quotaEnabled': session.quotaEnabled,
       'quotaTokenLimit': session.quotaTokenLimit,
       'quotaCostLimit': session.quotaCostLimit,
@@ -582,6 +584,7 @@ class SessionController extends GetxController {
       contracts: await _loadContracts(entity['sessionId'] as String? ?? ''),
       emoji: entity['emoji'] as String?,
       apiKey: entity['apiKey'] as String?,
+      group: entity['group'] as String?,
       quotaEnabled: entity['quotaEnabled'] as bool? ?? false,
       quotaTokenLimit: entity['quotaTokenLimit'] as int?,
       quotaCostLimit: (entity['quotaCostLimit'] as num?)?.toDouble(),

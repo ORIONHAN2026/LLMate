@@ -125,6 +125,9 @@ class ChatSession {
   /// 会话头像 emoji
   final String emoji;
 
+  /// 会话分组名称，null 或空字符串表示未分组
+  final String? group;
+
   /// 运行时动态解析的模型对象（不持久化，由 modelId 解析而来）
   final ChatModel? chatModel;
   final List<ChatMessage> messages;
@@ -191,6 +194,7 @@ class ChatSession {
     this.totalCost = 0.0,
     String? emoji,
     String? apiKey,
+    this.group,
     this.quotaEnabled = false,
     this.quotaTokenLimit,
     this.quotaCostLimit,
@@ -385,6 +389,8 @@ class ChatSession {
     double? totalCost,
     String? emoji,
     String? apiKey,
+    String? group,
+    bool clearGroup = false,
     bool? quotaEnabled,
     int? quotaTokenLimit,
     bool clearQuotaTokenLimit = false,
@@ -454,6 +460,7 @@ class ChatSession {
       totalCost: totalCost ?? this.totalCost,
       emoji: emoji ?? this.emoji,
       apiKey: apiKey ?? this.apiKey,
+      group: clearGroup ? null : (group ?? this.group),
       quotaEnabled: quotaEnabled ?? this.quotaEnabled,
       quotaTokenLimit:
           clearQuotaTokenLimit
@@ -577,6 +584,7 @@ class ChatSession {
       chatModel: chatModel,
       emoji: json['emoji'] as String?,
       apiKey: json['apiKey'] as String?,
+      group: json['group'] as String?,
       quotaEnabled: json['quotaEnabled'] as bool? ?? false,
       quotaTokenLimit: json['quotaTokenLimit'] as int?,
       quotaCostLimit: (json['quotaCostLimit'] as num?)?.toDouble(),
@@ -622,6 +630,7 @@ class ChatSession {
       'chatModel': chatModel?.toMap(),
       'emoji': emoji,
       'apiKey': apiKey,
+      if (group != null && group!.isNotEmpty) 'group': group,
       'quotaEnabled': quotaEnabled,
       if (quotaTokenLimit != null) 'quotaTokenLimit': quotaTokenLimit,
       if (quotaCostLimit != null) 'quotaCostLimit': quotaCostLimit,

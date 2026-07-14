@@ -518,7 +518,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                borderSide: const BorderSide(color: Color(0xFF2D6A4F)),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 10,
@@ -570,7 +570,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                borderSide: const BorderSide(color: Color(0xFF2D6A4F)),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 10,
@@ -899,10 +899,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                                                 color:
                                                                     isSizeSelected
                                                                         ? const Color(
-                                                                          0xFF3B82F6,
+                                                                          0xFF2D6A4F,
                                                                         )
                                                                         : const Color(
-                                                                          0xFF3B82F6,
+                                                                          0xFF2D6A4F,
                                                                         ).withValues(
                                                                           alpha:
                                                                               0.1,
@@ -913,7 +913,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                                                     ),
                                                                 border: Border.all(
                                                                   color: const Color(
-                                                                    0xFF3B82F6,
+                                                                    0xFF2D6A4F,
                                                                   ),
                                                                   width: 1,
                                                                 ),
@@ -930,7 +930,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                                                           ? Colors
                                                                               .white
                                                                           : const Color(
-                                                                            0xFF3B82F6,
+                                                                            0xFF2D6A4F,
                                                                           ),
                                                                 ),
                                                               ),
@@ -964,7 +964,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
-                  borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                  borderSide: const BorderSide(color: Color(0xFF2D6A4F)),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -1028,7 +1028,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                borderSide: const BorderSide(color: Color(0xFF2D6A4F)),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 10,
@@ -1084,7 +1084,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                borderSide: const BorderSide(color: Color(0xFF2D6A4F)),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 10,
@@ -1127,7 +1127,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                borderSide: const BorderSide(color: Color(0xFF2D6A4F)),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 10,
@@ -1254,7 +1254,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                borderSide: const BorderSide(color: Color(0xFF2D6A4F)),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 10,
@@ -1682,7 +1682,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           decoration: BoxDecoration(
             color:
                 isUser
-                    ? const Color(0xFF3B82F6)
+                    ? const Color(0xFF2D6A4F)
                     : isError
                     ? Colors.red
                     : Colors.grey[100], // AI头像使用浅灰色背景
@@ -1719,7 +1719,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             decoration: BoxDecoration(
               color:
                   isUser
-                      ? const Color(0xFF3B82F6).withValues(alpha: 0.1)
+                      ? const Color(0xFF2D6A4F).withValues(alpha: 0.1)
                       : isError
                       ? Colors.red.withValues(alpha: 0.1)
                       : Colors.grey[100],
@@ -1737,7 +1737,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            Color(0xFF3B82F6),
+                            Color(0xFF2D6A4F),
                           ),
                         ),
                       ),
@@ -1764,7 +1764,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         const TextSpan(
                           text: '▌',
                           style: TextStyle(
-                            color: Color(0xFF3B82F6),
+                            color: Color(0xFF2D6A4F),
                             fontWeight: FontWeight.bold,
                           ),
                         ),

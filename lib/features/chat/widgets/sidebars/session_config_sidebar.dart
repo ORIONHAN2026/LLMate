@@ -84,126 +84,6 @@ class SessionConfigSidebar {
     );
   }
 
-  /// 构建可点击切换的 Emoji 配置项
-  static Widget _buildEmojiPickerItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String currentEmoji,
-    required ValueChanged<String> onEmojiSelected,
-  }) {
-    return InkWell(
-      onTap: () => _showEmojiPickerDialog(context, currentEmoji, onEmojiSelected),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              size: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    currentEmoji,
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 显示 Emoji 选择器对话框
-  static void _showEmojiPickerDialog(
-    BuildContext context,
-    String currentEmoji,
-    ValueChanged<String> onEmojiSelected,
-  ) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '选择会话图标',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 320),
-                  child: SingleChildScrollView(
-                    child: Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: kSessionEmojis.map((emoji) {
-                        final isSelected = currentEmoji == emoji;
-                        return GestureDetector(
-                          onTap: () {
-                            onEmojiSelected(emoji);
-                            Navigator.of(ctx).pop();
-                          },
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                              border: isSelected
-                                  ? Border.all(
-                                      color: Theme.of(context).colorScheme.primary,
-                                      width: 1.5,
-                                    )
-                                  : null,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(emoji, style: const TextStyle(fontSize: 22)),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   /// 构建配置项
   static Widget _buildConfigItem(
     BuildContext context, {
@@ -381,12 +261,6 @@ class SessionConfigSidebar {
     );
   }
 
-  /// 格式化日期时间
-  static String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
-        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
   /// 格式化Token数量
   static String _formatTokenCount(int count) {
     if (count >= 1000000) {
@@ -399,6 +273,17 @@ class SessionConfigSidebar {
 
   /// 供同文件其他类使用的格式化方法
   static String sFormatTokenCount(int count) => _formatTokenCount(count);
+
+  /// 智能构建服务地址（有域名用域名，无域名用本地）
+  static String _buildSmartServiceUrl(String sessionId) {
+    try {
+      final domainController = Get.find<DomainController>();
+      if (domainController.isConfigured) {
+        return _buildServiceUrl(sessionId);
+      }
+    } catch (_) {}
+    return _buildLocalUrl(sessionId, '127.0.0.1');
+  }
 
   /// 构建服务地址（根据域名配置动态拼接）
   static String _buildServiceUrl(String sessionId) {
@@ -1580,27 +1465,18 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       },
                     ),
                     const SizedBox(height: 8),
-                    SessionConfigSidebar._buildEmojiPickerItem(
+                    SessionConfigSidebar._buildEditableConfigItem(
                       context,
-                      icon: CupertinoIcons.smiley,
-                      label: '会话图标',
-                      currentEmoji: session.emoji,
-                      onEmojiSelected: (emoji) {
+                      icon: CupertinoIcons.rectangle_3_offgrid,
+                      label: '分组',
+                      value: session.group ?? '未分组',
+                      onChanged: (newGroup) {
                         final sessionController =
                             Get.find<SessionController>();
                         sessionController.updateSession(
-                          session.copyWith(emoji: emoji),
+                          session.copyWith(group: newGroup.trim()),
                         );
                       },
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: CupertinoIcons.calendar,
-                      label: '创建时间',
-                      value: SessionConfigSidebar._formatDateTime(
-                        session.createdAt,
-                      ),
                     ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildConfigItem(
@@ -1611,17 +1487,6 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                           ? '${session.chatModel!.name} (${session.chatModel!.model})'
                           : '未设置',
                       valueColor: session.chatModel != null
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: CupertinoIcons.folder,
-                      label: '工作目录',
-                      value: session.workDirectory ?? '未设置',
-                      maxLines: 2,
-                      valueColor: session.workDirectory != null
                           ? Theme.of(context).colorScheme.primary
                           : null,
                     ),
@@ -1664,20 +1529,8 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     SessionConfigSidebar._buildCopyableConfigItem(
                       context,
                       icon: CupertinoIcons.link,
-                      label: '服务地址[外部]',
-                      value: SessionConfigSidebar._buildServiceUrl(
-                        session.sessionId,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildCopyableConfigItem(
-                      context,
-                      icon: CupertinoIcons.house,
-                      label: '服务地址[本地]',
-                      value: SessionConfigSidebar._buildLocalUrl(
-                        session.sessionId,
-                        '127.0.0.1',
-                      ),
+                      label: '服务地址',
+                      value: SessionConfigSidebar._buildSmartServiceUrl(session.sessionId),
                     ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildCopyableConfigItem(

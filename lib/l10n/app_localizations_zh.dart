@@ -344,7 +344,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get modelSearchHint => '输入模型名称，如：gpt-4o-mini, claude-3-haiku 等';
 
   @override
-  String get roleDescHint => '请输入角色设定的描述，用于指导大模型的行为和响应风格...';
+  String get roleDescHint => '可以设置模型的规范，比方说角色设定、禁止事项等...';
 
   @override
   String get toolLogicHint => '请输入工具的工作逻辑描述...';
@@ -1382,7 +1382,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get temperatureDescription => '控制回复的随机性和创造性。较低值更保守，较高值更有创意。';
 
   @override
-  String get modelRoleSetting => '模型的角色设定';
+  String get modelRoleSetting => '模型系统提示词';
 
   @override
   String get presetRole => '预设角色';

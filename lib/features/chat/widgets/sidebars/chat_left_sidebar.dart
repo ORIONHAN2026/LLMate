@@ -5,7 +5,6 @@ import 'package:llmwork/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
-import 'dart:math' as math;
 import '../../../../models/chat/chat_session.dart';
 
 // 会话项组件
@@ -33,57 +32,10 @@ class _SessionItem extends StatefulWidget {
   State<_SessionItem> createState() => _SessionItemState();
 }
 
-class _SessionItemState extends State<_SessionItem>
-    with SingleTickerProviderStateMixin {
+class _SessionItemState extends State<_SessionItem> {
   bool _isHovered = false;
-  late AnimationController _loadingAnimationController;
-  late Animation<double> _loadingAnimation;
   final sessionController = Get.find<SessionController>();
   List<ChatSession> get chatSessions => sessionController.sessions;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // 初始化加载动画控制器
-    _loadingAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    _loadingAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _loadingAnimationController,
-        curve: Curves.linear,
-      ),
-    );
-
-    // 根据会话发送状态控制动画
-    if (widget.session.isSending) {
-      _loadingAnimationController.repeat();
-    }
-  }
-
-  @override
-  void didUpdateWidget(_SessionItem oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // 监听会话发送状态变化
-    if (widget.session.isSending != oldWidget.session.isSending) {
-      if (widget.session.isSending) {
-        _loadingAnimationController.repeat();
-      } else {
-        _loadingAnimationController.stop();
-        _loadingAnimationController.reset();
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _loadingAnimationController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,32 +74,6 @@ class _SessionItemState extends State<_SessionItem>
             padding: const EdgeInsets.all(6),
             child: Row(
               children: [
-                // Emoji 头像
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color:
-                        widget.isSelected
-                            ? Theme.of(
-                              context,
-                            ).colorScheme.primary.withOpacity(0.1)
-                            : Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  alignment: Alignment.center,
-                  child:
-                      widget.session.isSending
-                          ? _buildLoadingIcon()
-                          : Text(
-                            widget.session.emoji,
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                ),
-                const SizedBox(width: 6),
                 // 对话信息
                 Expanded(
                   child: Column(
@@ -271,25 +197,6 @@ class _SessionItemState extends State<_SessionItem>
     }
   }
 
-  // 已移除未使用的模型图标/颜色辅助方法 _getModelIcon / _getModelIconColor
-
-  // 构建精美的菊花样式加载动画
-  Widget _buildLoadingIcon() {
-    return RotationTransition(
-      turns: _loadingAnimation,
-      child: Container(
-        width: 16,
-        height: 16,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(7)),
-        child: CustomPaint(
-          painter: _LoadingSpinnerPainter(
-            color: Theme.of(context).colorScheme.onSurface, // 使用主题色
-          ),
-        ),
-      ),
-    );
-  }
-
 }
 
 class ChatLeftSidebar extends StatefulWidget {
@@ -332,9 +239,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
 
   // 分组折叠状态
   bool _isFavoriteCollapsed = false;
-  bool _isTodayCollapsed = false;
-  bool _isYesterdayCollapsed = false;
-  bool _isEarlierCollapsed = false;
+  final Map<String, bool> _groupCollapsed = {};
 
   @override
   void initState() {
@@ -486,40 +391,35 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
   }) {
     final sessions = chatSessions ?? widget.chatSessions;
 
-    // 分离收藏和按时间分类的会话
+    // 分离收藏和非收藏会话
     final favoriteSessions = <int>[];
-    final todaySessions = <int>[];
-    final yesterdaySessions = <int>[];
-    final earlierSessions = <int>[];
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
+    final ungroupedSessions = <int>[];
+    final groupMap = <String, List<int>>{}; // groupName -> [indices]
 
     for (int i = 0; i < sessions.length; i++) {
       final session = sessions[i];
 
-      // 收藏的会话始终在收藏分类中
       if (session.isFavorite) {
         favoriteSessions.add(i);
         continue;
       }
 
-      // 非收藏会话按时间分类
-      final sessionDate = DateTime(
-        session.lastMessageTime.year,
-        session.lastMessageTime.month,
-        session.lastMessageTime.day,
-      );
+      final groupName =
+          (session.group != null && session.group!.trim().isNotEmpty)
+              ? session.group!.trim()
+              : null;
 
-      if (sessionDate.isAtSameMomentAs(today)) {
-        todaySessions.add(i);
-      } else if (sessionDate.isAtSameMomentAs(yesterday)) {
-        yesterdaySessions.add(i);
+      if (groupName == null) {
+        ungroupedSessions.add(i);
       } else {
-        earlierSessions.add(i);
+        groupMap.putIfAbsent(groupName, () => []);
+        groupMap[groupName]!.add(i);
       }
     }
+
+    // 获取有会话的分组列表，按首次出现顺序
+    final groups = groupMap.entries.toList()
+      ..sort((a, b) => a.value.first.compareTo(b.value.first));
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -555,84 +455,61 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
           ],
         ],
 
-        // 今日分类
-        if (todaySessions.isNotEmpty) ...[
-          _buildCollapsibleGroupHeader(
-            title: AppLocalizations.of(context)!.today,
-            isCollapsed: _isTodayCollapsed,
-            onToggle:
-                () => setState(() => _isTodayCollapsed = !_isTodayCollapsed),
-          ),
-          if (!_isTodayCollapsed) ...[
-            ...todaySessions.map((index) {
-              final session = sessions[index];
-              final isSelected = session.sessionId == currentSession?.sessionId;
+        // 未分组会话
+        if (ungroupedSessions.isNotEmpty) ...[
+          ...ungroupedSessions.map((index) {
+            final session = sessions[index];
+            final isSelected = session.sessionId == currentSession?.sessionId;
 
-              return _SessionItem(
-                session: session,
-                index: index,
-                isSelected: isSelected,
-                onSessionSwitch: widget.onSessionSwitch,
-                onDeleteSession: widget.onDeleteSession,
-                onToggleFavoriteSession: widget.onToggleFavoriteSession,
-              );
-            }),
-            const SizedBox(height: 8),
-          ],
+            return _SessionItem(
+              session: session,
+              index: index,
+              isSelected: isSelected,
+              onSessionSwitch: widget.onSessionSwitch,
+              onDeleteSession: widget.onDeleteSession,
+              onToggleFavoriteSession: widget.onToggleFavoriteSession,
+            );
+          }),
+          const SizedBox(height: 8),
         ],
 
-        // 昨日分类
-        if (yesterdaySessions.isNotEmpty) ...[
-          _buildCollapsibleGroupHeader(
-            title: AppLocalizations.of(context)!.yesterday,
-            isCollapsed: _isYesterdayCollapsed,
-            onToggle:
-                () => setState(
-                  () => _isYesterdayCollapsed = !_isYesterdayCollapsed,
+        // 各分组会话
+        if (groups.isNotEmpty) ...[
+          ...groups.map((entry) {
+            final groupName = entry.key;
+            final indices = entry.value;
+            final isCollapsed = _groupCollapsed[groupName] ?? false;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildCollapsibleGroupHeader(
+                  title: groupName,
+                  isCollapsed: isCollapsed,
+                  onToggle: () => setState(() {
+                    _groupCollapsed[groupName] = !isCollapsed;
+                  }),
                 ),
-          ),
-          if (!_isYesterdayCollapsed) ...[
-            ...yesterdaySessions.map((index) {
-              final session = sessions[index];
-              final isSelected = session.sessionId == currentSession?.sessionId;
+                if (!isCollapsed) ...[
+                  ...indices.map((index) {
+                    final session = sessions[index];
+                    final isSelected =
+                        session.sessionId == currentSession?.sessionId;
 
-              return _SessionItem(
-                session: session,
-                index: index,
-                isSelected: isSelected,
-                onSessionSwitch: widget.onSessionSwitch,
-                onDeleteSession: widget.onDeleteSession,
-                onToggleFavoriteSession: widget.onToggleFavoriteSession,
-              );
-            }),
-            const SizedBox(height: 8),
-          ],
-        ],
-
-        // 更早分类
-        if (earlierSessions.isNotEmpty) ...[
-          _buildCollapsibleGroupHeader(
-            title: AppLocalizations.of(context)!.earlier,
-            isCollapsed: _isEarlierCollapsed,
-            onToggle:
-                () =>
-                    setState(() => _isEarlierCollapsed = !_isEarlierCollapsed),
-          ),
-          if (!_isEarlierCollapsed) ...[
-            ...earlierSessions.map((index) {
-              final session = sessions[index];
-              final isSelected = session.sessionId == currentSession?.sessionId;
-
-              return _SessionItem(
-                session: session,
-                index: index,
-                isSelected: isSelected,
-                onSessionSwitch: widget.onSessionSwitch,
-                onDeleteSession: widget.onDeleteSession,
-                onToggleFavoriteSession: widget.onToggleFavoriteSession,
-              );
-            }),
-          ],
+                    return _SessionItem(
+                      session: session,
+                      index: index,
+                      isSelected: isSelected,
+                      onSessionSwitch: widget.onSessionSwitch,
+                      onDeleteSession: widget.onDeleteSession,
+                      onToggleFavoriteSession: widget.onToggleFavoriteSession,
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                ],
+              ],
+            );
+          }),
         ],
       ],
     );
@@ -715,44 +592,4 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     );
   }
-}
-
-// 自定义加载动画的画笔
-class _LoadingSpinnerPainter extends CustomPainter {
-  final Color color;
-
-  _LoadingSpinnerPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = 1.5
-          ..strokeCap = StrokeCap.round;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 1;
-
-    // 绘制12个线条，形成菊花效果
-    for (int i = 0; i < 12; i++) {
-      final angle = (i * 30) * (3.14159 / 180); // 每30度一个线条
-      final startRadius = radius * 0.3;
-      final endRadius = radius * 0.8;
-
-      final startX = center.dx + startRadius * math.cos(angle);
-      final startY = center.dy + startRadius * math.sin(angle);
-      final endX = center.dx + endRadius * math.cos(angle);
-      final endY = center.dy + endRadius * math.sin(angle);
-
-      // 创建渐变效果 - 每个线条的透明度不同
-      final opacity = 1.0 - (i / 12.0);
-      paint.color = color.withValues(alpha: opacity * 0.8 + 0.2);
-
-      canvas.drawLine(Offset(startX, startY), Offset(endX, endY), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

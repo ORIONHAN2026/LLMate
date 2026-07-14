@@ -50,7 +50,7 @@ final List<Map<String, dynamic>> onlineProviders = [
     'currency': 'CNY',
     'icon': CupertinoIcons.cube_box,
     'description': '高性能AI助手，支持多种任务',
-    'color': const Color(0xFF2D6A4F),
+    'color': const Color(0xFF1F2937),
     'defaultUrl': 'https://api.deepseek.com',
     'models': [
       {'id': 'deepseek-v4-flash', 'name': 'DeepSeek-V4-Flash', 'specs': '快速响应 • 高性价比 • 通用对话', },

@@ -17,7 +17,7 @@ class LoadingPage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF2D6A4F),
+                color: const Color(0xFF1F2937),
                 letterSpacing: 1.2,
               ),
             ),
@@ -29,7 +29,7 @@ class LoadingPage extends StatelessWidget {
               child: CircularProgressIndicator(
                 strokeWidth: 3,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  const Color(0xFF2D6A4F),
+                  const Color(0xFF1F2937),
                 ),
               ),
             ),

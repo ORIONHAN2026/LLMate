@@ -1,0 +1,29 @@
+# hexo-theme-book 主题配置
+home_page: index.md
+menu_page: menu.md
+favicon_url: favicon.png
+
+zoom_image: true
+
+codeblock:
+  highlight_theme: normal
+
+comments:
+  utterances:
+    enable: false
+    user:
+    repo:
+  disqus:
+    enable: false
+    shortname:
+  gitalk:
+    enable: false
+    githubID:
+    repo:
+    ClientID:
+    ClientSecret:
+    adminUser:
+    labels: 'gitalk'
+    distractionFreeMode: true
+
+google_analytics:

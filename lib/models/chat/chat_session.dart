@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:llmwork/models/bigmodel/chat_model.dart';
-import 'package:llmwork/models/chat/mcp_config.dart';
+import 'package:llmate/models/bigmodel/chat_model.dart';
+import 'package:llmate/models/chat/mcp_config.dart';
 
 import './chat_message.dart';
 import './chat_attachment.dart';
@@ -91,7 +91,7 @@ class ChatSession {
   /// 工作目录：会话产生的文件默认保存到此目录
   final String? workDirectory;
 
-  /// 绑定的 MCP 服务文件夹名列表（~/.llmwork/mcps/{name}），null/empty = 未绑定
+  /// 绑定的 MCP 服务文件夹名列表（~/.llmate/mcps/{name}），null/empty = 未绑定
   final List<String>? mcps;
 
   /// 深度思考模式（默认关闭）

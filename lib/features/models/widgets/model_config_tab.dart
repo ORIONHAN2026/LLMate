@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:llmwork/l10n/app_localizations.dart';
-import 'package:llmwork/models/bigmodel/chat_model.dart';
-import 'package:llmwork/models/chat/mcp_config.dart';
-import 'package:llmwork/utils/snackbar_utils.dart';
-import 'package:llmwork/models/chat/chat_setting.dart';
-import 'package:llmwork/controllers/mcp_controller.dart';
+import 'package:llmate/l10n/app_localizations.dart';
+import 'package:llmate/models/bigmodel/chat_model.dart';
+import 'package:llmate/models/chat/mcp_config.dart';
+import 'package:llmate/utils/snackbar_utils.dart';
+import 'package:llmate/models/chat/chat_setting.dart';
+import 'package:llmate/controllers/mcp_controller.dart';
 
 class ModelConfigTab extends StatefulWidget {
   final ChatModel model;

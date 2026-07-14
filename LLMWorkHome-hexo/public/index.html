@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+
+    
+      <link rel="icon" href="/favicon.png" />
+    
+
+    <title>
+        
+          LLMWork - 智能AI工作台123213 - LLMWork
+        
+    </title>
+
+    <!-- Spectre.css framework -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.9/spectre.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.9/spectre-exp.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.9/spectre-icons.min.css">
+
+    <!-- theme css & js -->
+    
+<link rel="stylesheet" href="/css/book.css">
+
+    
+<script src="/js/book.js"></script>
+
+
+    <!-- tocbot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.css">
+    
+    <!-- katex -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+
+    
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zooming/2.1.1/zooming.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const zooming = new Zooming()
+    zooming.listen('.book-content img')
+})
+</script>
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body>
+
+<div class="book-container">
+  <div class="book-sidebar">
+    <div class="book-brand">
+  <a href="/">
+    <img src="/favicon.png">
+    <span>LLMWORK</span>
+  </a>
+</div>
+    <div id="menu" class="book-menu hide">
+  <ul>
+<li><a href="index.html">首页</a></li>
+<li><a href="getting-started.html">开始使用</a></li>
+<li><a href="feature-guide.html">功能说明</a></li>
+<li><a href="use-cases.html">场景案例</a></li>
+<li><a href="faq.html">常见问题</a></li>
+<li><a href="security.html">安全说明</a></li>
+<li><a href="license.html">许可协议</a></li>
+<li><a href="mission.html">目标和使命</a></li>
+</ul>
+
+</div>
+
+
+<script src="/js/book-menu.js"></script>
+
+  </div>
+
+  <div class="sidebar-toggle" onclick="sidebar_toggle()" onmouseover="add_inner()" onmouseleave="remove_inner()">
+  <div class="sidebar-toggle-inner"></div>
+</div>
+
+<script>
+function add_inner() {
+  let inner = document.querySelector('.sidebar-toggle-inner')
+  inner.classList.add('show')  
+}
+
+function remove_inner() {
+  let inner = document.querySelector('.sidebar-toggle-inner')
+  inner.classList.remove('show')
+}
+
+function sidebar_toggle() {
+    let sidebar_toggle = document.querySelector('.sidebar-toggle')
+    let sidebar = document.querySelector('.book-sidebar')
+    let content = document.querySelector('.off-canvas-content')
+    if (sidebar_toggle.classList.contains('extend')) { // show
+        sidebar_toggle.classList.remove('extend')
+        sidebar.classList.remove('hide')
+        content.classList.remove('extend')
+    }
+    else { // hide
+        sidebar_toggle.classList.add('extend')
+        sidebar.classList.add('hide')
+        content.classList.add('extend')
+    }
+}
+</script>
+
+  <div class="off-canvas-content">
+    <div class="columns">
+      <div class="column col-10 col-lg-12">
+        <div class="book-navbar">
+          <!-- For Responsive Layout -->
+
+<header class="navbar">
+  <section class="navbar-section">
+    <a onclick="open_sidebar()">
+      <i class="icon icon-menu"></i>
+    </a>
+  </section>
+</header>
+
+        </div>
+        <div class="book-content">
+          <div class="book-post">
+  <h1 id="一个平台，连接所有-AI-模型"><a href="#一个平台，连接所有-AI-模型" class="headerlink" title="一个平台，连接所有 AI 模型"></a>一个平台，连接所有 AI 模型</h1><p>支持 OpenAI、Claude、Gemini、DeepSeek 等 <strong>8+ 主流大模型 API</strong>，随时一键切换，无需更换平台。</p>
+<p>内置多种工作模式与智能导航台——合同模式下自动生成合同概要、履约记录、争议条款等导航面板，让 AI 真正理解你的工作场景。</p>
+<div style="text-align:center;margin:32px 0;border:1px solid #494747ff;border-radius:2px;">
+
+<p><img src="/images/index.jpg" alt="LLMWork 界面截图"></p>
+</div>
+
+<div style="text-align:center;margin:32px 0;">
+
+<p><a href="download.html">🎉 免费下载</a>{.download-btn}</p>
+</div>
+
+<div style="text-align:center;color:#888;font-size:0.9em;">
+
+<p>macOS &nbsp;|&nbsp; Windows &nbsp;|&nbsp; Linux &nbsp;&nbsp; 最新版本 <strong>v1.1.0</strong></p>
+</div>
+
+<hr>
+<h2 id="核心功能"><a href="#核心功能" class="headerlink" title="核心功能"></a>核心功能</h2><h3 id="🖥️-多模型统一管理"><a href="#🖥️-多模型统一管理" class="headerlink" title="🖥️ 多模型统一管理"></a>🖥️ 多模型统一管理</h3><p>一个界面管理 OpenAI、Claude、Gemini、DeepSeek、通义千问、智谱、Ollama 等 8+ 主流 AI 模型。独立配置 API Key、Temperature、System Prompt，自由切换。</p>
+<h3 id="🔌-MCP-协议原生支持"><a href="#🔌-MCP-协议原生支持" class="headerlink" title="🔌 MCP 协议原生支持"></a>🔌 MCP 协议原生支持</h3><p>完整支持 Model Context Protocol，内置 MCP 市场一键安装。支持 SSE、HTTP、Streamable HTTP 传输，Stdio 和 URL 双连接方式，无限扩展 AI 能力边界。</p>
+<h3 id="📄-AI-文件操作引擎"><a href="#📄-AI-文件操作引擎" class="headerlink" title="📄 AI 文件操作引擎"></a>📄 AI 文件操作引擎</h3><p>让 AI 直接创建和编辑 Word、Excel、PDF、PPT 文档，处理图片、执行代码。内置 Python、Node.js、Shell 运行环境，AI 帮你完成实际工作。</p>
+<h3 id="⭐-技能系统-市场"><a href="#⭐-技能系统-市场" class="headerlink" title="⭐ 技能系统 &amp; 市场"></a>⭐ 技能系统 &amp; 市场</h3><p>创建自定义 AI 技能角色，内置技能市场提供代码审查、内容创作、数据分析等预置模板。一键绑定到模型和会话，让 AI 成为领域专家。</p>
+<h3 id="🧠-智能记忆压缩"><a href="#🧠-智能记忆压缩" class="headerlink" title="🧠 智能记忆压缩"></a>🧠 智能记忆压缩</h3><p>长对话自动记忆压缩，突破上下文长度限制。可视化展示压缩记忆和对话轮次，让 AI 在超长对话中始终保持连贯理解。</p>
+<h3 id="⏰-定时任务-快捷指令"><a href="#⏰-定时任务-快捷指令" class="headerlink" title="⏰ 定时任务 &amp; 快捷指令"></a>⏰ 定时任务 &amp; 快捷指令</h3><p>支持 Cron 定时任务，到时间自动发送预设消息。模型级和会话级快捷指令，一键发送常用提示词，大幅提升工作效率。</p>
+<hr>
+<h2 id="支持的模型平台"><a href="#支持的模型平台" class="headerlink" title="支持的模型平台"></a>支持的模型平台</h2><p>OpenAI &nbsp;|&nbsp; Anthropic Claude &nbsp;|&nbsp; Google Gemini &nbsp;|&nbsp; DeepSeek &nbsp;|&nbsp; 通义千问 &nbsp;|&nbsp; 智谱 GLM &nbsp;|&nbsp; Ollama 本地模型 &nbsp;|&nbsp; ModelScope</p>
+<hr>
+<blockquote>
+<p>LLMWork —— 不只是聊天客户端，更是你的 AI 生产力工作台。</p>
+<p><a href="download.html">立即下载 →</a></p>
+</blockquote>
+
+</div>
+
+
+  <div class="book-comments">
+    
+
+
+
+
+  </div>
+
+
+
+<script src="/js/book-post.js"></script>
+
+        </div>
+      </div>
+      <div class="column col-2 hide-lg">
+        <div class="book-post-info">
+  
+    <div class="book-post-meta">
+
+  <div class="author">
+
+    <!-- Author image -->
+    <div class="author-img">
+      
+        <figure
+          class="avatar avatar-lg"
+          data-initial="L"
+          style="background-color: #3b4351;">
+        </figure>
+      
+    </div>
+
+    <!-- Author title -->
+    <div class="author-title">
+      <div>LLMWork Team</div>
+      <div>2026-07-14</div>
+    </div>
+  </div>
+
+  
+
+  <div class="divider"></div>
+</div>
+  
+
+  <div class="book-tocbot">
+</div>
+<div class="book-tocbot-menu">
+  <a class="book-toc-expand" onclick="expand_toc()">Expand all</a>
+  <a onclick="go_top()">Back to top</a>
+  <a onclick="go_bottom()">Go to bottom</a>
+</div>
+
+
+<script src="/js/book-toc.js"></script>
+
+</div>
+      </div>
+    </div>
+  </div>
+  
+  <a class="off-canvas-overlay" onclick="hide_canvas()"></a>
+</div>
+
+</body>
+</html>
+
+
+<script src="/js/book.js"></script>

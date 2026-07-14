@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:llmwork/controllers/session_controller.dart';
-import 'package:llmwork/models/models.dart';
-import 'package:llmwork/utils/snackbar_utils.dart';
-import 'package:llmwork/core/llm/llm_client.dart';
-import 'package:llmwork/l10n/app_localizations.dart';
+import 'package:llmate/controllers/session_controller.dart';
+import 'package:llmate/models/models.dart';
+import 'package:llmate/utils/snackbar_utils.dart';
+import 'package:llmate/core/llm/llm_client.dart';
+import 'package:llmate/l10n/app_localizations.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

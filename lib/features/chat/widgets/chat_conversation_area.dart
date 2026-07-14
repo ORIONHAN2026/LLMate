@@ -1,9 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:llmwork/features/chat/widgets/message_widgets/ai_message_widget.dart';
-import 'package:llmwork/features/chat/widgets/message_widgets/user_message_widget.dart';
-import 'package:llmwork/features/chat/widgets/message_widgets/tool_message_widget.dart';
-import 'package:llmwork/utils/responsive_utils.dart';
+import 'package:llmate/features/chat/widgets/message_widgets/ai_message_widget.dart';
+import 'package:llmate/features/chat/widgets/message_widgets/user_message_widget.dart';
+import 'package:llmate/features/chat/widgets/message_widgets/tool_message_widget.dart';
+import 'package:llmate/utils/responsive_utils.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/models.dart';
 import 'dart:ui' as ui;
@@ -12,7 +12,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/rendering.dart';
-import 'package:llmwork/utils/snackbar_utils.dart';
+import 'package:llmate/utils/snackbar_utils.dart';
 
 class ChatConversationArea extends StatefulWidget {
   final ChatSession chatSession;

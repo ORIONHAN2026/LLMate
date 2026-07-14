@@ -1,5 +1,5 @@
-name: llmwork
-description: "LLMWork - 智能对话助手"
+name: llmate
+description: "LLMate - 智能对话助手"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -145,9 +145,9 @@ flutter_launcher_icons:
 
 # MSIX 打包配置
 msix_config:
-  display_name: LLMWork
-  publisher_display_name: com.llmwork.app
-  identity_name: com.llmwork.app
+  display_name: LLMate
+  publisher_display_name: com.llmate.app
+  identity_name: com.llmate.app
   msix_version: 1.0.0.0
   logo_path: assets\icons\app_icon.png
   capabilities: internetClient

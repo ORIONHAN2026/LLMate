@@ -1,6 +1,6 @@
 {
-    "name": "llmwork",
-    "short_name": "llmwork",
+    "name": "LLMate",
+    "short_name": "LLMate",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

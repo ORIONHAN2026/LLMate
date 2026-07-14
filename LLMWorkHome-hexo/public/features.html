@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+
+    
+      <link rel="icon" href="/favicon.png" />
+    
+
+    <title>
+        
+          功能特性 - LLMWork
+        
+    </title>
+
+    <!-- Spectre.css framework -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.9/spectre.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.9/spectre-exp.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.9/spectre-icons.min.css">
+
+    <!-- theme css & js -->
+    
+<link rel="stylesheet" href="/css/book.css">
+
+    
+<script src="/js/book.js"></script>
+
+
+    <!-- tocbot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.css">
+    
+    <!-- katex -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+
+    
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zooming/2.1.1/zooming.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const zooming = new Zooming()
+    zooming.listen('.book-content img')
+})
+</script>
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body>
+
+<div class="book-container">
+  <div class="book-sidebar">
+    <div class="book-brand">
+  <a href="/">
+    <img src="/favicon.png">
+    <span>LLMWORK</span>
+  </a>
+</div>
+    <div id="menu" class="book-menu hide">
+  <ul>
+<li><a href="index.html">首页</a></li>
+<li><a href="getting-started.html">开始使用</a></li>
+<li><a href="feature-guide.html">功能说明</a></li>
+<li><a href="use-cases.html">场景案例</a></li>
+<li><a href="faq.html">常见问题</a></li>
+<li><a href="security.html">安全说明</a></li>
+<li><a href="license.html">许可协议</a></li>
+<li><a href="mission.html">目标和使命</a></li>
+</ul>
+
+</div>
+
+
+<script src="/js/book-menu.js"></script>
+
+  </div>
+
+  <div class="sidebar-toggle" onclick="sidebar_toggle()" onmouseover="add_inner()" onmouseleave="remove_inner()">
+  <div class="sidebar-toggle-inner"></div>
+</div>
+
+<script>
+function add_inner() {
+  let inner = document.querySelector('.sidebar-toggle-inner')
+  inner.classList.add('show')  
+}
+
+function remove_inner() {
+  let inner = document.querySelector('.sidebar-toggle-inner')
+  inner.classList.remove('show')
+}
+
+function sidebar_toggle() {
+    let sidebar_toggle = document.querySelector('.sidebar-toggle')
+    let sidebar = document.querySelector('.book-sidebar')
+    let content = document.querySelector('.off-canvas-content')
+    if (sidebar_toggle.classList.contains('extend')) { // show
+        sidebar_toggle.classList.remove('extend')
+        sidebar.classList.remove('hide')
+        content.classList.remove('extend')
+    }
+    else { // hide
+        sidebar_toggle.classList.add('extend')
+        sidebar.classList.add('hide')
+        content.classList.add('extend')
+    }
+}
+</script>
+
+  <div class="off-canvas-content">
+    <div class="columns">
+      <div class="column col-10 col-lg-12">
+        <div class="book-navbar">
+          <!-- For Responsive Layout -->
+
+<header class="navbar">
+  <section class="navbar-section">
+    <a onclick="open_sidebar()">
+      <i class="icon icon-menu"></i>
+    </a>
+  </section>
+</header>
+
+        </div>
+        <div class="book-content">
+          
+<article id="page">
+  <h1>功能特性</h1>
+  <h2 id="为什么选择-LLMWork？"><a href="#为什么选择-LLMWork？" class="headerlink" title="为什么选择 LLMWork？"></a>为什么选择 LLMWork？</h2><p>不只是聊天客户端，更是你的 AI 生产力工作台。从多模型管理到文件操作，从 MCP 扩展到技能系统，一站式满足所有 AI 工作需求。</p>
+<h3 id="🖥️-多模型统一管理"><a href="#🖥️-多模型统一管理" class="headerlink" title="🖥️ 多模型统一管理"></a>🖥️ 多模型统一管理</h3><p>一个界面管理 OpenAI、Claude、Gemini、DeepSeek、通义千问、智谱、Ollama 等 <strong>8+ 主流 AI 模型</strong>。独立配置 API Key、Temperature、System Prompt，自由切换。</p>
+<ul>
+<li>单个模型独立配置，互不干扰</li>
+<li>支持在线模型 API + 本地 Ollama 模型</li>
+<li>模型选择器一键切换，无需重启对话</li>
+</ul>
+<h3 id="🔌-MCP-协议原生支持"><a href="#🔌-MCP-协议原生支持" class="headerlink" title="🔌 MCP 协议原生支持"></a>🔌 MCP 协议原生支持</h3><p>完整支持 **Model Context Protocol (MCP)**，内置 MCP 市场一键安装。</p>
+<ul>
+<li>支持 SSE、HTTP、Streamable HTTP 三种传输协议</li>
+<li>Stdio 本地进程 + URL 远程连接两种方式</li>
+<li>200+ 第三方 MCP 服务可用</li>
+<li>搜索、文件管理、数据库、浏览器自动化…</li>
+</ul>
+<h3 id="📄-AI-文件操作引擎"><a href="#📄-AI-文件操作引擎" class="headerlink" title="📄 AI 文件操作引擎"></a>📄 AI 文件操作引擎</h3><p>让 AI 直接创建和编辑 Word、Excel、PDF、PPT 文档，处理图片、执行代码。</p>
+<ul>
+<li>Word &#x2F; Excel &#x2F; PDF &#x2F; PPT 文档生成与编辑</li>
+<li>Python、Node.js、Shell 运行时环境</li>
+<li>图片处理与 OCR 识别</li>
+<li>Markdown 文档渲染与导出</li>
+</ul>
+<h3 id="⭐-技能系统-市场"><a href="#⭐-技能系统-市场" class="headerlink" title="⭐ 技能系统 &amp; 市场"></a>⭐ 技能系统 &amp; 市场</h3><p>创建自定义 AI 技能角色，内置技能市场提供预置模板。</p>
+<ul>
+<li>代码审查、内容创作、数据分析等模板</li>
+<li>一键绑定到模型和会话</li>
+<li>自定义 System Prompt 与角色设定</li>
+<li>让 AI 成为真正的领域专家</li>
+</ul>
+<h3 id="🧠-智能记忆压缩"><a href="#🧠-智能记忆压缩" class="headerlink" title="🧠 智能记忆压缩"></a>🧠 智能记忆压缩</h3><p>长对话自动记忆压缩，突破上下文长度限制。</p>
+<ul>
+<li>自动检测上下文窗口使用量</li>
+<li>可视化展示压缩记忆和对话轮次</li>
+<li>在超长对话中保持连贯理解</li>
+</ul>
+<h3 id="⏰-定时任务-快捷指令"><a href="#⏰-定时任务-快捷指令" class="headerlink" title="⏰ 定时任务 &amp; 快捷指令"></a>⏰ 定时任务 &amp; 快捷指令</h3><ul>
+<li>Cron 定时任务，到时间自动发送预设消息</li>
+<li>模型级和会话级快捷指令</li>
+<li>一键发送常用提示词</li>
+<li>大幅提升日常工作效率</li>
+</ul>
+<hr>
+<h2 id="支持的模型平台"><a href="#支持的模型平台" class="headerlink" title="支持的模型平台"></a>支持的模型平台</h2><table>
+<thead>
+<tr>
+<th>平台</th>
+<th>类型</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OpenAI</td>
+<td>云端 API</td>
+<td>GPT-4, GPT-4o 系列</td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>云端 API</td>
+<td>Claude 系列</td>
+</tr>
+<tr>
+<td>Google</td>
+<td>云端 API</td>
+<td>Gemini 系列</td>
+</tr>
+<tr>
+<td>DeepSeek</td>
+<td>云端 API</td>
+<td>DeepSeek-R1, V3</td>
+</tr>
+<tr>
+<td>通义千问</td>
+<td>云端 API</td>
+<td>Qwen 系列</td>
+</tr>
+<tr>
+<td>智谱 AI</td>
+<td>云端 API</td>
+<td>GLM 系列</td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td>本地部署</td>
+<td>开源模型本地运行</td>
+</tr>
+<tr>
+<td>ModelScope</td>
+<td>云端 API</td>
+<td>魔搭社区模型</td>
+</tr>
+</tbody></table>
+
+</article>
+
+<div id="paginator">
+  
+</div>
+
+        </div>
+      </div>
+      <div class="column col-2 hide-lg">
+        <div class="book-post-info">
+  
+    <div class="book-post-meta">
+
+  <div class="author">
+
+    <!-- Author image -->
+    <div class="author-img">
+      
+        <figure
+          class="avatar avatar-lg"
+          data-initial="L"
+          style="background-color: #3b4351;">
+        </figure>
+      
+    </div>
+
+    <!-- Author title -->
+    <div class="author-title">
+      <div>LLMWork Team</div>
+      <div>2026-07-14</div>
+    </div>
+  </div>
+
+  
+
+  <div class="divider"></div>
+</div>
+  
+
+  <div class="book-tocbot">
+</div>
+<div class="book-tocbot-menu">
+  <a class="book-toc-expand" onclick="expand_toc()">Expand all</a>
+  <a onclick="go_top()">Back to top</a>
+  <a onclick="go_bottom()">Go to bottom</a>
+</div>
+
+
+<script src="/js/book-toc.js"></script>
+
+</div>
+      </div>
+    </div>
+  </div>
+  
+  <a class="off-canvas-overlay" onclick="hide_canvas()"></a>
+</div>
+
+</body>
+</html>
+
+
+<script src="/js/book.js"></script>

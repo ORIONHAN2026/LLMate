@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+
+    
+      <link rel="icon" href="/favicon.png" />
+    
+
+    <title>
+        
+          更新日志 - LLMWork
+        
+    </title>
+
+    <!-- Spectre.css framework -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.9/spectre.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.9/spectre-exp.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.9/spectre-icons.min.css">
+
+    <!-- theme css & js -->
+    
+<link rel="stylesheet" href="/css/book.css">
+
+    
+<script src="/js/book.js"></script>
+
+
+    <!-- tocbot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.css">
+    
+    <!-- katex -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+
+    
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/zooming/2.1.1/zooming.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const zooming = new Zooming()
+    zooming.listen('.book-content img')
+})
+</script>
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+<body>
+
+<div class="book-container">
+  <div class="book-sidebar">
+    <div class="book-brand">
+  <a href="/">
+    <img src="/favicon.png">
+    <span>LLMWORK</span>
+  </a>
+</div>
+    <div id="menu" class="book-menu hide">
+  <ul>
+<li><a href="index.html">首页</a></li>
+<li><a href="getting-started.html">开始使用</a></li>
+<li><a href="feature-guide.html">功能说明</a></li>
+<li><a href="use-cases.html">场景案例</a></li>
+<li><a href="faq.html">常见问题</a></li>
+<li><a href="security.html">安全说明</a></li>
+<li><a href="license.html">许可协议</a></li>
+<li><a href="mission.html">目标和使命</a></li>
+</ul>
+
+</div>
+
+
+<script src="/js/book-menu.js"></script>
+
+  </div>
+
+  <div class="sidebar-toggle" onclick="sidebar_toggle()" onmouseover="add_inner()" onmouseleave="remove_inner()">
+  <div class="sidebar-toggle-inner"></div>
+</div>
+
+<script>
+function add_inner() {
+  let inner = document.querySelector('.sidebar-toggle-inner')
+  inner.classList.add('show')  
+}
+
+function remove_inner() {
+  let inner = document.querySelector('.sidebar-toggle-inner')
+  inner.classList.remove('show')
+}
+
+function sidebar_toggle() {
+    let sidebar_toggle = document.querySelector('.sidebar-toggle')
+    let sidebar = document.querySelector('.book-sidebar')
+    let content = document.querySelector('.off-canvas-content')
+    if (sidebar_toggle.classList.contains('extend')) { // show
+        sidebar_toggle.classList.remove('extend')
+        sidebar.classList.remove('hide')
+        content.classList.remove('extend')
+    }
+    else { // hide
+        sidebar_toggle.classList.add('extend')
+        sidebar.classList.add('hide')
+        content.classList.add('extend')
+    }
+}
+</script>
+
+  <div class="off-canvas-content">
+    <div class="columns">
+      <div class="column col-10 col-lg-12">
+        <div class="book-navbar">
+          <!-- For Responsive Layout -->
+
+<header class="navbar">
+  <section class="navbar-section">
+    <a onclick="open_sidebar()">
+      <i class="icon icon-menu"></i>
+    </a>
+  </section>
+</header>
+
+        </div>
+        <div class="book-content">
+          
+<article id="page">
+  <h1>更新日志</h1>
+  <h2 id="版本更新记录"><a href="#版本更新记录" class="headerlink" title="版本更新记录"></a>版本更新记录</h2><p>持续迭代，不断进化。每一次更新都让 LLMWork 更强大。</p>
+<hr>
+<h3 id="2025-06-21"><a href="#2025-06-21" class="headerlink" title="2025-06-21"></a>2025-06-21</h3><h4 id="🚀-MCP-市场与官网升级"><a href="#🚀-MCP-市场与官网升级" class="headerlink" title="🚀 MCP 市场与官网升级"></a>🚀 MCP 市场与官网升级</h4><ul>
+<li>🆕 全新 MCP 市场页面，展示 200+ MCP 服务，支持分类筛选与一键安装</li>
+<li>🆕 官网 SPA 页面架构，导航按钮切换独立页面，告别锚点滚动</li>
+<li>🆕 MCP 服务卡片：展示传输协议（SSE&#x2F;Stdio&#x2F;HTTP）、评分、安装量、版本号</li>
+<li>🆕 页面切换动画：fadeIn 过渡效果，导航栏高亮当前页面</li>
+<li>🔧 MCP 市场分类筛选：搜索与知识、文件与文档、开发工具、数据与可视化、云端服务、浏览器自动化</li>
+</ul>
+<hr>
+<h3 id="2025-06-14"><a href="#2025-06-14" class="headerlink" title="2025-06-14"></a>2025-06-14</h3><h4 id="🎉-首个正式版本发布"><a href="#🎉-首个正式版本发布" class="headerlink" title="🎉 首个正式版本发布"></a>🎉 首个正式版本发布</h4><ul>
+<li>🆕 支持 8+ 主流 AI 模型提供商统一管理</li>
+<li>🆕 完整 MCP 协议支持，内置 MCP 市场</li>
+<li>🆕 AI 文件操作引擎：Word、Excel、PDF、PPT、图片处理</li>
+<li>🆕 技能系统与技能市场</li>
+<li>🆕 智能对话记忆压缩</li>
+<li>🆕 Cron 定时任务 &amp; 快捷指令</li>
+<li>🆕 流式响应与 Token 消耗统计</li>
+<li>🆕 深色&#x2F;浅色主题，中英文国际化</li>
+<li>🆕 macOS &#x2F; Windows &#x2F; Linux 全平台支持</li>
+</ul>
+<hr>
+<h3 id="2025-05-20"><a href="#2025-05-20" class="headerlink" title="2025-05-20"></a>2025-05-20</h3><h4 id="Beta-测试版"><a href="#Beta-测试版" class="headerlink" title="Beta 测试版"></a>Beta 测试版</h4><ul>
+<li>🆕 多模型管理与对话功能完善</li>
+<li>🔧 MCP 协议集成与工具调用优化</li>
+<li>🔧 文件操作工具链完善</li>
+<li>🐛 多项 UI&#x2F;UX 体验修复</li>
+</ul>
+<hr>
+<h3 id="2025-04-01"><a href="#2025-04-01" class="headerlink" title="2025-04-01"></a>2025-04-01</h3><h4 id="Alpha-内测版"><a href="#Alpha-内测版" class="headerlink" title="Alpha 内测版"></a>Alpha 内测版</h4><ul>
+<li>🆕 核心对话引擎搭建</li>
+<li>🆕 基础多模型支持</li>
+<li>🆕 Isar 本地数据库集成</li>
+</ul>
+
+</article>
+
+<div id="paginator">
+  
+</div>
+
+        </div>
+      </div>
+      <div class="column col-2 hide-lg">
+        <div class="book-post-info">
+  
+    <div class="book-post-meta">
+
+  <div class="author">
+
+    <!-- Author image -->
+    <div class="author-img">
+      
+        <figure
+          class="avatar avatar-lg"
+          data-initial="L"
+          style="background-color: #3b4351;">
+        </figure>
+      
+    </div>
+
+    <!-- Author title -->
+    <div class="author-title">
+      <div>LLMWork Team</div>
+      <div>2026-07-14</div>
+    </div>
+  </div>
+
+  
+
+  <div class="divider"></div>
+</div>
+  
+
+  <div class="book-tocbot">
+</div>
+<div class="book-tocbot-menu">
+  <a class="book-toc-expand" onclick="expand_toc()">Expand all</a>
+  <a onclick="go_top()">Back to top</a>
+  <a onclick="go_bottom()">Go to bottom</a>
+</div>
+
+
+<script src="/js/book-toc.js"></script>
+
+</div>
+      </div>
+    </div>
+  </div>
+  
+  <a class="off-canvas-overlay" onclick="hide_canvas()"></a>
+</div>
+
+</body>
+</html>
+
+
+<script src="/js/book.js"></script>

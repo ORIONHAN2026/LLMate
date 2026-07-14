@@ -32,7 +32,7 @@ class ChatModel {
   // 对话设置 - 使用ChatSettings对象
   final ChatSettings? chatSettings;
 
-  /// 模型级 MCP 服务文件夹名列表（~/.llmwork/mcps/{name}），null/empty = 未绑定
+  /// 模型级 MCP 服务文件夹名列表（~/.llmate/mcps/{name}），null/empty = 未绑定
   final List<String>? mcps;
 
   /// 模型级 MCP 服务（运行时解析，不持久化于 model 自身）

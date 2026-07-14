@@ -1,7 +1,7 @@
-import 'package:llmwork/controllers/session_controller.dart';
-import 'package:llmwork/controllers/theme_controller.dart';
-import 'package:llmwork/l10n/app_localizations.dart';
-import 'package:llmwork/widgets/common/confirm_delete_dialog.dart';
+import 'package:llmate/controllers/session_controller.dart';
+import 'package:llmate/controllers/theme_controller.dart';
+import 'package:llmate/l10n/app_localizations.dart';
+import 'package:llmate/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';

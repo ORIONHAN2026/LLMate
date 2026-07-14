@@ -11,9 +11,9 @@ class LoadingPage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ChatHub 标题
+            // LLMate 标题
             Text(
-              'LLMWork ',
+              'LLMate ',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,

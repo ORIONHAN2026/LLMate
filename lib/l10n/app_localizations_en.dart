@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'ChatHub';
+  String get appTitle => 'LLMate';
 
   @override
   String get appSlogan => 'Smart Chat Assistant';

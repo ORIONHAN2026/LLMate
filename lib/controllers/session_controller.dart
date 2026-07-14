@@ -1,8 +1,8 @@
-import 'package:llmwork/models/chat/chat_message.dart';
-import 'package:llmwork/models/chat/scheduled_task.dart';
-import 'package:llmwork/models/chat/chat_attachment.dart';
-import 'package:llmwork/models/chat/chat_setting.dart';
-import 'package:llmwork/models/chat/contract_info.dart';
+import 'package:llmate/models/chat/chat_message.dart';
+import 'package:llmate/models/chat/scheduled_task.dart';
+import 'package:llmate/models/chat/chat_attachment.dart';
+import 'package:llmate/models/chat/chat_setting.dart';
+import 'package:llmate/models/chat/contract_info.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

@@ -9,11 +9,11 @@ export './storage_paths.dart' show StoragePaths;
 
 /// 本地文件存储服务（单例）
 ///
-/// 替代原 Isar 数据库，使用 ~/.llmwork/ 目录下的 JSON 文件存储数据。
+/// 替代原 Isar 数据库，使用 ~/.llmate/ 目录下的 JSON 文件存储数据。
 ///
 /// 存储结构：
 /// ```
-/// ~/.llmwork/
+/// ~/.llmate/
 /// ├── models.json              # 所有模型配置
 /// ├── mcp.json                 # 所有 MCP 服务配置
 /// ├── settings.json            # 通用设置（主题、语言等）

@@ -499,11 +499,11 @@ class _FeedbackTab extends StatelessWidget {
 
   Future<void> _sendFeedbackEmail(BuildContext context) async {
     const String feedbackEmail = 'hanxinyc@gmail.com';
-    const String subject = 'ChatHub App Feedback';
+    const String subject = 'LLMate App Feedback';
     const String body = '''
 
 -----------------------------
-Thank you for your feedback on ChatHub. We take every feedback seriously.
+Thank you for your feedback on LLMate. We take every feedback seriously.
 
 Thanks!
 ''';

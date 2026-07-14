@@ -1,9 +1,9 @@
-import 'package:llmwork/l10n/app_localizations.dart';
-import 'package:llmwork/utils/snackbar_utils.dart';
-import 'package:llmwork/utils/responsive_utils.dart';
+import 'package:llmate/l10n/app_localizations.dart';
+import 'package:llmate/utils/snackbar_utils.dart';
+import 'package:llmate/utils/responsive_utils.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:llmwork/controllers/session_controller.dart';
-import 'package:llmwork/models/chat/chat_session.dart';
+import 'package:llmate/controllers/session_controller.dart';
+import 'package:llmate/models/chat/chat_session.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

@@ -3,7 +3,7 @@ import 'dart:io' show Platform;
 import 'package:window_manager/window_manager.dart';
 import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:llmwork/l10n/app_localizations.dart';
+import 'package:llmate/l10n/app_localizations.dart';
 import './features/models/controllers/model_controller.dart';
 import './controllers/session_controller.dart';
 import './controllers/theme_controller.dart';
@@ -100,7 +100,7 @@ class MyApp extends StatelessWidget {
         final localeController = Get.find<LocaleController>();
         return Obx(
           () => GetMaterialApp(
-            title: 'ChatHub',
+            title: 'LLMate',
             debugShowCheckedModeBanner: false,
             locale: localeController.locale.value,
             localizationsDelegates: const [

@@ -9,7 +9,7 @@ class AppLocalizationsVi extends AppLocalizations {
   AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
-  String get appTitle => 'ChatHub';
+  String get appTitle => 'LLMate';
 
   @override
   String get appSlogan => '智能对话助手';

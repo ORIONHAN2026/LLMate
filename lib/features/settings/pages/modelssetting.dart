@@ -1,5 +1,5 @@
 import 'dart:io' show Platform;
-import 'package:llmwork/utils/snackbar_utils.dart';
+import 'package:llmate/utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
 
 import '../../../controllers/session_controller.dart';

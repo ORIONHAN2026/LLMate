@@ -1,9 +1,9 @@
-import 'package:llmwork/l10n/app_localizations.dart';
-import 'package:llmwork/models/bigmodel/chat_model.dart';
-import 'package:llmwork/models/chat/chat_setting.dart';
-import 'package:llmwork/utils/snackbar_utils.dart';
-import 'package:llmwork/features/models/widgets/model_config_tab.dart';
-import 'package:llmwork/widgets/common/confirm_delete_dialog.dart';
+import 'package:llmate/l10n/app_localizations.dart';
+import 'package:llmate/models/bigmodel/chat_model.dart';
+import 'package:llmate/models/chat/chat_setting.dart';
+import 'package:llmate/utils/snackbar_utils.dart';
+import 'package:llmate/features/models/widgets/model_config_tab.dart';
+import 'package:llmate/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';

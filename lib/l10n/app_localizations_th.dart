@@ -9,7 +9,7 @@ class AppLocalizationsTh extends AppLocalizations {
   AppLocalizationsTh([String locale = 'th']) : super(locale);
 
   @override
-  String get appTitle => 'แชทฮับ';
+  String get appTitle => 'LLMate';
 
   @override
   String get appSlogan => 'ผู้ช่วยสนทนาอัจฉริยะ';

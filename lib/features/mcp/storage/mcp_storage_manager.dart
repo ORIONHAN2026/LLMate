@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import '../../../data/storage_paths.dart';
-import 'package:llmwork/models/chat/mcp_config.dart';
+import 'package:llmate/models/chat/mcp_config.dart';
 
 /// MCP 存储结构管理器
 ///

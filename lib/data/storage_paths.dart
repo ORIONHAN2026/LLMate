@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
-/// 集中管理 ~/.llmwork/ 下的所有文件路径
+/// 集中管理 ~/.llmate/ 下的所有文件路径
 class StoragePaths {
   StoragePaths._();
 
@@ -14,47 +14,47 @@ class StoragePaths {
               '.')
           .replaceAll('\\', '/');
 
-  /// ~/.llmwork/
-  static String get root => p.join(home, '.llmwork');
+  /// ~/.llmate/
+  static String get root => p.join(home, '.llmate');
 
-  /// ~/.llmwork/mcps/
+  /// ~/.llmate/mcps/
   static String get mcpsDir => p.join(root, 'mcps');
 
-  /// ~/.llmwork/ssl/
+  /// ~/.llmate/ssl/
   static String get sslDir => p.join(root, 'ssl');
 
-  /// ~/.llmwork/models.json
+  /// ~/.llmate/models.json
   static String get modelsFile => p.join(root, 'models.json');
 
-  /// ~/.llmwork/settings.json
+  /// ~/.llmate/settings.json
   static String get settingsFile => p.join(root, 'settings.json');
 
-  /// ~/.llmwork/vendor_keys.json
+  /// ~/.llmate/vendor_keys.json
   static String get vendorKeysFile => p.join(root, 'vendor_keys.json');
 
-  /// ~/.llmwork/chats/
+  /// ~/.llmate/chats/
   static String get chatsDir => p.join(root, 'chats');
 
-  /// ~/.llmwork/chats/{sessionId}/
+  /// ~/.llmate/chats/{sessionId}/
   static String sessionDir(String sessionId) => p.join(chatsDir, sessionId);
 
-  /// ~/.llmwork/chats/{sessionId}/session.json
+  /// ~/.llmate/chats/{sessionId}/session.json
   static String sessionFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'session.json');
 
-  /// ~/.llmwork/chats/{sessionId}/message.json
+  /// ~/.llmate/chats/{sessionId}/message.json
   static String messageFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'message.json');
 
-  /// ~/.llmwork/chats/{sessionId}/memory.md
+  /// ~/.llmate/chats/{sessionId}/memory.md
   static String memoryFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'memory.md');
 
-  /// ~/.llmwork/chats/{sessionId}/mcp.json
+  /// ~/.llmate/chats/{sessionId}/mcp.json
   static String sessionMcpFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'mcp.json');
 
-  /// ~/.llmwork/chats/{sessionId}/business.md
+  /// ~/.llmate/chats/{sessionId}/business.md
   static String businessFile(String sessionId) =>
       p.join(sessionDir(sessionId), 'business.md');
 
@@ -64,8 +64,8 @@ class StoragePaths {
 
   /// 获取工作模式目录
   ///
-  /// - 如果设置了 workDirectory → `{workDirectory}/.llmwork/{workMode}/`
-  /// - 否则 → `{sessionDir}/.llmwork/{workMode}/`
+  /// - 如果设置了 workDirectory → `{workDirectory}/.llmate/{workMode}/`
+  /// - 否则 → `{sessionDir}/.llmate/{workMode}/`
   static String modeDir({
     required String sessionId,
     required String workMode,
@@ -74,10 +74,10 @@ class StoragePaths {
     final base = (workDirectory != null && workDirectory.isNotEmpty)
         ? workDirectory
         : sessionDir(sessionId);
-    return p.join(base, '.llmwork', workMode);
+    return p.join(base, '.llmate', workMode);
   }
 
-  /// 获取 .llmwork 根目录
+  /// 获取 .llmate 根目录
   static String llmworkDir({
     required String sessionId,
     String? workDirectory,
@@ -85,7 +85,7 @@ class StoragePaths {
     final base = (workDirectory != null && workDirectory.isNotEmpty)
         ? workDirectory
         : sessionDir(sessionId);
-    return p.join(base, '.llmwork');
+    return p.join(base, '.llmate');
   }
 
   /// 确保工作模式目录存在

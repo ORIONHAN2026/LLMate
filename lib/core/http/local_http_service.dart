@@ -651,8 +651,8 @@ class LocalHttpService {
           logData['error'] = error;
         }
 
-        // 确保目录存在：会话配置目录/audit/
-        final dir = Directory('${StoragePaths.sessionDir(sessionId)}/audit');
+        // 确保目录存在：~/.llmate/audit/chats/{sessionId}/
+        final dir = Directory('${StoragePaths.root}/audit/chats/$sessionId');
         if (!await dir.exists()) {
           await dir.create(recursive: true);
         }

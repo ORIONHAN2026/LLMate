@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class ModelIconUtils {
@@ -117,7 +116,7 @@ class ModelIconUtils {
                 isSelected ? Colors.white : Colors.grey[600],
               )
             : Icon(
-                CupertinoIcons.device_desktop,
+                Icons.desktop_windows,
                 color: isSelected ? Colors.white : Colors.grey[600],
                 size: 16,
               ),
@@ -131,7 +130,7 @@ class ModelIconUtils {
       width: 16,
       height: 16,
       errorBuilder: (context, error, stackTrace) {
-        return Icon(CupertinoIcons.device_desktop, color: fallbackColor, size: 16);
+        return Icon(Icons.desktop_windows, color: fallbackColor, size: 16);
       },
     );
   }

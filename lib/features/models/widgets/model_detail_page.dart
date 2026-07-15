@@ -4,7 +4,6 @@ import 'package:llmate/models/chat/chat_setting.dart';
 import 'package:llmate/utils/snackbar_utils.dart';
 import 'package:llmate/features/models/widgets/model_config_tab.dart';
 import 'package:llmate/widgets/common/confirm_delete_dialog.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
@@ -205,7 +204,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                   // 删除模型
                   _showDeleteConfirmation();
                 },
-                icon: const Icon(CupertinoIcons.trash, size: 10),
+                icon: const Icon(Icons.delete_outline, size: 10),
                 label: Text(AppLocalizations.of(context)!.delete),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.error,
@@ -239,7 +238,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
       itemName: _currentModel.name,
       description: loc.confirmDeleteModel,
       warningMessage: loc.irreversibleAction,
-      icon: CupertinoIcons.exclamationmark_triangle,
+      icon: Icons.warning_amber_rounded,
       iconColor: Theme.of(context).colorScheme.error,
     );
 

@@ -35,7 +35,7 @@ class SessionConfigSidebar {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              CupertinoIcons.settings,
+              Icons.settings,
               size: 32,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
             ),
@@ -52,7 +52,7 @@ class SessionConfigSidebar {
               '请先选择或创建一个会话',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 height: 1.5,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
               ),
@@ -115,7 +115,7 @@ class SessionConfigSidebar {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
@@ -173,7 +173,7 @@ class SessionConfigSidebar {
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
@@ -183,7 +183,7 @@ class SessionConfigSidebar {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -192,7 +192,7 @@ class SessionConfigSidebar {
               ),
             ),
             Icon(
-              CupertinoIcons.doc_on_doc,
+              Icons.content_copy,
               size: 12,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
             ),
@@ -220,7 +220,7 @@ class SessionConfigSidebar {
           Row(
             children: [
               Icon(
-                CupertinoIcons.info_circle,
+                Icons.info_outline,
                 size: 12,
                 color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
               ),
@@ -228,7 +228,7 @@ class SessionConfigSidebar {
               Text(
                 '连接器和技能的关联描述',
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 12,
                   color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                 ),
               ),
@@ -253,7 +253,7 @@ class SessionConfigSidebar {
     return Text(
       title,
       style: TextStyle(
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: FontWeight.w600,
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
         letterSpacing: 0.3,
@@ -350,7 +350,7 @@ class SessionConfigSidebar {
           Row(
             children: [
               Icon(
-                CupertinoIcons.info_circle,
+                Icons.info_outline,
                 size: 12,
                 color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
               ),
@@ -358,7 +358,7 @@ class SessionConfigSidebar {
               Text(
                 '模型定价（$currencyName/百万Token）',
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 12,
                   color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
                 ),
               ),
@@ -398,7 +398,7 @@ class SessionConfigSidebar {
         const SizedBox(height: 8),
         _buildConfigItem(
           context,
-          icon: CupertinoIcons.arrow_down_circle,
+          icon: Icons.arrow_circle_down,
           label: '累计输入Token',
           value: _formatTokenCount(session.promptTokens),
           valueColor: theme.colorScheme.primary,
@@ -406,7 +406,7 @@ class SessionConfigSidebar {
         const SizedBox(height: 8),
         _buildConfigItem(
           context,
-          icon: CupertinoIcons.arrow_up_circle,
+          icon: Icons.arrow_circle_up,
           label: '累计输出Token',
           value: _formatTokenCount(session.completionTokens),
           valueColor: theme.colorScheme.primary,
@@ -414,7 +414,7 @@ class SessionConfigSidebar {
         const SizedBox(height: 8),
         _buildConfigItem(
           context,
-          icon: CupertinoIcons.money_dollar_circle,
+          icon: Icons.monetization_on_outlined,
           label: '累计费用',
           value: '${_getCurrencySymbol(session.chatModel)}${session.totalCost.toStringAsFixed(6)}',
           valueColor: session.totalCost > 0
@@ -530,7 +530,7 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
                   Text(
                     widget.label,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
@@ -670,7 +670,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           _buildNumberField(
             context,
             controller: _tokenLimitController,
-            icon: CupertinoIcons.text_bubble,
+            icon: Icons.chat_bubble_outline,
             label: 'Token 用量上限',
             value: _session.quotaTokenLimit,
             hint: '不限制',
@@ -687,7 +687,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           _buildNumberField(
             context,
             controller: _costLimitController,
-            icon: CupertinoIcons.money_dollar_circle,
+            icon: Icons.monetization_on_outlined,
             label: '费用预算上限（${SessionConfigSidebar._getCurrencyName(_session.chatModel)}）',
             value: _session.quotaCostLimit,
             hint: '不限制',
@@ -705,7 +705,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           _buildNumberField(
             context,
             controller: _requestLimitController,
-            icon: CupertinoIcons.repeat,
+            icon: Icons.repeat,
             label: '请求次数上限',
             value: _session.quotaRequestLimit,
             hint: '不限制',
@@ -754,8 +754,8 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
         children: [
           Icon(
             _session.quotaEnabled
-                ? CupertinoIcons.gauge
-                : CupertinoIcons.gauge_badge_minus,
+                ? Icons.speed
+                : Icons.speed,
             size: 16,
             color: _session.quotaEnabled
                 ? Theme.of(context).colorScheme.primary
@@ -779,7 +779,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                 Text(
                   '达到上限后将拒绝新的请求',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
@@ -845,7 +845,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
@@ -893,7 +893,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                 onChanged(null);
               },
               child: Icon(
-                CupertinoIcons.xmark_circle_fill,
+                Icons.cancel,
                 size: 14,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
               ),
@@ -919,7 +919,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
       child: Row(
         children: [
           Icon(
-            CupertinoIcons.arrow_clockwise_circle,
+            Icons.restart_alt,
             size: 14,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
@@ -931,7 +931,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                 Text(
                   '重置周期',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
@@ -1010,8 +1010,8 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             children: [
               Icon(
                 quotaResult.exceeded
-                    ? CupertinoIcons.exclamationmark_triangle
-                    : CupertinoIcons.checkmark_seal,
+                    ? Icons.warning_amber_rounded
+                    : Icons.verified_outlined,
                 size: 12,
                 color: quotaResult.exceeded
                     ? Theme.of(context).colorScheme.error
@@ -1021,7 +1021,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               Text(
                 quotaResult.exceeded ? '配额已用尽' : '当前用量状态',
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: quotaResult.exceeded
                       ? Theme.of(context).colorScheme.error
@@ -1064,7 +1064,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             Text(
               quotaResult.detail ?? '',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 color: Theme.of(context).colorScheme.error.withValues(alpha: 0.8),
               ),
             ),
@@ -1081,7 +1081,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
       itemName: '用量配额',
       description: '确定要手动重置',
       warningMessage: '重置后当前周期的 Token 用量、费用和请求次数将清零，周期起始时间更新为当前时间。',
-      icon: CupertinoIcons.arrow_counterclockwise,
+      icon: Icons.undo,
       iconColor: Colors.orange,
       confirmText: '重置',
       cancelText: '取消',
@@ -1119,7 +1119,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              CupertinoIcons.arrow_counterclockwise,
+              Icons.undo,
               size: 14,
               color: Theme.of(context).colorScheme.error.withValues(alpha: 0.7),
             ),
@@ -1168,14 +1168,14 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
             Text(
               '$suffix$usedStr / $suffix$limitStr',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: progressColor,
               ),
@@ -1232,11 +1232,11 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
   void initState() {
     super.initState();
     _navSections = [
-      _NavSection(key: _basicInfoKey, label: '基础信息', icon: CupertinoIcons.info_circle),
-      _NavSection(key: _serviceKey, label: '服务配置', icon: CupertinoIcons.gear_alt),
-      _NavSection(key: _mcpKey, label: 'MCP', icon: CupertinoIcons.rectangle_3_offgrid),
-      _NavSection(key: _quotaKey, label: '用量配额', icon: CupertinoIcons.gauge),
-      _NavSection(key: _billingKey, label: '计费信息', icon: CupertinoIcons.money_dollar_circle),
+      _NavSection(key: _basicInfoKey, label: '基础信息', icon: Icons.info_outline),
+      _NavSection(key: _serviceKey, label: '服务配置', icon: Icons.settings),
+      _NavSection(key: _mcpKey, label: 'MCP', icon: Icons.grid_view),
+      _NavSection(key: _quotaKey, label: '用量配额', icon: Icons.speed),
+      _NavSection(key: _billingKey, label: '计费信息', icon: Icons.monetization_on_outlined),
     ];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -1311,8 +1311,8 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
         children: [
           Icon(
             session.noAuthEnabled
-                ? CupertinoIcons.lock_open
-                : CupertinoIcons.lock_shield,
+                ? Icons.lock_open
+                : Icons.shield,
             size: 16,
             color: session.noAuthEnabled
                 ? Theme.of(context).colorScheme.error
@@ -1338,7 +1338,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       ? '⚠️ 已关闭认证，任何人均可访问'
                       : '开启后不需要 API Key 即可访问',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     color: session.noAuthEnabled
                         ? Theme.of(context).colorScheme.error.withValues(alpha: 0.7)
                         : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
@@ -1409,7 +1409,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       Text(
                         section.label,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
                           color: isActive
                               ? Theme.of(context).colorScheme.primary
@@ -1450,7 +1450,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildEditableConfigItem(
                       context,
-                      icon: CupertinoIcons.chat_bubble,
+                      icon: Icons.chat_bubble_outline,
                       label: '会话名称',
                       value: session.name,
                       onChanged: (newName) {
@@ -1467,7 +1467,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildEditableConfigItem(
                       context,
-                      icon: CupertinoIcons.rectangle_3_offgrid,
+                      icon: Icons.grid_view,
                       label: '分组',
                       value: session.group ?? '未分组',
                       onChanged: (newGroup) {
@@ -1481,7 +1481,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildConfigItem(
                       context,
-                      icon: CupertinoIcons.globe,
+                      icon: Icons.language,
                       label: '绑定模型',
                       value: session.chatModel != null
                           ? '${session.chatModel!.name} (${session.chatModel!.model})'
@@ -1507,7 +1507,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildConfigItem(
                       context,
-                      icon: CupertinoIcons.chat_bubble_2,
+                      icon: Icons.chat_bubble_outline,
                       label: '消息数量',
                       value: '${session.messages.length}条',
                     ),
@@ -1528,14 +1528,14 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildCopyableConfigItem(
                       context,
-                      icon: CupertinoIcons.link,
+                      icon: Icons.link,
                       label: '服务地址',
                       value: SessionConfigSidebar._buildSmartServiceUrl(session.sessionId),
                     ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildCopyableConfigItem(
                       context,
-                      icon: CupertinoIcons.lock_shield,
+                      icon: Icons.shield,
                       label: 'API 密钥',
                       value: session.apiKey,
                     ),
@@ -1558,7 +1558,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildConfigItem(
                       context,
-                      icon: CupertinoIcons.rectangle_3_offgrid,
+                      icon: Icons.grid_view,
                       label: '模型MCP',
                       value: session.chatModel?.mcps != null &&
                               session.chatModel!.mcps!.isNotEmpty
@@ -1573,7 +1573,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildConfigItem(
                       context,
-                      icon: CupertinoIcons.rectangle_stack,
+                      icon: Icons.layers,
                       label: '会话MCP',
                       value: session.mcps != null && session.mcps!.isNotEmpty
                           ? session.mcps!.join(', ')
@@ -1590,7 +1590,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                         child: Text(
                           '可在模型管理或聊天输入框处添加 MCP 服务',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 12,
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface

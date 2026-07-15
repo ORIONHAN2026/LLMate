@@ -115,8 +115,8 @@ class MyApp extends StatelessWidget {
             ],
               theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                primary: const Color(0xFF1F2937),
-                seedColor: const Color(0xFF1F2937), // 黑色主色调
+                primary: const Color(0xFF2563EB),
+                seedColor: const Color(0xFF2563EB), // 蓝色主色调
                 brightness: Brightness.light,
               ).copyWith(
                 surface: Colors.white,
@@ -131,7 +131,7 @@ class MyApp extends StatelessWidget {
                 foregroundColor: Color(0xFF1F2937), // 标题文字颜色
                 titleTextStyle: TextStyle(
                   color: Color(0xFF1F2937), // 标题文字颜色
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
                 iconTheme: IconThemeData(
@@ -146,7 +146,20 @@ class MyApp extends StatelessWidget {
               ),
               cardColor: Colors.white,
               dividerColor: const Color(0xFFE5E7EB),
-              primaryColor: const Color(0xFF1F2937),
+              primaryColor: const Color(0xFF2563EB),
+              textTheme: const TextTheme(
+                headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                titleLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                titleMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                titleSmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                bodyLarge: TextStyle(fontSize: 15, height: 1.6),
+                bodyMedium: TextStyle(fontSize: 13, height: 1.5),
+                bodySmall: TextStyle(fontSize: 11, height: 1.4),
+                labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                labelMedium: TextStyle(fontSize: 12),
+                labelSmall: TextStyle(fontSize: 10),
+              ),
 
               // 按钮主题配置
               elevatedButtonTheme: ElevatedButtonThemeData(
@@ -158,19 +171,19 @@ class MyApp extends StatelessWidget {
               ),
               filledButtonTheme: FilledButtonThemeData(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF1F2937), // 填充按钮黑色
+                  backgroundColor: const Color(0xFF2563EB), // 填充按钮蓝色
                   foregroundColor: Colors.white, // 文字颜色
                 ),
               ),
               outlinedButtonTheme: OutlinedButtonThemeData(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1F2937), // 边框按钮黑色
-                  side: const BorderSide(color: Color(0xFF1F2937)),
+                  foregroundColor: const Color(0xFF2563EB), // 边框按钮蓝色
+                  side: const BorderSide(color: Color(0xFF2563EB)),
                 ),
               ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF1F2937), // 文本按钮黑色
+                  foregroundColor: const Color(0xFF2563EB), // 文本按钮蓝色
                 ),
               ),
 
@@ -183,21 +196,34 @@ class MyApp extends StatelessWidget {
             ),
             darkTheme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                primary: const Color(0xFF1F2937),
-                seedColor: const Color(0xFF1F2937),
+                primary: const Color(0xFF2563EB),
+                seedColor: const Color(0xFF2563EB),
                 brightness: Brightness.dark,
               ),
               useMaterial3: true,
-              scaffoldBackgroundColor: const Color(0xFF1F1F1F),
-              canvasColor: const Color(0xFF1F1F1F),
-              primaryColor: const Color(0xFF1F2937),
+              scaffoldBackgroundColor: const Color(0xFF1A1B23),
+              canvasColor: const Color(0xFF1A1B23),
+              primaryColor: const Color(0xFF2563EB),
+              textTheme: const TextTheme(
+                headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                titleLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                titleMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                titleSmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                bodyLarge: TextStyle(fontSize: 15, height: 1.6),
+                bodyMedium: TextStyle(fontSize: 13, height: 1.5),
+                bodySmall: TextStyle(fontSize: 11, height: 1.4),
+                labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                labelMedium: TextStyle(fontSize: 12),
+                labelSmall: TextStyle(fontSize: 10),
+              ),
               appBarTheme: const AppBarTheme(
-                backgroundColor: Color(0xFF1F1F1F),
+                backgroundColor: Color(0xFF1A1B23),
                 surfaceTintColor: Colors.transparent,
                 foregroundColor: Colors.white,
                 titleTextStyle: TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
                 iconTheme: IconThemeData(color: Colors.white70),
@@ -215,29 +241,29 @@ class MyApp extends StatelessWidget {
               ),
               filledButtonTheme: FilledButtonThemeData(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF1F2937),
+                  backgroundColor: const Color(0xFF2563EB),
                   foregroundColor: Colors.white,
                 ),
               ),
               outlinedButtonTheme: OutlinedButtonThemeData(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF9CA3AF),
-                  side: const BorderSide(color: Color(0xFF9CA3AF)),
+                  foregroundColor: const Color(0xFF2563EB),
+                  side: const BorderSide(color: Color(0xFF2563EB)),
                 ),
               ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF9CA3AF),
+                  foregroundColor: const Color(0xFF2563EB),
                 ),
               ),
-              cardColor: const Color(0xFF262626),
-              dividerColor: const Color(0xFF30363D),
+              cardColor: const Color(0xFF23242A),
+              dividerColor: const Color(0xFF2D2F3A),
               drawerTheme: const DrawerThemeData(
                 elevation: 16,
-                backgroundColor: Color(0xFF1F1F1F),
+                backgroundColor: Color(0xFF1A1B23),
               ),
               dialogTheme: DialogThemeData(
-                backgroundColor: const Color(0xFF262626),
+                backgroundColor: const Color(0xFF23242A),
               ),
             ),
             themeMode: themeController.themeMode,

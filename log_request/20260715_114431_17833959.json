@@ -1,0 +1,463 @@
+{
+  "timestamp": "2026-07-15T11:44:31.905394",
+  "sessionId": "1783395940761",
+  "model": "mimo-v2.5-pro",
+  "rawRequest": {
+    "model": "mimo-v2.5-pro",
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 📂 工作目录\n当前工作目录：`/Users/orion/.llmate/chats/1783395940761`\n\n### 文件操作规则\n1. **读取用户文件**：使用 `file_read` 工具读取工作目录下的文件\n2. **修改用户文件**：使用 `file_write` 工具修改用户指定的文件\n3. **格式保留**：修改文件时必须保留原有格式，包括字体、缩进、换行等\n4. **仅限工作目录**：读取和修改用户文件时，仅限工作目录下的文件\n\n### ⚠️ 重要说明\n- **工作模式文件**（合同要点、履约跟踪、争议记录、备忘录、脑图、日程等）使用专用工具（如 `contract_content_update`）写入，工具会自动保存到**工作目录**下\n- **会话数据**（session.json、messages.json、memory.md）由系统自动管理，存储在会话目录（~/.llmate/chats/会话ID/），无需手动操作"
+      },
+      {
+        "role": "user",
+        "content": "你好哦"
+      },
+      {
+        "role": "assistant",
+        "content": "你好哦~ 😊\n\n今天有什么我可以帮到你的吗？随时说~"
+      },
+      {
+        "role": "user",
+        "content": "你好呀"
+      },
+      {
+        "role": "assistant",
+        "content": "你好呀~ 😄\n\n感觉我们已经打了不少招呼了哈哈，有什么想聊的或者需要帮忙的吗？我随时在~"
+      },
+      {
+        "role": "user",
+        "content": "介绍下上海吧"
+      },
+      {
+        "role": "assistant",
+        "content": "# 🏙️ 上海简介\n\n上海，简称\"沪\"，别称\"申\"，是中国最大的经济中心城市，也是国际著名的港口城市。\n\n---\n\n## 📍 基本信息\n\n| 项目 | 内容 |\n|------|------|\n| **面积** | 约 6340 平方公里 |\n| **人口** | 约 2487 万（2023年常住人口） |\n| **GDP** | 约 4.72 万亿元（2023年），全国第一 |\n| **行政区划** | 16个市辖区 |\n| **气候** | 亚热带季风气候，四季分明 |\n\n---\n\n## 🏛️ 历史沿革\n\n- **春秋战国**：属楚国，为春申君封地，故别称\"申\"\n- **唐代**：设华亭县\n- **宋代**：设上海镇，因地处上海浦而得名\n- **1843年**：开埠通商，逐渐成为远东金融中心\n- **1949年**：解放后成为新中国重要的工业基地\n- **1990年**：浦东开发开放，开启新一轮腾飞\n\n---\n\n## 🌟 城市特色\n\n### 🏦 经济金融\n- 中国金融中心，拥有上海证券交易所\n- 陆家嘴金融贸易区聚集众多国内外金融机构\n- 2023年金融市场交易总额超 2500 万亿元\n\n### 🚢 航运贸易\n- 上海港集装箱吞吐量连续多年世界第一\n- 洋山深水港是全球最大的自动化集装箱码头之一\n\n### 🔬 科技创新\n- 张江科学城——中国\"硅谷\"\n- 人工智能、集成电路、生物医药三大先导产业\n\n### 🎭 文化多元\n- 海派文化——中西交融的独特城市气质\n- 外滩万国建筑群、石库门里弄、新天地等标志性文化符号\n\n---\n\n## 🎡 著名景点\n\n| 景点 | 特色 |\n|------|------|\n| **外滩** | 万国建筑博览群，隔江相望陆家嘴 |\n| **东方明珠** | 上海地标，高468米 |\n| **上海中心大厦** | 中国第一高楼，632米 |\n| **豫园** | 明代江南古典园林 |\n| **迪士尼乐园** | 中国大陆首座迪士尼 |\n| **新天地** | 石库门建筑改造的时尚街区 |\n| **田子坊** | 文艺创意街区 |\n\n---\n\n## 🍜 特色美食\n\n- 🦀 **大闸蟹** —— 秋季必吃\n- 🍜 **本帮菜** —— 浓油赤酱，如红烧肉、糖醋小排\n- 🥟 **小笼包** —— 南翔小笼最正宗\n- 🍰 **生煎包** —— 底部酥脆，汁水丰富\n- 🧁 **排骨年糕** —— 上海传统小吃\n\n---\n\n## 💡 一句话总结\n\n> 上海是一座\"海纳百川、追求卓越\"的城市，既有摩登现代的天际线，也有市井烟火的老弄堂，中西合璧，古今交融。\n\n---\n\n还想了解上海的哪方面？比如旅游攻略、美食推荐、历史故事，我都可以继续聊~ 😊"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好~ 👋\n\n感觉我们已经是老朋友了哈哈！有什么想聊的或者需要帮忙的，尽管开口哦~ 😄"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好你好~ 😄\n\n看来今天是个打招呼的好日子！☀️\n\n有什么我可以帮到你的吗？文档、PPT、知识问答、创意写作……随时为你效劳~"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "哈哈，你好~ 😄\n\n我们已经打了好多次招呼了！今天是不是在测试我会不会累呀？放心，我随时在线，不打烊~ 🤖✨\n\n有啥需要帮忙的吗？随时说~"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "哈哈，你好~ 😄\n\n看来今天是打招呼日！👋👋👋\n\n放心，我不会累，也不会烦，随时等你吩咐~ 有啥想聊的或者需要帮忙的吗？或者……我们继续打个招呼也行 😆"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "哈哈，你好~ 👋\n\n今天打招呼次数 +1！\n\n我随时在线，有啥需要帮忙的吗？或者继续打招呼也行，我不介意 😄"
+      },
+      {
+        "role": "user",
+        "content": "11"
+      },
+      {
+        "role": "assistant",
+        "content": "11 收到！✨\n\n这是在测试我的响应速度，还是有什么神秘暗号？😄\n\n有啥需要帮忙的吗？随时说~"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好~ 👋\n\n今天招呼打得很勤快呀！😄\n\n有啥想聊的或者需要帮忙的吗？我随时在~"
+      },
+      {
+        "role": "user",
+        "content": "生成关于上海的介绍在线链接"
+      },
+      {
+        "role": "assistant",
+        "content": "好的，我来帮你创建一个关于上海介绍的在线文档~"
+      },
+      {
+        "role": "user",
+        "content": "？"
+      },
+      {
+        "role": "assistant",
+        "content": "抱歉让你久等了，正在创建中~"
+      },
+      {
+        "role": "user",
+        "content": "生成一个在线页面，上面显示：你好"
+      },
+      {
+        "role": "assistant",
+        "content": "<tool_call>\n<function=manage>\n<parameter=action>create_file</parameter>\n<parameter=title>你好</parameter>\n<parameter=type>docx</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好！很高兴见到你！😊 我是MiMo，由小米大模型Core团队开发的大语言模型。无论你想聊天、问问题、需要创意灵感，还是想了解什么知识，我都在这里随时准备帮助你！有什么我可以为你做的吗？"
+      },
+      {
+        "role": "user",
+        "content": "Generate a concise chat title for the provided conversation.\n  \n  Rules: \n  - think about the language of the user's message first, you must generate title in the same languages as user's message \n  - return the language and title in JSON format: { \"language\": \"the language\", \"title\": \"...title\" }\n  - do not include any other text in your response, only the JSON object is allowed\n  \n  [conversation start]\n  User: 你好\n\nAssistant: \n\n@message_part::step_start-zzsrg\n\n\n\n@message_part::reasoning-zzsrg_reasoning-0\n\n你好！很高兴见到你！😊 我是MiMo\n  [conversation end]"
+      },
+      {
+        "role": "assistant",
+        "content": "{ \"language\": \"Chinese\", \"title\": \"问候对话\" }"
+      },
+      {
+        "role": "user",
+        "content": "请生成一个在线测试链接"
+      },
+      {
+        "role": "assistant",
+        "content": "我理解你想要一个“在线测试链接”，但需要先明确几个具体细节，这样才能给你最准确的帮助：\n\n## 目前有几个可能的情况：\n1. **如果你想要创建一个在线测试/问卷**：可以使用专业平台如：\n   - **问卷星**（wjx.cn）\n   - **腾讯问卷**（wj.qq.com）  \n   - **金数据**（jinshuju.net）\n   - **Google Forms**（需国际网络）\n\n2. **如果你想参加某个测试**：\n   - 心理测试网站（如16personalities.com/zh）\n   - 技能测试平台（如LeetCode、牛客网）\n   - 学习平台测试（如Coursera、edX）\n\n3. **如果你需要临时测试链接**：\n   - 可以帮你生成一个**假的测试链接示例**（不实际跳转）\n   - 例如：`https://example.com/test/demo123`\n\n---\n\n**你能告诉我具体是哪种情况吗？**  \n比如：\n- 你想**创建**什么类型的测试？（知识测试、心理测试、问卷调查…）\n- 还是想**参加**某个特定测试？\n- 或者只是需要一个**示例链接**用于演示？\n\n告诉我更多细节，我可以给你更精准的指引！ 😊"
+      },
+      {
+        "role": "user",
+        "content": "Generate a concise chat title for the provided conversation.\n  \n  Rules: \n  - think about the language of the user's message first, you must generate title in the same languages as user's message \n  - return the language and title in JSON format: { \"language\": \"the language\", \"title\": \"...title\" }\n  - do not include any other text in your response, only the JSON object is allowed\n  \n  [conversation start]\n  User: 你好\n\nAssistant: \n\n@message_part::step_start-zzsrg\n\n\n\n@message_part::reasoning-zzsrg_reasoning-0\n\n你好！很高兴见到你！😊 我是MiMo\n\nUser: 请生成一个在线测试链接\n\nAssistant: \n\n@message_part::step_start-4q22x\n\n\n\n@message_part::reasoning-4q22x_reasoning-0\n\n我理解你想要一个“在线测试链接”，但需\n  [conversation end]"
+      },
+      {
+        "role": "assistant",
+        "content": "{\n  \"language\": \"Chinese\",\n  \"title\": \"在线测试链接请求\"\n}"
+      },
+      {
+        "role": "user",
+        "content": "调用writePage工具"
+      },
+      {
+        "role": "assistant",
+        "content": "很抱歉，我目前无法直接调用名为 **“writePage”** 的专用工具。不过，我可以为你提供以下帮助：\n\n---\n\n## 如果你需要**在线测试页面**，我有以下建议：\n\n### 1. **使用免费网页创建工具**（无需编程）：\n   - **Google Sites**（sites.google.com）—— 简单拖拽式，可快速创建问卷或测试页。\n   - **Wix / Weebly** —— 适合美观的网页，支持嵌入问卷。\n   - **Notion** —— 可发布公开页面，适合知识测试或笔记类内容。\n\n### 2. **直接生成测试链接的平台**：\n   - **问卷星**（wjx.cn）—— 专业问卷/测试工具，支持自动生成链接。\n   - **Typeform**较好。\n   - **腾讯文档**（docs.qq.com）—— 可创建在线表格/问卷并分享链接。\n\n### 3. **如果你需要技术代码**：\n   我可以为你提供 **HTML + JavaScript 的简单测试页面代码**，例如：\n   ```htmlDOCTYPE html>\n   <html>\n   <head><title>在线测试</title></head>\n     <h1>欢迎参加测试</h1>\n     <p>问题1：中国的首都是哪里     <input type=\"radio\" name=\"q1\" value=\"A type=\"radio\" name=\"q1\" value=\"B\"> 北京<br>\n     <button onclick=\"checkbutton>\n     <script>\n       function checkAnswer() {\n         alert(\"感谢参与！\");\nscript>\n   </html>\n   ```\n   你可以将此代码保存为 `.html` 文件并在浏览器中打开。\n\n---\n\n## 请告诉我你的具体需求：\n- 你需要**哪种类型的测试**？（教育测试、心理测试、趣味问答…）\n- 是否需要**自动评分功能**？\n- 是否需要**美观的设计模板**？\n\n我会根据你的需求，进一步帮你设计方案或推荐工具！ 😊"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好！很高兴见到你，欢迎来到我的世界。我是你的智能助手，随时准备为你提供帮助和陪伴。无论你想聊什么话题，问什么问题，或者只是需要一个温暖的对话，我都在这里。今天有什么我可以为你效劳的吗？😊"
+      },
+      {
+        "role": "user",
+        "content": "Generate a concise chat title for the provided conversation.\n  \n  Rules: \n  - think about the language of the user's message first, you must generate title in the same languages as user's message \n  - return the language and title in JSON format: { \"language\": \"the language\", \"title\": \"...title\" }\n  - do not include any other text in your response, only the JSON object is allowed\n  \n  [conversation start]\n  User: 你好\n\nAssistant: \n\n@message_part::step_start-mzxv6\n\n\n\n@message_part::reasoning-mzxv6_reasoning-0\n\n你好！很高兴见到你，欢迎来到我的世界。\n  [conversation end]"
+      },
+      {
+        "role": "assistant",
+        "content": "{ \"language\": \"Chinese\", \"title\": \"你好对话\" }"
+      },
+      {
+        "role": "user",
+        "content": "调用writePage工具"
+      },
+      {
+        "role": "assistant",
+        "content": "要使用 `writePage` 工具，我需要你提供 **Markdown 格式的内容**。这个工具会把你的文本写入数据库，并生成一个可访问的网页链接。\n\n**请告诉我你想写入的内容**，例如：\n- 一篇笔记\n- 一个简单的页面\n- 测试文本\n\n你可以这样提供内容：\n```\n请将以下内容写入页面：\n# 我的测试页面\n这是一段示例文本，用于演示writePage功能。\n- 列表项 1\n- 列表项 2\n```\n\n或者直接告诉我：“请写入：[你的内容]”\n\n提供内容后，我马上为你生成链接！ 😊"
+      },
+      {
+        "role": "user",
+        "content": "请写入：你好"
+      },
+      {
+        "role": "assistant",
+        "content": "我已经为你创建了页面！✨\n\n**页面链接**：https://mcp.llmwork.cc/wechatpublic/p/9f47006e-34b8-427b-9170-ae960428f649\n\n这是一个简单的“你好”页面。你可以在浏览器中打开这个链接查看效果。如果需要创建更复杂的内容（比如带标题、列表、图片等），随时告诉我，我可以帮你生成更丰富的页面！"
+      },
+      {
+        "role": "user",
+        "content": "重新生成一个页面，里面写：下午好"
+      },
+      {
+        "role": "system",
+        "content": "## ⚡ 核心规则\n\n1. **工具优先**：回答需要文件内容、目录结构、代码片段或数据时，必须先调用工具获取。严禁在未调用工具的情况下编造文件名、路径、代码内容或数据。\n2. **操作验证**：声称完成了任何操作（修改文件、执行命令等），必须确实通过工具执行过。严禁假装执行。\n3. **诚实回应**：如果无法获取需要的信息，直接说\"无法确定\"，不要编造。区分事实（工具返回的）与推测。\n4. **静默执行**：直接调用工具并返回结果，无需向用户解释你正在使用什么工具。不要将内部工具作为功能特性向用户介绍。\n5. **过期数据**：不要依赖历史对话中看到过的数据，每次都重新通过工具获取最新内容。\n\n一句话：没调用工具就不准呈现数据，没执行操作就不准说已完成。"
+      },
+      {
+        "role": "system",
+        "content": "You MUST respond in Chinese (Simplified). Code, variable names, and URLs can remain in their original language."
+      },
+      {
+        "role": "user",
+        "content": "git 查看路径"
+      }
+    ],
+    "stream": true,
+    "max_tokens": 4000,
+    "temperature": 1.0,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "getAccessToken",
+          "description": "获取微信公众号 access_token。appid/secret 通过 MCP 客户端 headers (X-Appid/X-Secret) 或环境变量配置。默认从数据库读取未过期的缓存，传 force=true 时强制从微信 API 获取新 token。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "force": {
+                "type": "boolean",
+                "description": "是否强制从微信 API 获取新 token（默认 false，优先使用数据库缓存）"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "name": "writePage",
+          "description": "将 Markdown 内容写入数据库并生成可访问的网页链接。传入 Markdown 文本，返回一个包含 docId 的页面链接，用户打开链接即可查看渲染后的内容。",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Markdown 格式的文本内容（必填）"
+              }
+            },
+            "required": [
+              "content"
+            ]
+          }
+        }
+      }
+    ],
+    "tool_choice": "auto",
+    "thinking": {
+      "type": "disabled"
+    }
+  },
+  "request": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "## 📂 工作目录\n当前工作目录：`/Users/orion/.llmate/chats/1783395940761`\n\n### 文件操作规则\n1. **读取用户文件**：使用 `file_read` 工具读取工作目录下的文件\n2. **修改用户文件**：使用 `file_write` 工具修改用户指定的文件\n3. **格式保留**：修改文件时必须保留原有格式，包括字体、缩进、换行等\n4. **仅限工作目录**：读取和修改用户文件时，仅限工作目录下的文件\n\n### ⚠️ 重要说明\n- **工作模式文件**（合同要点、履约跟踪、争议记录、备忘录、脑图、日程等）使用专用工具（如 `contract_content_update`）写入，工具会自动保存到**工作目录**下\n- **会话数据**（session.json、messages.json、memory.md）由系统自动管理，存储在会话目录（~/.llmate/chats/会话ID/），无需手动操作"
+      },
+      {
+        "role": "user",
+        "content": "你好哦"
+      },
+      {
+        "role": "assistant",
+        "content": "你好哦~ 😊\n\n今天有什么我可以帮到你的吗？随时说~"
+      },
+      {
+        "role": "user",
+        "content": "你好呀"
+      },
+      {
+        "role": "assistant",
+        "content": "你好呀~ 😄\n\n感觉我们已经打了不少招呼了哈哈，有什么想聊的或者需要帮忙的吗？我随时在~"
+      },
+      {
+        "role": "user",
+        "content": "介绍下上海吧"
+      },
+      {
+        "role": "assistant",
+        "content": "# 🏙️ 上海简介\n\n上海，简称\"沪\"，别称\"申\"，是中国最大的经济中心城市，也是国际著名的港口城市。\n\n---\n\n## 📍 基本信息\n\n| 项目 | 内容 |\n|------|------|\n| **面积** | 约 6340 平方公里 |\n| **人口** | 约 2487 万（2023年常住人口） |\n| **GDP** | 约 4.72 万亿元（2023年），全国第一 |\n| **行政区划** | 16个市辖区 |\n| **气候** | 亚热带季风气候，四季分明 |\n\n---\n\n## 🏛️ 历史沿革\n\n- **春秋战国**：属楚国，为春申君封地，故别称\"申\"\n- **唐代**：设华亭县\n- **宋代**：设上海镇，因地处上海浦而得名\n- **1843年**：开埠通商，逐渐成为远东金融中心\n- **1949年**：解放后成为新中国重要的工业基地\n- **1990年**：浦东开发开放，开启新一轮腾飞\n\n---\n\n## 🌟 城市特色\n\n### 🏦 经济金融\n- 中国金融中心，拥有上海证券交易所\n- 陆家嘴金融贸易区聚集众多国内外金融机构\n- 2023年金融市场交易总额超 2500 万亿元\n\n### 🚢 航运贸易\n- 上海港集装箱吞吐量连续多年世界第一\n- 洋山深水港是全球最大的自动化集装箱码头之一\n\n### 🔬 科技创新\n- 张江科学城——中国\"硅谷\"\n- 人工智能、集成电路、生物医药三大先导产业\n\n### 🎭 文化多元\n- 海派文化——中西交融的独特城市气质\n- 外滩万国建筑群、石库门里弄、新天地等标志性文化符号\n\n---\n\n## 🎡 著名景点\n\n| 景点 | 特色 |\n|------|------|\n| **外滩** | 万国建筑博览群，隔江相望陆家嘴 |\n| **东方明珠** | 上海地标，高468米 |\n| **上海中心大厦** | 中国第一高楼，632米 |\n| **豫园** | 明代江南古典园林 |\n| **迪士尼乐园** | 中国大陆首座迪士尼 |\n| **新天地** | 石库门建筑改造的时尚街区 |\n| **田子坊** | 文艺创意街区 |\n\n---\n\n## 🍜 特色美食\n\n- 🦀 **大闸蟹** —— 秋季必吃\n- 🍜 **本帮菜** —— 浓油赤酱，如红烧肉、糖醋小排\n- 🥟 **小笼包** —— 南翔小笼最正宗\n- 🍰 **生煎包** —— 底部酥脆，汁水丰富\n- 🧁 **排骨年糕** —— 上海传统小吃\n\n---\n\n## 💡 一句话总结\n\n> 上海是一座\"海纳百川、追求卓越\"的城市，既有摩登现代的天际线，也有市井烟火的老弄堂，中西合璧，古今交融。\n\n---\n\n还想了解上海的哪方面？比如旅游攻略、美食推荐、历史故事，我都可以继续聊~ 😊"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好~ 👋\n\n感觉我们已经是老朋友了哈哈！有什么想聊的或者需要帮忙的，尽管开口哦~ 😄"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好你好~ 😄\n\n看来今天是个打招呼的好日子！☀️\n\n有什么我可以帮到你的吗？文档、PPT、知识问答、创意写作……随时为你效劳~"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "哈哈，你好~ 😄\n\n我们已经打了好多次招呼了！今天是不是在测试我会不会累呀？放心，我随时在线，不打烊~ 🤖✨\n\n有啥需要帮忙的吗？随时说~"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "哈哈，你好~ 😄\n\n看来今天是打招呼日！👋👋👋\n\n放心，我不会累，也不会烦，随时等你吩咐~ 有啥想聊的或者需要帮忙的吗？或者……我们继续打个招呼也行 😆"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "哈哈，你好~ 👋\n\n今天打招呼次数 +1！\n\n我随时在线，有啥需要帮忙的吗？或者继续打招呼也行，我不介意 😄"
+      },
+      {
+        "role": "user",
+        "content": "11"
+      },
+      {
+        "role": "assistant",
+        "content": "11 收到！✨\n\n这是在测试我的响应速度，还是有什么神秘暗号？😄\n\n有啥需要帮忙的吗？随时说~"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好~ 👋\n\n今天招呼打得很勤快呀！😄\n\n有啥想聊的或者需要帮忙的吗？我随时在~"
+      },
+      {
+        "role": "user",
+        "content": "生成关于上海的介绍在线链接"
+      },
+      {
+        "role": "assistant",
+        "content": "好的，我来帮你创建一个关于上海介绍的在线文档~"
+      },
+      {
+        "role": "user",
+        "content": "？"
+      },
+      {
+        "role": "assistant",
+        "content": "抱歉让你久等了，正在创建中~"
+      },
+      {
+        "role": "user",
+        "content": "生成一个在线页面，上面显示：你好"
+      },
+      {
+        "role": "assistant",
+        "content": "<tool_call>\n<function=manage>\n<parameter=action>create_file</parameter>\n<parameter=title>你好</parameter>\n<parameter=type>docx</parameter>\n</function>\n</tool_call>"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好！很高兴见到你！😊 我是MiMo，由小米大模型Core团队开发的大语言模型。无论你想聊天、问问题、需要创意灵感，还是想了解什么知识，我都在这里随时准备帮助你！有什么我可以为你做的吗？"
+      },
+      {
+        "role": "user",
+        "content": "Generate a concise chat title for the provided conversation.\n  \n  Rules: \n  - think about the language of the user's message first, you must generate title in the same languages as user's message \n  - return the language and title in JSON format: { \"language\": \"the language\", \"title\": \"...title\" }\n  - do not include any other text in your response, only the JSON object is allowed\n  \n  [conversation start]\n  User: 你好\n\nAssistant: \n\n@message_part::step_start-zzsrg\n\n\n\n@message_part::reasoning-zzsrg_reasoning-0\n\n你好！很高兴见到你！😊 我是MiMo\n  [conversation end]"
+      },
+      {
+        "role": "assistant",
+        "content": "{ \"language\": \"Chinese\", \"title\": \"问候对话\" }"
+      },
+      {
+        "role": "user",
+        "content": "请生成一个在线测试链接"
+      },
+      {
+        "role": "assistant",
+        "content": "我理解你想要一个“在线测试链接”，但需要先明确几个具体细节，这样才能给你最准确的帮助：\n\n## 目前有几个可能的情况：\n1. **如果你想要创建一个在线测试/问卷**：可以使用专业平台如：\n   - **问卷星**（wjx.cn）\n   - **腾讯问卷**（wj.qq.com）  \n   - **金数据**（jinshuju.net）\n   - **Google Forms**（需国际网络）\n\n2. **如果你想参加某个测试**：\n   - 心理测试网站（如16personalities.com/zh）\n   - 技能测试平台（如LeetCode、牛客网）\n   - 学习平台测试（如Coursera、edX）\n\n3. **如果你需要临时测试链接**：\n   - 可以帮你生成一个**假的测试链接示例**（不实际跳转）\n   - 例如：`https://example.com/test/demo123`\n\n---\n\n**你能告诉我具体是哪种情况吗？**  \n比如：\n- 你想**创建**什么类型的测试？（知识测试、心理测试、问卷调查…）\n- 还是想**参加**某个特定测试？\n- 或者只是需要一个**示例链接**用于演示？\n\n告诉我更多细节，我可以给你更精准的指引！ 😊"
+      },
+      {
+        "role": "user",
+        "content": "Generate a concise chat title for the provided conversation.\n  \n  Rules: \n  - think about the language of the user's message first, you must generate title in the same languages as user's message \n  - return the language and title in JSON format: { \"language\": \"the language\", \"title\": \"...title\" }\n  - do not include any other text in your response, only the JSON object is allowed\n  \n  [conversation start]\n  User: 你好\n\nAssistant: \n\n@message_part::step_start-zzsrg\n\n\n\n@message_part::reasoning-zzsrg_reasoning-0\n\n你好！很高兴见到你！😊 我是MiMo\n\nUser: 请生成一个在线测试链接\n\nAssistant: \n\n@message_part::step_start-4q22x\n\n\n\n@message_part::reasoning-4q22x_reasoning-0\n\n我理解你想要一个“在线测试链接”，但需\n  [conversation end]"
+      },
+      {
+        "role": "assistant",
+        "content": "{\n  \"language\": \"Chinese\",\n  \"title\": \"在线测试链接请求\"\n}"
+      },
+      {
+        "role": "user",
+        "content": "调用writePage工具"
+      },
+      {
+        "role": "assistant",
+        "content": "很抱歉，我目前无法直接调用名为 **“writePage”** 的专用工具。不过，我可以为你提供以下帮助：\n\n---\n\n## 如果你需要**在线测试页面**，我有以下建议：\n\n### 1. **使用免费网页创建工具**（无需编程）：\n   - **Google Sites**（sites.google.com）—— 简单拖拽式，可快速创建问卷或测试页。\n   - **Wix / Weebly** —— 适合美观的网页，支持嵌入问卷。\n   - **Notion** —— 可发布公开页面，适合知识测试或笔记类内容。\n\n### 2. **直接生成测试链接的平台**：\n   - **问卷星**（wjx.cn）—— 专业问卷/测试工具，支持自动生成链接。\n   - **Typeform**较好。\n   - **腾讯文档**（docs.qq.com）—— 可创建在线表格/问卷并分享链接。\n\n### 3. **如果你需要技术代码**：\n   我可以为你提供 **HTML + JavaScript 的简单测试页面代码**，例如：\n   ```htmlDOCTYPE html>\n   <html>\n   <head><title>在线测试</title></head>\n     <h1>欢迎参加测试</h1>\n     <p>问题1：中国的首都是哪里     <input type=\"radio\" name=\"q1\" value=\"A type=\"radio\" name=\"q1\" value=\"B\"> 北京<br>\n     <button onclick=\"checkbutton>\n     <script>\n       function checkAnswer() {\n         alert(\"感谢参与！\");\nscript>\n   </html>\n   ```\n   你可以将此代码保存为 `.html` 文件并在浏览器中打开。\n\n---\n\n## 请告诉我你的具体需求：\n- 你需要**哪种类型的测试**？（教育测试、心理测试、趣味问答…）\n- 是否需要**自动评分功能**？\n- 是否需要**美观的设计模板**？\n\n我会根据你的需求，进一步帮你设计方案或推荐工具！ 😊"
+      },
+      {
+        "role": "user",
+        "content": "你好"
+      },
+      {
+        "role": "assistant",
+        "content": "你好！很高兴见到你，欢迎来到我的世界。我是你的智能助手，随时准备为你提供帮助和陪伴。无论你想聊什么话题，问什么问题，或者只是需要一个温暖的对话，我都在这里。今天有什么我可以为你效劳的吗？😊"
+      },
+      {
+        "role": "user",
+        "content": "Generate a concise chat title for the provided conversation.\n  \n  Rules: \n  - think about the language of the user's message first, you must generate title in the same languages as user's message \n  - return the language and title in JSON format: { \"language\": \"the language\", \"title\": \"...title\" }\n  - do not include any other text in your response, only the JSON object is allowed\n  \n  [conversation start]\n  User: 你好\n\nAssistant: \n\n@message_part::step_start-mzxv6\n\n\n\n@message_part::reasoning-mzxv6_reasoning-0\n\n你好！很高兴见到你，欢迎来到我的世界。\n  [conversation end]"
+      },
+      {
+        "role": "assistant",
+        "content": "{ \"language\": \"Chinese\", \"title\": \"你好对话\" }"
+      },
+      {
+        "role": "user",
+        "content": "调用writePage工具"
+      },
+      {
+        "role": "assistant",
+        "content": "要使用 `writePage` 工具，我需要你提供 **Markdown 格式的内容**。这个工具会把你的文本写入数据库，并生成一个可访问的网页链接。\n\n**请告诉我你想写入的内容**，例如：\n- 一篇笔记\n- 一个简单的页面\n- 测试文本\n\n你可以这样提供内容：\n```\n请将以下内容写入页面：\n# 我的测试页面\n这是一段示例文本，用于演示writePage功能。\n- 列表项 1\n- 列表项 2\n```\n\n或者直接告诉我：“请写入：[你的内容]”\n\n提供内容后，我马上为你生成链接！ 😊"
+      },
+      {
+        "role": "user",
+        "content": "请写入：你好"
+      },
+      {
+        "role": "assistant",
+        "content": "我已经为你创建了页面！✨\n\n**页面链接**：https://mcp.llmwork.cc/wechatpublic/p/9f47006e-34b8-427b-9170-ae960428f649\n\n这是一个简单的“你好”页面。你可以在浏览器中打开这个链接查看效果。如果需要创建更复杂的内容（比如带标题、列表、图片等），随时告诉我，我可以帮你生成更丰富的页面！"
+      },
+      {
+        "role": "user",
+        "content": "重新生成一个页面，里面写：下午好"
+      },
+      {
+        "role": "system",
+        "content": "## ⚡ 核心规则\n\n1. **工具优先**：回答需要文件内容、目录结构、代码片段或数据时，必须先调用工具获取。严禁在未调用工具的情况下编造文件名、路径、代码内容或数据。\n2. **操作验证**：声称完成了任何操作（修改文件、执行命令等），必须确实通过工具执行过。严禁假装执行。\n3. **诚实回应**：如果无法获取需要的信息，直接说\"无法确定\"，不要编造。区分事实（工具返回的）与推测。\n4. **静默执行**：直接调用工具并返回结果，无需向用户解释你正在使用什么工具。不要将内部工具作为功能特性向用户介绍。\n5. **过期数据**：不要依赖历史对话中看到过的数据，每次都重新通过工具获取最新内容。\n\n一句话：没调用工具就不准呈现数据，没执行操作就不准说已完成。"
+      },
+      {
+        "role": "system",
+        "content": "You MUST respond in Chinese (Simplified). Code, variable names, and URLs can remain in their original language."
+      },
+      {
+        "role": "user",
+        "content": "git 查看路径"
+      }
+    ]
+  },
+  "response": {
+    "content": "抱歉，当前环境中 `writePage` 工具不可用，无法为你生成在线页面。😔\n\n### 替代方案：\n\n1. **使用在线 Markdown 发布工具**：\n   - [HackMD](https://hackmd.io) —— 直接输入内容，一键生成链接\n   - [Notion](https://notion.so) —— 创建公开页面并分享链接\n   - [GitHub Gist](https://gist.github.com) —— 输入内容后点击 \"Share\" 获取链接\n\n2. **手动快速创建**：\n   打开 [HackMD](https://hackmd.io)，输入以下内容，保存后即可分享链接：\n   ```markdown\n   下午好\n   ```\n\n3. **如果你有服务器或博客**：\n   我可以帮你生成 HTML 文件的代码，你上传到服务器即可。\n\n---\n\n如果你想了解更多工具或有其他需求，随时告诉我！😊",
+    "tool_calls": [
+      {
+        "name": "writePage",
+        "arguments": {
+          "content": "下午好"
+        },
+        "success": false,
+        "result": "工具 \"writePage\" 在当前环境中不可用。"
+      }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:llmate/controllers/session_controller.dart';
 import 'package:llmate/features/chat/widgets/model_selector.dart';
 import 'package:llmate/l10n/app_localizations.dart';
@@ -22,6 +22,8 @@ import '../../mcp/pages/mcp_management_page.dart';
 
 import '../../settings/pages/other_settings_page.dart';
 import '../../settings/pages/domain_management_page.dart';
+import '../widgets/usage_dashboard.dart';
+import 'package:llmate/widgets/command_palette.dart';
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});
@@ -320,7 +322,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                     IconButton(
                       onPressed: _createNewSession,
                       icon: Icon(
-                        CupertinoIcons.square_pencil,
+                        Icons.edit,
                         size: 15,
                         color: Theme.of(
                           context,
@@ -340,7 +342,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                         );
                       },
                       icon: Icon(
-                        CupertinoIcons.sidebar_right,
+                        Icons.menu_open,
                         size: 15,
                         color: Theme.of(
                           context,
@@ -522,9 +524,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromLTWH(
         buttonPosition.dx - 20, // 稍微向左偏移
-        buttonPosition.dy - 250, // 在按钮上方显示菜单
+        buttonPosition.dy - 310, // 在按钮上方显示菜单
         160, // 菜单宽度
-        280, // 菜单高度
+        340, // 菜单高度
       ),
       Offset.zero & overlay.size,
     );
@@ -538,11 +540,37 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       items: [
         PopupMenuItem(
           height: 48,
+          child: Row(
+            children: [
+              Icon(
+                Icons.bar_chart_rounded,
+                size: 16,
+                color: const Color(0xFF2563EB),
+              ),
+              const SizedBox(width: 12),
+              Text('使用量仪表盘', style: const TextStyle(fontSize: 12)),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (mounted) {
+                UsageDashboard.show(context, global: true);
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
+          enabled: false,
+          height: 1,
+          child: const Divider(height: 1, thickness: 1),
+        ),
+        PopupMenuItem(
+          height: 48,
           onTap: _sendFeedbackEmail,
           child: Row(
             children: [
               Icon(
-                CupertinoIcons.mail,
+                Icons.mail_outline,
                 size: 16,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
@@ -556,7 +584,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           child: Row(
             children: [
               Icon(
-                CupertinoIcons.sparkles,
+                Icons.auto_awesome,
                 size: 16,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
@@ -583,7 +611,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           child: Row(
             children: [
               Icon(
-                CupertinoIcons.link,
+                Icons.link,
                 size: 16,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
@@ -609,7 +637,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           child: Row(
             children: [
               Icon(
-                CupertinoIcons.globe,
+                Icons.language,
                 size: 16,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
@@ -635,7 +663,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           child: Row(
             children: [
               Icon(
-                CupertinoIcons.slider_horizontal_3,
+                Icons.tune,
                 size: 16,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
@@ -658,6 +686,98 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         ),
       ],
     );
+  }
+
+  // 显示命令面板
+  void _showCommandPalette() {
+    final l10n = AppLocalizations.of(context)!;
+    final actions = <CommandPaletteAction>[
+      CommandPaletteAction(
+        id: 'new-session',
+        title: l10n.newSession,
+        subtitle: 'Create a new chat session',
+        icon: Icons.edit,
+        shortcut: '\u2318N',
+        onTap: _createNewSession,
+      ),
+      CommandPaletteAction(
+        id: 'toggle-sidebar',
+        title: _isSidebarCollapsed
+            ? (l10n.expandSidebar)
+            : (l10n.collapseSidebar),
+        icon: Icons.menu,
+        shortcut: '\u2318B',
+        onTap: () {
+          setState(() {
+            _isSidebarCollapsed = !_isSidebarCollapsed;
+          });
+        },
+      ),
+      CommandPaletteAction(
+        id: 'toggle-right-panel',
+        title: _isRightSidebarCollapsed
+            ? (l10n.expandRightSidebar)
+            : (l10n.collapseRightSidebar),
+        icon: Icons.menu_open,
+        shortcut: '\u2318]',
+        onTap: () {
+          setState(() {
+            _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
+          });
+        },
+      ),
+      CommandPaletteAction(
+        id: 'settings',
+        title: l10n.otherSettings,
+        subtitle: 'Configure app preferences',
+        icon: Icons.tune,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const OtherSettingsPage(),
+            ),
+          );
+        },
+      ),
+      CommandPaletteAction(
+        id: 'model-management',
+        title: l10n.modelManagement,
+        subtitle: 'Manage AI models',
+        icon: Icons.auto_awesome,
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ModelSettingPage(),
+            ),
+          );
+          _loadModels();
+        },
+      ),
+      CommandPaletteAction(
+        id: 'mcp-management',
+        title: l10n.connectorManagement,
+        subtitle: 'Manage MCP connectors',
+        icon: Icons.link,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const McpManagementPage(),
+            ),
+          );
+        },
+      ),
+      CommandPaletteAction(
+        id: 'send-feedback',
+        title: l10n.feedback,
+        subtitle: 'Send feedback to the team',
+        icon: Icons.mail_outline,
+        onTap: _sendFeedbackEmail,
+      ),
+    ];
+    CommandPalette.show(context, actions: actions);
   }
 
   // 发送反馈邮件
@@ -758,29 +878,45 @@ Thanks!
 
   // 右侧边栏折叠按钮（顶部栏右侧）
   Widget _buildRightSidebarToggle() {
-    return Padding(
-      padding: const EdgeInsets.only(right: 4),
-      child: IconButton(
-        onPressed: () {
-          setState(() {
-            _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
-          });
-        },
-        icon: Icon(
-          _isRightSidebarCollapsed
-              ? CupertinoIcons.sidebar_right
-              : CupertinoIcons.sidebar_right,
-          size: 14,
-          color: Theme.of(context).colorScheme.onSurface.withValues(
-            alpha: _isRightSidebarCollapsed ? 0.6 : 0.4,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 使用量仪表盘按钮
+        IconButton(
+          onPressed: () => UsageDashboard.show(context, session: currentSession),
+          icon: Icon(
+            Icons.bar_chart_rounded,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+          ),
+          visualDensity: VisualDensity.compact,
+          tooltip: '使用量仪表盘',
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 4),
+          child: IconButton(
+            onPressed: () {
+              setState(() {
+                _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
+              });
+            },
+            icon: Icon(
+              _isRightSidebarCollapsed
+                  ? Icons.menu_open
+                  : Icons.menu_open,
+              size: 14,
+              color: Theme.of(context).colorScheme.onSurface.withValues(
+                alpha: _isRightSidebarCollapsed ? 0.6 : 0.4,
+              ),
+            ),
+            visualDensity: VisualDensity.compact,
+            tooltip:
+                _isRightSidebarCollapsed
+                    ? AppLocalizations.of(context)!.expandRightSidebar
+                    : AppLocalizations.of(context)!.collapseRightSidebar,
           ),
         ),
-        visualDensity: VisualDensity.compact,
-        tooltip:
-            _isRightSidebarCollapsed
-                ? AppLocalizations.of(context)!.expandRightSidebar
-                : AppLocalizations.of(context)!.collapseRightSidebar,
-      ),
+      ],
     );
   }
 
@@ -873,79 +1009,97 @@ Thanks!
 
   // 平板布局 - 混合桌面和移动端特性
   Widget _buildTabletLayout(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Row(
-        children: [
-          // 左侧边栏 - 可折叠
-          if (!_isSidebarCollapsed) ...[
-            SizedBox(
-              width: ResponsiveUtils.getSidebarWidth(context),
-              child: _buildSidePanel(),
-            ),
-            _buildResizableHandle(),
-          ],
-          // 主内容区域
-          Expanded(
-            flex: 3,
-            child: Column(
-              children: [
-                // 顶部模型选择栏
-                _buildTopBar(context),
-                Expanded(
-                  child: GetX<SessionController>(
-                    builder: (controller) {
-                      return _buildChatArea();
-                    },
-                  ),
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+            _showCommandPalette,
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: Row(
+            children: [
+              // 左侧边栏 - 可折叠
+              if (!_isSidebarCollapsed) ...[
+                SizedBox(
+                  width: ResponsiveUtils.getSidebarWidth(context),
+                  child: _buildSidePanel(),
                 ),
+                _buildResizableHandle(),
               ],
-            ),
+              // 主内容区域
+              Expanded(
+                flex: 3,
+                child: Column(
+                  children: [
+                    // 顶部模型选择栏
+                    _buildTopBar(context),
+                    Expanded(
+                      child: GetX<SessionController>(
+                        builder: (controller) {
+                          return _buildChatArea();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 右侧边栏 - 宽度为聊天窗口的 2/3
+              if (!_isRightSidebarCollapsed) ...[
+                _buildRightResizableHandle(),
+                Expanded(flex: 2, child: _buildRightSidePanel()),
+              ],
+            ],
           ),
-          // 右侧边栏 - 宽度为聊天窗口的 2/3
-          if (!_isRightSidebarCollapsed) ...[
-            _buildRightResizableHandle(),
-            Expanded(flex: 2, child: _buildRightSidePanel()),
-          ],
-        ],
+        ),
       ),
     );
   }
 
   // 桌面布局
   Widget _buildDesktopLayout(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Row(
-        children: [
-          // 左侧边栏 - 可调整宽度
-          if (!_isSidebarCollapsed) ...[
-            SizedBox(width: _sidebarWidth, child: _buildSidePanel()),
-            _buildResizableHandle(),
-          ],
-          // 主内容区域
-          Expanded(
-            flex: 3,
-            child: Column(
-              children: [
-                // 顶部栏
-                _buildTopBar(context),
-                Expanded(
-                  child: GetX<SessionController>(
-                    builder: (controller) {
-                      return _buildChatArea();
-                    },
-                  ),
-                ),
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+            _showCommandPalette,
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: Row(
+            children: [
+              // 左侧边栏 - 可调整宽度
+              if (!_isSidebarCollapsed) ...[
+                SizedBox(width: _sidebarWidth, child: _buildSidePanel()),
+                _buildResizableHandle(),
               ],
-            ),
+              // 主内容区域
+              Expanded(
+                flex: 3,
+                child: Column(
+                  children: [
+                    // 顶部栏
+                    _buildTopBar(context),
+                    Expanded(
+                      child: GetX<SessionController>(
+                        builder: (controller) {
+                          return _buildChatArea();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 右侧边栏 - 宽度为聊天窗口的 2/3
+              if (!_isRightSidebarCollapsed) ...[
+                _buildRightResizableHandle(),
+                Expanded(flex: 2, child: _buildRightSidePanel()),
+              ],
+            ],
           ),
-          // 右侧边栏 - 宽度为聊天窗口的 2/3
-          if (!_isRightSidebarCollapsed) ...[
-            _buildRightResizableHandle(),
-            Expanded(flex: 2, child: _buildRightSidePanel()),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -992,7 +1146,7 @@ Thanks!
                       });
                     },
                     icon: Icon(
-                      CupertinoIcons.sidebar_left,
+                      Icons.menu,
                       size: 14,
                       color: Theme.of(
                         context,

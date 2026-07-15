@@ -1,0 +1,54 @@
+# Hugo configuration file
+title:  LLMate
+
+# import hextra as module
+module:
+  imports:
+    - path: github.com/imfing/hextra
+
+markup:
+  # allow raw html
+  goldmark:
+    renderer:
+      unsafe: true
+
+  # enable hextra syntax highlight
+  highlight:
+    noClasses: false
+
+menu:
+  main:
+    - name: 文档
+      pageRef: /docs
+      weight: 1
+    - name: 关于
+      pageRef: /about
+      weight: 2
+    - name: 下载
+      pageRef: /docs/01-download
+      weight: 3
+    - name: Search
+      weight: 4
+      params:
+        type: search
+    - name: GitHub
+      weight: 5
+      url: "https://cnb.cool/llmhub.cc/llmchat.git"
+      params:
+        icon: github
+    - name: Theme Toggle
+      weight: 6
+      params:
+        type: theme-toggle
+
+params:
+  navbar:
+    displayTitle: true
+    displayLogo: false
+
+  footer:
+    displayCopyright: false
+    displayPoweredBy: true
+
+  editURL:
+    enable: false

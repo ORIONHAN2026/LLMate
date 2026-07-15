@@ -6,7 +6,6 @@ import 'package:llmate/models/models.dart';
 import 'package:llmate/utils/snackbar_utils.dart';
 import 'package:llmate/core/llm/llm_client.dart';
 import 'package:llmate/l10n/app_localizations.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -207,7 +206,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                           widget.message.msgId,
                         )?.chatModel?.buildIconWidget(false, size: 20) ??
                         Icon(
-                          CupertinoIcons.person_crop_circle,
+                          Icons.account_circle_outlined,
                           size: 20,
                           color: Theme.of(
                             context,
@@ -322,7 +321,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                   children: [
                                     // 复制按钮
                                     _buildActionButton(
-                                      icon: CupertinoIcons.doc_on_doc,
+                                      icon: Icons.content_copy,
                                       tooltip: l10n.copy,
                                       onTap:
                                           () => _copyMessage(
@@ -333,7 +332,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                     const SizedBox(width: 4),
                                     // 重新生成按钮
                                     _buildActionButton(
-                                      icon: CupertinoIcons.arrow_clockwise,
+                                      icon: Icons.refresh,
                                       tooltip: l10n.regenerate,
                                       onTap:
                                           () => _regenerateMessage(
@@ -343,7 +342,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                     const SizedBox(width: 4),
                                     // 编辑按钮
                                     _buildActionButton(
-                                      icon: CupertinoIcons.pencil,
+                                      icon: Icons.edit,
                                       tooltip: l10n.edit,
                                       onTap:
                                           () => _editMessage(
@@ -357,7 +356,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                       builder: (buttonContext) {
                                         return _buildActionButton(
                                           icon:
-                                              CupertinoIcons.ellipsis_vertical,
+                                              Icons.more_vert,
                                           tooltip: l10n.more,
                                           onTap: () {},
                                           onTapDown:
@@ -1715,35 +1714,35 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             : '';
     switch (ext) {
       case 'pdf':
-        return CupertinoIcons.doc_text;
+        return Icons.description;
       case 'doc':
       case 'docx':
-        return CupertinoIcons.doc_plaintext;
+        return Icons.text_snippet;
       case 'xls':
       case 'xlsx':
       case 'csv':
-        return CupertinoIcons.table;
+        return Icons.table_chart;
       case 'png':
       case 'jpg':
       case 'jpeg':
       case 'gif':
       case 'webp':
       case 'bmp':
-        return CupertinoIcons.photo;
+        return Icons.image;
       case 'pptx':
       case 'ppt':
-        return CupertinoIcons.doc_richtext;
+        return Icons.article;
       case 'md':
       case 'txt':
-        return CupertinoIcons.doc_text;
+        return Icons.description;
       case 'json':
       case 'xml':
       case 'yaml':
       case 'yml':
       case 'toml':
-        return CupertinoIcons.doc_text;
+        return Icons.description;
       default:
-        return CupertinoIcons.doc;
+        return Icons.insert_drive_file;
     }
   }
 
@@ -1810,7 +1809,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     // 复制消息
                     _buildMenuOption(
                       context: context,
-                      icon: CupertinoIcons.doc_on_doc,
+                      icon: Icons.content_copy,
                       title: l10n.copyMessage,
                       onTap: () {
                         Navigator.pop(context);
@@ -1822,7 +1821,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     // 重新生成
                     _buildExpandableMenuOption(
                       context: context,
-                      icon: CupertinoIcons.arrow_clockwise,
+                      icon: Icons.refresh,
                       title: l10n.regenerate,
                       isExpanded: isRegenerateExpanded,
                       onToggle: () {
@@ -1835,7 +1834,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                       children: [
                         _buildSubMenuOption(
                           context: context,
-                          icon: CupertinoIcons.play,
+                          icon: Icons.play_arrow,
                           title: l10n.regenerateFromHere,
                           onTap: () {
                             Navigator.pop(context);
@@ -1846,7 +1845,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         ),
                         _buildSubMenuOption(
                           context: context,
-                          icon: CupertinoIcons.reply,
+                          icon: Icons.reply,
                           title: l10n.regenerateThisReply,
                           onTap: () {
                             Navigator.pop(context);
@@ -1857,7 +1856,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         ),
                         _buildSubMenuOption(
                           context: context,
-                          icon: CupertinoIcons.arrow_left,
+                          icon: Icons.arrow_back,
                           title: l10n.regenerateLastReply,
                           onTap: () {
                             Navigator.pop(context);
@@ -1873,7 +1872,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     // 从此处创建新对话
                     _buildMenuOption(
                       context: context,
-                      icon: CupertinoIcons.plus,
+                      icon: Icons.add,
                       title: l10n.createNewChatFromHere,
                       onTap: () {
                         Navigator.pop(context);
@@ -1885,7 +1884,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     // 截图
                     _buildExpandableMenuOption(
                       context: context,
-                      icon: CupertinoIcons.camera,
+                      icon: Icons.camera_alt_outlined,
                       title: l10n.screenshot,
                       isExpanded: isScreenshotExpanded,
                       onToggle: () {
@@ -1898,7 +1897,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                       children: [
                         _buildSubMenuOption(
                           context: context,
-                          icon: CupertinoIcons.crop,
+                          icon: Icons.crop,
                           title: l10n.entireConversation,
                           onTap: () {
                             Navigator.pop(context);
@@ -1907,7 +1906,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         ),
                         _buildSubMenuOption(
                           context: context,
-                          icon: CupertinoIcons.arrow_down,
+                          icon: Icons.keyboard_arrow_down,
                           title: l10n.currentRound,
                           onTap: () {
                             Navigator.pop(context);
@@ -1916,7 +1915,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         ),
                         _buildSubMenuOption(
                           context: context,
-                          icon: CupertinoIcons.square_on_square,
+                          icon: Icons.content_copy,
                           title: l10n.currentMessage,
                           onTap: () {
                             Navigator.pop(context);
@@ -1930,7 +1929,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     // 删除消息
                     _buildMenuOption(
                       context: context,
-                      icon: CupertinoIcons.trash,
+                      icon: Icons.delete_outline,
                       title: l10n.deleteMessage,
                       onTap: () async {
                         Navigator.pop(context);
@@ -2095,7 +2094,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             ),
             if (hasArrow)
               Icon(
-                CupertinoIcons.chevron_right,
+                Icons.keyboard_arrow_right,
                 size: 12,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -2141,8 +2140,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 ),
                 Icon(
                   isExpanded
-                      ? CupertinoIcons.chevron_down
-                      : CupertinoIcons.chevron_right,
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_right,
                   size: 12,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),

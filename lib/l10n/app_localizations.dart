@@ -3011,6 +3011,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'USD'**
   String get usd;
+
+  /// No description provided for @loadingPageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Intelligent Enterprise AI Workspace'**
+  String get loadingPageSubtitle;
+
+  /// No description provided for @billingSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing'**
+  String get billingSettings;
+
+  /// No description provided for @mcpSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP Settings'**
+  String get mcpSettings;
+
+  /// No description provided for @currencyTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency Type'**
+  String get currencyTypeLabel;
+
+  /// No description provided for @inputPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Input Price'**
+  String get inputPriceLabel;
+
+  /// No description provided for @outputPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Output Price'**
+  String get outputPriceLabel;
+
+  /// No description provided for @pricePerMillionTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'{unit}/M Tokens'**
+  String pricePerMillionTokens(Object unit);
+
+  /// No description provided for @priceUnitDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Price: {unit}/Million Tokens. Used for cumulative session cost calculation.'**
+  String priceUnitDescription(Object unit);
+
+  /// No description provided for @examplePriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 0.14'**
+  String get examplePriceHint;
+
+  /// No description provided for @mcpBindingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'After binding MCP services to the model, sessions using this model will automatically inject these MCP tools. Session MCP and model MCP will automatically merge and deduplicate.'**
+  String get mcpBindingDescription;
+
+  /// No description provided for @addMcpServiceButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add MCP Service'**
+  String get addMcpServiceButton;
+
+  /// No description provided for @clearAllMcpBindings.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All MCP Bindings'**
+  String get clearAllMcpBindings;
+
+  /// No description provided for @selectMcpServiceMultiSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Select MCP Service (Multi-select)'**
+  String get selectMcpServiceMultiSelect;
+
+  /// No description provided for @noMcpServiceAddFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'No MCP services, please add in MCP Management first'**
+  String get noMcpServiceAddFirst;
+
+  /// No description provided for @confirmWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'OK ({count})'**
+  String confirmWithCount(Object count);
+
+  /// No description provided for @temperaturePrecise.
+  ///
+  /// In en, this message translates to:
+  /// **'Precise'**
+  String get temperaturePrecise;
+
+  /// No description provided for @temperatureConservative.
+  ///
+  /// In en, this message translates to:
+  /// **'Conservative'**
+  String get temperatureConservative;
+
+  /// No description provided for @temperatureNeutral.
+  ///
+  /// In en, this message translates to:
+  /// **'Neutral'**
+  String get temperatureNeutral;
+
+  /// No description provided for @temperatureCreative.
+  ///
+  /// In en, this message translates to:
+  /// **'Creative'**
+  String get temperatureCreative;
+
+  /// No description provided for @temperatureRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'Random'**
+  String get temperatureRandom;
+
+  /// No description provided for @xToolsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} tools'**
+  String xToolsCount(Object n);
+
+  /// No description provided for @newConversationDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'New Conversation'**
+  String get newConversationDefault;
 }
 
 class _AppLocalizationsDelegate

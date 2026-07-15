@@ -1565,4 +1565,79 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get usd => '美元';
+
+  @override
+  String get loadingPageSubtitle => '智能企业级 AI 工作空间';
+
+  @override
+  String get billingSettings => '计费设置';
+
+  @override
+  String get mcpSettings => 'MCP设置';
+
+  @override
+  String get currencyTypeLabel => '货币类型';
+
+  @override
+  String get inputPriceLabel => '输入价格';
+
+  @override
+  String get outputPriceLabel => '输出价格';
+
+  @override
+  String pricePerMillionTokens(Object unit) {
+    return '$unit/百万Token';
+  }
+
+  @override
+  String priceUnitDescription(Object unit) {
+    return '价格单位：$unit/百万Token。用于计算会话累计费用。';
+  }
+
+  @override
+  String get examplePriceHint => '例如: 0.14';
+
+  @override
+  String get mcpBindingDescription =>
+      '为模型绑定 MCP 服务后，使用该模型的会话将自动注入这些 MCP 的工具。会话自身的 MCP 和模型的 MCP 会自动合并去重。';
+
+  @override
+  String get addMcpServiceButton => '添加 MCP 服务';
+
+  @override
+  String get clearAllMcpBindings => '取消全部 MCP 绑定';
+
+  @override
+  String get selectMcpServiceMultiSelect => '选择 MCP 服务（可多选）';
+
+  @override
+  String get noMcpServiceAddFirst => '暂无 MCP 服务，请先在 MCP 管理中添加';
+
+  @override
+  String confirmWithCount(Object count) {
+    return '确定 ($count)';
+  }
+
+  @override
+  String get temperaturePrecise => '精准';
+
+  @override
+  String get temperatureConservative => '保守';
+
+  @override
+  String get temperatureNeutral => '中性';
+
+  @override
+  String get temperatureCreative => '创造';
+
+  @override
+  String get temperatureRandom => '随机';
+
+  @override
+  String xToolsCount(Object n) {
+    return '$n 个工具';
+  }
+
+  @override
+  String get newConversationDefault => '新对话';
 }

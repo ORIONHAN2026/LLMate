@@ -6,7 +6,6 @@ import '../../../controllers/session_controller.dart';
 import '../../models/controllers/model_controller.dart';
 // Update the import path below to the correct relative path if the file exists elsewhere, for example:
 import '../../../models/chat/chat_session.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../models/bigmodel/chat_model.dart';
@@ -219,7 +218,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: const Icon(CupertinoIcons.back, size: 20),
+              icon: const Icon(Icons.arrow_back_ios, size: 20),
               onPressed: () {
                 // 检查是否在对话框中
                 if (Navigator.canPop(context)) {
@@ -288,7 +287,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _showOnlineModelDialog,
-                icon: const Icon(CupertinoIcons.plus, size: 10),
+                icon: const Icon(Icons.add, size: 10),
                 label: Text(
                   AppLocalizations.of(context)!.addModel,
                   style: const TextStyle(fontSize: 11),
@@ -629,7 +628,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         errorBuilder: (context, error, stackTrace) {
           // 如果图片加载失败，回退到图标
           return Icon(
-            CupertinoIcons.divide,
+            Icons.horizontal_rule,
             color:
                 isSelected
                     ? Theme.of(context).colorScheme.primary
@@ -641,7 +640,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     } else {
       // 没有对应图标文件的模型使用默认图标
       return Icon(
-        CupertinoIcons.device_laptop,
+        Icons.laptop,
         color:
             isSelected
                 ? Theme.of(context).colorScheme.primary

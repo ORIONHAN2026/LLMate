@@ -484,5 +484,47 @@
   "domainSaved": "Service configuration saved",
   "currencyLabel": "Currency",
   "cny": "CNY",
-  "usd": "USD"
+  "usd": "USD",
+  "loadingPageSubtitle": "Intelligent Enterprise AI Workspace",
+  "billingSettings": "Billing",
+  "mcpSettings": "MCP Settings",
+  "currencyTypeLabel": "Currency Type",
+  "inputPriceLabel": "Input Price",
+  "outputPriceLabel": "Output Price",
+  "pricePerMillionTokens": "{unit}/M Tokens",
+  "@pricePerMillionTokens": {
+    "placeholders": {
+      "unit": {}
+    }
+  },
+  "priceUnitDescription": "Price: {unit}/Million Tokens. Used for cumulative session cost calculation.",
+  "@priceUnitDescription": {
+    "placeholders": {
+      "unit": {}
+    }
+  },
+  "examplePriceHint": "e.g. 0.14",
+  "mcpBindingDescription": "After binding MCP services to the model, sessions using this model will automatically inject these MCP tools. Session MCP and model MCP will automatically merge and deduplicate.",
+  "addMcpServiceButton": "Add MCP Service",
+  "clearAllMcpBindings": "Clear All MCP Bindings",
+  "selectMcpServiceMultiSelect": "Select MCP Service (Multi-select)",
+  "noMcpServiceAddFirst": "No MCP services, please add in MCP Management first",
+  "confirmWithCount": "OK ({count})",
+  "@confirmWithCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "temperaturePrecise": "Precise",
+  "temperatureConservative": "Conservative",
+  "temperatureNeutral": "Neutral",
+  "temperatureCreative": "Creative",
+  "temperatureRandom": "Random",
+  "xToolsCount": "{n} tools",
+  "@xToolsCount": {
+    "placeholders": {
+      "n": {}
+    }
+  },
+  "newConversationDefault": "New Conversation"
 }

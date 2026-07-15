@@ -93,7 +93,7 @@ class _ScheduledTaskDialogState extends State<ScheduledTaskDialog> {
                 child: Row(
                   children: [
                     Icon(
-                      CupertinoIcons.clock,
+                      Icons.schedule,
                       size: 16,
                       color: theme.colorScheme.onSurface.withOpacity(0.4),
                     ),

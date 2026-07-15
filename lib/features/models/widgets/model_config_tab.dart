@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/models/bigmodel/chat_model.dart';
@@ -104,11 +103,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           unselectedLabelStyle: const TextStyle(fontSize: 13),
           indicatorSize: TabBarIndicatorSize.label,
           isScrollable: true,
-          tabs: const [
-            Tab(text: '基本信息'),
-            Tab(text: '计费设置'),
-            Tab(text: '模型参数'),
-            Tab(text: 'MCP设置'),
+          tabs: [
+            Tab(text: AppLocalizations.of(context)!.basicInfo),
+            Tab(text: AppLocalizations.of(context)!.billingSettings),
+            Tab(text: AppLocalizations.of(context)!.modelParams),
+            Tab(text: AppLocalizations.of(context)!.mcpSettings),
           ],
         ),
         Expanded(
@@ -410,14 +409,14 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             divisions: 20,
             onChanged: (value) {
               setState(() {
-                final updatedChatSettings = (_currentModel.chatSettings ??
-                        ChatSettings(
-                          conversationName: '新对话',
-                          systemPrompt: '',
-                          temperature: 1.0,
-                          replyLanguage: '',
-                        ))
-                    .copyWith(temperature: value);
+                  final updatedChatSettings = (_currentModel.chatSettings ??
+                          ChatSettings(
+                            conversationName: AppLocalizations.of(context)!.newConversationDefault,
+                            systemPrompt: '',
+                            temperature: 1.0,
+                            replyLanguage: '',
+                          ))
+                      .copyWith(temperature: value);
                 _currentModel = _currentModel.copyWith(
                   chatSettings: updatedChatSettings,
                 );
@@ -478,11 +477,12 @@ class _ModelConfigTabState extends State<ModelConfigTab>
 
   /// 根据温度值返回对应标签
   String _getTemperatureLabel(double temperature) {
-    if (temperature <= 0.1) return '精准';
-    if (temperature <= 0.5) return '保守';
-    if (temperature <= 1.1) return '中性';
-    if (temperature <= 1.5) return '创造';
-    return '随机';
+    final loc = AppLocalizations.of(context)!;
+    if (temperature <= 0.1) return loc.temperaturePrecise;
+    if (temperature <= 0.5) return loc.temperatureConservative;
+    if (temperature <= 1.1) return loc.temperatureNeutral;
+    if (temperature <= 1.5) return loc.temperatureCreative;
+    return loc.temperatureRandom;
   }
 
   Widget _buildSystemPromptField() {
@@ -522,7 +522,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             _debounceTimer = Timer(const Duration(seconds: 1), () {
               final updatedChatSettings = (_currentModel.chatSettings ??
                       ChatSettings(
-                        conversationName: '新对话',
+                        conversationName: AppLocalizations.of(context)!.newConversationDefault,
                         systemPrompt: '',
                         temperature: 1.0,
                         replyLanguage: '',
@@ -551,8 +551,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
 
   /// 获取当前价格单位描述
   String _buildPriceUnitDesc() {
-    final unitText = _currentModel.currency == 'CNY' ? '元' : '美元';
-    return '价格单位：$unitText/百万Token。用于计算会话累计费用。';
+    final loc = AppLocalizations.of(context)!;
+    final unitText = _currentModel.currency == 'CNY' ? loc.cny : loc.usd;
+    return loc.priceUnitDescription(unitText);
   }
 
   Widget _buildCurrencySelector() {
@@ -561,7 +562,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '货币类型',
+          AppLocalizations.of(context)!.currencyTypeLabel,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
@@ -571,14 +572,14 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         const SizedBox(height: 6),
         Row(
           children: [
-            _buildCurrencyChip('人民币', '¥', isCNY, () {
+            _buildCurrencyChip(AppLocalizations.of(context)!.cny, '¥', isCNY, () {
               setState(() {
                 _currentModel = _currentModel.copyWith(currency: 'CNY');
               });
               widget.onModelUpdated(_currentModel);
             }),
             const SizedBox(width: 8),
-            _buildCurrencyChip('美元', '\$', !isCNY, () {
+            _buildCurrencyChip(AppLocalizations.of(context)!.usd, '\$', !isCNY, () {
               setState(() {
                 _currentModel = _currentModel.copyWith(currency: 'USD');
               });
@@ -637,7 +638,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     );
   }
 
-  String _buildCurrencyUnitText() => _currentModel.currency == 'CNY' ? '元/百万Token' : '美元/百万Token';
+  String _buildCurrencyUnitText() {
+    final loc = AppLocalizations.of(context)!;
+    final unitText = _currentModel.currency == 'CNY' ? loc.cny : loc.usd;
+    return loc.pricePerMillionTokens(unitText);
+  }
 
   Widget _buildPromptPriceField() {
     return Column(
@@ -647,7 +652,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '输入价格',
+              AppLocalizations.of(context)!.inputPriceLabel,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -670,7 +675,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            hintText: '例如: 0.14',
+            hintText: AppLocalizations.of(context)!.examplePriceHint,
             hintStyle: const TextStyle(fontSize: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
@@ -709,7 +714,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '输出价格',
+              AppLocalizations.of(context)!.outputPriceLabel,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -732,7 +737,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            hintText: '例如: 0.28',
+            hintText: AppLocalizations.of(context)!.examplePriceHint,
             hintStyle: const TextStyle(fontSize: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
@@ -773,7 +778,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         children: [
           // 说明文字
           Text(
-            '为模型绑定 MCP 服务后，使用该模型的会话将自动注入这些 MCP 的工具。\n会话自身的 MCP 和模型的 MCP 会自动合并去重。',
+            AppLocalizations.of(context)!.mcpBindingDescription,
             style: TextStyle(
               fontSize: 11,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -786,7 +791,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             onPressed: _showMcpSelectionDialog,
             icon: const Icon(Icons.add, size: 16),
             label: Text(
-              '添加 MCP 服务',
+              AppLocalizations.of(context)!.addMcpServiceButton,
               style: const TextStyle(fontSize: 12),
             ),
             style: OutlinedButton.styleFrom(
@@ -800,7 +805,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             TextButton.icon(
               onPressed: _clearMcpBinding,
               icon: const Icon(Icons.link_off, size: 14),
-              label: const Text('取消全部 MCP 绑定', style: TextStyle(fontSize: 12)),
+              label: Text(AppLocalizations.of(context)!.clearAllMcpBindings, style: const TextStyle(fontSize: 12)),
               style: TextButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
               ),
@@ -863,7 +868,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           const SizedBox(height: 6),
           Row(
             children: [
-              _buildInfoChip(Icons.build, '$toolCount 个工具'),
+              _buildInfoChip(Icons.build, AppLocalizations.of(context)!.xToolsCount(toolCount)),
               if (mcp.url != null && mcp.url!.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 Flexible(
@@ -923,7 +928,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
 
             return AlertDialog(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              title: const Text('选择 MCP 服务（可多选）', style: TextStyle(fontSize: 15)),
+              title: Text(AppLocalizations.of(context)!.selectMcpServiceMultiSelect, style: const TextStyle(fontSize: 15)),
               content: SizedBox(
                 width: 350,
                 height: 400,
@@ -933,7 +938,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                     TextField(
                       controller: searchController,
                       decoration: InputDecoration(
-                        hintText: '搜索 MCP 服务...',
+                        hintText: AppLocalizations.of(context)!.searchMcp,
                         hintStyle: const TextStyle(fontSize: 12),
                         prefixIcon: const Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
@@ -953,7 +958,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                       child: filtered.isEmpty
                           ? Center(
                               child: Text(
-                                _mcpServices.isEmpty ? '暂无 MCP 服务，请先在 MCP 管理中添加' : '无匹配结果',
+                                _mcpServices.isEmpty ? AppLocalizations.of(context)!.noMcpServiceAddFirst : AppLocalizations.of(context)!.noMatchingResults,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Theme.of(context)
@@ -1002,7 +1007,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('取消', style: TextStyle(fontSize: 12)),
+                  child: Text(AppLocalizations.of(context)!.cancel, style: const TextStyle(fontSize: 12)),
                 ),
                 TextButton(
                   onPressed: () {
@@ -1010,7 +1015,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                     _applyMcpSelection(dialogSelected);
                   },
                   child: Text(
-                    '确定 (${dialogSelected.length})',
+                    AppLocalizations.of(context)!.confirmWithCount(dialogSelected.length),
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),

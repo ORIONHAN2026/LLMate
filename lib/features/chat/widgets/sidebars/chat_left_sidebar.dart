@@ -3,7 +3,6 @@ import 'package:llmate/controllers/theme_controller.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/widgets/common/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import '../../../../models/chat/chat_session.dart';
 
@@ -86,7 +85,7 @@ class _SessionItemState extends State<_SessionItem> {
                             child: Text(
                               widget.session.name,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color:
                                     widget.isSelected
@@ -122,8 +121,8 @@ class _SessionItemState extends State<_SessionItem> {
                               : null,
                       icon: Icon(
                         widget.session.isFavorite
-                            ? CupertinoIcons.star_fill
-                            : CupertinoIcons.star,
+                            ? Icons.star
+                            : Icons.star_border,
                         size: 12,
                         color:
                             widget.session.isFavorite
@@ -158,7 +157,7 @@ class _SessionItemState extends State<_SessionItem> {
                               ? () => _showDeleteConfirmation(context)
                               : null,
                       icon: Icon(
-                        CupertinoIcons.trash,
+                        Icons.delete_outline,
                         size: 12,
                         color: Theme.of(
                           context,
@@ -188,7 +187,7 @@ class _SessionItemState extends State<_SessionItem> {
       itemName: sessionName,
       description: l10n.deleteConfirmMsg,
       warningMessage: l10n.deleteSessionTitle_warning,
-      icon: CupertinoIcons.chat_bubble,
+      icon: Icons.chat_bubble_outline,
       iconColor: Theme.of(context).colorScheme.error,
     );
 
@@ -301,7 +300,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                         IconButton(
                           onPressed: widget.onToggleFullscreen,
                           icon: Icon(
-                            CupertinoIcons.fullscreen,
+                            Icons.fullscreen,
                             size: 14,
                             color: Theme.of(
                               context,
@@ -319,7 +318,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                       IconButton(
                         onPressed: widget.onNewSession,
                         icon: Icon(
-                          CupertinoIcons.square_pencil,
+                          Icons.edit,
                           size: 16,
                           color: Theme.of(
                             context,
@@ -337,7 +336,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                       IconButton(
                         onPressed: widget.onToggleCollapse,
                         icon: Icon(
-                          CupertinoIcons.sidebar_right,
+                          Icons.menu_open,
                           size: 16,
                           color: Theme.of(
                             context,
@@ -542,7 +541,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
               turns: isCollapsed ? -0.25 : 0, // -90度到0度
               duration: const Duration(milliseconds: 200),
               child: Icon(
-                CupertinoIcons.chevron_down,
+                Icons.keyboard_arrow_down,
                 size: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
@@ -561,7 +560,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
       borderRadius: BorderRadius.circular(8),
       child: const Padding(
         padding: EdgeInsets.all(8),
-        child: Icon(CupertinoIcons.gear, size: 15),
+        child: Icon(Icons.settings, size: 15),
       ),
     );
   }
@@ -577,7 +576,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Icon(
-            isDark ? CupertinoIcons.moon_fill : CupertinoIcons.sun_max_fill,
+            isDark ? Icons.dark_mode : Icons.light_mode,
             size: 15,
             color: isDark ? Colors.indigo[300] : Colors.amber[600],
           ),

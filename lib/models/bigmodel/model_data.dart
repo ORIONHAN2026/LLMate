@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 // 业务类型列表
@@ -48,7 +47,7 @@ final List<Map<String, dynamic>> onlineProviders = [
     'id': 'deepseek',
     'protocol': 'openai',
     'currency': 'CNY',
-    'icon': CupertinoIcons.cube_box,
+    'icon': Icons.widgets,
     'description': '高性能AI助手，支持多种任务',
     'color': const Color(0xFF1F2937),
     'defaultUrl': 'https://api.deepseek.com',
@@ -62,7 +61,7 @@ final List<Map<String, dynamic>> onlineProviders = [
     'id': 'openai',
     'protocol': 'openai',
     'currency': 'USD',
-    'icon': CupertinoIcons.command,
+    'icon': Icons.terminal,
     'description': 'OpenAI GPT系列模型',
     'color': const Color(0xFF10B981),
     'defaultUrl': 'https://api.openai.com/v1',
@@ -77,7 +76,7 @@ final List<Map<String, dynamic>> onlineProviders = [
     'id': 'google',
     'protocol': 'gemini',
     'currency': 'USD',
-    'icon': CupertinoIcons.person,
+    'icon': Icons.person,
     'description': 'Google Gemini系列模型',
     'color': const Color(0xFFEF4444),
     'defaultUrl': 'https://generativelanguage.googleapis.com/v1',
@@ -92,7 +91,7 @@ final List<Map<String, dynamic>> onlineProviders = [
     'id': 'qwen',
     'protocol': 'openai',
     'currency': 'CNY',
-    'icon': CupertinoIcons.chat_bubble_2,
+    'icon': Icons.chat_bubble_outline,
     'description': '阿里云百炼平台模型服务',
     'color': const Color(0xFF8B5CF6),
     'defaultUrl': 'https://dashscope.aliyuncs.com/compatible-mode/v1',
@@ -195,7 +194,7 @@ final List<Map<String, dynamic>> onlineProviders = [
     'id': 'tencent',
     'protocol': 'openai',
     'currency': 'CNY',
-    'icon': CupertinoIcons.cloud,
+    'icon': Icons.cloud_outlined,
     'description': '腾讯云TokenHub大模型服务',
     'color': const Color(0xFF00A4FF),
     'defaultUrl': 'https://api.hunyuan.cloud.tencent.com/v1',
@@ -235,7 +234,7 @@ final List<Map<String, dynamic>> onlineProviders = [
     'id': 'xiaomi_mimo',
     'protocol': 'openai',
     'currency': 'CNY',
-    'icon': CupertinoIcons.device_phone_portrait,
+    'icon': Icons.phone_iphone,
     'description': '小米Mimo大模型服务',
     'color': const Color(0xFFFF6900),
     'defaultUrl': 'https://api.xiaomimimo.com/v1',

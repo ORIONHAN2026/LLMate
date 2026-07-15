@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:llmate/controllers/session_controller.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/models/models.dart';
@@ -144,14 +143,14 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                           children: [
                             // 编辑按钮
                             _buildActionButton(
-                              icon: CupertinoIcons.pencil,
+                              icon: Icons.edit,
                               tooltip: l10n.edit,
                               onTap: () => _editMessage(widget.message),
                             ),
                             const SizedBox(width: 4),
                             // 重新生成按钮
                             _buildActionButton(
-                              icon: CupertinoIcons.arrow_clockwise,
+                              icon: Icons.refresh,
                               tooltip: l10n.regenerate,
                               onTap:
                                   () => _regenerateMessage(
@@ -161,7 +160,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                             const SizedBox(width: 4),
                             // 复制按钮
                             _buildActionButton(
-                              icon: CupertinoIcons.doc_on_doc,
+                              icon: Icons.content_copy,
                               tooltip: l10n.copy,
                               onTap:
                                   () => _copyMessage(
@@ -174,7 +173,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                             Builder(
                               builder: (buttonContext) {
                                 return _buildActionButton(
-                                  icon: CupertinoIcons.ellipsis_vertical,
+                                  icon: Icons.more_vert,
                                   tooltip: l10n.more,
                                   onTap: () {},
                                   onTapDown:
@@ -795,7 +794,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     // 复制消息
                     _buildMenuOption(
                       context: context,
-                      icon: CupertinoIcons.doc_on_doc,
+                      icon: Icons.content_copy,
                       title: l10n.copyMessage,
                       onTap: () {
                         Navigator.pop(context);
@@ -807,7 +806,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     // 重新生成 - 可展开子菜单
                     _buildExpandableMenuOption(
                       context: context,
-                      icon: CupertinoIcons.arrow_clockwise,
+                      icon: Icons.refresh,
                       title: l10n.regenerate,
                       isExpanded: isRegenerateExpanded,
                       onToggle: () {
@@ -818,7 +817,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                       children: [
                         _buildSubMenuOption(
                           context: context,
-                          icon: CupertinoIcons.play,
+                          icon: Icons.play_arrow,
                           title: l10n.regenerateFromHere,
                           onTap: () {
                             Navigator.pop(context);
@@ -829,7 +828,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                         ),
                         // _buildSubMenuOption(
                         //   context: context,
-                        //   icon: CupertinoIcons.arrow_left,
+                        //   icon: Icons.arrow_back,
                         //   title: '重新生成最后一条回复',
                         //   onTap: () {
                         //     Navigator.pop(context);
@@ -845,7 +844,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     // 删除消息
                     _buildMenuOption(
                       context: context,
-                      icon: CupertinoIcons.trash,
+                      icon: Icons.delete_outline,
                       title: l10n.deleteMessage,
                       onTap: () {
                         Navigator.pop(context);
@@ -857,7 +856,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     // 从此处创建新对话
                     _buildMenuOption(
                       context: context,
-                      icon: CupertinoIcons.plus,
+                      icon: Icons.add,
                       title: l10n.createNewChatFromHere,
                       onTap: () {
                         Navigator.pop(context);
@@ -869,7 +868,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                     // 删除回复 (仅用户消息显示)
                     _buildMenuOption(
                       context: context,
-                      icon: CupertinoIcons.reply,
+                      icon: Icons.reply,
                       title: l10n.deleteReply,
                       onTap: () {
                         Navigator.pop(context);
@@ -934,7 +933,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
             ),
             if (hasArrow)
               Icon(
-                CupertinoIcons.chevron_right,
+                Icons.keyboard_arrow_right,
                 size: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
@@ -980,8 +979,8 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                 ),
                 Icon(
                   isExpanded
-                      ? CupertinoIcons.chevron_down
-                      : CupertinoIcons.chevron_right,
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_right,
                   size: 12,
                   color: Theme.of(
                     context,
@@ -1317,32 +1316,32 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
     switch (type) {
       case 'image':
-        icon = CupertinoIcons.photo;
+        icon = Icons.image;
         iconColor = Theme.of(context).colorScheme.primary;
         break;
       case 'document':
       case 'text':
-        icon = CupertinoIcons.doc_text;
+        icon = Icons.description;
         iconColor = Theme.of(context).colorScheme.secondary;
         break;
       case 'code':
-        icon = CupertinoIcons.textformat;
+        icon = Icons.text_fields;
         iconColor = Theme.of(context).colorScheme.tertiary;
         break;
       case 'office':
-        icon = CupertinoIcons.doc;
+        icon = Icons.insert_drive_file;
         iconColor = Theme.of(context).colorScheme.primary;
         break;
       case 'web':
-        icon = CupertinoIcons.globe;
+        icon = Icons.language;
         iconColor = Theme.of(context).colorScheme.secondary;
         break;
       case 'folder':
-        icon = CupertinoIcons.folder;
+        icon = Icons.folder_open;
         iconColor = Theme.of(context).colorScheme.tertiary;
         break;
       default:
-        icon = CupertinoIcons.doc;
+        icon = Icons.insert_drive_file;
         iconColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
     }
 
@@ -1374,32 +1373,32 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     // 根据附件类型选择图标和颜色
     switch (attachment.type) {
       case 'image':
-        icon = CupertinoIcons.photo;
+        icon = Icons.image;
         iconColor = Theme.of(context).colorScheme.primary;
         break;
       case 'document':
       case 'text':
-        icon = CupertinoIcons.doc_text;
+        icon = Icons.description;
         iconColor = Theme.of(context).colorScheme.secondary;
         break;
       case 'code':
-        icon = CupertinoIcons.textformat;
+        icon = Icons.text_fields;
         iconColor = Theme.of(context).colorScheme.tertiary;
         break;
       case 'office':
-        icon = CupertinoIcons.doc;
+        icon = Icons.insert_drive_file;
         iconColor = Theme.of(context).colorScheme.primary;
         break;
       case 'web':
-        icon = CupertinoIcons.globe;
+        icon = Icons.language;
         iconColor = Theme.of(context).colorScheme.secondary;
         break;
       case 'folder':
-        icon = CupertinoIcons.folder;
+        icon = Icons.folder_open;
         iconColor = Theme.of(context).colorScheme.tertiary;
         break;
       default:
-        icon = CupertinoIcons.doc;
+        icon = Icons.insert_drive_file;
         iconColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
     }
 

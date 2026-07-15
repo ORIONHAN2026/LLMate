@@ -1,5 +1,4 @@
 import 'dart:io' show Platform;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -31,12 +30,12 @@ class _SettingsPageState extends State<SettingsPage> {
     final l10n = AppLocalizations.of(context)!;
     return [
       _SettingsNavItem(
-        icon: CupertinoIcons.sparkles,
+        icon: Icons.auto_awesome,
         label: l10n.modelManagement,
         builder: (_) => const ModelSettingPage(embedded: true),
       ),
       _SettingsNavItem(
-        icon: CupertinoIcons.link,
+        icon: Icons.link,
         label: l10n.connectorManagement,
         builder: (actions) => McpManagementPage(
           embedded: true,
@@ -44,12 +43,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
       _SettingsNavItem(
-        icon: CupertinoIcons.slider_horizontal_3,
+        icon: Icons.tune,
         label: l10n.otherSettings,
         builder: (_) => const _GeneralSettingsTab(),
       ),
       _SettingsNavItem(
-        icon: CupertinoIcons.mail,
+        icon: Icons.mail_outline,
         label: l10n.feedback,
         builder: (_) => const _FeedbackTab(),
       ),
@@ -80,7 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: const Icon(CupertinoIcons.back, size: 20),
+              icon: const Icon(Icons.arrow_back_ios, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -355,7 +354,7 @@ class _GeneralSettingsTab extends StatelessWidget {
             ),
             if (selected)
               Icon(
-                CupertinoIcons.checkmark_alt_circle_fill,
+                Icons.check_circle,
                 size: 22,
                 color: colorScheme.primary,
               ),
@@ -386,7 +385,7 @@ class _GeneralSettingsTab extends StatelessWidget {
           children: [
             _buildSkinTile(
               colorScheme,
-              icon: CupertinoIcons.arrow_2_circlepath,
+              icon: Icons.sync,
               title: l10n.followSystem,
               subtitle: l10n.followSystemDesc,
               selected: isSys,
@@ -397,7 +396,7 @@ class _GeneralSettingsTab extends StatelessWidget {
             _buildDivider(colorScheme),
             _buildSkinTile(
               colorScheme,
-              icon: CupertinoIcons.sun_max,
+              icon: Icons.light_mode_outlined,
               title: l10n.lightMode,
               subtitle: l10n.lightModeDesc,
               selected: !isSys && !isDark,
@@ -408,7 +407,7 @@ class _GeneralSettingsTab extends StatelessWidget {
             _buildDivider(colorScheme),
             _buildSkinTile(
               colorScheme,
-              icon: CupertinoIcons.moon,
+              icon: Icons.dark_mode_outlined,
               title: l10n.darkMode,
               subtitle: l10n.darkModeDesc,
               selected: !isSys && isDark,
@@ -473,7 +472,7 @@ class _GeneralSettingsTab extends StatelessWidget {
             ),
             if (selected)
               Icon(
-                CupertinoIcons.checkmark_alt_circle_fill,
+                Icons.check_circle,
                 size: 22,
                 color: colorScheme.primary,
               ),
@@ -536,7 +535,7 @@ Thanks!
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              CupertinoIcons.mail,
+              Icons.mail_outline,
               size: 48,
               color: colorScheme.onSurface.withValues(alpha: 0.25),
             ),
@@ -560,7 +559,7 @@ Thanks!
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => _sendFeedbackEmail(context),
-              icon: const Icon(CupertinoIcons.mail, size: 16),
+              icon: const Icon(Icons.mail_outline, size: 16),
               label: Text(l10n.feedback),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(

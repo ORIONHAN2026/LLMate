@@ -343,7 +343,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                     ),
                     if (isSelected)
                       Icon(
-                        CupertinoIcons.checkmark,
+                        Icons.check,
                         size: 14,
                         color: Theme.of(context).colorScheme.secondary,
                       ),
@@ -436,7 +436,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                         ],
                       ),
                       if (!isMobile || _hasValidModel()) ...[
-                        const SizedBox(height: 1),
+                        const SizedBox(height: 0),
                         Text(
                           _getDisplayModelDetail(),
                           style: TextStyle(

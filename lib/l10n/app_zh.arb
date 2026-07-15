@@ -484,5 +484,47 @@
   "domainSaved": "服务配置已保存",
   "currencyLabel": "货币类型",
   "cny": "人民币",
-  "usd": "美元"
+  "usd": "美元",
+  "loadingPageSubtitle": "智能企业级 AI 工作空间",
+  "billingSettings": "计费设置",
+  "mcpSettings": "MCP设置",
+  "currencyTypeLabel": "货币类型",
+  "inputPriceLabel": "输入价格",
+  "outputPriceLabel": "输出价格",
+  "pricePerMillionTokens": "{unit}/百万Token",
+  "@pricePerMillionTokens": {
+    "placeholders": {
+      "unit": {}
+    }
+  },
+  "priceUnitDescription": "价格单位：{unit}/百万Token。用于计算会话累计费用。",
+  "@priceUnitDescription": {
+    "placeholders": {
+      "unit": {}
+    }
+  },
+  "examplePriceHint": "例如: 0.14",
+  "mcpBindingDescription": "为模型绑定 MCP 服务后，使用该模型的会话将自动注入这些 MCP 的工具。会话自身的 MCP 和模型的 MCP 会自动合并去重。",
+  "addMcpServiceButton": "添加 MCP 服务",
+  "clearAllMcpBindings": "取消全部 MCP 绑定",
+  "selectMcpServiceMultiSelect": "选择 MCP 服务（可多选）",
+  "noMcpServiceAddFirst": "暂无 MCP 服务，请先在 MCP 管理中添加",
+  "confirmWithCount": "确定 ({count})",
+  "@confirmWithCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "temperaturePrecise": "精准",
+  "temperatureConservative": "保守",
+  "temperatureNeutral": "中性",
+  "temperatureCreative": "创造",
+  "temperatureRandom": "随机",
+  "xToolsCount": "{n} 个工具",
+  "@xToolsCount": {
+    "placeholders": {
+      "n": {}
+    }
+  },
+  "newConversationDefault": "新对话"
 }

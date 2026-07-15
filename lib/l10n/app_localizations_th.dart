@@ -1602,4 +1602,80 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get usd => 'USD';
+
+  @override
+  String get loadingPageSubtitle => 'Intelligent Enterprise AI Workspace';
+
+  @override
+  String get billingSettings => 'Billing';
+
+  @override
+  String get mcpSettings => 'MCP Settings';
+
+  @override
+  String get currencyTypeLabel => 'Currency Type';
+
+  @override
+  String get inputPriceLabel => 'Input Price';
+
+  @override
+  String get outputPriceLabel => 'Output Price';
+
+  @override
+  String pricePerMillionTokens(Object unit) {
+    return '$unit/M Tokens';
+  }
+
+  @override
+  String priceUnitDescription(Object unit) {
+    return 'Price: $unit/Million Tokens. Used for cumulative session cost calculation.';
+  }
+
+  @override
+  String get examplePriceHint => 'e.g. 0.14';
+
+  @override
+  String get mcpBindingDescription =>
+      'After binding MCP services to the model, sessions using this model will automatically inject these MCP tools. Session MCP and model MCP will automatically merge and deduplicate.';
+
+  @override
+  String get addMcpServiceButton => 'Add MCP Service';
+
+  @override
+  String get clearAllMcpBindings => 'Clear All MCP Bindings';
+
+  @override
+  String get selectMcpServiceMultiSelect => 'Select MCP Service (Multi-select)';
+
+  @override
+  String get noMcpServiceAddFirst =>
+      'No MCP services, please add in MCP Management first';
+
+  @override
+  String confirmWithCount(Object count) {
+    return 'OK ($count)';
+  }
+
+  @override
+  String get temperaturePrecise => 'Precise';
+
+  @override
+  String get temperatureConservative => 'Conservative';
+
+  @override
+  String get temperatureNeutral => 'Neutral';
+
+  @override
+  String get temperatureCreative => 'Creative';
+
+  @override
+  String get temperatureRandom => 'Random';
+
+  @override
+  String xToolsCount(Object n) {
+    return '$n tools';
+  }
+
+  @override
+  String get newConversationDefault => 'New Conversation';
 }

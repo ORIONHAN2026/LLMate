@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'dart:io' show Platform;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -76,7 +75,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: const Icon(CupertinoIcons.back, size: 20),
+              icon: const Icon(Icons.arrow_back_ios, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -97,7 +96,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
             tooltip: '添加 MCP',
             onPressed: () => _showAddMcpDialog(),
             icon: Icon(
-              CupertinoIcons.add,
+              Icons.add,
               size: 16,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
@@ -118,7 +117,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           tooltip: '添加 MCP',
           onPressed: () => _showAddMcpDialog(),
           icon: Icon(
-            CupertinoIcons.add,
+            Icons.add,
             size: 16,
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
@@ -134,7 +133,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              CupertinoIcons.cube_box,
+              Icons.widgets,
               size: 48,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.25),
             ),
@@ -248,7 +247,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                     ),
                     child: Row(
                       children: [
-                        Icon(CupertinoIcons.checkmark_circle, size: 12, color: Colors.green),
+                        Icon(Icons.check_circle_outline, size: 12, color: Colors.green),
                         const SizedBox(width: 4),
                         Text(
                           '识别到: ${parsedResult!.name}',
@@ -268,7 +267,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                     ),
                     child: Row(
                       children: [
-                        Icon(CupertinoIcons.exclamationmark_circle, size: 12, color: Colors.red),
+                        Icon(Icons.error_outline, size: 12, color: Colors.red),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(parseError!, style: TextStyle(fontSize: 11, color: Colors.red)),
@@ -407,7 +406,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
-                              Icon(CupertinoIcons.cube_box, size: 20, color: Theme.of(ctx).colorScheme.primary),
+                              Icon(Icons.widgets, size: 20, color: Theme.of(ctx).colorScheme.primary),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Column(
@@ -491,7 +490,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(CupertinoIcons.exclamationmark_circle, size: 14, color: Colors.orange),
+                                        Icon(Icons.error_outline, size: 14, color: Colors.orange),
                                         const SizedBox(width: 8),
                                         Text(
                                           '暂未获取工具列表，请点击刷新按钮',
@@ -559,7 +558,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     Navigator.pop(ctx);
                                     _confirmRemoveService(service);
                                   },
-                                  icon: const Icon(CupertinoIcons.delete, size: 14),
+                                  icon: const Icon(Icons.delete, size: 14),
                                   label: const Text('移除'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: Colors.red,
@@ -600,7 +599,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     SnackBarUtils.showSuccess(context, '配置已更新');
                                   }
                                 },
-                                icon: const Icon(CupertinoIcons.checkmark, size: 14),
+                                icon: const Icon(Icons.check, size: 14),
                                 label: const Text('保存'),
                               ),
                             ],
@@ -779,7 +778,7 @@ class _McpCardState extends State<_McpCard> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        CupertinoIcons.refresh,
+                        Icons.refresh,
                         size: 10,
                         color: Theme.of(context).colorScheme.primary,
                       ),
@@ -797,7 +796,7 @@ class _McpCardState extends State<_McpCard> {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          CupertinoIcons.delete,
+                          Icons.delete,
                           size: 10,
                           color: Theme.of(context).colorScheme.error,
                         ),

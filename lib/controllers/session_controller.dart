@@ -188,6 +188,17 @@ class SessionController extends GetxController {
       if (isCurrent) {
         final messages = updatedSession.messages;
         final messagesJson = messages.map((m) => m.toJson()).toList();
+        // 安全防护：如果当前内存中消息为空，先检查磁盘是否已有数据，避免空列表覆盖
+        if (messagesJson.isEmpty) {
+          final existingMessages =
+              await store.isarChatMessages.getBySessionId(updatedSession.sessionId);
+          if (existingMessages.isNotEmpty) {
+            debugPrint(
+              '⚠️ 安全防护：跳过空消息持久化，保留磁盘 ${existingMessages.length} 条消息 (session: ${updatedSession.sessionId})',
+            );
+            return; // 不覆盖磁盘已有数据
+          }
+        }
         await store.isarChatMessages.putAll(
           updatedSession.sessionId,
           messagesJson,
@@ -255,12 +266,32 @@ class SessionController extends GetxController {
 
     final targetIndex = sessions.indexWhere((s) => s.sessionId == sessionId);
     if (targetIndex >= 0 && targetIndex < sessions.length) {
-      final target = sessions[targetIndex];
+      ChatSession target = sessions[targetIndex];
+
+      // 懒加载：确保消息已加载再持久化，防止空列表覆盖磁盘数据
+      if (target.messages.isEmpty) {
+        final messages = await loadMessages(target.sessionId);
+        if (messages.isNotEmpty) {
+          target = target.copyWith(messages: messages);
+          sessions[targetIndex] = target;
+        }
+      }
+
+      // 根据 modelId 动态重新加载 chatModel
+      if (target.modelId != null && target.modelId!.isNotEmpty) {
+        try {
+          final modelController = Get.find<ModelController>();
+          final m = modelController.models.firstWhere(
+            (m) => m.modelId == target.modelId,
+          );
+          target = target.copyWith(chatModel: m);
+          sessions[targetIndex] = target;
+        } catch (_) {}
+      }
+
       currentSession.value = target;
       McpController.instance.initForSession(target);
-      Future.microtask(
-        () => _persistSessionAndCurrent(target, isCurrent: true),
-      );
+      await _persistSessionAndCurrent(target, isCurrent: true);
     }
   }
 

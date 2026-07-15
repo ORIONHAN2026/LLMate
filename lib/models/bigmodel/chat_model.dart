@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../chat/chat_setting.dart';
@@ -289,34 +288,34 @@ class ChatModel {
     final lowercaseName = displayName.toLowerCase();
 
     if (lowercaseName.contains('deepseek') || lowercaseName.contains('r1')) {
-      return CupertinoIcons.person_crop_circle;
+      return Icons.account_circle_outlined;
     } else if (lowercaseName.contains('gpt') ||
         lowercaseName.contains('openai')) {
-      return CupertinoIcons.chat_bubble_2;
+      return Icons.chat_bubble_outline;
     } else if (lowercaseName.contains('claude')) {
-      return CupertinoIcons.person_crop_circle_badge_checkmark;
+      return Icons.verified_user;
     } else if (lowercaseName.contains('gemini') ||
         lowercaseName.contains('bard')) {
-      return CupertinoIcons.star;
+      return Icons.star_border;
     } else if (lowercaseName.contains('llama') ||
         lowercaseName.contains('meta')) {
-      return CupertinoIcons.time;
+      return Icons.schedule;
     } else if (lowercaseName.contains('qwen') ||
         lowercaseName.contains('tongyi')) {
-      return CupertinoIcons.cloud;
+      return Icons.cloud_outlined;
     } else if (lowercaseName.contains('chatglm') ||
         lowercaseName.contains('glm')) {
-      return CupertinoIcons.bolt;
+      return Icons.bolt;
     } else if (lowercaseName.contains('baichuan')) {
-      return CupertinoIcons.tree;
+      return Icons.park;
     } else if (lowercaseName.contains('wenxin') ||
         lowercaseName.contains('ernie')) {
-      return CupertinoIcons.clear;
+      return Icons.clear;
     } else if (lowercaseName.contains('spark') ||
         lowercaseName.contains('讯飞')) {
-      return CupertinoIcons.time;
+      return Icons.schedule;
     } else {
-      return CupertinoIcons.chat_bubble;
+      return Icons.chat_bubble_outline;
     }
   }
 

@@ -1,5 +1,4 @@
 import 'dart:io' show Platform;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:get/get.dart';
@@ -34,7 +33,7 @@ class OtherSettingsPage extends StatelessWidget {
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: const Icon(CupertinoIcons.back, size: 20),
+              icon: const Icon(Icons.arrow_back_ios, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -171,7 +170,7 @@ class OtherSettingsPage extends StatelessWidget {
             ),
             if (selected)
               Icon(
-                CupertinoIcons.checkmark_alt_circle_fill,
+                Icons.check_circle,
                 size: 22,
                 color: colorScheme.primary,
               ),
@@ -202,7 +201,7 @@ class OtherSettingsPage extends StatelessWidget {
           children: [
             _buildSkinTile(
               colorScheme,
-              icon: CupertinoIcons.arrow_2_circlepath,
+              icon: Icons.sync,
               title: l10n.followSystem,
               subtitle: l10n.followSystemDesc,
               selected: isSys,
@@ -213,7 +212,7 @@ class OtherSettingsPage extends StatelessWidget {
             _buildDivider(colorScheme),
             _buildSkinTile(
               colorScheme,
-              icon: CupertinoIcons.sun_max,
+              icon: Icons.light_mode_outlined,
               title: l10n.lightMode,
               subtitle: l10n.lightModeDesc,
               selected: !isSys && !isDark,
@@ -224,7 +223,7 @@ class OtherSettingsPage extends StatelessWidget {
             _buildDivider(colorScheme),
             _buildSkinTile(
               colorScheme,
-              icon: CupertinoIcons.moon,
+              icon: Icons.dark_mode_outlined,
               title: l10n.darkMode,
               subtitle: l10n.darkModeDesc,
               selected: !isSys && isDark,
@@ -289,7 +288,7 @@ class OtherSettingsPage extends StatelessWidget {
             ),
             if (selected)
               Icon(
-                CupertinoIcons.checkmark_alt_circle_fill,
+                Icons.check_circle,
                 size: 22,
                 color: colorScheme.primary,
               ),

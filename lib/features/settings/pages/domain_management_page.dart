@@ -1,7 +1,6 @@
 import 'dart:io' show File, Platform;
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
@@ -72,7 +71,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: const Icon(CupertinoIcons.back, size: 20),
+              icon: const Icon(Icons.arrow_back_ios, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -211,7 +210,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
             TextButton.icon(
               onPressed: _restartService,
               icon: Icon(
-                CupertinoIcons.arrow_clockwise,
+                Icons.refresh,
                 size: 16,
                 color: colorScheme.primary,
               ),
@@ -470,7 +469,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
           // 证书文件
           _buildCertTile(
             colorScheme,
-            icon: CupertinoIcons.doc_text_fill,
+            icon: Icons.description,
             title: l10n.sslCertificate,
             subtitle: _certPath != null ? _certPath!.split('/').last : l10n.notSet,
             selected: _certPath != null,
@@ -483,7 +482,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
           // 私钥文件
           _buildCertTile(
             colorScheme,
-            icon: CupertinoIcons.lock_fill,
+            icon: Icons.lock,
             title: l10n.sslPrivateKey,
             subtitle: _keyPath != null ? _keyPath!.split('/').last : l10n.notSet,
             selected: _keyPath != null,
@@ -551,7 +550,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
             ),
             if (selected)
               Icon(
-                CupertinoIcons.checkmark_alt_circle_fill,
+                Icons.check_circle,
                 size: 22,
                 color: colorScheme.primary,
               ),
@@ -559,7 +558,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               IconButton(
                 onPressed: onClear,
                 icon: Icon(
-                  CupertinoIcons.xmark_circle_fill,
+                  Icons.cancel,
                   size: 18,
                   color: colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
@@ -589,7 +588,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
       child: Row(
         children: [
           Icon(
-            httpsOn ? CupertinoIcons.lock_fill : CupertinoIcons.lock_open_fill,
+            httpsOn ? Icons.lock : Icons.lock_open,
             size: 20,
             color: httpsOn ? Colors.green : colorScheme.onSurface.withValues(alpha: 0.4),
           ),
@@ -655,7 +654,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            CupertinoIcons.info_circle_fill,
+            Icons.info,
             size: 18,
             color: colorScheme.primary,
           ),

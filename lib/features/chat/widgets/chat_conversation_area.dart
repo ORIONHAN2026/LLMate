@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:llmate/features/chat/widgets/message_widgets/ai_message_widget.dart';
 import 'package:llmate/features/chat/widgets/message_widgets/user_message_widget.dart';
@@ -856,7 +855,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
                 width: 80,
                 height: 80,
                 child: Icon(
-                  CupertinoIcons.captions_bubble,
+                  Icons.chat_bubble_outline,
                   size: 80,
                   color: Colors.grey[600],
                 ),

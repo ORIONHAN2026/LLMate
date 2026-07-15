@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -314,7 +313,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 child: Row(
                   children: [
                     Icon(
-                      CupertinoIcons.search,
+                      Icons.search,
                       size: 14,
                       color: Theme.of(
                         context,
@@ -356,7 +355,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         child: Row(
                           children: [
                             Icon(
-                              CupertinoIcons.doc,
+                              Icons.insert_drive_file,
                               size: 14,
                               color: Theme.of(context).colorScheme.primary,
                             ),
@@ -382,7 +381,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                     Text(
                                       relativePath,
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 12,
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
@@ -1425,20 +1424,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   IconData _getAttachmentIcon(String type) {
     switch (type) {
       case 'image':
-        return CupertinoIcons.photo;
+        return Icons.image;
       case 'document':
       case 'text':
-        return CupertinoIcons.doc_text;
+        return Icons.description;
       case 'code':
-        return CupertinoIcons.textformat;
+        return Icons.text_fields;
       case 'office':
-        return CupertinoIcons.doc;
+        return Icons.insert_drive_file;
       case 'web':
-        return CupertinoIcons.globe;
+        return Icons.language;
       case 'folder':
-        return CupertinoIcons.folder;
+        return Icons.folder_open;
       default:
-        return CupertinoIcons.doc;
+        return Icons.insert_drive_file;
     }
   }
 
@@ -1566,7 +1565,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         child: Container(
           padding: const EdgeInsets.all(4),
           child: Icon(
-            CupertinoIcons.paintbrush,
+            Icons.brush,
             size: 13,
             color:
                 _isSending
@@ -1624,7 +1623,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: isDeepThink ? FontWeight.w700 : FontWeight.w500,
                   color:
                       _isSending
@@ -1684,7 +1683,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                CupertinoIcons.folder,
+                Icons.folder_open,
                 size: 13,
                 color:
                     _isSending
@@ -1705,7 +1704,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: hasWorkDir ? FontWeight.w700 : FontWeight.w500,
                     color:
                         _isSending
@@ -1865,7 +1864,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: hasTask ? FontWeight.w700 : FontWeight.w500,
                     color:
                         _isSending
@@ -1897,7 +1896,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         child: Container(
           padding: const EdgeInsets.all(4),
           child: Icon(
-            CupertinoIcons.paperclip,
+            Icons.attach_file,
             size: 13,
             color:
                 _isSending
@@ -1944,7 +1943,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                CupertinoIcons.link,
+                Icons.link,
                 size: 13,
                 color:
                     _isSending
@@ -1963,7 +1962,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight:
                         mcpCount > 0 ? FontWeight.w700 : FontWeight.w500,
                     color:
@@ -2001,7 +2000,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       child: Row(
         children: [
           Icon(
-            CupertinoIcons.search,
+            Icons.search,
             size: 16,
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
           ),
@@ -2032,7 +2031,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
             ),
           ),
@@ -2115,7 +2114,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         child: Text(
                           '模型 MCP（默认启用，不可更改）：${modelMcpNames.join('、')}',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
                           ),
                         ),
@@ -2204,7 +2203,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
-                                                fontSize: 11,
+                                                fontSize: 12,
                                                 color: Theme.of(
                                                   context,
                                                 ).colorScheme.onSurface.withOpacity(0.5),

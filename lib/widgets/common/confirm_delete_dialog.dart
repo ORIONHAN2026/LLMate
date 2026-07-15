@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class ConfirmDeleteDialog extends StatelessWidget {
@@ -35,7 +34,7 @@ class ConfirmDeleteDialog extends StatelessWidget {
       title: Row(
         children: [
           Icon(
-            icon ?? CupertinoIcons.exclamationmark_triangle,
+            icon ?? Icons.warning_amber_rounded,
             size: 14,
             color: iconColor ?? Colors.red,
           ),
@@ -76,7 +75,7 @@ class ConfirmDeleteDialog extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    CupertinoIcons.info,
+                    Icons.info_outline,
                     size: 12,
                     color: iconColor ?? Colors.red,
                   ),
@@ -135,7 +134,7 @@ class ConfirmDeleteDialog extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon ?? CupertinoIcons.trash, size: 10),
+              Icon(icon ?? Icons.delete_outline, size: 10),
               const SizedBox(width: 4),
               Text(confirmText),
             ],

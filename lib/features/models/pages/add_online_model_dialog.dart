@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../l10n/app_localizations.dart';
@@ -1187,7 +1186,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 Row(
                   children: [
                     const Icon(
-                      CupertinoIcons.check_mark_circled,
+                      Icons.check_circle_outline,
                       size: 14,
                       color: Color(0xFF10B981),
                     ),
@@ -1206,7 +1205,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 _buildSummaryItem(
                   AppLocalizations.of(context)!.platformLabel,
                   platformDisplayName,
-                  CupertinoIcons.cloud,
+                  Icons.cloud_outlined,
                 ),
                 const SizedBox(height: 8),
                 _buildSummaryItem(
@@ -1214,7 +1213,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   _apiUrlController.text.trim().isNotEmpty
                       ? _apiUrlController.text.trim()
                       : AppLocalizations.of(context)!.notSet,
-                  CupertinoIcons.link,
+                  Icons.link,
                 ),
                 const SizedBox(height: 8),
                 _buildSummaryItem(
@@ -1228,7 +1227,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                 orElse: () => {'name': _selectedOnlineModel},
                               )['name']
                       : AppLocalizations.of(context)!.notSelected,
-                  CupertinoIcons.device_desktop,
+                  Icons.desktop_windows,
                 ),
                 const SizedBox(height: 8),
               ],
@@ -1426,7 +1425,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         'apiKey': inputApiKey,
         'apiUrl': finalApiUrl,
         'chatSettings': {
-          'conversationName': '新对话',
+          'conversationName': AppLocalizations.of(context)!.newConversationDefault,
           'systemPrompt': '',
           'temperature': 1.0,
           'replyLanguage': '',
@@ -1705,7 +1704,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     color: null, // 让图标使用原本的颜色
                   )
                   : const Icon(
-                    CupertinoIcons.device_desktop,
+                    Icons.desktop_windows,
                     size: 12,
                     color: Colors.grey,
                   ),

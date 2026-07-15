@@ -9,14 +9,14 @@ import './chat_setting.dart';
 import './scheduled_task.dart';
 import './contract_info.dart';
 
-/// 生成类似 DeepSeek/OpenAI 风格的 API Key
-/// 格式: sk-{32位随机hex字符串}
+/// 生成会话级别的 API Key
+/// 格式: lm-{32位随机hex字符串}
 String generateSessionApiKey() {
   final random = math.Random.secure();
-  final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+  final bytes = List<int>.generate(16, (_) => random.nextInt(256));
   final hexString =
       bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-  return 'sk-$hexString';
+  return 'lm-$hexString';
 }
 
 const List<String> kSessionEmojis = [
@@ -135,7 +135,7 @@ class ChatSession {
   final ScheduledTask? scheduledTask;
 
   /// 会话级别的 API 密钥，用于外部 HTTP 请求认证
-  /// 格式: sk-{64位随机hex字符串}，类似 DeepSeek/OpenAI 风格
+  /// 格式: lm-{32位随机hex字符串}
   final String apiKey;
 
   /// 免授权模式：开启后外部请求无需提供 API Key 即可访问

@@ -58,7 +58,7 @@ Handler apiKeyGuard(Handler innerHandler) {
             'error': {
               'message':
                   'Invalid or missing API key. '
-                  'Please provide a valid API key via Authorization: Bearer sk-xxx',
+                  'Please provide a valid API key via Authorization: Bearer lm-xxx',
               'type': 'invalid_request_error',
               'code': 'invalid_api_key',
             },
@@ -123,7 +123,7 @@ String _extractSessionIdFromPath(String path) {
 }
 
 /// 从 Authorization header 中提取 Bearer Token
-/// 支持格式: "Bearer sk-xxx" 或 "sk-xxx"
+/// 支持格式: "Bearer lm-xxx" 或 "lm-xxx"
 String? _extractBearerToken(String authHeader) {
   if (authHeader.isEmpty) return null;
 
@@ -136,8 +136,8 @@ String? _extractBearerToken(String authHeader) {
     return bearerMatch.group(1)!.trim();
   }
 
-  // 兼容直接传 sk-xxx 的情况
-  if (authHeader.trim().startsWith('sk-')) {
+  // 兼容直接传 lm-xxx 的情况
+  if (authHeader.trim().startsWith('lm-')) {
     return authHeader.trim();
   }
 

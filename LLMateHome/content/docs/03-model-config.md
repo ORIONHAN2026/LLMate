@@ -19,7 +19,7 @@ LLMate 支持接入主流大模型供应商，统一管理企业的所有 AI 模
 | 模型名称 | 自定义名称，便于识别 | 公司 GPT-4o |
 | 供应商 | 选择模型供应商 | OpenAI / DeepSeek / Gemini |
 | API 地址 | 模型 API 端点 URL | `https://api.openai.com/v1` |
-| API 密钥 | 供应商提供的安全密钥 | `sk-xxxxxxxx` |
+| API 密钥 | 供应商提供的安全密钥 | `lm-xxxxxxxx` |
 | 模型标识 | 具体模型名称 | `gpt-4o` / `deepseek-chat` |
 | Temperature | 生成随机性 (0-2) | `0.7` |
 | 最大 Token | 单次回复最大长度 | `4096` |

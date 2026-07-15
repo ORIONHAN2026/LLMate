@@ -7,19 +7,22 @@
         {
             "name": "client",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "args": ["-d", "macos"]
         },
         {
             "name": "client (profile mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "args": ["-d", "macos"]
         },
         {
             "name": "client (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "args": ["-d", "macos"]
         }
     ]
 }

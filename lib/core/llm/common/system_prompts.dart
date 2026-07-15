@@ -55,19 +55,6 @@ class CommonSystemPrompts {
     }
   }
 
-  /// 工作目录提示（动态拼接路径）
-  static String workDirectory(String dir) {
-    return '## 📂 工作目录\n当前工作目录：`$dir`\n\n'
-        '### 文件操作规则'
-        '\n1. **读取用户文件**：使用 `file_read` 工具读取工作目录下的文件'
-        '\n2. **修改用户文件**：使用 `file_write` 工具修改用户指定的文件'
-        '\n3. **格式保留**：修改文件时必须保留原有格式，包括字体、缩进、换行等'
-        '\n4. **仅限工作目录**：读取和修改用户文件时，仅限工作目录下的文件'
-        '\n\n### ⚠️ 重要说明'
-        '\n- **工作模式文件**（合同要点、履约跟踪、争议记录、备忘录、脑图、日程等）使用专用工具（如 `contract_content_update`）写入，工具会自动保存到**工作目录**下'
-        '\n- **会话数据**（session.json、messages.json、memory.md）由系统自动管理，存储在会话目录（~/.llmate/chats/会话ID/），无需手动操作';
-  }
-
   /// 合同模式提示词
   static String contractMode(String workDir, String sessionDir) {
     return '''## 📋 合同模式

@@ -1,6 +1,5 @@
 import 'package:llmate/models/chat/chat_message.dart';
 import 'package:llmate/models/chat/scheduled_task.dart';
-import 'package:llmate/models/chat/chat_attachment.dart';
 import 'package:llmate/models/chat/chat_setting.dart';
 import 'package:llmate/models/chat/contract_info.dart';
 import 'package:flutter/material.dart';
@@ -119,40 +118,25 @@ class SessionController extends GetxController {
     }
   }
 
-  /// 自动计算会话的累计计费信息
+  /// 自动计算会话的累计计费信息（Token 统计，费用由 ChatSession.totalCost getter 实时计算）
   ChatSession _recalculateBilling(ChatSession session) {
     // 如果消息列表为空（懒加载未完成），保留现有的 token 值，避免覆盖为 0
     if (session.messages.isEmpty) return session;
 
     int inputTotal = 0;
     int outputTotal = 0;
-    double cost = 0.0;
 
     for (final msg in session.messages) {
       if (msg.promptTokens != null) inputTotal += msg.promptTokens!;
       if (msg.completionTokens != null) outputTotal += msg.completionTokens!;
     }
 
-    // 根据模型价格计算费用（价格/百万token，货币类型由模型的currency字段决定）
-    if (session.chatModel != null) {
-      final promptPrice = session.chatModel!.promptPrice;
-      final completionPrice = session.chatModel!.completionPrice;
-      if (promptPrice != null) {
-        cost += inputTotal * promptPrice / 1000000.0;
-      }
-      if (completionPrice != null) {
-        cost += outputTotal * completionPrice / 1000000.0;
-      }
-    }
-
     // 只有值发生变化时才创建新对象
     if (inputTotal != session.promptTokens ||
-        outputTotal != session.completionTokens ||
-        cost != session.totalCost) {
+        outputTotal != session.completionTokens) {
       return session.copyWith(
         promptTokens: inputTotal,
         completionTokens: outputTotal,
-        totalCost: cost,
       );
     }
     return session;
@@ -514,8 +498,6 @@ class SessionController extends GetxController {
       'shouldStopResponse': false, // 运行时状态不持久化
       'scrollPosition': session.scrollPosition,
       'inputContent': session.inputContent,
-      'lastSelectedDirectory': session.lastSelectedDirectory,
-      'workDirectory': session.workDirectory,
       'modelId': session.modelId,
       if (session.mcps != null && session.mcps!.isNotEmpty) 'mcps': session.mcps,
       'deepThink': session.deepThink,
@@ -523,7 +505,6 @@ class SessionController extends GetxController {
       'sessionQuickCommands':
           session.sessionQuickCommands.map((c) => c.toJson()).toList(),
       'scheduledTask': session.scheduledTask?.toJson(),
-      'attachments': session.attachments.map((a) => a.toJson()).toList(),
       'emoji': session.emoji,
       'promptTokens': session.promptTokens,
       'completionTokens': session.completionTokens,
@@ -577,17 +558,6 @@ class SessionController extends GetxController {
       } catch (_) {}
     }
 
-    // 解析附件
-    List<ChatAttachment> attachments = [];
-    if (entity['attachments'] is List) {
-      try {
-        attachments =
-            (entity['attachments'] as List)
-                .map((a) => ChatAttachment.fromJson(a as Map<String, dynamic>))
-                .toList();
-      } catch (_) {}
-    }
-
     return ChatSession(
       sessionId: entity['sessionId'] as String? ?? '',
       name: entity['name'] as String? ?? '新对话',
@@ -602,12 +572,9 @@ class SessionController extends GetxController {
       chatModel: chatModel,
       isFavorite: entity['isFavorite'] as bool? ?? false,
       inputContent: entity['inputContent'] as String? ?? '',
-      attachments: attachments,
       isSending: false,
       shouldStopResponse: false,
       scrollPosition: (entity['scrollPosition'] as num?)?.toDouble() ?? 0.0,
-      lastSelectedDirectory: entity['lastSelectedDirectory'] as String?,
-      workDirectory: entity['workDirectory'] as String?,
       deepThink: entity['deepThink'] as bool? ?? false,
       connectPrompt: entity['connectPrompt'] as String?,
       sessionQuickCommands: commands,
@@ -629,7 +596,6 @@ class SessionController extends GetxController {
       promptTokens: entity['promptTokens'] as int? ?? 0,
       completionTokens: entity['completionTokens'] as int? ?? 0,
       totalTokens: entity['totalTokens'] as int? ?? 0,
-      totalCost: (entity['totalCost'] as num?)?.toDouble() ?? 0.0,
       noAuthEnabled: entity['noAuthEnabled'] as bool? ?? false,
     );
   }

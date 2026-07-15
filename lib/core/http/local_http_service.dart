@@ -12,6 +12,7 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart' as cors;
 
 import '../../controllers/domain_controller.dart';
 import '../../controllers/session_controller.dart';
+import '../../data/storage_paths.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import 'middleware/api_key_guard.dart';
@@ -210,12 +211,10 @@ class LocalHttpService {
     });
 
     // 模型列表路由（返回当前会话绑定的模型，兼容 OpenAI /v1/models 格式）
-    router.get('/<segment>/models', (
-      Request request,
-      String sessionId,
-    ) async {
-      final pipeline = const Pipeline()
-          .addMiddleware(apiKeyGuard); // API Key 校验，装载 session
+    router.get('/<segment>/models', (Request request, String sessionId) async {
+      final pipeline = const Pipeline().addMiddleware(
+        apiKeyGuard,
+      ); // API Key 校验，装载 session
 
       return pipeline.addHandler((Request req) {
         return _handleModelsList(req);
@@ -229,8 +228,22 @@ class LocalHttpService {
     ) async {
       // 每次请求生成唯一 RequestId，注入 context 供审计/日志与链路追踪使用
       final requestId = _generateRequestId();
+
+      // 读取原始请求体（中间件处理前的原始请求，用于日志保存）
+      String originBodyStr = '';
+      try {
+        originBodyStr = await request.readAsString();
+      } catch (e) {
+        debugPrint('⚠️ 读取原始请求体失败: $e');
+      }
+
       final requestWithId = request.change(
-        context: {...request.context, 'requestId': requestId},
+        context: {
+          ...request.context,
+          'requestId': requestId,
+          'originBody': originBodyStr,
+        },
+        body: utf8.encode(originBodyStr),
       );
 
       // 构建中间件管道（洋葱模型）：
@@ -280,10 +293,7 @@ class LocalHttpService {
       }
 
       return Response.ok(
-        jsonEncode({
-          'object': 'list',
-          'data': data,
-        }),
+        jsonEncode({'object': 'list', 'data': data}),
         headers: {'content-type': 'application/json'},
       );
     } catch (e) {
@@ -328,11 +338,6 @@ class LocalHttpService {
       // 从中间件注入的 context 中提取会话和增强后的请求体
       final session = request.context['session'] as ChatSession;
       final body = request.context['body'] as Map<String, dynamic>;
-
-      // 将最终请求体写入磁盘，便于调试/回放
-      File(
-        'log_request/request.json',
-      ).writeAsString(const JsonEncoder.withIndent('  ').convert(body));
 
       // 客户端断开时取消后端请求
       bool cancelStream = false;
@@ -528,9 +533,30 @@ class LocalHttpService {
             '✅ 会话已更新: ${session.sessionId}, '
             'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
           );
+
+          // ── 保存完整请求/响应日志 ──
+          _saveRequestResponseLog(
+            request: request,
+            body: body,
+            responseContent: contentBuffer.toString(),
+            sessionId: session.sessionId,
+            error: null,
+          );
         } catch (e) {
           // ── 异步 IIFE 内部异常 ──
           debugPrint('❌ 流式代理错误: $e');
+
+          // 即使出错也尝试保存已有的请求/响应日志
+          try {
+            _saveRequestResponseLog(
+              request: request,
+              body: null,
+              responseContent: null,
+              sessionId: session.sessionId,
+              error: e.toString(),
+            );
+          } catch (_) {}
+
           streamController.addError(e);
           await streamController.close();
         }
@@ -571,4 +597,76 @@ class LocalHttpService {
     }
   }
 
+  /// 保存完整的请求/响应日志到会话配置目录下的 audit 子目录
+  ///
+  /// 保存路径：~/.llmate/chats/{sessionId}/audit/
+  /// 文件名格式：年-月-日-时-分-秒-requestId.json
+  /// 内容包含：
+  ///   - originRequest: 第三方客户端发送的原始请求体
+  ///   - middleRequest: 中间件处理后最终发送给 LLM 的请求体
+  ///   - response: 累计回复给第三方客户端的完整内容
+  static void _saveRequestResponseLog({
+    required Request request,
+    Map<String, dynamic>? body,
+    String? responseContent,
+    required String sessionId,
+    String? error,
+  }) {
+    () async {
+      try {
+        final requestId =
+            request.context['requestId'] as String? ?? 'unknown';
+        final originBodyStr =
+            request.context['originBody'] as String? ?? '';
+
+        // 解析原始请求体
+        dynamic originRequest;
+        if (originBodyStr.isNotEmpty) {
+          try {
+            originRequest = jsonDecode(originBodyStr);
+          } catch (_) {
+            originRequest = originBodyStr;
+          }
+        } else {
+          originRequest = {};
+        }
+
+        // 构建时间戳：年-月-日-时-分-秒
+        final now = DateTime.now();
+        final timestamp =
+            '${now.year}-'
+            '${now.month.toString().padLeft(2, '0')}-'
+            '${now.day.toString().padLeft(2, '0')}-'
+            '${now.hour.toString().padLeft(2, '0')}-'
+            '${now.minute.toString().padLeft(2, '0')}-'
+            '${now.second.toString().padLeft(2, '0')}';
+
+        final logData = <String, dynamic>{
+          'originRequest': originRequest,
+          'middleRequest': body ?? {},
+          'response': responseContent ?? '',
+        };
+
+        if (error != null) {
+          logData['error'] = error;
+        }
+
+        // 确保目录存在：会话配置目录/audit/
+        final dir = Directory('${StoragePaths.sessionDir(sessionId)}/audit');
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+
+        final filename = '$timestamp-$requestId.json';
+        final file = File('${dir.path}/$filename');
+        await file.writeAsString(
+          const JsonEncoder.withIndent('  ').convert(logData),
+        );
+
+        debugPrint('📝 [RequestLog] 请求日志已保存: ${file.path}');
+      } catch (e) {
+        debugPrint('⚠️ [RequestLog] 保存请求日志失败: $e');
+      }
+    }();
+  }
 }

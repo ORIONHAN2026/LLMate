@@ -480,15 +480,12 @@ class LlmClient {
     required ChatSession session,
   }) async {
     final messages = <Map<String, dynamic>>[];
-    final workDir = getEffectiveWorkDir(session);
-
     // 1. 通用系统提示词
     messages.addAll(
       buildBaseSystemMessages(
         model: model,
         session: session,
         thinkEnabled: session.deepThink,
-        workDir: workDir,
       ),
     );
 

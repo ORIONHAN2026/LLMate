@@ -1278,7 +1278,6 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           messages: historyMessages,
           chatModel: session.chatModel,
           inputContent: '',
-          attachments: [],
         );
 
         // 添加新会话到控制器

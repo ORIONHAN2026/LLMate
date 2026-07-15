@@ -130,7 +130,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   _buildStatCard(theme,
                       isDark: isDark,
                       title: '总费用',
-                      value: '\$${totalCost.toStringAsFixed(4)}',
+                      value: '${_getCurrencySymbol(currentSession.chatModel)}${totalCost.toStringAsFixed(4)}',
                       icon: Icons.attach_money,
                       accentColor: const Color(0xFFDC2626),
                       progress: quotaEnabled &&
@@ -141,7 +141,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                       progressSuffix: quotaEnabled &&
                               costLimit != null &&
                               costLimit > 0
-                          ? '${(totalCost / costLimit * 100).toStringAsFixed(0)}% / \$${costLimit.toStringAsFixed(4)}'
+                          ? '${(totalCost / costLimit * 100).toStringAsFixed(0)}% / ${_getCurrencySymbol(currentSession.chatModel)}${costLimit.toStringAsFixed(4)}'
                           : null),
                 ],
               ),
@@ -161,7 +161,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 _buildSectionTitle(theme, '配额限制'),
                 const SizedBox(height: 12),
                 _buildQuotaCard(theme, isDark, totalTokens, totalCost,
-                    tokenLimit, costLimit),
+                    tokenLimit, costLimit, currentSession.chatModel),
               ],
               const SizedBox(height: 80),
             ],
@@ -586,7 +586,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                         color: theme.colorScheme.onSurface)),
               ),
               Text(
-                '${_formatTokenCount(total)} · \$${totalCost.toStringAsFixed(4)}',
+                '${_formatTokenCount(total)} · ${_getCurrencySymbol(chatModel)}${totalCost.toStringAsFixed(4)}',
                 style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -661,7 +661,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
   }
 
   Widget _buildQuotaCard(ThemeData theme, bool isDark, int totalTokens,
-      double totalCost, int? tokenLimit, double? costLimit) {
+      double totalCost, int? tokenLimit, double? costLimit, ChatModel? chatModel) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -728,7 +728,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                           fontSize: 13, color: theme.colorScheme.onSurface)),
                 ),
                 Text(
-                  '\$${totalCost.toStringAsFixed(4)} / \$${costLimit.toStringAsFixed(4)}',
+                  '${_getCurrencySymbol(chatModel)}${totalCost.toStringAsFixed(4)} / ${_getCurrencySymbol(chatModel)}${costLimit.toStringAsFixed(4)}',
                   style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -805,7 +805,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                         color: theme.colorScheme.onSurface)),
               ),
               Text(
-                '${_formatTokenCount(modelTotal)} · \$${usage.totalCost.toStringAsFixed(4)}',
+                '${_formatTokenCount(modelTotal)} · ${_getCurrencySymbol(usage.chatModel)}${usage.totalCost.toStringAsFixed(4)}',
                 style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -944,7 +944,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                         color: theme.colorScheme.onSurface)),
               ),
               Text(
-                '${_formatTokenCount(total)} · \$${session.totalCost.toStringAsFixed(4)}',
+                '${_formatTokenCount(total)} · ${_getCurrencySymbol(session.chatModel)}${session.totalCost.toStringAsFixed(4)}',
                 style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1025,6 +1025,11 @@ class _UsageDashboardState extends State<UsageDashboard> {
       return '${(count / 1000).toStringAsFixed(1)}K';
     }
     return '$count';
+  }
+
+  /// 获取模型对应的货币符号
+  String _getCurrencySymbol(ChatModel? model) {
+    return model?.currency == 'CNY' ? '¥' : '\$';
   }
 }
 

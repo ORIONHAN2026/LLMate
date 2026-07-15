@@ -336,7 +336,6 @@ class _AppInitializerState extends State<AppInitializer> {
           messages: [],
           chatModel: selectedModelObject, // 有可用模型时自动绑定
           inputContent: '',
-          attachments: [],
         );
         await sessionController.addSession(defaultSession);
       }

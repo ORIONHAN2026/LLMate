@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:io';
 import 'dart:async';
-import 'dart:convert';
-import 'package:path/path.dart' as p;
 import '../../../controllers/session_controller.dart';
 import '../../../controllers/mcp_controller.dart';
 import '../../../models/models.dart';
@@ -23,7 +19,6 @@ import './scheduled_task_dialog.dart';
 /// 完全自包含的聊天输入组件，包括：
 /// - 文本输入框
 /// - 发送功能
-/// - 附件、图片、网页等功能按钮
 /// - 模型管理
 /// - 会话管理
 /// - 滚动控制
@@ -87,15 +82,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   // 预判是否为本次发送的文档整理类任务（避免多次判定不一致）
   // 移除原先的 _pendingOrganizeDoc 预判逻辑，改为仅依据最终 AI 回复内容判定是否保存整理文档
 
-  // @文件提及相关状态
-  bool _showFileMention = false;
-  String _fileMentionFilter = '';
-  int _fileMentionAtOffset = 0;
-  OverlayEntry? _fileMentionOverlayEntry;
-
-  List<FileSystemEntity> _workDirFiles = [];
-  bool _hasFileMention = false;
-
   // 监听器
   late final StreamSubscription _sessionSubscription;
   Timer? _textChangeTimer;
@@ -104,310 +90,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   bool get _isSending =>
       sessionController.currentSession.value?.isSending ?? false;
 
-  /// 获取当前会话的附件列表
-  List<ChatAttachment> get _currentAttachments =>
-      sessionController.currentSession.value?.attachments ?? [];
-
-  // ── @文件提及相关方法 ──
-
-  /// 检测输入中的 @ 并显示文件选择列表
-  void _checkForFileMention() {
-    final text = _inputController.text;
-    final cursorPos = _inputController.selection.baseOffset;
-
-    if (cursorPos < 0) {
-      _hideFileMentionOverlay();
-      return;
-    }
-
-    int atPos = -1;
-    for (int i = cursorPos - 1; i >= 0; i--) {
-      final ch = text[i];
-      if (ch == '@') {
-        atPos = i;
-        break;
-      } else if (ch == ' ' || ch == '\n' || ch == '\r') {
-        break;
-      }
-    }
-
-    if (atPos >= 0) {
-      final filter = text.substring(atPos + 1, cursorPos);
-      if (filter.contains(' ') || filter.contains('\n')) {
-        _hideFileMentionOverlay();
-        return;
-      }
-      _fileMentionFilter = filter;
-      _fileMentionAtOffset = atPos;
-      _loadWorkDirFiles();
-    } else {
-      _hideFileMentionOverlay();
-    }
-  }
-
-  /// 加载工作目录下的文件列表
-  Future<void> _loadWorkDirFiles() async {
-    final currentSession = sessionController.currentSession.value;
-    final workDir = currentSession?.workDirectory;
-
-    if (workDir == null || workDir.trim().isEmpty) {
-      setState(() {
-        _workDirFiles = [];
-        _showFileMention = false;
-      });
-      return;
-    }
-
-    try {
-      final dir = Directory(workDir);
-      if (!await dir.exists()) {
-        setState(() {
-          _workDirFiles = [];
-          _showFileMention = false;
-        });
-        return;
-      }
-
-      // 递归获取所有文件（排除隐藏文件和常见忽略目录）
-      final files = <FileSystemEntity>[];
-      await for (final entity in dir.list(
-        recursive: true,
-        followLinks: false,
-      )) {
-        if (entity is File) {
-          final relativePath = entity.path.substring(workDir.length + 1);
-          // 跳过隐藏文件和常见忽略目录
-          if (relativePath.startsWith('.') ||
-              relativePath.contains('/.') ||
-              relativePath.contains('node_modules') ||
-              relativePath.contains('.git') ||
-              relativePath.contains('build') ||
-              relativePath.contains('.dart_tool')) {
-            continue;
-          }
-          files.add(entity);
-        }
-      }
-
-      setState(() {
-        _workDirFiles = files;
-        _showFileMention = true;
-      });
-      _updateFileMentionOverlay();
-    } catch (e) {
-      debugPrint('加载工作目录文件失败: $e');
-      setState(() {
-        _workDirFiles = [];
-        _showFileMention = false;
-      });
-    }
-  }
-
-  /// 过滤文件列表
-  List<FileSystemEntity> _getFilteredFiles() {
-    if (_fileMentionFilter.isEmpty) return _workDirFiles;
-
-    final filter = _fileMentionFilter.toLowerCase();
-    return _workDirFiles.where((file) {
-      final fileName = file.path.split('/').last.toLowerCase();
-      final relativePath =
-          file.path
-              .substring(
-                (sessionController
-                            .currentSession
-                            .value
-                            ?.workDirectory
-                            ?.length ??
-                        0) +
-                    1,
-              )
-              .toLowerCase();
-      return fileName.contains(filter) || relativePath.contains(filter);
-    }).toList();
-  }
-
-  /// 插入文件引用到输入框
-  void _insertFileMention(String filePath) {
-    final text = _inputController.text;
-    final currentCursor = _inputController.selection.baseOffset;
-
-    final workDir = sessionController.currentSession.value?.workDirectory ?? '';
-    final relativePath =
-        filePath.startsWith(workDir)
-            ? filePath.substring(workDir.length + 1)
-            : filePath;
-
-    final insertText = '@$relativePath ';
-
-    final before = text.substring(0, _fileMentionAtOffset);
-    final after = text.substring(currentCursor);
-    final newText = '$before$insertText$after';
-
-    _inputController.text = newText;
-    final newCursorPos = _fileMentionAtOffset + insertText.length;
-    _inputController.selection = TextSelection.collapsed(offset: newCursorPos);
-
-    _hideFileMentionOverlay();
-    setState(() {
-      _showFileMention = false;
-      _hasFileMention = true; // 标记有文件引用，启用修订模式
-    });
-  }
-
-  /// 显示文件提及弹出层
-  void _updateFileMentionOverlay() {
-    _hideFileMentionOverlay();
-
-    final filtered = _getFilteredFiles();
-    if (filtered.isEmpty) return;
-
-    final overlay = Overlay.of(context);
-    final entry = OverlayEntry(builder: (ctx) => _buildFileMentionPopup());
-    _fileMentionOverlayEntry = entry;
-    overlay.insert(entry);
-  }
-
-  /// 隐藏文件提及弹出层
-  void _hideFileMentionOverlay() {
-    _fileMentionOverlayEntry?.remove();
-    _fileMentionOverlayEntry = null;
-  }
-
-  /// 构建文件提及弹出层
-  Widget _buildFileMentionPopup() {
-    final filtered = _getFilteredFiles();
-    final workDir = sessionController.currentSession.value?.workDirectory ?? '';
-
-    return Positioned(
-      left: 20,
-      right: 20,
-      bottom: 120, // 在输入框上方显示
-      child: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(24),
-        color: Theme.of(context).colorScheme.surface,
-        child: Container(
-          constraints: const BoxConstraints(maxHeight: 240),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 搜索提示
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(context).dividerColor,
-                      width: 0.5,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search,
-                      size: 14,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.4),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '选择工作目录下的文件',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 文件列表
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: filtered.length > 8 ? 8 : filtered.length,
-                  itemBuilder: (context, index) {
-                    final file = filtered[index];
-                    final relativePath = file.path.substring(
-                      workDir.length + 1,
-                    );
-                    final fileName = file.path.split('/').last;
-
-                    return InkWell(
-                      onTap: () => _insertFileMention(file.path),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.insert_drive_file,
-                              size: 14,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    fileName,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (relativePath != fileName)
-                                    Text(
-                                      relativePath,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withOpacity(0.5),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
+  // ── 方法 ──
   void initState() {
     super.initState();
 
@@ -424,25 +107,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     _inputController.addListener(_onTextChanged);
     widget.scrollController.addListener(
       _onScrollChanged,
-    ); // 监听当前会话的变化，确保附件状态及时更新
+    );
 
     _sessionSubscription = sessionController.currentSession.listen((
       currentSession,
     ) async {
       // MCP 懒连接：不在会话切换时预初始化，等 LLM 返回工具调用时再按需连接。
       // 切换时由 SessionController.switchToSession() 统一断开旧连接。
-
-      if (mounted && currentSession != null) {
-        // 附件状态变化时触发UI更新
-        setState(() {
-          // UI会自动从getter获取最新的附件列表
-        });
-      } else if (mounted && currentSession == null) {
-        // 当前会话为空时，触发UI更新
-        setState(() {
-          // UI会自动从getter获取空的附件列表
-        });
-      }
     });
 
     _loadModels();
@@ -463,7 +134,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     _inputController.removeListener(_onTextChanged);
     widget.scrollController.removeListener(_onScrollChanged);
     _sessionSubscription.cancel(); // 先取消监听，阻止后续 setState
-    _hideFileMentionOverlay();
     // 关闭所有 MCP 客户端连接（在 dispose controller 之前）
     McpController.instance.closeAllClients();
     _inputController.dispose();
@@ -525,44 +195,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       if (_inputController.text != inputContent) {
         _inputController.text = inputContent;
       }
-
-      // 延迟触发UI更新以加载会话的附件（通过getter获取）
-      if (mounted) {
-        setState(() {
-          // UI会自动从getter获取最新的附件列表
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          // UI会自动从getter获取空的附件列表
-        });
-      }
     }
-  }
-
-  /// 保存选择的目录到当前会话
-  void _saveLastSelectedDirectory(String filePath) {
-    try {
-      final directory = File(filePath).parent.path;
-      final currentSession = sessionController.currentSession.value;
-      if (currentSession != null) {
-        // 更新会话的目录记录
-        final updatedSession = currentSession.copyWith(
-          lastSelectedDirectory: directory,
-        );
-        sessionController.updateSession(updatedSession);
-        debugPrint('保存目录到会话: $directory');
-      }
-    } catch (e) {
-      debugPrint('保存目录失败: $e');
-    }
-  }
-
-  /// 获取文件选择的初始目录（从当前会话）
-  String? _getInitialDirectory() {
-    final currentSession = sessionController.currentSession.value;
-    return currentSession?.getInitialDirectory();
   }
 
   void _onTextChanged() {
@@ -570,18 +203,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     if (hasText != _hasText) {
       setState(() {
         _hasText = hasText;
-      });
-    }
-
-    // 检测 @ 文件提及相关输入
-    _checkForFileMention();
-
-    // 检查是否还有文件引用
-    final text = _inputController.text;
-    final hasAtMention = text.contains('@') && _showFileMention;
-    if (_hasFileMention && !hasAtMention && text.trim().isEmpty) {
-      setState(() {
-        _hasFileMention = false;
       });
     }
 
@@ -627,7 +248,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       messages: [],
       chatModel: selectedModelObject,
       inputContent: '',
-      attachments: [],
     );
 
     // 添加新会话到顶部并设为当前会话
@@ -758,429 +378,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  /// 选择文件附件
-  Future<void> _pickFile() async {
-    try {
-      debugPrint("开始选择文件...");
-
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-        allowMultiple: true,
-        withData: false,
-        withReadStream: false,
-        allowCompression: false,
-        dialogTitle: '选择文件',
-        initialDirectory: _getInitialDirectory(), // 使用初始目录
-      );
-
-      debugPrint("文件选择结果: $result");
-
-      if (result == null) {
-        debugPrint("用户取消了文件选择");
-        // 用户主动取消，不显示提示避免闪烁
-        return;
-      }
-
-      if (result.files.isEmpty) {
-        debugPrint("没有选择任何文件");
-        // 文件列表为空，不显示提示避免闪烁
-        return;
-      }
-
-      debugPrint("选择了 ${result.files.length} 个文件");
-
-      // 处理多个文件 - 批量添加避免竞态条件
-      final validFiles = <PlatformFile>[];
-      int duplicateCount = 0;
-      int oversizedCount = 0;
-
-      // 先过滤所有有效文件
-      for (final file in result.files) {
-        debugPrint("检查文件: ${file.name}, 路径: ${file.path}, 大小: ${file.size}");
-
-        if (file.path == null) {
-          debugPrint("文件路径为空: ${file.name}");
-          // 文件路径为空，跳过处理，不显示提示避免闪烁
-          continue;
-        }
-
-        // 检查文件大小并显示相应提示
-        if (file.size > 50 * 1024 * 1024) {
-          // 50MB 以上拒绝，不显示提示避免闪烁
-          oversizedCount++;
-          continue;
-        }
-
-        // 检查是否已存在相同文件（通过文件路径和大小判断）
-        final isDuplicate = _currentAttachments.any(
-          (attachment) =>
-              attachment.filePath == file.path && attachment.size == file.size,
-        );
-
-        if (isDuplicate) {
-          debugPrint("文件已存在，跳过: ${file.name}");
-          duplicateCount++;
-          continue;
-        }
-
-        validFiles.add(file);
-      }
-
-      debugPrint(
-        "文件处理统计: 总计${result.files.length}个，有效${validFiles.length}个，重复$duplicateCount个，超大$oversizedCount个",
-      );
-
-      if (validFiles.isNotEmpty) {
-        // 批量添加所有有效文件
-        await _addMultipleAttachments(validFiles, 'document');
-
-        // 保存选择的目录（使用第一个文件的目录）
-        if (validFiles.isNotEmpty && validFiles.first.path != null) {
-          _saveLastSelectedDirectory(validFiles.first.path!);
-        }
-
-        // 文件添加成功，不显示提示，通过附件状态可见
-      }
-      // 移除 "没有成功添加任何文件" 的提示，避免不必要的闪烁
-    } catch (e) {
-      debugPrint("选择文件时发生错误: $e");
-      // 选择文件失败，不显示提示避免闪烁
-    }
-  }
-
-  /// 批量添加多个附件到当前会话（避免竞态条件）
-  Future<void> _addMultipleAttachments(
-    List<PlatformFile> files,
-    String defaultType,
-  ) async {
-    if (files.isEmpty) return;
-
-    // 检查文件大小限制并过滤
-    final oversizedFiles =
-        files.where((file) => file.size > 50 * 1024 * 1024).toList();
-    final validFiles =
-        files.where((file) => file.size <= 50 * 1024 * 1024).toList();
-
-    if (oversizedFiles.isNotEmpty && mounted) {
-      // 超过大小限制的文件，不显示弹窗，直接过滤掉避免闪烁
-      debugPrint('过滤掉 ${oversizedFiles.length} 个超大文件');
-    }
-
-    if (validFiles.isEmpty) return;
-
-    // 确保有当前会话
-    ChatSession? currentSession = sessionController.currentSession.value;
-    if (currentSession == null) {
-      _createNewSession();
-      await Future.delayed(const Duration(milliseconds: 100));
-      // 重新获取当前会话
-      currentSession = sessionController.currentSession.value;
-      if (currentSession == null) {
-        // 无法创建会话，不显示提示避免闪烁
-        return;
-      }
-    }
-
-    // 再次过滤重复文件（基于当前会话中的附件）
-    final currentAttachments = currentSession.attachments;
-    final uniqueFiles =
-        validFiles.where((file) {
-          final isDuplicate = currentAttachments.any(
-            (attachment) =>
-                attachment.filePath == file.path &&
-                attachment.size == file.size,
-          );
-          if (isDuplicate) {
-            debugPrint("批量添加时发现重复文件，跳过: ${file.name}");
-          }
-          return !isDuplicate;
-        }).toList();
-
-    if (uniqueFiles.isEmpty) {
-      debugPrint("所有文件都已存在，无需添加");
-      return;
-    }
-
-    // 批量创建所有附件对象
-    final List<ChatAttachment> newAttachments = [];
-    final List<String> attachmentIds = [];
-
-    for (final file in uniqueFiles) {
-      final attachmentId =
-          '${DateTime.now().millisecondsSinceEpoch}_${newAttachments.length}';
-      attachmentIds.add(attachmentId);
-
-      // 根据文件扩展名判断类型
-      String attachmentType = defaultType;
-      if (file.extension != null) {
-        final ext = file.extension!.toLowerCase();
-        if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].contains(ext)) {
-          attachmentType = 'image';
-        } else if (['.md', '.txt', '.doc', '.docx', '.pdf'].contains(ext)) {
-          attachmentType = 'document';
-        } else if ([
-          '.go',
-          '.py',
-          '.js',
-          '.html',
-          '.css',
-          '.dart',
-          '.java',
-          '.cpp',
-        ].contains(ext)) {
-          attachmentType = 'code';
-        }
-      }
-
-      final attachment = ChatAttachment(
-        id: attachmentId,
-        name: file.name,
-        type: attachmentType,
-        filePath: file.path!,
-        size: file.size,
-        createdAt: DateTime.now(),
-      );
-
-      newAttachments.add(attachment);
-      debugPrint(
-        '创建附件对象: ${attachment.name}, ID: ${attachment.id}, 大小: ${attachment.size}',
-      );
-    } // 一次性更新会话，添加所有附件
-    final updatedAttachments = List<ChatAttachment>.from(
-      currentSession.attachments,
-    );
-    updatedAttachments.addAll(newAttachments);
-
-    final updatedSession = currentSession.copyWith(
-      attachments: updatedAttachments,
-    );
-
-    await sessionController.updateSession(updatedSession);
-    debugPrint('批量添加 ${newAttachments.length} 个附件到会话: ${updatedSession.name}');
-
-    // 异步处理每个文件内容
-    for (int i = 0; i < newAttachments.length; i++) {
-      final attachment = newAttachments[i];
-      final attachmentId = attachmentIds[i];
-
-      // 不等待，让文件处理在后台进行
-      _processAttachmentInBackground(
-        attachmentId,
-        attachment,
-        currentSession.sessionId,
-      );
-    }
-  }
-
-  /// 后台处理附件（使用系统内置工具读取文件内容）
-  Future<void> _processAttachmentInBackground(
-    String attachmentId,
-    ChatAttachment attachment,
-    String targetSessionId,
-  ) async {
-    debugPrint('开始后台处理附件: ${attachment.name}，目标会话: $targetSessionId');
-
-    try {
-      final processedAttachment = await _readAttachmentContent(attachment);
-
-      debugPrint(
-        '文件处理完成: ${attachment.name}, 内容长度: ${processedAttachment.content?.length ?? 0}',
-      );
-
-      await _updateAttachmentInSession(
-        attachmentId,
-        processedAttachment,
-        targetSessionId,
-      );
-    } catch (e) {
-      debugPrint('处理附件时出错: $e');
-
-      final errorAttachment = attachment.copyWith(content: 'ERROR_PROCESSING');
-      await _updateAttachmentInSession(
-        attachmentId,
-        errorAttachment,
-        targetSessionId,
-      );
-    }
-  }
-
-  /// 根据文件格式读取附件内容
-  Future<ChatAttachment> _readAttachmentContent(
-    ChatAttachment attachment,
-  ) async {
-    if (attachment.filePath == null || attachment.filePath!.isEmpty) {
-      return attachment;
-    }
-
-    final file = File(attachment.filePath!);
-    if (!await file.exists()) {
-      return attachment.copyWith(content: '[文件不存在或已被移动]');
-    }
-
-    final ext = p.extension(attachment.name).toLowerCase();
-
-    try {
-      // ── 图片：base64 编码原文 ──
-      if (const [
-        '.png',
-        '.jpg',
-        '.jpeg',
-        '.gif',
-        '.webp',
-        '.bmp',
-        '.tiff',
-        '.ico',
-      ].contains(ext)) {
-        final bytes = await file.readAsBytes();
-        final base64Str = base64Encode(bytes);
-        final mimeType = _imageMimeType(ext);
-        return attachment.copyWith(
-          type: 'image',
-          content: '图片文件: ${attachment.name}',
-          base64Data: base64Str,
-          mimeType: mimeType,
-          size: await file.length(),
-        );
-      }
-
-      // ── 文本/代码与二进制文件：尝试作为文本读取 ──
-      try {
-        final content = await file.readAsString(encoding: utf8);
-        final isCode = _isCodeExtension(ext);
-        return attachment.copyWith(
-          type: isCode ? 'code' : 'text',
-          content: content.isEmpty ? '[空文件]' : content,
-          size: await file.length(),
-        );
-      } catch (_) {
-        return attachment.copyWith(
-          content: '[不支持的文件格式: $ext]',
-          size: await file.length(),
-        );
-      }
-    } catch (e) {
-      debugPrint('读取附件失败: $e');
-      return attachment.copyWith(content: '[读取文件失败: $e]');
-    }
-  }
-
-  /// 获取图片 MIME 类型
-  String _imageMimeType(String ext) {
-    switch (ext) {
-      case '.png':
-        return 'image/png';
-      case '.jpg':
-      case '.jpeg':
-        return 'image/jpeg';
-      case '.gif':
-        return 'image/gif';
-      case '.webp':
-        return 'image/webp';
-      case '.bmp':
-        return 'image/bmp';
-      case '.tiff':
-        return 'image/tiff';
-      case '.ico':
-        return 'image/x-icon';
-      default:
-        return 'image/png';
-    }
-  }
-
-  /// 判断是否为代码文件扩展名
-  bool _isCodeExtension(String ext) {
-    return const {
-      '.dart',
-      '.java',
-      '.kt',
-      '.swift',
-      '.py',
-      '.js',
-      '.ts',
-      '.tsx',
-      '.jsx',
-      '.c',
-      '.cpp',
-      '.h',
-      '.hpp',
-      '.cs',
-      '.go',
-      '.rs',
-      '.rb',
-      '.php',
-      '.sh',
-      '.lua',
-      '.r',
-      '.sql',
-      '.vue',
-      '.svelte',
-    }.contains(ext);
-  }
-
-  /// 更新会话中的附件
-  Future<void> _updateAttachmentInSession(
-    String attachmentId,
-    ChatAttachment updatedAttachment,
-    String targetSessionId, // 添加目标会话ID参数
-  ) async {
-    // 通过会话ID查找目标会话
-    ChatSession? targetSession;
-    try {
-      targetSession = sessionController.sessions.firstWhere(
-        (session) => session.sessionId == targetSessionId,
-      );
-    } catch (e) {
-      // 如果找不到目标会话，尝试使用当前会话
-      debugPrint('未找到目标会话 $targetSessionId，尝试使用当前会话');
-      targetSession = sessionController.currentSession.value;
-    }
-
-    if (targetSession == null) {
-      debugPrint('目标会话和当前会话都不存在，无法更新附件');
-      return;
-    }
-
-    // 找到附件并更新
-    final attachments = List<ChatAttachment>.from(targetSession.attachments);
-    final attachmentIndex = attachments.indexWhere(
-      (att) => att.id == attachmentId,
-    );
-
-    if (attachmentIndex != -1) {
-      attachments[attachmentIndex] = updatedAttachment;
-
-      final updatedSession = targetSession.copyWith(attachments: attachments);
-
-      // 直接使用 updateSession 方法，避免复杂的状态管理
-      debugPrint(
-        '更新附件状态: ${updatedAttachment.name}, 状态: ${updatedAttachment.content != null ? "已处理" : "处理中"}, 会话: $targetSessionId',
-      );
-      sessionController.updateSession(updatedSession);
-    } else {
-      debugPrint('在会话 $targetSessionId 中未找到附件: $attachmentId');
-    }
-  }
-
-  /// 移除附件
-  void _removeAttachment(ChatAttachment attachment) {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final updatedAttachments = List<ChatAttachment>.from(
-      currentSession.attachments,
-    );
-    updatedAttachments.removeWhere((att) => att.id == attachment.id);
-
-    final updatedSession = currentSession.copyWith(
-      attachments: updatedAttachments,
-    );
-
-    // 只更新会话状态，依靠监听器来同步 _currentAttachments
-    sessionController.updateSession(updatedSession);
-
-    // 附件已移除，不显示提示，通过UI状态可见
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -1243,22 +440,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 minLines: 1, // 最少显示1行
               ),
             ),
-            // 内联附件展示区域（在输入框和按钮之间）
-            if (_currentAttachments.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      _currentAttachments.map((attachment) {
-                        return _buildInlineAttachmentChip(attachment);
-                      }).toList(),
-                ),
-              ),
             // 功能按钮组
             Container(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
@@ -1273,8 +454,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          _buildInputAttachToggle(),
-                          const SizedBox(width: 8),
                           _buildDeepThinkToggle(),
                           const SizedBox(width: 8),
                           _buildMcpToolsToggle(),
@@ -1285,8 +464,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                             _buildScheduledTaskToggle(),
                             const SizedBox(width: 8),
                           ],
-                          _buildWorkDirectoryToggle(),
-                          const SizedBox(width: 8),
                           _buildCleanHistoryToggle(),
                           // Container(
                           //   height: 16,
@@ -1312,174 +489,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建内联附件 chip（显示在输入框内）
-  Widget _buildInlineAttachmentChip(ChatAttachment attachment) {
-    final iconData = _getAttachmentIcon(attachment.type);
-    final iconColor = _getAttachmentIconColor(attachment.type);
-    final isProcessing = attachment.content == null;
-    final hasError = attachment.content == 'ERROR_PROCESSING';
-
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 200, minWidth: 80),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 文件图标
-            Icon(iconData, size: 14, color: iconColor),
-            const SizedBox(width: 8),
-            // 文件信息
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    attachment.name,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (attachment.size != null)
-                        Text(
-                          _formatFileSize(attachment.size!),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.5),
-                          ),
-                        ),
-                      if (isProcessing) ...[
-                        const SizedBox(width: 4),
-                        SizedBox(
-                          width: 10,
-                          height: 10,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.orange[600]!,
-                            ),
-                          ),
-                        ),
-                      ] else if (hasError) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.error_outline,
-                          size: 10,
-                          color: Colors.red[600],
-                        ),
-                      ] else ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.check_circle,
-                          size: 10,
-                          color: Colors.green[600],
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 4),
-            // 删除按钮
-            GestureDetector(
-              onTap: () => _removeAttachment(attachment),
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.close,
-                  size: 10,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 根据附件类型获取图标
-  IconData _getAttachmentIcon(String type) {
-    switch (type) {
-      case 'image':
-        return Icons.image;
-      case 'document':
-      case 'text':
-        return Icons.description;
-      case 'code':
-        return Icons.text_fields;
-      case 'office':
-        return Icons.insert_drive_file;
-      case 'web':
-        return Icons.language;
-      case 'folder':
-        return Icons.folder_open;
-      default:
-        return Icons.insert_drive_file;
-    }
-  }
-
-  /// 根据附件类型获取图标颜色
-  Color _getAttachmentIconColor(String type) {
-    switch (type) {
-      case 'image':
-        return Colors.blue;
-      case 'document':
-      case 'text':
-        return Colors.green;
-      case 'code':
-        return Colors.purple;
-      case 'office':
-        return Colors.indigo;
-      case 'web':
-        return Colors.orange;
-      case 'folder':
-        return Colors.amber;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  /// 格式化文件大小
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '${bytes}B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
-  }
-
   /// 构建发送/停止按钮
   Widget _buildSendStopButton() {
-    // 检查是否有附件正在处理中
-    final processingAttachments =
-        _currentAttachments
-            .where((attachment) => attachment.content == null)
-            .toList();
-
     if (_isSending) {
       // 正在发送时显示停止按钮
       return Tooltip(
@@ -1502,33 +513,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           ),
         ),
       );
-    } else if (processingAttachments.isNotEmpty) {
-      // 有附件正在处理时显示处理中状态
-      return Tooltip(
-        message: AppLocalizations.of(
-          context,
-        )!.waitingAttachments(processingAttachments.length),
-        child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.secondary,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: SizedBox(
-            width: 10,
-            height: 10,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.onSecondary,
-              ),
-            ),
-          ),
-        ),
-      );
-    } else if (_hasText || _currentAttachments.isNotEmpty) {
-      // 有文字输入或有附件时显示发送按钮
+    } else if (_hasText) {
+      // 有文字输入时显示发送按钮
       return Tooltip(
         message: AppLocalizations.of(context)!.sendMessageAction,
         child: InkWell(
@@ -1644,182 +630,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建工作目录按钮
-  Widget _buildWorkDirectoryToggle() {
-    final currentSession = sessionController.currentSession.value;
-    final workDir = currentSession?.workDirectory;
-    final hasWorkDir = workDir != null && workDir.isNotEmpty;
-    final displayText =
-        hasWorkDir
-            ? p.basename(workDir)
-            : AppLocalizations.of(context)!.workingDirectoryLabel;
-
-    return Tooltip(
-      message:
-          hasWorkDir
-              ? '双击打开，长按修改'
-              : AppLocalizations.of(context)!.setWorkingDirHint,
-      child: GestureDetector(
-        // 未设置时单击选择，已设置时双击打开/长按修改
-        onTap:
-            _isSending
-                ? null
-                : hasWorkDir
-                ? null
-                : _showWorkDirectoryPicker,
-        onLongPress:
-            _isSending || !hasWorkDir ? null : () => _showWorkDirectoryPicker(),
-        onDoubleTap:
-            hasWorkDir && !_isSending
-                ? () {
-                  try {
-                    Process.run('open', [workDir]);
-                  } catch (_) {}
-                }
-                : null,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.folder_open,
-                size: 13,
-                color:
-                    _isSending
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
-                        : hasWorkDir
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-              ),
-              const SizedBox(width: 4),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 80),
-                child: Text(
-                  displayText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: hasWorkDir ? FontWeight.w700 : FontWeight.w500,
-                    color:
-                        _isSending
-                            ? Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.3)
-                            : hasWorkDir
-                            ? Theme.of(context).colorScheme.onSurface
-                            : Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 选择工作目录
-  void _showWorkDirectoryPicker() async {
-    final currentSession = sessionController.currentSession.value;
-    if (currentSession == null) return;
-
-    final result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: AppLocalizations.of(context)!.selectWorkingDir,
-      initialDirectory: currentSession.workDirectory,
-    );
-
-    if (result != null && mounted) {
-      debugPrint('📂 选择工作目录: $result');
-
-      // 检查目录冲突
-      final conflictError = await _checkDirectoryConflict(
-        currentSession.sessionId,
-        result,
-      );
-      if (conflictError != null) {
-        debugPrint('❌ 目录冲突: $conflictError');
-        SnackBarUtils.showError(context, conflictError);
-        return;
-      }
-
-      // 迁移已有的模式文件到工作目录
-      await StoragePaths.migrateModeFiles(
-        sessionId: currentSession.sessionId,
-        workDirectory: result,
-      );
-
-      // 设置工作目录
-      final dirName = p.basename(result);
-
-      // 如果会话名称是"新建会话"，则改为目录名称
-      final shouldUpdateTitle =
-          currentSession.name == '新建会话' || currentSession.name.isEmpty;
-
-      sessionController.updateSession(
-        currentSession.copyWith(
-          workDirectory: result,
-          title: shouldUpdateTitle ? dirName : null,
-        ),
-      );
-      SnackBarUtils.showSuccess(
-        context,
-        AppLocalizations.of(context)!.workingDirSet,
-      );
-    }
-  }
-
-  /// 检查目录冲突
-  Future<String?> _checkDirectoryConflict(
-    String sessionId,
-    String targetDir,
-  ) async {
-    // 检查目标目录是否有 .llmate 目录
-    final llmateDir = Directory(p.join(targetDir, '.llmate'));
-    final hasLlmate = await llmateDir.exists();
-    debugPrint('🔍 检查 .llmate 目录: ${llmateDir.path}, 存在: $hasLlmate');
-
-    if (!hasLlmate) return null;
-
-    // 检查会话目录是否有模式文件
-    final sessionHasModeFiles = await _sessionHasModeFiles(sessionId);
-    debugPrint('🔍 会话目录有模式文件: $sessionHasModeFiles');
-
-    // 如果会话已有模式文件，拒绝
-    if (sessionHasModeFiles) {
-      return '该目录已存在 LLM 工作文件（.llmate），请选择其他目录';
-    }
-
-    // 允许（首次设置）
-    return null;
-  }
-
-  /// 检查会话目录是否有任何模式文件
-  Future<bool> _sessionHasModeFiles(String sessionId) async {
-    final modes = ['contract', 'invoice', 'chatroom', 'creative', 'task'];
-    for (final mode in modes) {
-      final modeDir = StoragePaths.modeDir(
-        sessionId: sessionId,
-        workMode: mode,
-      );
-      final dir = Directory(modeDir);
-      if (await dir.exists()) {
-        final files = await dir.list(recursive: true).toList();
-        if (files.any((e) => e is File)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   /// 构建定时任务按钮
   Widget _buildScheduledTaskToggle() {
     final currentSession = sessionController.currentSession.value;
@@ -1880,28 +690,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 构建输入框功能按钮
-  Widget _buildInputAttachToggle() {
-    return Tooltip(
-      message: AppLocalizations.of(context)!.attach,
-      child: InkWell(
-        onTap: _isSending ? null : _pickFile,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          child: Icon(
-            Icons.attach_file,
-            size: 13,
-            color:
-                _isSending
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
       ),
@@ -2337,19 +1125,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final text = _inputController.text.trim();
       debugPrint('发送消息: $text');
 
-      // 防止发送空消息（没有文本且没有附件）或重复发送
-      if ((text.isEmpty && _currentAttachments.isEmpty) || _isSending) {
-        return;
-      }
-
-      // 检查是否有附件正在处理中
-      final processingAttachments =
-          _currentAttachments
-              .where((attachment) => attachment.content == null)
-              .toList();
-
-      if (processingAttachments.isNotEmpty) {
-        // 有附件正在处理中，不发送消息，发送按钮状态已显示处理中
+      // 防止发送空消息或重复发送
+      if (text.isEmpty || _isSending) {
         return;
       }
 
@@ -2363,33 +1140,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 实际执行发送消息的方法
   Future<void> _doSendMessage(String text) async {
     debugPrint('🚀 开始执行 _doSendMessage');
-    debugPrint('🚀 当前会话附件数量: ${_currentAttachments.length}');
-    // for (int i = 0; i < _currentAttachments.length; i++) {
-    //   final attachment = _currentAttachments[i];
-    //   debugPrint('🚀 附件 $i: ${attachment.name}, 类型: ${attachment.type}');
-    // }
-
-    // 过滤出已成功处理的附件（排除处理失败的）
-    final validAttachments =
-        _currentAttachments
-            .where(
-              (attachment) =>
-                  (attachment.content != null &&
-                      attachment.content != 'ERROR_PROCESSING') ||
-                  (attachment.base64Data != null &&
-                      attachment.base64Data!.isNotEmpty),
-            )
-            .toList();
-
-    debugPrint(
-      '发送消息 - 总附件数: ${_currentAttachments.length}, 有效附件数: ${validAttachments.length}',
-    );
-    for (int i = 0; i < validAttachments.length; i++) {
-      final attachment = validAttachments[i];
-      debugPrint(
-        '有效附件 $i: ${attachment.name}, 类型: ${attachment.type}, 内容长度: ${attachment.content?.length ?? 0}',
-      );
-    }
 
     // 如果没有当前会话，创建一个新会话
     var updateSession = sessionController.currentSession.value;
@@ -2407,47 +1157,28 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 生成唯一的时间戳ID
     final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-    // 如果有文件引用，添加修订模式指令
-    String messageContent = text;
-    if (_hasFileMention) {
-      messageContent =
-          '【修订模式】$text\n\n'
-          '注意：你正在修改文件，请务必保留文件的原始格式（包括字体、缩进、换行等），'
-          '只修改内容部分，不要添加额外的格式化或改变文件结构。';
-      // 重置修订模式标记
-      setState(() {
-        _hasFileMention = false;
-      });
-    }
-
-    // 创建用户消息对象，只包含已成功处理的附件
+    // 创建用户消息对象
     final userMessage = ChatMessage(
       msgId: '${timestamp}_user',
       role: MessageRole.user,
-      content: messageContent,
+      content: text,
       timestamp: DateTime.now(),
       sessionId: updateSession.sessionId,
-      attachments: List<ChatAttachment>.from(validAttachments), // 只包含已处理的附件
     );
 
     // 为用户消息创建GlobalKey
     widget.messageKeys[userMessage.msgId] = GlobalKey();
 
-    // 立即更新会话状态，但保留附件信息用于发送
+    // 立即更新会话状态
     final updatedSession = updateSession.copyWith(
       messages: [...updateSession.messages, userMessage],
       inputContent: '',
-      attachments: [], // 保留附件信息用于发送
       isSending: true,
     );
 
     sessionController.updateSession(updatedSession);
 
-    // 强制触发UI更新以立即清除附件显示
     setState(() {});
-
-    debugPrint('💡 发送消息后附件状态: ${updatedSession.attachments.length} 个附件');
-    debugPrint('💡 _currentAttachments: ${_currentAttachments.length} 个附件');
 
     // 等待下一帧确保UI更新完成
     await Future.delayed(const Duration(milliseconds: 50));

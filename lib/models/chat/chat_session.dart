@@ -1,10 +1,8 @@
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:llmate/models/bigmodel/chat_model.dart';
 import 'package:llmate/models/chat/mcp_config.dart';
 
 import './chat_message.dart';
-import './chat_attachment.dart';
 import './chat_setting.dart';
 import './scheduled_task.dart';
 import './contract_info.dart';
@@ -80,16 +78,11 @@ class ChatSession {
   final DateTime createdAt;
   final bool isFavorite;
   final String inputContent;
-  final List<ChatAttachment> attachments;
   final bool isSending;
   final bool shouldStopResponse;
   final double scrollPosition;
-  final String? lastSelectedDirectory;
 
   // === 会话级功能配置 ===
-
-  /// 工作目录：会话产生的文件默认保存到此目录
-  final String? workDirectory;
 
   /// 绑定的 MCP 服务文件夹名列表（~/.llmate/mcps/{name}），null/empty = 未绑定
   final List<String>? mcps;
@@ -111,8 +104,10 @@ class ChatSession {
   /// 累计总token数
   int totalTokens;
 
-  /// 累计费用（货币类型由绑定的模型决定）
-  final double totalCost;
+  /// 累计费用（实时计算：基于输入/输出 token 数和模型定价）
+  /// 货币类型由绑定的 chatModel.currency 决定
+  /// 计算公式: promptTokens * promptPrice / 1,000,000 + completionTokens * completionPrice / 1,000,000
+  double get totalCost => _calculateCost(promptTokens, completionTokens);
 
   /// 合约要点列表（商务模式下，由 contract_inspect 工具写入）
   final List<ContractInfo>? contracts;
@@ -177,12 +172,9 @@ class ChatSession {
     this.chatModel,
     this.isFavorite = false,
     this.inputContent = '',
-    this.attachments = const [],
     this.isSending = false,
     this.shouldStopResponse = false,
     this.scrollPosition = 0.0,
-    this.lastSelectedDirectory,
-    this.workDirectory,
     this.deepThink = false,
     this.connectPrompt,
     this.sessionQuickCommands = const [],
@@ -191,7 +183,6 @@ class ChatSession {
     this.promptTokens = 0,
     this.completionTokens = 0,
     this.totalTokens = 0,
-    this.totalCost = 0.0,
     String? emoji,
     String? apiKey,
     this.group,
@@ -327,6 +318,21 @@ class ChatSession {
   }
 
   /// 获取当前配额周期内的 Token/费用用量（从消息中计算）
+  /// 根据模型价格计算指定 token 量的费用
+  /// 价格单位：/百万token
+  double _calculateCost(int inputTokens, int outputTokens) {
+    double cost = 0.0;
+    final promptPrice = chatModel?.promptPrice;
+    final completionPrice = chatModel?.completionPrice;
+    if (promptPrice != null) {
+      cost += inputTokens * promptPrice / 1000000.0;
+    }
+    if (completionPrice != null) {
+      cost += outputTokens * completionPrice / 1000000.0;
+    }
+    return cost;
+  }
+
   ({int inputTokens, int outputTokens, double cost}) getPeriodBilling() {
     if (!quotaEnabled || quotaPeriodStart == null || chatModel == null) {
       return (inputTokens: 0, outputTokens: 0, cost: 0.0);
@@ -342,17 +348,7 @@ class ChatSession {
       }
     }
 
-    double cost = 0.0;
-    final promptPrice = chatModel!.promptPrice;
-    final completionPrice = chatModel!.completionPrice;
-    if (promptPrice != null) {
-      cost += inputTotal * promptPrice / 1000000.0;
-    }
-    if (completionPrice != null) {
-      cost += outputTotal * completionPrice / 1000000.0;
-    }
-
-    return (inputTokens: inputTotal, outputTokens: outputTotal, cost: cost);
+    return (inputTokens: inputTotal, outputTokens: outputTotal, cost: _calculateCost(inputTotal, outputTotal));
   }
 
   ChatSession copyWith({
@@ -362,13 +358,9 @@ class ChatSession {
     List<ChatMessage>? messages,
     bool? isFavorite,
     String? inputContent,
-    List<ChatAttachment>? attachments,
     bool? isSending,
     bool? shouldStopResponse,
     double? scrollPosition,
-    String? lastSelectedDirectory,
-    String? workDirectory,
-    bool clearWorkDirectory = false,
     String? mcp,
     Mcp? mcpServer,
     bool clearMcp = false,
@@ -386,7 +378,6 @@ class ChatSession {
     int? promptTokens,
     int? completionTokens,
     int? totalTokens,
-    double? totalCost,
     String? emoji,
     String? apiKey,
     String? group,
@@ -436,14 +427,9 @@ class ChatSession {
       messages: messages ?? this.messages,
       isFavorite: isFavorite ?? this.isFavorite,
       inputContent: inputContent ?? this.inputContent,
-      attachments: attachments ?? this.attachments,
       isSending: isSending ?? this.isSending,
       shouldStopResponse: shouldStopResponse ?? this.shouldStopResponse,
       scrollPosition: scrollPosition ?? this.scrollPosition,
-      lastSelectedDirectory:
-          lastSelectedDirectory ?? this.lastSelectedDirectory,
-      workDirectory:
-          clearWorkDirectory ? null : (workDirectory ?? this.workDirectory),
       mcps: resolvedMcps,
       modelId: resolvedModelId,
       chatModel: resolvedChatModel,
@@ -457,7 +443,6 @@ class ChatSession {
       promptTokens: promptTokens ?? this.promptTokens,
       completionTokens: completionTokens ?? this.completionTokens,
       totalTokens: totalTokens ?? this.totalTokens,
-      totalCost: totalCost ?? this.totalCost,
       emoji: emoji ?? this.emoji,
       apiKey: apiKey ?? this.apiKey,
       group: clearGroup ? null : (group ?? this.group),
@@ -550,16 +535,9 @@ class ChatSession {
           [],
       isFavorite: json['isFavorite'] ?? false,
       inputContent: json['inputContent'] ?? '',
-      attachments:
-          (json['attachments'] as List<dynamic>?)
-              ?.map((attachmentJson) => ChatAttachment.fromJson(attachmentJson))
-              .toList() ??
-          [],
       isSending: json['isSending'] ?? false,
       shouldStopResponse: json['shouldStopResponse'] ?? false,
       scrollPosition: (json['scrollPosition'] as num?)?.toDouble() ?? 0.0,
-      lastSelectedDirectory: json['lastSelectedDirectory'],
-      workDirectory: json['workDirectory'],
       deepThink: json['deepThink'] as bool? ?? false,
       connectPrompt: json['connectPrompt'] as String?,
       sessionQuickCommands:
@@ -578,7 +556,6 @@ class ChatSession {
       promptTokens: json['promptTokens'] as int? ?? 0,
       completionTokens: json['completionTokens'] as int? ?? 0,
       totalTokens: json['totalTokens'] as int? ?? 0,
-      totalCost: (json['totalCost'] as num?)?.toDouble() ?? 0.0,
       modelId: modelId,
       mcps: mcpsList,
       chatModel: chatModel,
@@ -607,13 +584,9 @@ class ChatSession {
       'messages': messages.map((message) => message.toJson()).toList(),
       'isFavorite': isFavorite,
       'inputContent': inputContent,
-      'attachments':
-          attachments.map((attachment) => attachment.toJson()).toList(),
       'isSending': isSending,
       'shouldStopResponse': shouldStopResponse,
       'scrollPosition': scrollPosition,
-      'lastSelectedDirectory': lastSelectedDirectory,
-      if (workDirectory != null) 'workDirectory': workDirectory,
       'deepThink': deepThink,
       if (connectPrompt != null) 'connectPrompt': connectPrompt,
       'sessionQuickCommands':
@@ -641,19 +614,6 @@ class ChatSession {
       'quotaRequestCount': quotaRequestCount,
       'noAuthEnabled': noAuthEnabled,
     };
-  }
-
-  String? getInitialDirectory() {
-    if (lastSelectedDirectory != null) {
-      try {
-        if (Directory(lastSelectedDirectory!).existsSync()) {
-          return lastSelectedDirectory;
-        }
-      } catch (e) {
-        // 目录不存在或无法访问，返回 null
-      }
-    }
-    return null;
   }
 }
 

@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../../../models/bigmodel/chat_model.dart';
 import '../../../models/chat/chat_session.dart';
 import '../../../models/chat/chat_message.dart';
-import '../../../models/chat/chat_attachment.dart';
 import '../../../models/chat/mcp_config.dart';
 import '../../../controllers/mcp_controller.dart';
 
@@ -43,11 +42,8 @@ Future<List<String>> loadRoleContexts(String sessionId, {String? workDirectory})
   return contexts;
 }
 
-/// 获取有效的工作目录（优先使用用户选择的，否则使用会话目录）
+/// 获取有效的工作目录（使用会话目录）
 String getEffectiveWorkDir(ChatSession session) {
-  if (session.workDirectory != null && session.workDirectory!.isNotEmpty) {
-    return session.workDirectory!;
-  }
   return StoragePaths.sessionDir(session.sessionId);
 }
 
@@ -130,11 +126,11 @@ void appendHistoryMessages(
   final historyMessages = session.messages.sublist(0, userMsgIndex);
 
   for (final msg in historyMessages) {
-    if (msg.content.isEmpty && msg.attachments.isEmpty) continue;
+    if (msg.content.isEmpty) continue;
     final apiRole = _toOpenAIRole(msg.role);
     if (apiRole == null) continue;
 
-    if (msg.role == MessageRole.user && msg.attachments.isNotEmpty) {
+    if (msg.role == MessageRole.user) {
       final msgContent = buildUserContent(msg);
       messages.add({'role': apiRole, 'content': msgContent});
     } else if (msg.role == MessageRole.tool) {
@@ -162,89 +158,7 @@ String? _toOpenAIRole(MessageRole role) {
 
 /// 构建包含附件信息的用户消息内容
 dynamic buildUserContent(ChatMessage userMessage) {
-  if (userMessage.attachments.isEmpty) {
-    return userMessage.content;
-  }
-
-  // 检查是否有图片附件（支持 base64 或 OSS URL）
-  final hasImageAttachment = userMessage.attachments.any(
-    (a) =>
-        a.type == 'image' &&
-        ((a.base64Data != null && a.base64Data!.isNotEmpty) ||
-         (a.ossUrl != null && a.ossUrl!.isNotEmpty)),
-  );
-
-  if (hasImageAttachment) {
-    final parts = <Map<String, dynamic>>[];
-    for (final a in userMessage.attachments) {
-      if (a.type == 'image') {
-        // 优先使用 OSS URL，其次使用 base64
-        String? imageUrl;
-        if (a.ossUrl != null && a.ossUrl!.isNotEmpty) {
-          imageUrl = a.ossUrl;
-        } else if (a.base64Data != null && a.base64Data!.isNotEmpty) {
-          imageUrl = 'data:${a.mimeType ?? "image/png"};base64,${a.base64Data}';
-        }
-
-        if (imageUrl != null) {
-          parts.add({
-            'type': 'image_url',
-            'image_url': {'url': imageUrl},
-          });
-          if (a.content != null && a.content!.isNotEmpty) {
-            final path =
-                (a.filePath != null && a.filePath!.isNotEmpty)
-                    ? a.filePath!
-                    : a.name;
-            parts.add({'type': 'text', 'text': '[图片: $path] ${a.content}'});
-          }
-        } else {
-          parts.add({'type': 'text', 'text': _buildAttachmentInfo(a)});
-        }
-      } else {
-        parts.add({'type': 'text', 'text': _buildAttachmentInfo(a)});
-      }
-    }
-    parts.add({'type': 'text', 'text': userMessage.content});
-    return parts;
-  }
-
-  final infos = userMessage.attachments.map(_buildAttachmentInfo).toList();
-  return '${infos.join('\n\n')}\n\n ${userMessage.content}';
-}
-
-String _buildAttachmentInfo(ChatAttachment a) {
-  final buf = StringBuffer();
-  const labels = {
-    'image': '图片文件',
-    'document': '文档文件',
-    'text': '文档文件',
-    'code': '代码文件',
-    'web': '网页链接',
-    'folder': '文件夹',
-  };
-  final label = labels[a.type] ?? '文件';
-  final path =
-      (a.filePath != null && a.filePath!.isNotEmpty) ? a.filePath! : a.name;
-  buf.write('[$label: $path');
-  if (a.size != null && a.size! > 0) {
-    buf.write(', 大小: ${_formatFileSize(a.size!)}');
-  }
-  buf.write(']\n');
-
-  // 如果有 OSS URL，添加链接信息
-  if (a.ossUrl != null && a.ossUrl!.isNotEmpty) {
-    buf.write('[文件链接: ${a.ossUrl}]\n');
-  }
-
-  if (a.content == null || a.content!.isEmpty) {
-    buf.write('[文件处理中...]');
-  } else if (a.content == 'ERROR_PROCESSING') {
-    buf.write('[文件处理失败]');
-  } else {
-    buf.write(a.content!);
-  }
-  return buf.toString();
+  return userMessage.content;
 }
 
 String _formatFileSize(int bytes) {
@@ -300,7 +214,6 @@ List<Map<String, dynamic>> buildBaseSystemMessages({
   ChatModel? model,
   ChatSession? session,
   bool thinkEnabled = false,
-  String? workDir,
 }) {
   final messages = <Map<String, dynamic>>[];
 
@@ -313,13 +226,6 @@ List<Map<String, dynamic>> buildBaseSystemMessages({
     messages.add({
       'role': 'system',
       'content': CommonSystemPrompts.deepThink,
-    });
-  }
-
-  if (workDir != null) {
-    messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.workDirectory(workDir),
     });
   }
 

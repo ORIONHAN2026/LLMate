@@ -1,4 +1,3 @@
-import './chat_attachment.dart';
 import './content_block.dart';
 
 enum MessageRole { user, bot, tool }
@@ -12,7 +11,6 @@ class ChatMessage {
   final DateTime timestamp;
   final String? sessionId;
   final bool isError;
-  final List<ChatAttachment> attachments; // 消息的附件列表
    
   // 消息关联字段
   final String? pairedMsgId; // 配对的消息ID（用于关联用户消息和AI回复）
@@ -39,7 +37,6 @@ class ChatMessage {
     required this.timestamp,
     this.sessionId,
     this.isError = false,
-    this.attachments = const [], // 默认为空列表
     this.pairedMsgId, // 配对的消息ID（可选）
     this.toolName, // 工具名称（可选）
     this.toolCallId, // 工具调用ID（可选）
@@ -88,11 +85,6 @@ class ChatMessage {
               : DateTime.now(),
       sessionId: json['sessionId'],
       isError: json['isError'] ?? false,
-      attachments:
-          (json['attachments'] as List<dynamic>?)
-              ?.map((attachmentJson) => ChatAttachment.fromJson(attachmentJson))
-              .toList() ??
-          [],
       pairedMsgId: json['pairedMessageId'],
       toolName: json['toolName'],
       toolCallId: json['toolCallId'],
@@ -142,8 +134,6 @@ class ChatMessage {
       'timestamp': timestamp.toIso8601String(),
       'sessionId': sessionId,
       'isError': isError,
-      'attachments':
-          attachments.map((attachment) => attachment.toJson()).toList(),
       'pairedMessageId': pairedMsgId,
       'toolName': toolName,
       'toolCallId': toolCallId,
@@ -178,7 +168,6 @@ class ChatMessage {
     DateTime? timestamp,
     String? sessionId,
     bool? isError,
-    List<ChatAttachment>? attachments,
     String? pairedMsgId, // 配对的消息ID
     String? toolName,
     String? toolCallId,
@@ -199,7 +188,6 @@ class ChatMessage {
       timestamp: timestamp ?? this.timestamp,
       sessionId: sessionId ?? this.sessionId,
       isError: isError ?? this.isError,
-      attachments: attachments ?? this.attachments,
       pairedMsgId: pairedMsgId ?? this.pairedMsgId, // 配对的消息ID
       toolName: toolName ?? this.toolName,
       toolCallId: toolCallId ?? this.toolCallId,

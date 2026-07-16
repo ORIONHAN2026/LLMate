@@ -38,6 +38,12 @@ class _UsageDashboardState extends State<UsageDashboard> {
   List<UsageChartPoint> _chartData = [];
   bool _chartLoading = false;
 
+  /// 时间区间（按粒度解释）：
+  /// - 分/小时：仅取某一天，start=当天 00:00，end=当天 23:59:59.999
+  /// - 天/月/年：start~end 的范围（为 null 表示不限该侧）
+  DateTime? _rangeStart;
+  DateTime? _rangeEnd;
+
   @override
   void initState() {
     super.initState();
@@ -60,11 +66,42 @@ class _UsageDashboardState extends State<UsageDashboard> {
     setState(() => _chartLoading = true);
 
     final modelId = session.chatModel?.modelId ?? 'unknown';
+
+    // 分/小时维度未选日期时，自动取「最近有数据的一天」作为默认
+    DateTime? start = _rangeStart;
+    DateTime? end = _rangeEnd;
+    if (_isSingleDay && start == null) {
+      final all = await UsageLoader.load(
+        sessionId: session.sessionId,
+        modelId: modelId,
+        granularity: _granularity,
+      );
+      final DateTime baseDay;
+      if (all.isNotEmpty) {
+        final latest =
+            all.map((p) => p.timestamp).reduce((a, b) => a.isAfter(b) ? a : b);
+        baseDay = DateTime(latest.year, latest.month, latest.day);
+      } else {
+        final now = DateTime.now();
+        baseDay = DateTime(now.year, now.month, now.day);
+      }
+      start = baseDay;
+      end = DateTime(baseDay.year, baseDay.month, baseDay.day, 23, 59, 59, 999);
+      if (mounted) {
+        setState(() {
+          _rangeStart = start;
+          _rangeEnd = end;
+        });
+      }
+    }
+
     try {
       final data = await UsageLoader.load(
         sessionId: session.sessionId,
         modelId: modelId,
         granularity: _granularity,
+        start: start,
+        end: end,
       );
       if (mounted) {
         setState(() {
@@ -79,8 +116,17 @@ class _UsageDashboardState extends State<UsageDashboard> {
     }
   }
 
+  /// 分/小时维度只需选「某一天」
+  bool get _isSingleDay =>
+      _granularity == 'minute' || _granularity == 'hour';
+
+  /// 切换粒度时重置区间（分/小时会由 _loadChartData 自动定位到有数据的一天）
   Future<void> _onGranularityChanged(String granularity) async {
-    setState(() => _granularity = granularity);
+    setState(() {
+      _granularity = granularity;
+      _rangeStart = null;
+      _rangeEnd = null;
+    });
     await _loadChartData();
   }
   @override
@@ -229,6 +275,8 @@ class _UsageDashboardState extends State<UsageDashboard> {
             _buildSectionTitle(theme, '用量曲线'),
             const SizedBox(height: 12),
             _buildGranularitySelector(theme, isDark),
+            const SizedBox(height: 12),
+            _buildDateRangeSelector(theme, isDark),
             const SizedBox(height: 12),
             _buildChartToggle(theme),
             const SizedBox(height: 12),
@@ -1176,6 +1224,184 @@ class _UsageDashboardState extends State<UsageDashboard> {
         }),
       ],
     );
+  }
+
+  /// 时间区间选择器：根据粒度变化形态
+  /// - 分/小时：选「某一天」
+  /// - 天/月/年：选「开始 ~ 结束」范围
+  Widget _buildDateRangeSelector(ThemeData theme, bool isDark) {
+    final chipBg = isDark ? const Color(0xFF2D2F3A) : const Color(0xFFF3F4F6);
+    final borderColor =
+        isDark ? const Color(0xFF3A3D4A) : const Color(0xFFE5E7EB);
+
+    if (_isSingleDay) {
+      final day = _rangeStart;
+      return Row(
+        children: [
+          Icon(Icons.calendar_today_outlined,
+              size: 14, color: theme.colorScheme.onSurface.withOpacity(0.45)),
+          const SizedBox(width: 6),
+          _dateChip(
+            theme: theme,
+            bg: chipBg,
+            borderColor: borderColor,
+            label: day == null ? '选择日期' : _fmtByGran(day),
+            onTap: _pickDay,
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Icon(Icons.date_range_outlined,
+            size: 14, color: theme.colorScheme.onSurface.withOpacity(0.45)),
+        const SizedBox(width: 6),
+        _dateChip(
+          theme: theme,
+          bg: chipBg,
+          borderColor: borderColor,
+          label: _rangeStart == null ? '开始' : _fmtByGran(_rangeStart!),
+          onTap: () => _pickRange(isStart: true),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Text('—',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurface.withOpacity(0.4))),
+        ),
+        _dateChip(
+          theme: theme,
+          bg: chipBg,
+          borderColor: borderColor,
+          label: _rangeEnd == null ? '结束' : _fmtByGran(_rangeEnd!),
+          onTap: () => _pickRange(isStart: false),
+        ),
+        if (_rangeStart != null || _rangeEnd != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _rangeStart = null;
+                  _rangeEnd = null;
+                });
+                _loadChartData();
+              },
+              child: Icon(Icons.close,
+                  size: 16,
+                  color: theme.colorScheme.onSurface.withOpacity(0.4)),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _dateChip({
+    required ThemeData theme,
+    required Color bg,
+    required Color borderColor,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: borderColor),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.onSurface.withOpacity(0.8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 分/小时：选择某一天
+  Future<void> _pickDay() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _rangeStart ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+      helpText: '选择日期',
+    );
+    if (picked == null) return;
+    setState(() {
+      _rangeStart = DateTime(picked.year, picked.month, picked.day);
+      _rangeEnd = DateTime(
+          picked.year, picked.month, picked.day, 23, 59, 59, 999);
+    });
+    await _loadChartData();
+  }
+
+  /// 天/月/年：选择范围起点或终点
+  Future<void> _pickRange({required bool isStart}) async {
+    final current = isStart
+        ? _rangeStart ?? DateTime.now()
+        : _rangeEnd ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+      helpText: isStart ? '开始日期' : '结束日期',
+    );
+    if (picked == null) return;
+
+    DateTime start;
+    DateTime end;
+    switch (_granularity) {
+      case 'month':
+        start = DateTime(picked.year, picked.month);
+        end = DateTime(picked.year, picked.month + 1, 0, 23, 59, 59, 999);
+        break;
+      case 'year':
+        start = DateTime(picked.year);
+        end = DateTime(picked.year, 12, 31, 23, 59, 59, 999);
+        break;
+      case 'day':
+      default:
+        start = DateTime(picked.year, picked.month, picked.day);
+        end = DateTime(
+            picked.year, picked.month, picked.day, 23, 59, 59, 999);
+        break;
+    }
+
+    setState(() {
+      if (isStart) {
+        _rangeStart = start;
+      } else {
+        _rangeEnd = end;
+      }
+    });
+    await _loadChartData();
+  }
+
+  /// 按粒度格式化时间区间标签
+  String _fmtByGran(DateTime d) {
+    switch (_granularity) {
+      case 'minute':
+      case 'hour':
+        return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+      case 'day':
+        return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+      case 'month':
+        return '${d.year}/${d.month.toString().padLeft(2, '0')}';
+      case 'year':
+        return '${d.year}';
+      default:
+        return '${d.year}/${d.month}/${d.day}';
+    }
   }
 
   Widget _buildChartToggle(ThemeData theme) {

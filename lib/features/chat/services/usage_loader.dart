@@ -32,10 +32,13 @@ class UsageLoader {
   /// 加载指定会话和模型的用量曲线数据
   ///
   /// [granularity]: 'minute' | 'hour' | 'day' | 'month' | 'year'
+  /// [start] / [end]: 可选的时间范围过滤（含端点）。为 null 表示不限制该侧。
   static Future<List<UsageChartPoint>> load({
     required String sessionId,
     required String modelId,
     required String granularity,
+    DateTime? start,
+    DateTime? end,
   }) async {
     final usageDir = Directory(p.join(StoragePaths.root, 'usage'));
     if (!await usageDir.exists()) return [];
@@ -61,6 +64,10 @@ class UsageLoader {
 
       final timestamp = _parseTimestamp(parts);
       if (timestamp == null) continue;
+
+      // 范围过滤
+      if (start != null && timestamp.isBefore(start)) continue;
+      if (end != null && timestamp.isAfter(end)) continue;
 
       try {
         final content = await file.readAsString();

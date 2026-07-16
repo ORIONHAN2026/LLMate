@@ -18,8 +18,8 @@ class SessionConfigSidebar {
     
     return Obx(() {
       final session = sessionController.currentSession.value;
-      if (session == null) {
-        return _buildEmptyState(context);
+        if (session == null) {
+        return buildEmptyState(context);
       }
       
       return _buildConfigContent(context, session);
@@ -27,7 +27,7 @@ class SessionConfigSidebar {
   }
 
   /// 构建空状态
-  static Widget _buildEmptyState(BuildContext context) {
+  static Widget buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -431,6 +431,267 @@ class SessionConfigSidebar {
             chatModel: session.chatModel,
           ),
         ],
+      ],
+    );
+  }
+
+  // ===== 供会话详情页（Tab 布局）与精简右侧边栏复用的分节构建方法 =====
+
+  /// 基础信息分节
+  static Widget buildBasicInfoSection(BuildContext context, ChatSession session) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, '基础信息'),
+        const SizedBox(height: 8),
+        _buildEditableConfigItem(
+          context,
+          icon: Icons.chat_bubble_outline,
+          label: '会话名称',
+          value: session.name,
+          onChanged: (newName) {
+            if (newName.trim().isNotEmpty && newName.trim() != session.name) {
+              final sessionController = Get.find<SessionController>();
+              sessionController.updateSession(
+                session.copyWith(title: newName.trim()),
+              );
+            }
+          },
+        ),
+        const SizedBox(height: 8),
+        _buildEditableConfigItem(
+          context,
+          icon: Icons.grid_view,
+          label: '分组',
+          value: session.group ?? '未分组',
+          onChanged: (newGroup) {
+            final sessionController = Get.find<SessionController>();
+            sessionController.updateSession(
+              session.copyWith(group: newGroup.trim()),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        _buildConfigItem(
+          context,
+          icon: Icons.language,
+          label: '绑定模型',
+          value: session.chatModel != null
+              ? '${session.chatModel!.name} (${session.chatModel!.model})'
+              : '未设置',
+          valueColor:
+              session.chatModel != null
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+        ),
+        if (session.connectPrompt != null &&
+            session.connectPrompt!.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _buildSectionTitle(context, '关联提示词'),
+          const SizedBox(height: 8),
+          _buildPromptCard(context, session.connectPrompt!),
+        ],
+        const SizedBox(height: 8),
+        _buildConfigItem(
+          context,
+          icon: Icons.chat_bubble_outline,
+          label: '消息数量',
+          value: '${session.messages.length}条',
+        ),
+      ],
+    );
+  }
+
+  /// 服务配置分节
+  static Widget buildServiceConfigSection(
+    BuildContext context,
+    ChatSession session,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, '服务配置'),
+        const SizedBox(height: 8),
+        _buildCopyableConfigItem(
+          context,
+          icon: Icons.link,
+          label: '服务地址',
+          value: _buildSmartServiceUrl(session.sessionId),
+        ),
+        const SizedBox(height: 8),
+        _buildCopyableConfigItem(
+          context,
+          icon: Icons.shield,
+          label: 'API 密钥',
+          value: session.apiKey,
+        ),
+        const SizedBox(height: 8),
+        _buildNoAuthToggle(context, session),
+      ],
+    );
+  }
+
+  /// MCP 分节
+  static Widget buildMcpSection(BuildContext context, ChatSession session) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, 'MCP'),
+        const SizedBox(height: 8),
+        _buildConfigItem(
+          context,
+          icon: Icons.grid_view,
+          label: '模型MCP',
+          value: session.chatModel?.mcps != null &&
+                  session.chatModel!.mcps!.isNotEmpty
+              ? session.chatModel!.mcps!.join(', ')
+              : '未绑定',
+          valueColor:
+              session.chatModel?.mcps != null &&
+                      session.chatModel!.mcps!.isNotEmpty
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+        ),
+        const SizedBox(height: 8),
+        _buildConfigItem(
+          context,
+          icon: Icons.layers,
+          label: '会话MCP',
+          value: session.mcps != null && session.mcps!.isNotEmpty
+              ? session.mcps!.join(', ')
+              : '未绑定',
+          valueColor: session.mcps != null && session.mcps!.isNotEmpty
+              ? Theme.of(context).colorScheme.primary
+              : null,
+        ),
+        if ((session.chatModel?.mcps == null ||
+                session.chatModel!.mcps!.isEmpty) &&
+            (session.mcps == null || session.mcps!.isEmpty))
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '可在模型管理或聊天输入框处添加 MCP 服务',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.3),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// 用量配额分节
+  static Widget buildQuotaSection(BuildContext context, ChatSession session) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, '用量配额'),
+        const SizedBox(height: 8),
+        _QuotaConfigSection(session: session),
+      ],
+    );
+  }
+
+  /// 免授权访问开关（独立构建，供精简边栏与详情页复用）
+  static Widget _buildNoAuthToggle(BuildContext context, ChatSession session) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: session.noAuthEnabled
+            ? Theme.of(context).colorScheme.error.withValues(alpha: 0.08)
+            : Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: session.noAuthEnabled
+            ? Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.error.withValues(alpha: 0.3),
+                width: 1,
+              )
+            : null,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            session.noAuthEnabled ? Icons.lock_open : Icons.shield,
+            size: 16,
+            color: session.noAuthEnabled
+                ? Theme.of(context).colorScheme.error
+                : Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '免授权访问',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: session.noAuthEnabled
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                Text(
+                  session.noAuthEnabled
+                      ? '⚠️ 已关闭认证，任何人均可访问'
+                      : '开启后不需要 API Key 即可访问',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: session.noAuthEnabled
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.error.withValues(alpha: 0.7)
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.75,
+            child: CupertinoSwitch(
+              value: session.noAuthEnabled,
+              activeTrackColor: Theme.of(context).colorScheme.error,
+              onChanged: (val) {
+                final sessionController = Get.find<SessionController>();
+                sessionController.updateSession(
+                  session.copyWith(noAuthEnabled: val),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 精简版右侧边栏内容（仅展示核心信息）
+  static Widget buildCompactSidebar(
+    BuildContext context,
+    ChatSession session,
+  ) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      children: [
+        buildBasicInfoSection(context, session),
+        const SizedBox(height: 16),
+        buildServiceConfigSection(context, session),
+        const SizedBox(height: 16),
+        buildBillingInfo(context, session),
       ],
     );
   }
@@ -1291,80 +1552,6 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
     }
   }
 
-  /// 构建免授权开关
-  Widget _buildNoAuthToggle(BuildContext context, ChatSession session) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: session.noAuthEnabled
-            ? Theme.of(context).colorScheme.error.withValues(alpha: 0.08)
-            : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-        border: session.noAuthEnabled
-            ? Border.all(
-                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
-                width: 1,
-              )
-            : null,
-      ),
-      child: Row(
-        children: [
-          Icon(
-            session.noAuthEnabled
-                ? Icons.lock_open
-                : Icons.shield,
-            size: 16,
-            color: session.noAuthEnabled
-                ? Theme.of(context).colorScheme.error
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '免授权访问',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: session.noAuthEnabled
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                Text(
-                  session.noAuthEnabled
-                      ? '⚠️ 已关闭认证，任何人均可访问'
-                      : '开启后不需要 API Key 即可访问',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: session.noAuthEnabled
-                        ? Theme.of(context).colorScheme.error.withValues(alpha: 0.7)
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Transform.scale(
-            scale: 0.75,
-            child: CupertinoSwitch(
-              value: session.noAuthEnabled,
-              activeTrackColor: Theme.of(context).colorScheme.error,
-              onChanged: (val) {
-                final sessionController = Get.find<SessionController>();
-                sessionController.updateSession(
-                  session.copyWith(noAuthEnabled: val),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildNavBar(BuildContext context) {
     return Container(
       width: 30,
@@ -1540,7 +1727,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       value: session.apiKey,
                     ),
                     const SizedBox(height: 8),
-                    _buildNoAuthToggle(context, session),
+                    SessionConfigSidebar._buildNoAuthToggle(context, session),
                   ],
                 ),
               ),

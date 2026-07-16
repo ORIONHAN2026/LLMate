@@ -23,6 +23,7 @@ import '../../mcp/pages/mcp_management_page.dart';
 import '../../settings/pages/other_settings_page.dart';
 import '../../settings/pages/domain_management_page.dart';
 import '../widgets/usage_dashboard.dart';
+import '../widgets/session_detail_page.dart';
 import 'package:llmate/widgets/command_palette.dart';
 
 class CodeChatHomePage extends StatefulWidget {
@@ -890,6 +891,23 @@ Thanks!
           ),
           visualDensity: VisualDensity.compact,
           tooltip: '使用量仪表盘',
+        ),
+        // 会话详情按钮 - 以 Tab 形式查看完整会话配置
+        IconButton(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const SessionDetailPage(),
+              ),
+            );
+          },
+          icon: Icon(
+            Icons.info_outline,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+          ),
+          visualDensity: VisualDensity.compact,
+          tooltip: '会话详情',
         ),
         Padding(
           padding: const EdgeInsets.only(right: 4),

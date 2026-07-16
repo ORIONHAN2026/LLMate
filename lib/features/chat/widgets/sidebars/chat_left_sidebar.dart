@@ -100,6 +100,18 @@ class _SessionItemState extends State<_SessionItem> {
                           // 收藏指示器 - 对收藏的会话始终显示小星星
                         ],
                       ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.session.chatModel?.name ??
+                            widget.session.chatModel?.model ??
+                            '未绑定模型',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),

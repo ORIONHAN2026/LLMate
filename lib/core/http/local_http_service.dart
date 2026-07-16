@@ -15,6 +15,7 @@ import '../../controllers/session_controller.dart';
 import '../../data/storage_paths.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
+import '../../models/chat/usage_stats.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/model_tool_guard.dart';
@@ -540,7 +541,16 @@ class LocalHttpService {
             body: body,
             responseContent: contentBuffer.toString(),
             sessionId: session.sessionId,
+            modelId: session.chatModel?.modelId ?? 'unknown',
             error: null,
+          );
+
+          // ── 保存按分钟累计的用量统计 ──
+          _saveUsageStats(
+            session: session,
+            startTime: generationStartTime,
+            promptTokens: promptTokens,
+            completionTokens: completionTokens,
           );
         } catch (e) {
           // ── 异步 IIFE 内部异常 ──
@@ -553,6 +563,7 @@ class LocalHttpService {
               body: null,
               responseContent: null,
               sessionId: session.sessionId,
+              modelId: session.chatModel?.modelId ?? 'unknown',
               error: e.toString(),
             );
           } catch (_) {}
@@ -610,14 +621,12 @@ class LocalHttpService {
     Map<String, dynamic>? body,
     String? responseContent,
     required String sessionId,
+    required String modelId,
     String? error,
   }) {
     () async {
       try {
-        final requestId =
-            request.context['requestId'] as String? ?? 'unknown';
-        final originBodyStr =
-            request.context['originBody'] as String? ?? '';
+        final originBodyStr = request.context['originBody'] as String? ?? '';
 
         // 解析原始请求体
         dynamic originRequest;
@@ -651,13 +660,13 @@ class LocalHttpService {
           logData['error'] = error;
         }
 
-        // 确保目录存在：~/.llmate/audit/chats/{sessionId}/
-        final dir = Directory('${StoragePaths.root}/audit/chats/$sessionId');
+        // 确保目录存在：~/.llmate/audit/
+        final dir = Directory('${StoragePaths.root}/audit');
         if (!await dir.exists()) {
           await dir.create(recursive: true);
         }
 
-        final filename = '$timestamp-$requestId.json';
+        final filename = '$timestamp-$modelId-$sessionId-audit.json';
         final file = File('${dir.path}/$filename');
         await file.writeAsString(
           const JsonEncoder.withIndent('  ').convert(logData),
@@ -668,5 +677,112 @@ class LocalHttpService {
         debugPrint('⚠️ [RequestLog] 保存请求日志失败: $e');
       }
     }();
+  }
+
+  /// 保存用量统计（按分/时/日/月/年 五个粒度）
+  ///
+  /// 保存路径：~/.llmate/usage/
+  /// 文件名格式（以粒度区分）：
+  ///   - 分钟：年-月-日-时-分-{modelId}-{sessionId}-usage.json
+  ///   - 小时：年-月-日-时-{modelId}-{sessionId}-usage.json
+  ///   - 天：  年-月-日-{modelId}-{sessionId}-usage.json
+  ///   - 月：  年-月-{modelId}-{sessionId}-usage.json
+  ///   - 年：  年-{modelId}-{sessionId}-usage.json
+  static void _saveUsageStats({
+    required ChatSession session,
+    required DateTime startTime,
+    required int promptTokens,
+    required int completionTokens,
+  }) {
+    () async {
+      try {
+        final sessionId = session.sessionId;
+        final model = session.chatModel;
+        final modelId = model?.modelId ?? 'unknown';
+        final currency = model?.currency ?? 'USD';
+
+        // 计算本次请求费用
+        double requestCost = 0.0;
+        if (model?.promptPrice != null) {
+          requestCost += promptTokens * model!.promptPrice! / 1000000.0;
+        }
+        if (model?.completionPrice != null) {
+          requestCost += completionTokens * model!.completionPrice! / 1000000.0;
+        }
+
+        final detail = UsageDetail(
+          timestamp: startTime,
+          promptTokens: promptTokens,
+          completionTokens: completionTokens,
+          cost: requestCost,
+          model: modelId,
+          currency: currency,
+        );
+
+        final dir = Directory('${StoragePaths.root}/usage');
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+
+        final y = startTime.year.toString();
+        final mo = startTime.month.toString().padLeft(2, '0');
+        final d = startTime.day.toString().padLeft(2, '0');
+        final h = startTime.hour.toString().padLeft(2, '0');
+        final mi = startTime.minute.toString().padLeft(2, '0');
+
+        // 按粒度从细到粗：分 → 时 → 日 → 月 → 年
+        final timestamps = [
+          '$y-$mo-$d-$h-$mi',
+          '$y-$mo-$d-$h',
+          '$y-$mo-$d',
+          '$y-$mo',
+          y,
+        ];
+
+        for (final ts in timestamps) {
+          await _accumulateUsage(
+            dir: dir,
+            filename: '$ts-$modelId-$sessionId-usage.json',
+            detail: detail,
+          );
+        }
+      } catch (e) {
+        debugPrint('⚠️ [Usage] 保存用量统计失败: $e');
+      }
+    }();
+  }
+
+  /// 对单个时间粒度的用量文件进行读取-累加-写入
+  static Future<void> _accumulateUsage({
+    required Directory dir,
+    required String filename,
+    required UsageDetail detail,
+  }) async {
+    final file = File('${dir.path}/$filename');
+
+    UsageStats stats;
+    if (await file.exists()) {
+      try {
+        final content = await file.readAsString();
+        stats = UsageStats.fromJson(
+            jsonDecode(content) as Map<String, dynamic>);
+      } catch (_) {
+        stats = UsageStats.empty();
+      }
+    } else {
+      stats = UsageStats.empty();
+    }
+
+    stats.add(detail);
+
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(stats.toJson()),
+    );
+
+    debugPrint(
+      '📊 [Usage] 用量统计已更新: ${file.path} '
+      '(请求数=${stats.requests}, 总量=${stats.totalTokens}, '
+      '费用=${stats.costsByCurrency})',
+    );
   }
 }

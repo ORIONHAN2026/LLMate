@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../../models/bigmodel/chat_model.dart';
 import '../../../../models/chat/chat_session.dart';
+import '../services/usage_loader.dart';
+import 'usage_curve_chart.dart';
 
 /// 使用量仪表盘
 /// - global=true: 全局统计（所有会话汇总）
@@ -30,6 +32,57 @@ class UsageDashboard extends StatefulWidget {
 }
 
 class _UsageDashboardState extends State<UsageDashboard> {
+  String _granularity = 'day';
+  final _showTokens = ValueNotifier<bool>(true);
+  final _showCost = ValueNotifier<bool>(true);
+  List<UsageChartPoint> _chartData = [];
+  bool _chartLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.global && widget.session != null) {
+      _loadChartData();
+    }
+  }
+
+  @override
+  void dispose() {
+    _showTokens.dispose();
+    _showCost.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadChartData() async {
+    final session = widget.session;
+    if (session == null) return;
+
+    setState(() => _chartLoading = true);
+
+    final modelId = session.chatModel?.modelId ?? 'unknown';
+    try {
+      final data = await UsageLoader.load(
+        sessionId: session.sessionId,
+        modelId: modelId,
+        granularity: _granularity,
+      );
+      if (mounted) {
+        setState(() {
+          _chartData = data;
+          _chartLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _chartLoading = false);
+      }
+    }
+  }
+
+  Future<void> _onGranularityChanged(String granularity) async {
+    setState(() => _granularity = granularity);
+    await _loadChartData();
+  }
   @override
   Widget build(BuildContext context) {
     return widget.global ? _buildGlobalView() : _buildSessionView();
@@ -59,115 +112,160 @@ class _UsageDashboardState extends State<UsageDashboard> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _buildAppBar('${session.name} 使用量'),
-      body: Obx(() {
-        final sessions = sessionController.sessions;
-        final currentSession =
-            sessions.cast<ChatSession?>().firstWhere(
-                  (s) => s?.sessionId == session.sessionId,
-                  orElse: () => null,
-                ) ??
-                session;
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ===== 概览 (依赖 Obx 响应式数据) =====
+            Obx(() {
+              final sessions = sessionController.sessions;
+              final currentSession =
+                  sessions.cast<ChatSession?>().firstWhere(
+                        (s) => s?.sessionId == session.sessionId,
+                        orElse: () => null,
+                      ) ??
+                      session;
 
-        final promptTokens = currentSession.promptTokens;
-        final completionTokens = currentSession.completionTokens;
-        final totalTokens = promptTokens + completionTokens;
-        final totalCost = currentSession.totalCost;
-        final messageCount = currentSession.messages.length;
-        final modelName = currentSession.chatModel?.name ?? 'Unknown';
-        final quotaEnabled = currentSession.quotaEnabled;
-        final tokenLimit = currentSession.quotaTokenLimit;
-        final costLimit = currentSession.quotaCostLimit;
+              final promptTokens = currentSession.promptTokens;
+              final completionTokens = currentSession.completionTokens;
+              final totalTokens = promptTokens + completionTokens;
+              final totalCost = currentSession.totalCost;
+              final messageCount = currentSession.messages.length;
+              final modelName = currentSession.chatModel?.name ?? 'Unknown';
+              final quotaEnabled = currentSession.quotaEnabled;
+              final tokenLimit = currentSession.quotaTokenLimit;
+              final costLimit = currentSession.quotaCostLimit;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle(theme, '概览'),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStatCard(theme,
-                      isDark: isDark,
-                      title: '消息数',
-                      value: '$messageCount',
-                      icon: Icons.message_outlined,
-                      accentColor: const Color(0xFF7C3AED)),
-                  _buildStatCard(theme,
-                      isDark: isDark,
-                      title: '输入 Token',
-                      value: _formatTokenCount(promptTokens),
-                      icon: Icons.arrow_upward,
-                      accentColor: const Color(0xFF2563EB),
-                      progress: quotaEnabled &&
-                              tokenLimit != null &&
-                              tokenLimit > 0
-                          ? promptTokens / tokenLimit
-                          : null,
-                      progressSuffix: quotaEnabled &&
-                              tokenLimit != null &&
-                              tokenLimit > 0
-                          ? '${(promptTokens / tokenLimit * 100).toStringAsFixed(0)}% / ${_formatTokenCount(tokenLimit)}'
-                          : null),
-                  _buildStatCard(theme,
-                      isDark: isDark,
-                      title: '输出 Token',
-                      value: _formatTokenCount(completionTokens),
-                      icon: Icons.arrow_downward,
-                      accentColor: const Color(0xFF059669),
-                      progress: quotaEnabled &&
-                              tokenLimit != null &&
-                              tokenLimit > 0
-                          ? completionTokens / tokenLimit
-                          : null,
-                      progressSuffix: quotaEnabled &&
-                              tokenLimit != null &&
-                              tokenLimit > 0
-                          ? '${(completionTokens / tokenLimit * 100).toStringAsFixed(0)}% / ${_formatTokenCount(tokenLimit)}'
-                          : null),
-                  _buildStatCard(theme,
-                      isDark: isDark,
-                      title: '总费用',
-                      value: '${_getCurrencySymbol(currentSession.chatModel)}${totalCost.toStringAsFixed(4)}',
-                      icon: Icons.attach_money,
-                      accentColor: const Color(0xFFDC2626),
-                      progress: quotaEnabled &&
-                              costLimit != null &&
-                              costLimit > 0
-                          ? totalCost / costLimit
-                          : null,
-                      progressSuffix: quotaEnabled &&
-                              costLimit != null &&
-                              costLimit > 0
-                          ? '${(totalCost / costLimit * 100).toStringAsFixed(0)}% / ${_getCurrencySymbol(currentSession.chatModel)}${costLimit.toStringAsFixed(4)}'
-                          : null),
+                  _buildSectionTitle(theme, '概览'),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _buildStatCard(theme,
+                          isDark: isDark,
+                          title: '消息数',
+                          value: '$messageCount',
+                          icon: Icons.message_outlined,
+                          accentColor: const Color(0xFF7C3AED)),
+                      _buildStatCard(theme,
+                          isDark: isDark,
+                          title: '输入 Token',
+                          value: _formatTokenCount(promptTokens),
+                          icon: Icons.arrow_upward,
+                          accentColor: const Color(0xFF2563EB),
+                          progress: quotaEnabled &&
+                                  tokenLimit != null &&
+                                  tokenLimit > 0
+                              ? promptTokens / tokenLimit
+                              : null,
+                          progressSuffix: quotaEnabled &&
+                                  tokenLimit != null &&
+                                  tokenLimit > 0
+                              ? '${(promptTokens / tokenLimit * 100).toStringAsFixed(0)}% / ${_formatTokenCount(tokenLimit)}'
+                              : null),
+                      _buildStatCard(theme,
+                          isDark: isDark,
+                          title: '输出 Token',
+                          value: _formatTokenCount(completionTokens),
+                          icon: Icons.arrow_downward,
+                          accentColor: const Color(0xFF059669),
+                          progress: quotaEnabled &&
+                                  tokenLimit != null &&
+                                  tokenLimit > 0
+                              ? completionTokens / tokenLimit
+                              : null,
+                          progressSuffix: quotaEnabled &&
+                                  tokenLimit != null &&
+                                  tokenLimit > 0
+                              ? '${(completionTokens / tokenLimit * 100).toStringAsFixed(0)}% / ${_formatTokenCount(tokenLimit)}'
+                              : null),
+                      _buildStatCard(theme,
+                          isDark: isDark,
+                          title: '总费用',
+                          value: '${_getCurrencySymbol(currentSession.chatModel)}${totalCost.toStringAsFixed(4)}',
+                          icon: Icons.attach_money,
+                          accentColor: const Color(0xFFDC2626),
+                          progress: quotaEnabled &&
+                                  costLimit != null &&
+                                  costLimit > 0
+                              ? totalCost / costLimit
+                              : null,
+                          progressSuffix: quotaEnabled &&
+                                  costLimit != null &&
+                                  costLimit > 0
+                              ? '${(totalCost / costLimit * 100).toStringAsFixed(0)}% / ${_getCurrencySymbol(currentSession.chatModel)}${costLimit.toStringAsFixed(4)}'
+                              : null),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle(theme, 'Token 分布'),
+                  const SizedBox(height: 12),
+                  _buildTokenDistributionCard(
+                      theme, isDark, promptTokens, completionTokens),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle(theme, '模型信息'),
+                  const SizedBox(height: 12),
+                  _buildSessionModelInfoCard(
+                      theme, isDark, currentSession.chatModel, modelName,
+                      promptTokens, completionTokens, totalCost),
+                  if (quotaEnabled) ...[
+                    const SizedBox(height: 24),
+                    _buildSectionTitle(theme, '配额限制'),
+                    const SizedBox(height: 12),
+                    _buildQuotaCard(theme, isDark, totalTokens, totalCost,
+                        tokenLimit, costLimit, currentSession.chatModel),
+                  ],
                 ],
-              ),
-              const SizedBox(height: 24),
-              _buildSectionTitle(theme, 'Token 分布'),
-              const SizedBox(height: 12),
-              _buildTokenDistributionCard(
-                  theme, isDark, promptTokens, completionTokens),
-              const SizedBox(height: 24),
-              _buildSectionTitle(theme, '模型信息'),
-              const SizedBox(height: 12),
-              _buildSessionModelInfoCard(
-                  theme, isDark, currentSession.chatModel, modelName,
-                  promptTokens, completionTokens, totalCost),
-              if (quotaEnabled) ...[
-                const SizedBox(height: 24),
-                _buildSectionTitle(theme, '配额限制'),
-                const SizedBox(height: 12),
-                _buildQuotaCard(theme, isDark, totalTokens, totalCost,
-                    tokenLimit, costLimit, currentSession.chatModel),
-              ],
-              const SizedBox(height: 80),
-            ],
-          ),
-        );
-      }),
+              );
+            }),
+
+            // ===== 用量曲线 (独立于 Obx，依赖 _chartData state) =====
+            const SizedBox(height: 24),
+            _buildSectionTitle(theme, '用量曲线'),
+            const SizedBox(height: 12),
+            _buildGranularitySelector(theme, isDark),
+            const SizedBox(height: 12),
+            _buildChartToggle(theme),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 220,
+              child: _chartLoading
+                  ? Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        ),
+                      ),
+                    )
+                  : ValueListenableBuilder<bool>(
+                      valueListenable: _showTokens,
+                      builder: (_, showToken, _1) =>
+                          ValueListenableBuilder<bool>(
+                        valueListenable: _showCost,
+                        builder: (_, showCost, _2) => UsageCurveChart(
+                          data: _chartData,
+                          showTokens: showToken,
+                          showCost: showCost,
+                          currencySymbol:
+                              _getCurrencySymbol(session.chatModel),
+                          granularity: _granularity,
+                        ),
+                      ),
+                    ),
+            ),
+
+            const SizedBox(height: 80),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1030,6 +1128,122 @@ class _UsageDashboardState extends State<UsageDashboard> {
   /// 获取模型对应的货币符号
   String _getCurrencySymbol(ChatModel? model) {
     return model?.currency == 'CNY' ? '¥' : '\$';
+  }
+
+  // ==================== 用量曲线 ====================
+
+  Widget _buildGranularitySelector(ThemeData theme, bool isDark) {
+    const options = [
+      ('分', 'minute'),
+      ('小时', 'hour'),
+      ('天', 'day'),
+      ('月', 'month'),
+      ('年', 'year'),
+    ];
+
+    return Row(
+      children: [
+        ...options.map((opt) {
+          final selected = _granularity == opt.$2;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => _onGranularityChanged(opt.$2),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFF2563EB)
+                      : (isDark
+                          ? const Color(0xFF2D2F3A)
+                          : const Color(0xFFF3F4F6)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  opt.$1,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: selected
+                        ? Colors.white
+                        : theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildChartToggle(ThemeData theme) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _showTokens,
+      builder: (_, showToken, _1) => ValueListenableBuilder<bool>(
+        valueListenable: _showCost,
+        builder: (_, showCost, _2) => Row(
+          children: [
+            _toggleChip(
+              theme: theme,
+              label: 'Token',
+              color: const Color(0xFF2563EB),
+              selected: showToken,
+              onTap: () => _showTokens.value = !_showTokens.value,
+            ),
+            const SizedBox(width: 8),
+            _toggleChip(
+              theme: theme,
+              label: '费用',
+              color: const Color(0xFFDC2626),
+              selected: showCost,
+              onTap: () => _showCost.value = !_showCost.value,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _toggleChip({
+    required ThemeData theme,
+    required String label,
+    required Color color,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              color: selected ? color : Colors.transparent,
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(
+                color: selected ? color : color.withOpacity(0.4),
+                width: 1.5,
+              ),
+            ),
+            child: selected
+                ? const Icon(Icons.check, size: 10, color: Colors.white)
+                : null,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

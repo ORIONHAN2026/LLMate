@@ -410,7 +410,7 @@
   "structuredCap": "结构化",
   "batchCap": "批量",
   "basicInfo": "基本信息",
-  "modelParams": "模型参数",
+  "modelParams": "模型设置",
   "unknown": "未知",
   "nameLabel": "名称",
   "apiKeyLabel": "API密钥",

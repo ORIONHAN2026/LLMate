@@ -10,7 +10,7 @@ import '../models/bigmodel/chat_model.dart';
 import '../data/storage_service.dart';
 import '../data/storage_paths.dart';
 
-import '../features/models/controllers/model_controller.dart';
+import './model_controller.dart';
 import './mcp_controller.dart';
 
 /// 从会话存储实体中解析 MCP 文件夹名（兼容旧格式 mcpId / mcp Map）

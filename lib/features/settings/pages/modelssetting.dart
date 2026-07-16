@@ -1,9 +1,9 @@
-import 'dart:io' show Platform;
 import 'package:llmate/utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../widgets/standard_app_bar.dart';
 
 import '../../../controllers/session_controller.dart';
-import '../../models/controllers/model_controller.dart';
+import '../../../controllers/model_controller.dart';
 // Update the import path below to the correct relative path if the file exists elsewhere, for example:
 import '../../../models/chat/chat_session.dart';
 import 'package:flutter/material.dart';
@@ -204,46 +204,9 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        toolbarHeight: 44,
-        leadingWidth: Platform.isMacOS ? 70 + 20 + 15 : 44,
-        leading: Padding(
-          padding: EdgeInsets.only(left: Platform.isMacOS ? 70 : 0),
-          child: Transform.translate(
-            offset: const Offset(0, -5),
-            child: IconButton(
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: const Icon(Icons.arrow_back_ios, size: 20),
-              onPressed: () {
-                // 检查是否在对话框中
-                if (Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                }
-              },
-            ),
-          ),
-        ),
-        title: Transform.translate(
-          offset: const Offset(0, -5),
-          child: Text(
-            AppLocalizations.of(context)!.modelManagement,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).textTheme.titleLarge?.color,
-            ),
-          ),
-        ),
-        centerTitle: false,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: Theme.of(context).dividerColor),
-        ),
+      appBar: StandardAppBar(
+        title: AppLocalizations.of(context)!.modelManagement,
+        showBottomDivider: true,
       ),
       body: body,
     );

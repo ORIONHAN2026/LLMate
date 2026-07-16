@@ -95,19 +95,17 @@ class _ModelConfigTabState extends State<ModelConfigTab>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Column(
       children: [
         TabBar(
           controller: _tabController,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          unselectedLabelStyle: const TextStyle(fontSize: 13),
-          indicatorSize: TabBarIndicatorSize.label,
           isScrollable: true,
           tabs: [
-            Tab(text: AppLocalizations.of(context)!.basicInfo),
-            Tab(text: AppLocalizations.of(context)!.billingSettings),
-            Tab(text: AppLocalizations.of(context)!.modelParams),
-            Tab(text: AppLocalizations.of(context)!.mcpSettings),
+            Tab(text: loc.basicInfo, icon: const Icon(Icons.info_outline, size: 16)),
+            Tab(text: loc.billingSettings, icon: const Icon(Icons.monetization_on_outlined, size: 16)),
+            Tab(text: loc.modelParams, icon: const Icon(Icons.tune, size: 16)),
+            Tab(text: loc.mcpSettings, icon: const Icon(Icons.grid_view, size: 16)),
           ],
         ),
         Expanded(

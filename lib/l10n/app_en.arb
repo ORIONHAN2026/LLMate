@@ -410,7 +410,7 @@
   "structuredCap": "Structured",
   "batchCap": "Batch",
   "basicInfo": "Basic Info",
-  "modelParams": "Model Parameters",
+  "modelParams": "Model Settings",
   "unknown": "Unknown",
   "nameLabel": "Name",
   "apiKeyLabel": "API Key",

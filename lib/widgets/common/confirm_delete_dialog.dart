@@ -28,15 +28,22 @@ class ConfirmDeleteDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    // 红色在暗色下提亮，保证与深色背景的对比度
+    final accentColor = iconColor ??
+        (isDark ? Colors.redAccent.shade200 : Colors.red);
+    final onAccentColor = Colors.white;
+
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.dialogTheme.backgroundColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       title: Row(
         children: [
           Icon(
             icon ?? Icons.warning_amber_rounded,
             size: 14,
-            color: iconColor ?? Colors.red,
+            color: accentColor,
           ),
           const SizedBox(width: 6),
           Text(
@@ -44,7 +51,7 @@ class ConfirmDeleteDialog extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: iconColor ?? Colors.red,
+              color: accentColor,
             ),
           ),
         ],
@@ -57,7 +64,7 @@ class ConfirmDeleteDialog extends StatelessWidget {
             '$description "$itemName" 吗？',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey[800],
+              color: theme.textTheme.bodyMedium?.color,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -66,10 +73,10 @@ class ConfirmDeleteDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: (iconColor ?? Colors.red).withValues(alpha: 0.1),
+                color: accentColor.withValues(alpha: isDark ? 0.15 : 0.1),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: (iconColor ?? Colors.red).withValues(alpha: 0.2),
+                  color: accentColor.withValues(alpha: isDark ? 0.3 : 0.2),
                 ),
               ),
               child: Row(
@@ -77,7 +84,7 @@ class ConfirmDeleteDialog extends StatelessWidget {
                   Icon(
                     Icons.info_outline,
                     size: 12,
-                    color: iconColor ?? Colors.red,
+                    color: accentColor,
                   ),
                   const SizedBox(width: 6),
                   Expanded(
@@ -85,7 +92,7 @@ class ConfirmDeleteDialog extends StatelessWidget {
                       warningMessage!,
                       style: TextStyle(
                         fontSize: 11,
-                        color: iconColor ?? Colors.red,
+                        color: accentColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -112,7 +119,7 @@ class ConfirmDeleteDialog extends StatelessWidget {
           child: Text(
             cancelText,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: theme.textTheme.labelLarge?.color,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -122,8 +129,8 @@ class ConfirmDeleteDialog extends StatelessWidget {
             Navigator.of(context).pop(true); // 直接返回true，关闭对话框
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: iconColor ?? Colors.red,
-            foregroundColor: Colors.white,
+            backgroundColor: accentColor,
+            foregroundColor: onAccentColor,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             minimumSize: const Size(60, 28),
             textStyle: const TextStyle(fontSize: 11),

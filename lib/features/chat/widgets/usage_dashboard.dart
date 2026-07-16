@@ -1,4 +1,4 @@
-import 'dart:io' show Platform;
+import '../../../widgets/standard_app_bar.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -32,7 +32,7 @@ class UsageDashboard extends StatefulWidget {
 }
 
 class _UsageDashboardState extends State<UsageDashboard> {
-  String _granularity = 'day';
+  String _granularity = 'hour';
   final _showTokens = ValueNotifier<bool>(true);
   final _showCost = ValueNotifier<bool>(true);
   List<UsageChartPoint> _chartData = [];
@@ -67,24 +67,12 @@ class _UsageDashboardState extends State<UsageDashboard> {
 
     final modelId = session.chatModel?.modelId ?? 'unknown';
 
-    // 分/小时维度未选日期时，自动取「最近有数据的一天」作为默认
+    // 分/小时维度未选日期时，默认取「当天」（与默认粒度 hour 对应）
     DateTime? start = _rangeStart;
     DateTime? end = _rangeEnd;
     if (_isSingleDay && start == null) {
-      final all = await UsageLoader.load(
-        sessionId: session.sessionId,
-        modelId: modelId,
-        granularity: _granularity,
-      );
-      final DateTime baseDay;
-      if (all.isNotEmpty) {
-        final latest =
-            all.map((p) => p.timestamp).reduce((a, b) => a.isAfter(b) ? a : b);
-        baseDay = DateTime(latest.year, latest.month, latest.day);
-      } else {
-        final now = DateTime.now();
-        baseDay = DateTime(now.year, now.month, now.day);
-      }
+      final now = DateTime.now();
+      final baseDay = DateTime(now.year, now.month, now.day);
       start = baseDay;
       end = DateTime(baseDay.year, baseDay.month, baseDay.day, 23, 59, 59, 999);
       if (mounted) {
@@ -203,49 +191,19 @@ class _UsageDashboardState extends State<UsageDashboard> {
                           title: '输入 Token',
                           value: _formatTokenCount(promptTokens),
                           icon: Icons.arrow_upward,
-                          accentColor: const Color(0xFF2563EB),
-                          progress: quotaEnabled &&
-                                  tokenLimit != null &&
-                                  tokenLimit > 0
-                              ? promptTokens / tokenLimit
-                              : null,
-                          progressSuffix: quotaEnabled &&
-                                  tokenLimit != null &&
-                                  tokenLimit > 0
-                              ? '${(promptTokens / tokenLimit * 100).toStringAsFixed(0)}% / ${_formatTokenCount(tokenLimit)}'
-                              : null),
+                          accentColor: const Color(0xFF2563EB)),
                       _buildStatCard(theme,
                           isDark: isDark,
                           title: '输出 Token',
                           value: _formatTokenCount(completionTokens),
                           icon: Icons.arrow_downward,
-                          accentColor: const Color(0xFF059669),
-                          progress: quotaEnabled &&
-                                  tokenLimit != null &&
-                                  tokenLimit > 0
-                              ? completionTokens / tokenLimit
-                              : null,
-                          progressSuffix: quotaEnabled &&
-                                  tokenLimit != null &&
-                                  tokenLimit > 0
-                              ? '${(completionTokens / tokenLimit * 100).toStringAsFixed(0)}% / ${_formatTokenCount(tokenLimit)}'
-                              : null),
+                          accentColor: const Color(0xFF059669)),
                       _buildStatCard(theme,
                           isDark: isDark,
                           title: '总费用',
                           value: '${_getCurrencySymbol(currentSession.chatModel)}${totalCost.toStringAsFixed(4)}',
                           icon: Icons.attach_money,
-                          accentColor: const Color(0xFFDC2626),
-                          progress: quotaEnabled &&
-                                  costLimit != null &&
-                                  costLimit > 0
-                              ? totalCost / costLimit
-                              : null,
-                          progressSuffix: quotaEnabled &&
-                                  costLimit != null &&
-                                  costLimit > 0
-                              ? '${(totalCost / costLimit * 100).toStringAsFixed(0)}% / ${_getCurrencySymbol(currentSession.chatModel)}${costLimit.toStringAsFixed(4)}'
-                              : null),
+                          accentColor: const Color(0xFFDC2626)),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -463,46 +421,9 @@ class _UsageDashboardState extends State<UsageDashboard> {
   // ==================== 共用组件 ====================
 
   PreferredSizeWidget _buildAppBar(String title) {
-    final theme = Theme.of(context);
-    return AppBar(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      elevation: 0,
-      surfaceTintColor: Colors.transparent,
-      toolbarHeight: 44,
-      leadingWidth: Platform.isMacOS ? 70 + 20 + 15 : 44,
-      leading: Padding(
-        padding: EdgeInsets.only(left: Platform.isMacOS ? 70 : 0),
-        child: Transform.translate(
-          offset: const Offset(0, -5),
-          child: IconButton(
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-            icon: const Icon(Icons.arrow_back_ios, size: 20),
-            onPressed: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-            },
-          ),
-        ),
-      ),
-      title: Transform.translate(
-        offset: const Offset(0, -5),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: theme.textTheme.titleLarge?.color,
-          ),
-        ),
-      ),
-      centerTitle: false,
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: theme.dividerColor),
-      ),
+    return StandardAppBar(
+      title: title,
+      showBottomDivider: true,
     );
   }
 

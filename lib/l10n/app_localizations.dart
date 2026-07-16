@@ -2565,7 +2565,7 @@ abstract class AppLocalizations {
   /// No description provided for @modelParams.
   ///
   /// In en, this message translates to:
-  /// **'Model Parameters'**
+  /// **'Model Settings'**
   String get modelParams;
 
   /// No description provided for @unknown.

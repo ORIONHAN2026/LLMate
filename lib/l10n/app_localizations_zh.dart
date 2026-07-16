@@ -1340,7 +1340,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get basicInfo => '基本信息';
 
   @override
-  String get modelParams => '模型参数';
+  String get modelParams => '模型设置';
 
   @override
   String get unknown => '未知';

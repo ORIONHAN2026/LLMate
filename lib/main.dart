@@ -4,7 +4,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:llmate/l10n/app_localizations.dart';
-import './features/models/controllers/model_controller.dart';
+import './controllers/model_controller.dart';
 import './controllers/session_controller.dart';
 import './controllers/theme_controller.dart';
 import './controllers/locale_controller.dart';

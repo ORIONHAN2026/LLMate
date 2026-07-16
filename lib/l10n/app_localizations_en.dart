@@ -1365,7 +1365,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get basicInfo => 'Basic Info';
 
   @override
-  String get modelParams => 'Model Parameters';
+  String get modelParams => 'Model Settings';
 
   @override
   String get unknown => 'Unknown';

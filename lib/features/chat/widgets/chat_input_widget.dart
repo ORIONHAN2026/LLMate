@@ -6,7 +6,7 @@ import '../../../controllers/session_controller.dart';
 import '../../../controllers/mcp_controller.dart';
 import '../../../models/models.dart';
 import '../../../core/llm/llm_framework.dart';
-import '../../models/controllers/model_controller.dart';
+import '../../../controllers/model_controller.dart';
 import '../../../core/config/feature_toggle_service.dart';
 import '../../../utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';

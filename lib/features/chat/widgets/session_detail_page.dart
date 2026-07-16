@@ -1,3 +1,5 @@
+import '../../../widgets/standard_app_bar.dart';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/session_controller.dart';
@@ -17,12 +19,8 @@ class SessionDetailPage extends StatelessWidget {
 
       if (session == null) {
         return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            title: const Text('会话详情'),
+          appBar: StandardAppBar(
+            title: '会话详情',
           ),
           body: Center(
             child: Text(
@@ -40,19 +38,24 @@ class SessionDetailPage extends StatelessWidget {
         _DetailTab(
           label: '基础信息',
           icon: Icons.info_outline,
-          builder: (ctx) => SessionConfigSidebar.buildBasicInfoSection(ctx, session),
+          builder:
+              (ctx) => SessionConfigSidebar.buildBasicInfoSection(ctx, session),
         ),
         _DetailTab(
           label: '会话设定',
           icon: Icons.tune,
           builder:
-              (ctx) => SessionConfigSidebar.buildSessionSettingsSection(ctx, session),
+              (ctx) => SessionConfigSidebar.buildSessionSettingsSection(
+                ctx,
+                session,
+              ),
         ),
         _DetailTab(
           label: '服务配置',
           icon: Icons.settings_ethernet,
           builder:
-              (ctx) => SessionConfigSidebar.buildServiceConfigSection(ctx, session),
+              (ctx) =>
+                  SessionConfigSidebar.buildServiceConfigSection(ctx, session),
         ),
         _DetailTab(
           label: 'MCP',
@@ -62,7 +65,8 @@ class SessionDetailPage extends StatelessWidget {
         _DetailTab(
           label: '用量配额',
           icon: Icons.speed,
-          builder: (ctx) => SessionConfigSidebar.buildQuotaSection(ctx, session),
+          builder:
+              (ctx) => SessionConfigSidebar.buildQuotaSection(ctx, session),
         ),
         _DetailTab(
           label: '计费信息',
@@ -74,35 +78,15 @@ class SessionDetailPage extends StatelessWidget {
       return DefaultTabController(
         length: tabs.length,
         child: Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  session.name,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '会话详情',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
-              ],
-            ),
+          appBar: StandardAppBar(
+            title: session.name,
             bottom: TabBar(
               isScrollable: true,
               tabs:
                   tabs
-                      .map((t) => Tab(text: t.label, icon: Icon(t.icon, size: 16)))
+                      .map(
+                        (t) => Tab(text: t.label, icon: Icon(t.icon, size: 16)),
+                      )
                       .toList(),
             ),
           ),

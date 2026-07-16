@@ -9,7 +9,8 @@ import 'dart:io' show Platform;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../../models/models.dart';
-import '../../models/controllers/model_controller.dart';
+import '../../../widgets/standard_app_bar.dart';
+import '../../../controllers/model_controller.dart';
 
 import '../widgets/sidebars/chat_left_sidebar.dart';
 import '../widgets/sidebars/chat_right_sidebar.dart';
@@ -566,7 +567,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         ),
         PopupMenuItem(
           height: 48,
-          onTap: _sendFeedbackEmail,
+          onTap: _openFeedbackPage,
           child: Row(
             children: [
               Icon(
@@ -772,33 +773,25 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       CommandPaletteAction(
         id: 'send-feedback',
         title: l10n.feedback,
-        subtitle: 'Send feedback to the team',
+        subtitle: 'Open feedback page on GitHub',
         icon: Icons.mail_outline,
-        onTap: _sendFeedbackEmail,
+        onTap: _openFeedbackPage,
       ),
     ];
     CommandPalette.show(context, actions: actions);
   }
 
-  // 发送反馈邮件
-  Future<void> _sendFeedbackEmail() async {
-    const String feedbackEmail = 'hanxinyc@gmail.com';
-    const String subject = 'LLMate App Feedback';
-    const String body = '''
-
------------------------------
-Thank you for your feedback on LLMate. We take every feedback seriously.
-
-Thanks!
-''';
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: feedbackEmail,
-      queryParameters: {'subject': subject, 'body': body},
+  // 打开反馈网页
+  Future<void> _openFeedbackPage() async {
+    final Uri feedbackUri = Uri.parse(
+      'https://github.com/ORIONHAN2026/LLMate/issues',
     );
     try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
+      if (await canLaunchUrl(feedbackUri)) {
+        await launchUrl(
+          feedbackUri,
+          mode: LaunchMode.externalApplication,
+        );
       }
     } catch (_) {}
   }
@@ -982,11 +975,8 @@ Thanks!
   Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.appTitle),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
+      appBar: StandardAppBar(
+        showBack: false,
         leading: Builder(
           builder:
               (context) => IconButton(
@@ -994,6 +984,8 @@ Thanks!
                 onPressed: () => Scaffold.of(context).openDrawer(),
               ),
         ),
+        title: AppLocalizations.of(context)!.appTitle,
+        leadingWidth: Platform.isMacOS ? 70 : null,
         actions: [
           // 模型选择器 - 移动端简化版
           Expanded(

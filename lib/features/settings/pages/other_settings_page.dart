@@ -1,4 +1,4 @@
-import 'dart:io' show Platform;
+import '../../../widgets/standard_app_bar.dart';
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:get/get.dart';
@@ -19,37 +19,8 @@ class OtherSettingsPage extends StatelessWidget {
     final localeController = Get.find<LocaleController>();
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        toolbarHeight: 44,
-        leadingWidth: Platform.isMacOS ? 70 + 20 + 15 : 44,
-        leading: Padding(
-          padding: EdgeInsets.only(left: Platform.isMacOS ? 70 : 0),
-          child: Transform.translate(
-            offset: const Offset(0, -5),
-            child: IconButton(
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: const Icon(Icons.arrow_back_ios, size: 20),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ),
-        title: Transform.translate(
-          offset: const Offset(0, -5),
-          child: Text(
-            l10n.otherSettings,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-          ),
-        ),
-        centerTitle: false,
+      appBar: StandardAppBar(
+        title: l10n.otherSettings,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

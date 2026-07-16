@@ -8,7 +8,7 @@ import '../models/chat/mcp_config.dart';
 import '../models/bigmodel/chat_model.dart';
 import '../core/llm/openai_provider.dart';
 import '../features/mcp/storage/mcp_storage_manager.dart';
-import '../features/models/controllers/model_controller.dart';
+import './model_controller.dart';
 
 // MCP 连接信息
 class McpConnectionInfo {

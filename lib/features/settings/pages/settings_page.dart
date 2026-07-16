@@ -1,5 +1,5 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import '../../../widgets/standard_app_bar.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';
@@ -65,37 +65,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        toolbarHeight: 44,
-        leadingWidth: Platform.isMacOS ? 70 + 20 + 15 : 44,
-        leading: Padding(
-          padding: EdgeInsets.only(left: Platform.isMacOS ? 70 : 0),
-          child: Transform.translate(
-            offset: const Offset(0, -5),
-            child: IconButton(
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              icon: const Icon(Icons.arrow_back_ios, size: 20),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ),
-        title: Transform.translate(
-          offset: const Offset(0, -5),
-          child: Text(
-            l10n.settings,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-          ),
-        ),
-        centerTitle: false,
+      appBar: StandardAppBar(
+        title: l10n.settings,
         actions: [
           ..._currentActions,
           const SizedBox(width: 4),

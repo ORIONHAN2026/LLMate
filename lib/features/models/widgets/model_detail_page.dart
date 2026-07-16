@@ -181,16 +181,18 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
-                  _currentModel.platform ?? '',
+                  _currentModel.platform != null && _currentModel.platform!.isNotEmpty
+                      ? '模型详情 · ${_currentModel.platform}'
+                      : '模型详情',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],

@@ -8,8 +8,6 @@ LLM 模型的查看、编辑、添加和删除。
 
 ```
 models/
-├── controllers/
-│   └── model_controller.dart        # 模型列表全局控制器
 ├── pages/
 │   └── add_online_model_dialog.dart # 在线模型添加向导（多步骤弹窗）
 └── widgets/

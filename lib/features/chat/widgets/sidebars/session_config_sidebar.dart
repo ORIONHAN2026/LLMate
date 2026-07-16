@@ -141,12 +141,15 @@ class SessionConfigSidebar {
   }
 
   /// 构建可复制的配置项（点击复制到剪贴板）
+  /// [onReset] 不为空时，在复制图标旁显示重置图标
   static Widget _buildCopyableConfigItem(
     BuildContext context, {
     required IconData icon,
     required String label,
     required String value,
+    VoidCallback? onReset,
   }) {
+    final showReset = onReset != null;
     return InkWell(
       onTap: () {
         Clipboard.setData(ClipboardData(text: value));
@@ -193,6 +196,21 @@ class SessionConfigSidebar {
                 ],
               ),
             ),
+            if (showReset) ...[
+              InkWell(
+                onTap: onReset,
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Icon(
+                    Icons.refresh,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
             Icon(
               Icons.content_copy,
               size: 12,
@@ -202,6 +220,86 @@ class SessionConfigSidebar {
         ),
       ),
     );
+  }
+
+  /// 重置会话 API 密钥：弹窗确认后生成新密钥并持久化
+  static Future<void> _resetApiKey(
+    BuildContext context,
+    ChatSession session,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.refresh,
+              size: 14,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 6),
+            const Text(
+              '重置 API 密钥',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        content: Text(
+          '确定要重置该会话的 API 密钥吗？重置后旧密钥将立即失效，使用旧密钥的外部请求将无法访问。',
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).textTheme.bodyMedium?.color,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: const Size(60, 28),
+              textStyle: const TextStyle(fontSize: 11),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            child: Text(
+              '取消',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.labelLarge?.color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: const Size(60, 28),
+              textStyle: const TextStyle(fontSize: 11),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            child: const Text('确认重置'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final newKey = generateSessionApiKey();
+    final sessionController = Get.find<SessionController>();
+    await sessionController.updateSession(
+      session.copyWith(apiKey: newKey),
+    );
+    if (context.mounted) {
+      SnackBarUtils.showSuccess(context, 'API 密钥已重置');
+    }
   }
 
   /// 构建提示词卡片
@@ -391,7 +489,11 @@ class SessionConfigSidebar {
   }
 
   /// 构建计费信息区域（独立使用）
-  static Widget buildBillingInfo(BuildContext context, ChatSession session) {
+  static Widget buildBillingInfo(
+    BuildContext context,
+    ChatSession session, {
+    bool showPriceCard = true,
+  }) {
     final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,8 +525,9 @@ class SessionConfigSidebar {
               ? theme.colorScheme.error
               : theme.colorScheme.onSurface,
         ),
-        if (session.chatModel?.promptPrice != null ||
-            session.chatModel?.completionPrice != null) ...[
+        if (showPriceCard &&
+            (session.chatModel?.promptPrice != null ||
+                session.chatModel?.completionPrice != null)) ...[
           const SizedBox(height: 8),
           _buildPriceCard(
             context,
@@ -440,7 +543,11 @@ class SessionConfigSidebar {
   // ===== 供会话详情页（Tab 布局）与精简右侧边栏复用的分节构建方法 =====
 
   /// 基础信息分节
-  static Widget buildBasicInfoSection(BuildContext context, ChatSession session) {
+  static Widget buildBasicInfoSection(
+    BuildContext context,
+    ChatSession session, {
+    bool showMessageCount = true,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -493,13 +600,15 @@ class SessionConfigSidebar {
           const SizedBox(height: 8),
           _buildPromptCard(context, session.connectPrompt!),
         ],
-        const SizedBox(height: 8),
-        _buildConfigItem(
-          context,
-          icon: Icons.chat_bubble_outline,
-          label: '消息数量',
-          value: '${session.messages.length}条',
-        ),
+        if (showMessageCount) ...[
+          const SizedBox(height: 8),
+          _buildConfigItem(
+            context,
+            icon: Icons.chat_bubble_outline,
+            label: '消息数量',
+            value: '${session.messages.length}条',
+          ),
+        ],
       ],
     );
   }
@@ -526,6 +635,7 @@ class SessionConfigSidebar {
           icon: Icons.shield,
           label: 'API 密钥',
           value: session.apiKey,
+          onReset: () => _resetApiKey(context, session),
         ),
         const SizedBox(height: 8),
         _buildNoAuthToggle(context, session),
@@ -697,11 +807,11 @@ class SessionConfigSidebar {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       children: [
-        buildBasicInfoSection(context, session),
+        buildBasicInfoSection(context, session, showMessageCount: false),
         const SizedBox(height: 16),
         buildServiceConfigSection(context, session),
         const SizedBox(height: 16),
-        buildBillingInfo(context, session),
+        buildBillingInfo(context, session, showPriceCard: false),
       ],
     );
   }
@@ -1839,6 +1949,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       icon: Icons.shield,
                       label: 'API 密钥',
                       value: session.apiKey,
+                      onReset: () => SessionConfigSidebar._resetApiKey(context, session),
                     ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildNoAuthToggle(context, session),

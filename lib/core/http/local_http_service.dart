@@ -282,16 +282,14 @@ class LocalHttpService {
         );
       }
 
-      final model = session.chatModel;
-      final data = <Map<String, dynamic>>[];
-      if (model != null) {
-        data.add({
-          'id': model.model,
+      final data = <Map<String, dynamic>>[
+        {
+          'id': 'auto',
           'object': 'model',
-          'created': model.createdAt?.millisecondsSinceEpoch ?? 0,
-          'owned_by': model.platform ?? model.type ?? 'custom',
-        });
-      }
+          'created': 0,
+          'owned_by': 'llmate',
+        },
+      ];
 
       return Response.ok(
         jsonEncode({'object': 'list', 'data': data}),

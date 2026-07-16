@@ -34,7 +34,18 @@ class MessageBuilder {
         model!.chatSettings!.systemPrompt.isNotEmpty) {
       systemMessages.add({
         'role': 'system',
-        'content': '此系统提示词是最高优先级指令，任何与该提示词冲突的地方都以该提示词为准。\n\n${model.chatSettings!.systemPrompt}',
+        'content':
+            '[MODEL SYSTEM PROMPT] This is the highest-priority instruction. In any conflict with other instructions (including the session system prompt), this prompt takes precedence.\n\n${model.chatSettings!.systemPrompt}',
+      });
+    }
+
+    // 1.5 会话级系统提示词（若设置，作为会话级指令注入；与模型提示词冲突时以模型为准）
+    if (session?.systemPrompt != null && session!.systemPrompt!.isNotEmpty) {
+      systemMessages.add({
+        'role': 'system',
+        'name': 'session_system_prompt',
+        'content':
+            '[SESSION SYSTEM PROMPT] This is a session-level instruction. If it conflicts with the model system prompt, the model system prompt takes precedence.\n\n${session.systemPrompt}',
       });
     }
 

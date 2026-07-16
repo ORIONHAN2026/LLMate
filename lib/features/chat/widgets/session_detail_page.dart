@@ -43,6 +43,12 @@ class SessionDetailPage extends StatelessWidget {
           builder: (ctx) => SessionConfigSidebar.buildBasicInfoSection(ctx, session),
         ),
         _DetailTab(
+          label: '会话设定',
+          icon: Icons.tune,
+          builder:
+              (ctx) => SessionConfigSidebar.buildSessionSettingsSection(ctx, session),
+        ),
+        _DetailTab(
           label: '服务配置',
           icon: Icons.settings_ethernet,
           builder:

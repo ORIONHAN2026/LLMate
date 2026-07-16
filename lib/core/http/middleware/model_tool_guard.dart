@@ -48,7 +48,39 @@ Handler modelToolGuard(Handler innerHandler) {
         body['tools'] = tools;
       }
       body['tool_choice'] = 'auto';
-      debugPrint('🔧 [ModelTool] 注入 ${tools.length} 个 MCP 工具 (含 session + model)');
+      debugPrint(
+        '🔧 [ModelTool] 注入 ${tools.length} 个 MCP 工具 (含 session + model)',
+      );
+    }
+
+    // 3. 系统提示词注入（顺序与 mode_utils.buildBaseSystemMessages 一致：
+    //    先模型配置的系统提示词，后会话级系统提示词，均作为最高优先级指令）
+    final messages = body['messages'];
+    if (messages is List) {
+      var insertIndex = 0;
+
+      // 3.1 模型级系统提示词
+      final modelSystemPrompt = session.chatModel?.chatSettings?.systemPrompt;
+      if (modelSystemPrompt != null && modelSystemPrompt.isNotEmpty) {
+        messages.insert(insertIndex++, {
+          'role': 'system',
+          'name': 'model_system_prompt',
+          'content':
+              '[MODEL SYSTEM PROMPT] This is the highest-priority instruction. In any conflict with other instructions (including the session system prompt), this prompt takes precedence.\n\n$modelSystemPrompt',
+        });
+        debugPrint('💬 [ModelTool] 注入模型系统提示词');
+      }
+
+      // 3.2 会话级系统提示词
+      if (session.systemPrompt != null && session.systemPrompt!.isNotEmpty) {
+        messages.insert(insertIndex++, {
+          'role': 'system',
+          'name': 'session_system_prompt',
+          'content':
+              '[SESSION SYSTEM PROMPT] This is a session-level instruction. If it conflicts with the model system prompt, the model system prompt takes precedence.\n\n${session.systemPrompt}',
+        });
+        debugPrint('💬 [ModelTool] 注入会话级系统提示词');
+      }
     }
 
     final updatedRequest = request.change(

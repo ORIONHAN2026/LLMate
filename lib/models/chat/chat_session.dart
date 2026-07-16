@@ -93,6 +93,9 @@ class ChatSession {
   /// 连接器的关联关系描述提示词
   final String? connectPrompt;
 
+  /// 会话级系统提示词（若设置，则在第三方请求时作为最高优先级指令注入）
+  final String? systemPrompt;
+
   // === 计费统计 ===
 
   /// 累计输入token数
@@ -177,6 +180,7 @@ class ChatSession {
     this.scrollPosition = 0.0,
     this.deepThink = false,
     this.connectPrompt,
+    this.systemPrompt,
     this.sessionQuickCommands = const [],
     this.scheduledTask,
     this.contracts,
@@ -370,6 +374,8 @@ class ChatSession {
     bool? deepThink,
     String? connectPrompt,
     bool clearConnectPrompt = false,
+    String? systemPrompt,
+    bool clearSystemPrompt = false,
     List<ChatCommand>? sessionQuickCommands,
     ScheduledTask? scheduledTask,
     bool clearScheduledTask = false,
@@ -436,6 +442,8 @@ class ChatSession {
       deepThink: deepThink ?? this.deepThink,
       connectPrompt:
           clearConnectPrompt ? null : (connectPrompt ?? this.connectPrompt),
+      systemPrompt:
+          clearSystemPrompt ? null : (systemPrompt ?? this.systemPrompt),
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
       scheduledTask:
           clearScheduledTask ? null : (scheduledTask ?? this.scheduledTask),
@@ -540,6 +548,7 @@ class ChatSession {
       scrollPosition: (json['scrollPosition'] as num?)?.toDouble() ?? 0.0,
       deepThink: json['deepThink'] as bool? ?? false,
       connectPrompt: json['connectPrompt'] as String?,
+      systemPrompt: json['systemPrompt'] as String?,
       sessionQuickCommands:
           (json['sessionQuickCommands'] as List<dynamic>?)
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
@@ -589,6 +598,8 @@ class ChatSession {
       'scrollPosition': scrollPosition,
       'deepThink': deepThink,
       if (connectPrompt != null) 'connectPrompt': connectPrompt,
+      if (systemPrompt != null && systemPrompt!.isNotEmpty)
+        'systemPrompt': systemPrompt,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
       if (scheduledTask != null) 'scheduledTask': scheduledTask!.toJson(),

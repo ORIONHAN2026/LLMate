@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -583,6 +585,14 @@ class SessionConfigSidebar {
     );
   }
 
+  /// 会话设定分节（含会话级系统提示词）
+  static Widget buildSessionSettingsSection(
+    BuildContext context,
+    ChatSession session,
+  ) {
+    return _SessionSettingsSection(session: session);
+  }
+
   /// 用量配额分节
   static Widget buildQuotaSection(BuildContext context, ChatSession session) {
     return Column(
@@ -831,6 +841,110 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 会话设定区域（会话级系统提示词）
+class _SessionSettingsSection extends StatefulWidget {
+  final ChatSession session;
+
+  const _SessionSettingsSection({required this.session});
+
+  @override
+  State<_SessionSettingsSection> createState() =>
+      _SessionSettingsSectionState();
+}
+
+class _SessionSettingsSectionState extends State<_SessionSettingsSection> {
+  late final TextEditingController _systemPromptController;
+  Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _systemPromptController =
+        TextEditingController(text: widget.session.systemPrompt ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant _SessionSettingsSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 切换会话时同步文本内容
+    if (widget.session.sessionId != oldWidget.session.sessionId) {
+      final newText = widget.session.systemPrompt ?? '';
+      if (_systemPromptController.text != newText) {
+        _systemPromptController.text = newText;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _systemPromptController.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+      final sessionController = Get.find<SessionController>();
+      final trimmed = value.trim();
+      sessionController.updateSession(
+        widget.session.copyWith(
+          systemPrompt: trimmed,
+          clearSystemPrompt: trimmed.isEmpty,
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SessionConfigSidebar._buildSectionTitle(context, '系统提示词'),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _systemPromptController,
+          maxLines: 6,
+          minLines: 3,
+          style: const TextStyle(fontSize: 12),
+          decoration: InputDecoration(
+            hintText: '为该会话设定角色/行为，如：你是一名专业的法律顾问……',
+            hintStyle: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: theme.dividerColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: theme.dividerColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: theme.colorScheme.primary),
+            ),
+            contentPadding: const EdgeInsets.all(10),
+          ),
+          onChanged: _onChanged,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '设置后将作为最高优先级指令，在第三方请求时自动注入。留空则不注入。',
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.5,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      ],
     );
   }
 }

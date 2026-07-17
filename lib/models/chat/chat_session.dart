@@ -4,7 +4,6 @@ import 'package:llmate/models/chat/mcp_config.dart';
 
 import './chat_message.dart';
 import './chat_setting.dart';
-import './scheduled_task.dart';
 import './contract_info.dart';
 
 /// 生成会话级别的 API Key
@@ -130,7 +129,6 @@ class ChatSession {
   final ChatModel? chatModel;
   final List<ChatMessage> messages;
   final List<ChatCommand> sessionQuickCommands;
-  final ScheduledTask? scheduledTask;
 
   /// 会话级别的 API 密钥，用于外部 HTTP 请求认证
   /// 格式: lm-{32位随机hex字符串}
@@ -182,7 +180,6 @@ class ChatSession {
     this.connectPrompt,
     this.systemPrompt,
     this.sessionQuickCommands = const [],
-    this.scheduledTask,
     this.contracts,
     this.promptTokens = 0,
     this.completionTokens = 0,
@@ -377,8 +374,6 @@ class ChatSession {
     String? systemPrompt,
     bool clearSystemPrompt = false,
     List<ChatCommand>? sessionQuickCommands,
-    ScheduledTask? scheduledTask,
-    bool clearScheduledTask = false,
     List<ContractInfo>? contracts,
     bool clearContracts = false,
     int? promptTokens,
@@ -445,8 +440,6 @@ class ChatSession {
       systemPrompt:
           clearSystemPrompt ? null : (systemPrompt ?? this.systemPrompt),
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
-      scheduledTask:
-          clearScheduledTask ? null : (scheduledTask ?? this.scheduledTask),
       contracts: clearContracts ? null : (contracts ?? this.contracts),
       promptTokens: promptTokens ?? this.promptTokens,
       completionTokens: completionTokens ?? this.completionTokens,
@@ -554,10 +547,6 @@ class ChatSession {
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
               .toList() ??
           [],
-      scheduledTask:
-          json['scheduledTask'] is Map<String, dynamic>
-              ? ScheduledTask.fromJson(json['scheduledTask'])
-              : null,
       contracts:
           (json['contracts'] as List<dynamic>?)
               ?.map((c) => ContractInfo.fromJson(c as Map<String, dynamic>))
@@ -602,7 +591,6 @@ class ChatSession {
         'systemPrompt': systemPrompt,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
-      if (scheduledTask != null) 'scheduledTask': scheduledTask!.toJson(),
       if (contracts != null)
         'contracts': contracts!.map((c) => c.toJson()).toList(),
       'promptTokens': promptTokens,

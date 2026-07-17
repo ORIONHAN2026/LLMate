@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../models/bigmodel/chat_model.dart';
 import '../../../models/bigmodel/model_data.dart';
-import '../../../core/utils/model_icon_utils.dart';
 import '../../models/pages/add_online_model_dialog.dart';
 import '../../models/widgets/model_detail_page.dart';
 

@@ -358,9 +358,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get searchMcp => 'ค้นหาบริการ MCP...';
 
   @override
-  String get scheduledMessageHint => 'เนื้อหาข้อความที่ส่งเป็นประจำ...';
-
-  @override
   String get cronExample => 'ตัวอย่าง: 0 9 * * * (9:00 น. ทุกวัน)';
 
   @override
@@ -938,15 +935,6 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
-  String get scheduledTaskLabel => 'งานที่กำหนดไว้';
-
-  @override
-  String get setScheduledMessage => 'ตั้งค่าข้อความที่กำหนดเวลาไว้';
-
-  @override
-  String get scheduledLabelColon => 'เวลา';
-
-  @override
   String get modelConfigNotFound => 'ไม่พบการกำหนดค่าโมเดล';
 
   @override
@@ -1020,12 +1008,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get cannotFindRenderObject => '无法找到消息的渲染对象';
-
-  @override
-  String get editScheduledTask => '编辑定时任务';
-
-  @override
-  String get setScheduledTaskDialog => '设置定时任务';
 
   @override
   String get cronExpression => 'Cron 表达式';

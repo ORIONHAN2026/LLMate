@@ -12,7 +12,6 @@ import './controllers/domain_controller.dart';
 import './controllers/mcp_controller.dart';
 import './features/chat/pages/home.dart';
 import './pages/loading_page.dart';
-import './core/scheduler/scheduled_task_service.dart';
 import './core/http/local_http_service.dart';
 
 import './models/bigmodel/chat_model.dart';
@@ -339,9 +338,6 @@ class _AppInitializerState extends State<AppInitializer> {
         );
         await sessionController.addSession(defaultSession);
       }
-
-      // 启动定时任务调度器
-      ScheduledTaskService().start();
 
       // 确保加载页面至少显示500ms，避免闪烁
       await Future.delayed(const Duration(milliseconds: 500));

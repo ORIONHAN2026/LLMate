@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_setting.dart';
 import '../chat/mcp_config.dart';
-import '../../core/utils/model_icon_utils.dart';
+import '../../../controllers/model_controller.dart';
 
 /// 聊天模型数据结构
 class ChatModel {

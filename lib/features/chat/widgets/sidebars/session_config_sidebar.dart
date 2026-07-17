@@ -10,20 +10,20 @@ import '../../../../controllers/domain_controller.dart';
 import '../../../../models/chat/chat_session.dart';
 import '../../../../models/bigmodel/chat_model.dart';
 import '../../../../utils/snackbar_utils.dart';
-import '../../../../widgets/common/confirm_delete_dialog.dart';
+import '../../../../widgets/confirm_delete_dialog.dart';
 
 /// 会话配置侧边栏内容
 class SessionConfigSidebar {
   /// 构建会话配置 Tab 的内容
   static Widget buildTabContent(BuildContext context) {
     final sessionController = Get.find<SessionController>();
-    
+
     return Obx(() {
       final session = sessionController.currentSession.value;
-        if (session == null) {
+      if (session == null) {
         return buildEmptyState(context);
       }
-      
+
       return _buildConfigContent(context, session);
     });
   }
@@ -39,14 +39,18 @@ class SessionConfigSidebar {
             Icon(
               Icons.settings,
               size: 32,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.15),
             ),
             const SizedBox(height: 12),
             Text(
               '暂无会话配置',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.35),
               ),
             ),
             const SizedBox(height: 4),
@@ -56,7 +60,9 @@ class SessionConfigSidebar {
               style: TextStyle(
                 fontSize: 12,
                 height: 1.5,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.25),
               ),
             ),
           ],
@@ -98,7 +104,9 @@ class SessionConfigSidebar {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -107,7 +115,9 @@ class SessionConfigSidebar {
           Icon(
             icon,
             size: 14,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -118,7 +128,9 @@ class SessionConfigSidebar {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -129,7 +141,8 @@ class SessionConfigSidebar {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: valueColor ?? Theme.of(context).colorScheme.onSurface,
+                    color:
+                        valueColor ?? Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -159,7 +172,9 @@ class SessionConfigSidebar {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -168,7 +183,9 @@ class SessionConfigSidebar {
             Icon(
               icon,
               size: 14,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.7),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -179,7 +196,9 @@ class SessionConfigSidebar {
                     label,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -205,7 +224,9 @@ class SessionConfigSidebar {
                   child: Icon(
                     Icons.refresh,
                     size: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
               ),
@@ -214,7 +235,9 @@ class SessionConfigSidebar {
             Icon(
               Icons.content_copy,
               size: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.3),
             ),
           ],
         ),
@@ -229,74 +252,81 @@ class SessionConfigSidebar {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: Row(
-          children: [
-            Icon(
-              Icons.refresh,
-              size: 14,
-              color: Theme.of(context).colorScheme.primary,
+      builder:
+          (dialogContext) => AlertDialog(
+            backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(width: 6),
-            const Text(
-              '重置 API 密钥',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.refresh,
+                  size: 14,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  '重置 API 密钥',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
-          ],
-        ),
-        content: Text(
-          '确定要重置该会话的 API 密钥吗？重置后旧密钥将立即失效，使用旧密钥的外部请求将无法访问。',
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).textTheme.bodyMedium?.color,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              minimumSize: const Size(60, 28),
-              textStyle: const TextStyle(fontSize: 11),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-            child: Text(
-              '取消',
+            content: Text(
+              '确定要重置该会话的 API 密钥吗？重置后旧密钥将立即失效，使用旧密钥的外部请求将无法访问。',
               style: TextStyle(
-                color: Theme.of(context).textTheme.labelLarge?.color,
-                fontWeight: FontWeight.w500,
+                fontSize: 12,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              minimumSize: const Size(60, 28),
-              textStyle: const TextStyle(fontSize: 11),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  minimumSize: const Size(60, 28),
+                  textStyle: const TextStyle(fontSize: 11),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                child: Text(
+                  '取消',
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.labelLarge?.color,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
-            child: const Text('确认重置'),
+              ElevatedButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  minimumSize: const Size(60, 28),
+                  textStyle: const TextStyle(fontSize: 11),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                child: const Text('确认重置'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmed != true) return;
 
     final newKey = generateSessionApiKey();
     final sessionController = Get.find<SessionController>();
-    await sessionController.updateSession(
-      session.copyWith(apiKey: newKey),
-    );
+    await sessionController.updateSession(session.copyWith(apiKey: newKey));
     if (context.mounted) {
       SnackBarUtils.showSuccess(context, 'API 密钥已重置');
     }
@@ -307,7 +337,9 @@ class SessionConfigSidebar {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+        color: Theme.of(
+          context,
+        ).colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
@@ -322,14 +354,18 @@ class SessionConfigSidebar {
               Icon(
                 Icons.info_outline,
                 size: 12,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 6),
               Text(
                 '连接器和技能的关联描述',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -394,7 +430,8 @@ class SessionConfigSidebar {
         final scheme = config.httpsEnabled ? 'https' : 'http';
         final port = config.httpsEnabled ? config.httpsPort : config.httpPort;
         // 默认端口不显示
-        final host = '$scheme://${config.domain}${(scheme == 'http' && port != 80) || (scheme == 'https' && port != 443) ? ':$port' : ''}';
+        final host =
+            '$scheme://${config.domain}${(scheme == 'http' && port != 80) || (scheme == 'https' && port != 443) ? ':$port' : ''}';
         return '$host/$sessionId';
       }
     } catch (_) {
@@ -437,7 +474,9 @@ class SessionConfigSidebar {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.3),
+        color: Theme.of(
+          context,
+        ).colorScheme.secondaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
@@ -452,14 +491,18 @@ class SessionConfigSidebar {
               Icon(
                 Icons.info_outline,
                 size: 12,
-                color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.secondary.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 6),
               Text(
                 '模型定价（$currencyName/百万Token）',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -520,10 +563,12 @@ class SessionConfigSidebar {
           context,
           icon: Icons.monetization_on_outlined,
           label: '累计费用',
-          value: '${_getCurrencySymbol(session.chatModel)}${session.totalCost.toStringAsFixed(6)}',
-          valueColor: session.totalCost > 0
-              ? theme.colorScheme.error
-              : theme.colorScheme.onSurface,
+          value:
+              '${_getCurrencySymbol(session.chatModel)}${session.totalCost.toStringAsFixed(6)}',
+          valueColor:
+              session.totalCost > 0
+                  ? theme.colorScheme.error
+                  : theme.colorScheme.onSurface,
         ),
         if (showPriceCard &&
             (session.chatModel?.promptPrice != null ||
@@ -585,9 +630,10 @@ class SessionConfigSidebar {
           context,
           icon: Icons.language,
           label: '绑定模型',
-          value: session.chatModel != null
-              ? '${session.chatModel!.name} (${session.chatModel!.model})'
-              : '未设置',
+          value:
+              session.chatModel != null
+                  ? '${session.chatModel!.name} (${session.chatModel!.model})'
+                  : '未设置',
           valueColor:
               session.chatModel != null
                   ? Theme.of(context).colorScheme.primary
@@ -654,10 +700,11 @@ class SessionConfigSidebar {
           context,
           icon: Icons.grid_view,
           label: '模型MCP',
-          value: session.chatModel?.mcps != null &&
-                  session.chatModel!.mcps!.isNotEmpty
-              ? session.chatModel!.mcps!.join(', ')
-              : '未绑定',
+          value:
+              session.chatModel?.mcps != null &&
+                      session.chatModel!.mcps!.isNotEmpty
+                  ? session.chatModel!.mcps!.join(', ')
+                  : '未绑定',
           valueColor:
               session.chatModel?.mcps != null &&
                       session.chatModel!.mcps!.isNotEmpty
@@ -669,12 +716,14 @@ class SessionConfigSidebar {
           context,
           icon: Icons.layers,
           label: '会话MCP',
-          value: session.mcps != null && session.mcps!.isNotEmpty
-              ? session.mcps!.join(', ')
-              : '未绑定',
-          valueColor: session.mcps != null && session.mcps!.isNotEmpty
-              ? Theme.of(context).colorScheme.primary
-              : null,
+          value:
+              session.mcps != null && session.mcps!.isNotEmpty
+                  ? session.mcps!.join(', ')
+                  : '未绑定',
+          valueColor:
+              session.mcps != null && session.mcps!.isNotEmpty
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
         ),
         if ((session.chatModel?.mcps == null ||
                 session.chatModel!.mcps!.isEmpty) &&
@@ -720,31 +769,34 @@ class SessionConfigSidebar {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: session.noAuthEnabled
-            ? Theme.of(context).colorScheme.error.withValues(alpha: 0.08)
-            : Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-        border: session.noAuthEnabled
-            ? Border.all(
-                color: Theme.of(
+        color:
+            session.noAuthEnabled
+                ? Theme.of(context).colorScheme.error.withValues(alpha: 0.08)
+                : Theme.of(
                   context,
-                ).colorScheme.error.withValues(alpha: 0.3),
-                width: 1,
-              )
-            : null,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border:
+            session.noAuthEnabled
+                ? Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.error.withValues(alpha: 0.3),
+                  width: 1,
+                )
+                : null,
       ),
       child: Row(
         children: [
           Icon(
             session.noAuthEnabled ? Icons.lock_open : Icons.shield,
             size: 16,
-            color: session.noAuthEnabled
-                ? Theme.of(context).colorScheme.error
-                : Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.4),
+            color:
+                session.noAuthEnabled
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -756,11 +808,12 @@ class SessionConfigSidebar {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: session.noAuthEnabled
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color:
+                        session.noAuthEnabled
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 Text(
@@ -769,13 +822,14 @@ class SessionConfigSidebar {
                       : '开启后不需要 API Key 即可访问',
                   style: TextStyle(
                     fontSize: 12,
-                    color: session.noAuthEnabled
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.error.withValues(alpha: 0.7)
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.4),
+                    color:
+                        session.noAuthEnabled
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.error.withValues(alpha: 0.7)
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
               ],
@@ -800,10 +854,7 @@ class SessionConfigSidebar {
   }
 
   /// 精简版右侧边栏内容（仅展示核心信息）
-  static Widget buildCompactSidebar(
-    BuildContext context,
-    ChatSession session,
-  ) {
+  static Widget buildCompactSidebar(BuildContext context, ChatSession session) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       children: [
@@ -892,7 +943,9 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -901,7 +954,9 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
             Icon(
               widget.icon,
               size: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -912,7 +967,9 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
                     widget.label,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -973,8 +1030,9 @@ class _SessionSettingsSectionState extends State<_SessionSettingsSection> {
   @override
   void initState() {
     super.initState();
-    _systemPromptController =
-        TextEditingController(text: widget.session.systemPrompt ?? '');
+    _systemPromptController = TextEditingController(
+      text: widget.session.systemPrompt ?? '',
+    );
   }
 
   @override
@@ -1081,13 +1139,22 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     super.initState();
     _session = widget.session;
     _tokenLimitController = TextEditingController(
-      text: _session.quotaTokenLimit != null ? _session.quotaTokenLimit.toString() : '',
+      text:
+          _session.quotaTokenLimit != null
+              ? _session.quotaTokenLimit.toString()
+              : '',
     );
     _costLimitController = TextEditingController(
-      text: _session.quotaCostLimit != null ? _session.quotaCostLimit.toString() : '',
+      text:
+          _session.quotaCostLimit != null
+              ? _session.quotaCostLimit.toString()
+              : '',
     );
     _requestLimitController = TextEditingController(
-      text: _session.quotaRequestLimit != null ? _session.quotaRequestLimit.toString() : '',
+      text:
+          _session.quotaRequestLimit != null
+              ? _session.quotaRequestLimit.toString()
+              : '',
     );
   }
 
@@ -1112,21 +1179,30 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   }
 
   void _syncTokenLimitText() {
-    final newText = _session.quotaTokenLimit != null ? _session.quotaTokenLimit.toString() : '';
+    final newText =
+        _session.quotaTokenLimit != null
+            ? _session.quotaTokenLimit.toString()
+            : '';
     if (_tokenLimitController.text != newText) {
       _tokenLimitController.text = newText;
     }
   }
 
   void _syncCostLimitText() {
-    final newText = _session.quotaCostLimit != null ? _session.quotaCostLimit.toString() : '';
+    final newText =
+        _session.quotaCostLimit != null
+            ? _session.quotaCostLimit.toString()
+            : '';
     if (_costLimitController.text != newText) {
       _costLimitController.text = newText;
     }
   }
 
   void _syncRequestLimitText() {
-    final newText = _session.quotaRequestLimit != null ? _session.quotaRequestLimit.toString() : '';
+    final newText =
+        _session.quotaRequestLimit != null
+            ? _session.quotaRequestLimit.toString()
+            : '';
     if (_requestLimitController.text != newText) {
       _requestLimitController.text = newText;
     }
@@ -1160,10 +1236,12 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             value: _session.quotaTokenLimit,
             hint: '不限制',
             onChanged: (val) {
-              _updateSession(_session.copyWith(
-                quotaTokenLimit: val as int?,
-                clearQuotaTokenLimit: val == null,
-              ));
+              _updateSession(
+                _session.copyWith(
+                  quotaTokenLimit: val as int?,
+                  clearQuotaTokenLimit: val == null,
+                ),
+              );
             },
           ),
           const SizedBox(height: 8),
@@ -1173,15 +1251,18 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             context,
             controller: _costLimitController,
             icon: Icons.monetization_on_outlined,
-            label: '费用预算上限（${SessionConfigSidebar._getCurrencyName(_session.chatModel)}）',
+            label:
+                '费用预算上限（${SessionConfigSidebar._getCurrencyName(_session.chatModel)}）',
             value: _session.quotaCostLimit,
             hint: '不限制',
             isDouble: true,
             onChanged: (val) {
-              _updateSession(_session.copyWith(
-                quotaCostLimit: val as double?,
-                clearQuotaCostLimit: val == null,
-              ));
+              _updateSession(
+                _session.copyWith(
+                  quotaCostLimit: val as double?,
+                  clearQuotaCostLimit: val == null,
+                ),
+              );
             },
           ),
           const SizedBox(height: 8),
@@ -1195,10 +1276,12 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             value: _session.quotaRequestLimit,
             hint: '不限制',
             onChanged: (val) {
-              _updateSession(_session.copyWith(
-                quotaRequestLimit: val as int?,
-                clearQuotaRequestLimit: val == null,
-              ));
+              _updateSession(
+                _session.copyWith(
+                  quotaRequestLimit: val as int?,
+                  clearQuotaRequestLimit: val == null,
+                ),
+              );
             },
           ),
           const SizedBox(height: 8),
@@ -1224,27 +1307,34 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: _session.quotaEnabled
-            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
-            : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        color:
+            _session.quotaEnabled
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
+                : Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
-        border: _session.quotaEnabled
-            ? Border.all(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                width: 1,
-              )
-            : null,
+        border:
+            _session.quotaEnabled
+                ? Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.3),
+                  width: 1,
+                )
+                : null,
       ),
       child: Row(
         children: [
           Icon(
-            _session.quotaEnabled
-                ? Icons.speed
-                : Icons.speed,
+            _session.quotaEnabled ? Icons.speed : Icons.speed,
             size: 16,
-            color: _session.quotaEnabled
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+            color:
+                _session.quotaEnabled
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1256,16 +1346,21 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: _session.quotaEnabled
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color:
+                        _session.quotaEnabled
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 Text(
                   '达到上限后将拒绝新的请求',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
               ],
@@ -1277,20 +1372,23 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               value: _session.quotaEnabled,
               activeTrackColor: Theme.of(context).colorScheme.primary,
               onChanged: (val) {
-              final updated = _session.copyWith(quotaEnabled: val);
-              if (val && _session.quotaPeriodStart == null) {
-                // 开启时按自然时间边界初始化
-                final now = DateTime.now();
-                final periodStart = _session.quotaResetPeriod == 'daily'
-                    ? DateTime(now.year, now.month, now.day)
-                    : _session.quotaResetPeriod == 'monthly'
-                        ? DateTime(now.year, now.month, 1)
-                        : now;
-                _updateSession(updated.copyWith(quotaPeriodStart: periodStart));
-              } else {
-                _updateSession(updated);
-              }
-            },
+                final updated = _session.copyWith(quotaEnabled: val);
+                if (val && _session.quotaPeriodStart == null) {
+                  // 开启时按自然时间边界初始化
+                  final now = DateTime.now();
+                  final periodStart =
+                      _session.quotaResetPeriod == 'daily'
+                          ? DateTime(now.year, now.month, now.day)
+                          : _session.quotaResetPeriod == 'monthly'
+                          ? DateTime(now.year, now.month, 1)
+                          : now;
+                  _updateSession(
+                    updated.copyWith(quotaPeriodStart: periodStart),
+                  );
+                } else {
+                  _updateSession(updated);
+                }
+              },
             ),
           ),
         ],
@@ -1308,11 +1406,12 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     required ValueChanged<num?> onChanged,
     bool isDouble = false,
   }) {
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1320,7 +1419,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           Icon(
             icon,
             size: 14,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1331,15 +1432,18 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(height: 2),
                 TextField(
                   controller: controller,
-                  keyboardType: isDouble
-                      ? const TextInputType.numberWithOptions(decimal: true)
-                      : TextInputType.number,
+                  keyboardType:
+                      isDouble
+                          ? const TextInputType.numberWithOptions(decimal: true)
+                          : TextInputType.number,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -1351,7 +1455,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                     hintText: hint,
                     hintStyle: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.3),
                     ),
                     border: InputBorder.none,
                   ),
@@ -1359,9 +1465,8 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                     if (text.isEmpty) {
                       onChanged(null);
                     } else {
-                      final parsed = isDouble
-                          ? double.tryParse(text)
-                          : int.tryParse(text);
+                      final parsed =
+                          isDouble ? double.tryParse(text) : int.tryParse(text);
                       if (parsed != null && parsed >= 0) {
                         onChanged(parsed);
                       }
@@ -1380,7 +1485,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               child: Icon(
                 Icons.cancel,
                 size: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.3),
               ),
             ),
         ],
@@ -1389,16 +1496,14 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   }
 
   Widget _buildResetPeriodPicker(BuildContext context) {
-    final periods = {
-      null: '不自动重置',
-      'daily': '每天重置',
-      'monthly': '每月重置',
-    };
+    final periods = {null: '不自动重置', 'daily': '每天重置', 'monthly': '每月重置'};
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1406,7 +1511,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           Icon(
             Icons.restart_alt,
             size: 14,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1417,7 +1524,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                   '重置周期',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -1431,15 +1540,16 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                       fontWeight: FontWeight.w500,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    items: periods.entries.map((entry) {
-                      return DropdownMenuItem<String?>(
-                        value: entry.key,
-                        child: Text(
-                          entry.value,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      );
-                    }).toList(),
+                    items:
+                        periods.entries.map((entry) {
+                          return DropdownMenuItem<String?>(
+                            value: entry.key,
+                            child: Text(
+                              entry.value,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          );
+                        }).toList(),
                     onChanged: (val) {
                       final updated = _session.copyWith(
                         quotaResetPeriod: val,
@@ -1447,10 +1557,13 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                       );
                       if (val != null && _session.quotaPeriodStart == null) {
                         final now = DateTime.now();
-                        final periodStart = val == 'daily'
-                            ? DateTime(now.year, now.month, now.day)
-                            : DateTime(now.year, now.month, 1);
-                        _updateSession(updated.copyWith(quotaPeriodStart: periodStart));
+                        final periodStart =
+                            val == 'daily'
+                                ? DateTime(now.year, now.month, now.day)
+                                : DateTime(now.year, now.month, 1);
+                        _updateSession(
+                          updated.copyWith(quotaPeriodStart: periodStart),
+                        );
                       } else {
                         _updateSession(updated);
                       }
@@ -1468,23 +1581,32 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   Widget _buildQuotaStatusCard(BuildContext context) {
     final periodBilling = _session.getPeriodBilling();
     final hasPeriod = _session.quotaPeriodStart != null;
-    final effectiveTokens = hasPeriod
-        ? periodBilling.inputTokens + periodBilling.outputTokens
-        : _session.promptTokens + _session.completionTokens;
+    final effectiveTokens =
+        hasPeriod
+            ? periodBilling.inputTokens + periodBilling.outputTokens
+            : _session.promptTokens + _session.completionTokens;
     final effectiveCost = hasPeriod ? periodBilling.cost : _session.totalCost;
     final quotaResult = _session.checkQuota();
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: quotaResult.exceeded
-            ? Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3)
-            : Theme.of(context).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
+        color:
+            quotaResult.exceeded
+                ? Theme.of(
+                  context,
+                ).colorScheme.errorContainer.withValues(alpha: 0.3)
+                : Theme.of(
+                  context,
+                ).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: quotaResult.exceeded
-              ? Theme.of(context).colorScheme.error.withValues(alpha: 0.3)
-              : Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.2),
+          color:
+              quotaResult.exceeded
+                  ? Theme.of(context).colorScheme.error.withValues(alpha: 0.3)
+                  : Theme.of(
+                    context,
+                  ).colorScheme.tertiary.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -1498,9 +1620,10 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                     ? Icons.warning_amber_rounded
                     : Icons.verified_outlined,
                 size: 12,
-                color: quotaResult.exceeded
-                    ? Theme.of(context).colorScheme.error
-                    : Theme.of(context).colorScheme.tertiary,
+                color:
+                    quotaResult.exceeded
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.tertiary,
               ),
               const SizedBox(width: 6),
               Text(
@@ -1508,9 +1631,10 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: quotaResult.exceeded
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.tertiary,
+                  color:
+                      quotaResult.exceeded
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.tertiary,
                 ),
               ),
             ],
@@ -1531,11 +1655,14 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               used: effectiveCost,
               limit: _session.quotaCostLimit!,
               isDouble: true,
-              suffix: SessionConfigSidebar._getCurrencySymbol(_session.chatModel),
+              suffix: SessionConfigSidebar._getCurrencySymbol(
+                _session.chatModel,
+              ),
             ),
           ],
           if (_session.quotaRequestLimit != null) ...[
-            if (_session.quotaTokenLimit != null || _session.quotaCostLimit != null)
+            if (_session.quotaTokenLimit != null ||
+                _session.quotaCostLimit != null)
               const SizedBox(height: 6),
             _buildQuotaProgress(
               context,
@@ -1550,7 +1677,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               quotaResult.detail ?? '',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.8),
+                color: Theme.of(
+                  context,
+                ).colorScheme.error.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -1574,15 +1703,15 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
 
     if (shouldReset == true) {
       final now = DateTime.now();
-      final periodStart = _session.quotaResetPeriod == 'daily'
-          ? DateTime(now.year, now.month, now.day)
-          : _session.quotaResetPeriod == 'monthly'
+      final periodStart =
+          _session.quotaResetPeriod == 'daily'
+              ? DateTime(now.year, now.month, now.day)
+              : _session.quotaResetPeriod == 'monthly'
               ? DateTime(now.year, now.month, 1)
               : now;
-      _updateSession(_session.copyWith(
-        quotaRequestCount: 0,
-        quotaPeriodStart: periodStart,
-      ));
+      _updateSession(
+        _session.copyWith(quotaRequestCount: 0, quotaPeriodStart: periodStart),
+      );
     }
   }
 
@@ -1593,7 +1722,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.2),
+          color: Theme.of(
+            context,
+          ).colorScheme.errorContainer.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
@@ -1614,7 +1745,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.error.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -1631,16 +1764,20 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     bool isDouble = false,
     String suffix = '',
   }) {
-    final progress = limit > 0 ? (used.toDouble() / limit.toDouble()).clamp(0.0, 1.0) : 0.0;
-    final usedStr = isDouble
-        ? used.toStringAsFixed(4)
-        : SessionConfigSidebar.sFormatTokenCount(used.toInt());
-    final limitStr = isDouble
-        ? limit.toStringAsFixed(2)
-        : SessionConfigSidebar.sFormatTokenCount(limit.toInt());
-    final progressColor = progress >= 0.9
-        ? Theme.of(context).colorScheme.error
-        : progress >= 0.7
+    final progress =
+        limit > 0 ? (used.toDouble() / limit.toDouble()).clamp(0.0, 1.0) : 0.0;
+    final usedStr =
+        isDouble
+            ? used.toStringAsFixed(4)
+            : SessionConfigSidebar.sFormatTokenCount(used.toInt());
+    final limitStr =
+        isDouble
+            ? limit.toStringAsFixed(2)
+            : SessionConfigSidebar.sFormatTokenCount(limit.toInt());
+    final progressColor =
+        progress >= 0.9
+            ? Theme.of(context).colorScheme.error
+            : progress >= 0.7
             ? Colors.orange
             : Theme.of(context).colorScheme.primary;
 
@@ -1654,7 +1791,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
             Text(
@@ -1688,7 +1827,11 @@ class _NavSection {
   final GlobalKey key;
   final String label;
   final IconData icon;
-  const _NavSection({required this.key, required this.label, required this.icon});
+  const _NavSection({
+    required this.key,
+    required this.label,
+    required this.icon,
+  });
 }
 
 /// 会话配置内容组件（单列表 + 右侧导航）
@@ -1721,7 +1864,11 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
       _NavSection(key: _serviceKey, label: '服务配置', icon: Icons.settings),
       _NavSection(key: _mcpKey, label: 'MCP', icon: Icons.grid_view),
       _NavSection(key: _quotaKey, label: '用量配额', icon: Icons.speed),
-      _NavSection(key: _billingKey, label: '计费信息', icon: Icons.monetization_on_outlined),
+      _NavSection(
+        key: _billingKey,
+        label: '计费信息',
+        icon: Icons.monetization_on_outlined,
+      ),
     ];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -1781,7 +1928,9 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
       width: 30,
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(8),
           bottomLeft: Radius.circular(8),
@@ -1789,51 +1938,56 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: _navSections.map((section) {
-          final isActive = section.label == _activeSection;
-          return Expanded(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => _scrollToSection(section),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  bottomLeft: Radius.circular(8),
-                ),
-                child: Container(
-                  width: double.infinity,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(
-                        color: isActive
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.transparent,
-                        width: 2.5,
+        children:
+            _navSections.map((section) {
+              final isActive = section.label == _activeSection;
+              return Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _scrollToSection(section),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(8),
+                      bottomLeft: Radius.circular(8),
+                    ),
+                    child: Container(
+                      width: double.infinity,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          left: BorderSide(
+                            color:
+                                isActive
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.transparent,
+                            width: 2.5,
+                          ),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            section.label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight:
+                                  isActive ? FontWeight.w700 : FontWeight.w400,
+                              color:
+                                  isActive
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.onSurface
+                                          .withValues(alpha: 0.55),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        section.label,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-                          color: isActive
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-              ),
-            ),
-          );
-        }).toList(),
+              );
+            }).toList(),
       ),
     );
   }
@@ -1882,8 +2036,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       label: '分组',
                       value: session.group ?? '未分组',
                       onChanged: (newGroup) {
-                        final sessionController =
-                            Get.find<SessionController>();
+                        final sessionController = Get.find<SessionController>();
                         sessionController.updateSession(
                           session.copyWith(group: newGroup.trim()),
                         );
@@ -1894,21 +2047,20 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       context,
                       icon: Icons.language,
                       label: '绑定模型',
-                      value: session.chatModel != null
-                          ? '${session.chatModel!.name} (${session.chatModel!.model})'
-                          : '未设置',
-                      valueColor: session.chatModel != null
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
+                      value:
+                          session.chatModel != null
+                              ? '${session.chatModel!.name} (${session.chatModel!.model})'
+                              : '未设置',
+                      valueColor:
+                          session.chatModel != null
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
                     ),
                     // 关联提示词
                     if (session.connectPrompt != null &&
                         session.connectPrompt!.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      SessionConfigSidebar._buildSectionTitle(
-                        context,
-                        '关联提示词',
-                      ),
+                      SessionConfigSidebar._buildSectionTitle(context, '关联提示词'),
                       const SizedBox(height: 8),
                       SessionConfigSidebar._buildPromptCard(
                         context,
@@ -1941,7 +2093,9 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       context,
                       icon: Icons.link,
                       label: '服务地址',
-                      value: SessionConfigSidebar._buildSmartServiceUrl(session.sessionId),
+                      value: SessionConfigSidebar._buildSmartServiceUrl(
+                        session.sessionId,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildCopyableConfigItem(
@@ -1949,7 +2103,11 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       icon: Icons.shield,
                       label: 'API 密钥',
                       value: session.apiKey,
-                      onReset: () => SessionConfigSidebar._resetApiKey(context, session),
+                      onReset:
+                          () => SessionConfigSidebar._resetApiKey(
+                            context,
+                            session,
+                          ),
                     ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildNoAuthToggle(context, session),
@@ -1972,10 +2130,11 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       context,
                       icon: Icons.grid_view,
                       label: '模型MCP',
-                      value: session.chatModel?.mcps != null &&
-                              session.chatModel!.mcps!.isNotEmpty
-                          ? session.chatModel!.mcps!.join(', ')
-                          : '未绑定',
+                      value:
+                          session.chatModel?.mcps != null &&
+                                  session.chatModel!.mcps!.isNotEmpty
+                              ? session.chatModel!.mcps!.join(', ')
+                              : '未绑定',
                       valueColor:
                           session.chatModel?.mcps != null &&
                                   session.chatModel!.mcps!.isNotEmpty
@@ -1987,12 +2146,14 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       context,
                       icon: Icons.layers,
                       label: '会话MCP',
-                      value: session.mcps != null && session.mcps!.isNotEmpty
-                          ? session.mcps!.join(', ')
-                          : '未绑定',
-                      valueColor: session.mcps != null && session.mcps!.isNotEmpty
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
+                      value:
+                          session.mcps != null && session.mcps!.isNotEmpty
+                              ? session.mcps!.join(', ')
+                              : '未绑定',
+                      valueColor:
+                          session.mcps != null && session.mcps!.isNotEmpty
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
                     ),
                     if ((session.chatModel?.mcps == null ||
                             session.chatModel!.mcps!.isEmpty) &&
@@ -2003,10 +2164,9 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                           '可在模型管理或聊天输入框处添加 MCP 服务',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.3),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.3),
                           ),
                         ),
                       ),

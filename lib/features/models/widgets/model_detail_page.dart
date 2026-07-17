@@ -3,7 +3,7 @@ import 'package:llmate/models/bigmodel/chat_model.dart';
 import 'package:llmate/models/chat/chat_setting.dart';
 import 'package:llmate/utils/snackbar_utils.dart';
 import 'package:llmate/features/models/widgets/model_config_tab.dart';
-import 'package:llmate/widgets/common/confirm_delete_dialog.dart';
+import 'package:llmate/widgets/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
@@ -172,7 +172,9 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _currentModel.name.isNotEmpty ? _currentModel.name : AppLocalizations.of(context)!.unnamedModel,
+                  _currentModel.name.isNotEmpty
+                      ? _currentModel.name
+                      : AppLocalizations.of(context)!.unnamedModel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -183,7 +185,8 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _currentModel.platform != null && _currentModel.platform!.isNotEmpty
+                  _currentModel.platform != null &&
+                          _currentModel.platform!.isNotEmpty
                       ? '模型详情 · ${_currentModel.platform}'
                       : '模型详情',
                   maxLines: 1,
@@ -254,7 +257,10 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
         widget.onModelDeleted!(_currentModel.modelId);
       }
       // 显示删除成功提示
-      SnackBarUtils.showSuccess(context, loc.modelDeletedToast(_currentModel.name));
+      SnackBarUtils.showSuccess(
+        context,
+        loc.modelDeletedToast(_currentModel.name),
+      );
     }
   }
 }

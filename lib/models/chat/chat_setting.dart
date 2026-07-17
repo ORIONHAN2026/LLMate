@@ -6,12 +6,20 @@ class ChatSettings {
 
   String replyLanguage;
 
+  /// 安全设置：开启后，请求/响应中的手机号将被 * 号脱敏
+  bool maskPhone;
+
+  /// 安全设置：开启后，请求/响应中的身份证号将被 * 号脱敏
+  bool maskIdCard;
+
   ChatSettings({
     required this.conversationName,
     required this.systemPrompt,
     required this.temperature,
 
     required this.replyLanguage,
+    this.maskPhone = false,
+    this.maskIdCard = false,
   });
 
   ChatSettings copyWith({
@@ -20,6 +28,8 @@ class ChatSettings {
     double? temperature,
 
     String? replyLanguage,
+    bool? maskPhone,
+    bool? maskIdCard,
   }) {
     return ChatSettings(
       conversationName: conversationName ?? this.conversationName,
@@ -27,6 +37,8 @@ class ChatSettings {
       temperature: temperature ?? this.temperature,
 
       replyLanguage: replyLanguage ?? this.replyLanguage,
+      maskPhone: maskPhone ?? this.maskPhone,
+      maskIdCard: maskIdCard ?? this.maskIdCard,
     );
   }
 
@@ -38,6 +50,8 @@ class ChatSettings {
       'temperature': temperature,
 
       'replyLanguage': replyLanguage,
+      'maskPhone': maskPhone,
+      'maskIdCard': maskIdCard,
     };
   }
 
@@ -49,6 +63,8 @@ class ChatSettings {
       temperature: (json['temperature'] as num?)?.toDouble() ?? 0.0,
 
       replyLanguage: json['replyLanguage'] ?? '助手设置（默认）',
+      maskPhone: json['maskPhone'] as bool? ?? false,
+      maskIdCard: json['maskIdCard'] as bool? ?? false,
     );
   }
 
@@ -70,7 +86,9 @@ class ChatSettings {
         other.conversationName == conversationName &&
         other.systemPrompt == systemPrompt &&
         other.temperature == temperature &&
-        other.replyLanguage == replyLanguage;
+        other.replyLanguage == replyLanguage &&
+        other.maskPhone == maskPhone &&
+        other.maskIdCard == maskIdCard;
   }
 
   @override
@@ -81,12 +99,14 @@ class ChatSettings {
       temperature,
 
       replyLanguage,
+      maskPhone,
+      maskIdCard,
     );
   }
 
   @override
   String toString() {
-    return 'ChatSettings{conversationName: $conversationName, systemPrompt: $systemPrompt, temperature: $temperature, replyLanguage: $replyLanguage}';
+    return 'ChatSettings{conversationName: $conversationName, systemPrompt: $systemPrompt, temperature: $temperature, replyLanguage: $replyLanguage, maskPhone: $maskPhone, maskIdCard: $maskIdCard}';
   }
 }
 

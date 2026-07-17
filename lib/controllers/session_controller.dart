@@ -1,5 +1,4 @@
 import 'package:llmate/models/chat/chat_message.dart';
-import 'package:llmate/models/chat/scheduled_task.dart';
 import 'package:llmate/models/chat/chat_setting.dart';
 import 'package:llmate/models/chat/contract_info.dart';
 import 'package:flutter/material.dart';
@@ -504,7 +503,6 @@ class SessionController extends GetxController {
       'connectPrompt': session.connectPrompt,
       'sessionQuickCommands':
           session.sessionQuickCommands.map((c) => c.toJson()).toList(),
-      'scheduledTask': session.scheduledTask?.toJson(),
       'emoji': session.emoji,
       'promptTokens': session.promptTokens,
       'completionTokens': session.completionTokens,
@@ -533,16 +531,6 @@ class SessionController extends GetxController {
         final modelController = Get.find<ModelController>();
         chatModel = modelController.models.firstWhere(
           (m) => m.modelId == modelId,
-        );
-      } catch (_) {}
-    }
-
-    // 解析定时任务
-    ScheduledTask? scheduledTask;
-    if (entity['scheduledTask'] is Map<String, dynamic>) {
-      try {
-        scheduledTask = ScheduledTask.fromJson(
-          entity['scheduledTask'] as Map<String, dynamic>,
         );
       } catch (_) {}
     }
@@ -578,7 +566,6 @@ class SessionController extends GetxController {
       deepThink: entity['deepThink'] as bool? ?? false,
       connectPrompt: entity['connectPrompt'] as String?,
       sessionQuickCommands: commands,
-      scheduledTask: scheduledTask,
       contracts: await _loadContracts(entity['sessionId'] as String? ?? ''),
       emoji: entity['emoji'] as String?,
       apiKey: entity['apiKey'] as String?,

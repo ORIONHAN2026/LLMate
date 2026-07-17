@@ -356,9 +356,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get searchMcp => '搜索 MCP 服务...';
 
   @override
-  String get scheduledMessageHint => '定时发送的消息内容...';
-
-  @override
   String get cronExample => '例: 0 9 * * * (每天9:00)';
 
   @override
@@ -923,15 +920,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get scheduledTaskLabel => '定时任务';
-
-  @override
-  String get setScheduledMessage => '设置定时消息';
-
-  @override
-  String get scheduledLabelColon => '定时';
-
-  @override
   String get modelConfigNotFound => '未找到模型配置';
 
   @override
@@ -1002,12 +990,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get cannotFindRenderObject => '无法找到消息的渲染对象';
-
-  @override
-  String get editScheduledTask => '编辑定时任务';
-
-  @override
-  String get setScheduledTaskDialog => '设置定时任务';
 
   @override
   String get cronExpression => 'Cron 表达式';

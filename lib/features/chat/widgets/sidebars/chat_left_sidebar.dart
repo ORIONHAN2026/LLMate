@@ -1,7 +1,7 @@
 import 'package:llmate/controllers/session_controller.dart';
 import 'package:llmate/controllers/theme_controller.dart';
 import 'package:llmate/l10n/app_localizations.dart';
-import 'package:llmate/widgets/common/confirm_delete_dialog.dart';
+import 'package:llmate/widgets/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../models/chat/chat_session.dart';
@@ -89,8 +89,13 @@ class _SessionItemState extends State<_SessionItem> {
                                 fontWeight: FontWeight.w600,
                                 color:
                                     widget.isSelected
-                                        ? Theme.of(context).colorScheme.onSurface
-                                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                                        ? Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.8),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -107,7 +112,9 @@ class _SessionItemState extends State<_SessionItem> {
                             '未绑定模型',
                         style: TextStyle(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.45),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -207,7 +214,6 @@ class _SessionItemState extends State<_SessionItem> {
       sessionController.deleteSession(widget.session.sessionId);
     }
   }
-
 }
 
 class ChatLeftSidebar extends StatefulWidget {
@@ -429,8 +435,9 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
     }
 
     // 获取有会话的分组列表，按首次出现顺序
-    final groups = groupMap.entries.toList()
-      ..sort((a, b) => a.value.first.compareTo(b.value.first));
+    final groups =
+        groupMap.entries.toList()
+          ..sort((a, b) => a.value.first.compareTo(b.value.first));
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -497,9 +504,10 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                 _buildCollapsibleGroupHeader(
                   title: groupName,
                   isCollapsed: isCollapsed,
-                  onToggle: () => setState(() {
-                    _groupCollapsed[groupName] = !isCollapsed;
-                  }),
+                  onToggle:
+                      () => setState(() {
+                        _groupCollapsed[groupName] = !isCollapsed;
+                      }),
                 ),
                 if (!isCollapsed) ...[
                   ...indices.map((index) {

@@ -48,7 +48,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     _apiKeyController = TextEditingController();
     _modelNameController = TextEditingController();
     _systemPromptController = TextEditingController();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _selectedMcpNames = List<String>.from(_currentModel.mcps ?? []);
     _initializeData();
     _loadMcpServices();
@@ -106,6 +106,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             Tab(text: loc.billingSettings, icon: const Icon(Icons.monetization_on_outlined, size: 16)),
             Tab(text: loc.modelParams, icon: const Icon(Icons.tune, size: 16)),
             Tab(text: loc.mcpSettings, icon: const Icon(Icons.grid_view, size: 16)),
+            Tab(text: '安全设置', icon: const Icon(Icons.security, size: 16)),
           ],
         ),
         Expanded(
@@ -120,6 +121,8 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               _buildModelParamsTab(),
               // Tab 4: MCP 设置
               _buildMcpSettingsTab(),
+              // Tab 5: 安全设置（敏感信息脱敏）
+              _buildSecurityTab(),
             ],
           ),
         ),
@@ -181,6 +184,99 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         ],
       ),
     );
+  }
+
+  // ========== 安全设置 Tab（敏感信息脱敏开关） ==========
+  // 注：本 Tab 文案使用中文硬编码，未接入 gen-l10n，避免改动多语言资源文件。
+  Widget _buildSecurityTab() {
+    final settings = _currentModel.chatSettings;
+    final maskPhone = settings?.maskPhone ?? false;
+    final maskIdCard = settings?.maskIdCard ?? false;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '敏感信息脱敏',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '开启后，发送给大模型的消息及本地审计日志中的对应信息将被 * 号替换，防止明文隐私泄露。',
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildSecuritySwitch(
+            title: '手机号脱敏',
+            subtitle: '将消息中的手机号替换为 * 号',
+            value: maskPhone,
+            onChanged: (v) => _updateSecuritySetting(maskPhone: v),
+          ),
+          const SizedBox(height: 8),
+          _buildSecuritySwitch(
+            title: '身份证号脱敏',
+            subtitle: '将消息中的身份证号替换为 * 号',
+            value: maskIdCard,
+            onChanged: (v) => _updateSecuritySetting(maskIdCard: v),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecuritySwitch({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.3),
+        ),
+      ),
+      child: SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        title: Text(title, style: const TextStyle(fontSize: 13)),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 11,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          ),
+        ),
+        value: value,
+        onChanged: onChanged,
+        dense: true,
+      ),
+    );
+  }
+
+  void _updateSecuritySetting({bool? maskPhone, bool? maskIdCard}) {
+    final updatedChatSettings = (_currentModel.chatSettings ??
+            ChatSettings(
+              conversationName: AppLocalizations.of(context)!.newConversationDefault,
+              systemPrompt: '',
+              temperature: 1.0,
+              replyLanguage: '',
+            ))
+        .copyWith(maskPhone: maskPhone, maskIdCard: maskIdCard);
+    setState(() {
+      _currentModel = _currentModel.copyWith(chatSettings: updatedChatSettings);
+    });
+    widget.onModelUpdated(_currentModel);
   }
 
   Widget _buildConfigItem(String label, String value) {

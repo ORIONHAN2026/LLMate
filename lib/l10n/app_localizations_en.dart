@@ -358,9 +358,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchMcp => 'Search MCP services...';
 
   @override
-  String get scheduledMessageHint => 'Scheduled message content...';
-
-  @override
   String get cronExample => 'e.g. 0 9 * * * (daily at 9:00)';
 
   @override
@@ -933,15 +930,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get scheduledTaskLabel => 'Scheduled Task';
-
-  @override
-  String get setScheduledMessage => 'Set scheduled message';
-
-  @override
-  String get scheduledLabelColon => 'Scheduled';
-
-  @override
   String get modelConfigNotFound => 'Model configuration not found';
 
   @override
@@ -1018,12 +1006,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cannotFindRenderObject => 'Cannot find message render object';
-
-  @override
-  String get editScheduledTask => 'Edit Scheduled Task';
-
-  @override
-  String get setScheduledTaskDialog => 'Set Scheduled Task';
 
   @override
   String get cronExpression => 'Cron Expression';

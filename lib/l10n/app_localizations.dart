@@ -792,12 +792,6 @@ abstract class AppLocalizations {
   /// **'Search MCP services...'**
   String get searchMcp;
 
-  /// No description provided for @scheduledMessageHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Scheduled message content...'**
-  String get scheduledMessageHint;
-
   /// No description provided for @cronExample.
   ///
   /// In en, this message translates to:
@@ -1806,24 +1800,6 @@ abstract class AppLocalizations {
   /// **'Fetch failed: {error}'**
   String fetchFailed(Object error);
 
-  /// No description provided for @scheduledTaskLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Scheduled Task'**
-  String get scheduledTaskLabel;
-
-  /// No description provided for @setScheduledMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Set scheduled message'**
-  String get setScheduledMessage;
-
-  /// No description provided for @scheduledLabelColon.
-  ///
-  /// In en, this message translates to:
-  /// **'Scheduled'**
-  String get scheduledLabelColon;
-
   /// No description provided for @modelConfigNotFound.
   ///
   /// In en, this message translates to:
@@ -1943,18 +1919,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cannot find message render object'**
   String get cannotFindRenderObject;
-
-  /// No description provided for @editScheduledTask.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit Scheduled Task'**
-  String get editScheduledTask;
-
-  /// No description provided for @setScheduledTaskDialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Set Scheduled Task'**
-  String get setScheduledTaskDialog;
 
   /// No description provided for @cronExpression.
   ///

@@ -10,9 +10,8 @@ import '../../../controllers/model_controller.dart';
 import '../../../core/config/feature_toggle_service.dart';
 import '../../../utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../widgets/common/confirm_delete_dialog.dart';
+import '../../../widgets/confirm_delete_dialog.dart';
 import '../../../data/storage_service.dart';
-import './scheduled_task_dialog.dart';
 
 /// 聊天输入框组件
 ///
@@ -105,9 +104,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     _inputFocusNode = FocusNode();
     _hasText = _inputController.text.isNotEmpty;
     _inputController.addListener(_onTextChanged);
-    widget.scrollController.addListener(
-      _onScrollChanged,
-    );
+    widget.scrollController.addListener(_onScrollChanged);
 
     _sessionSubscription = sessionController.currentSession.listen((
       currentSession,
@@ -459,11 +456,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           _buildMcpToolsToggle(),
                           const SizedBox(width: 8),
 
-                          if (FeatureToggleService()
-                              .isScheduledTaskEnabled) ...[
-                            _buildScheduledTaskToggle(),
-                            const SizedBox(width: 8),
-                          ],
                           _buildCleanHistoryToggle(),
                           // Container(
                           //   height: 16,
@@ -630,72 +622,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建定时任务按钮
-  Widget _buildScheduledTaskToggle() {
-    final currentSession = sessionController.currentSession.value;
-    final task = currentSession?.scheduledTask;
-    final hasTask = task != null;
-    final label =
-        hasTask
-            ? task.humanReadable
-            : AppLocalizations.of(context)!.scheduledTaskLabel;
-
-    return Tooltip(
-      message:
-          hasTask
-              ? '${AppLocalizations.of(context)!.scheduledLabelColon}: ${task.humanReadable}'
-              : AppLocalizations.of(context)!.setScheduledMessage,
-      child: GestureDetector(
-        onTap: _isSending ? null : () => ScheduledTaskDialog.show(context),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                hasTask ? Icons.schedule : Icons.schedule_outlined,
-                size: 13,
-                color:
-                    _isSending
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
-                        : hasTask
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-              ),
-              const SizedBox(width: 4),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 80),
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: hasTask ? FontWeight.w700 : FontWeight.w500,
-                    color:
-                        _isSending
-                            ? Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.3)
-                            : hasTask
-                            ? Theme.of(context).colorScheme.onSurface
-                            : Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   /// 构建MCP工具切换按钮
   Widget _buildMcpToolsToggle() {
     final currentSession = sessionController.currentSession.value;
@@ -723,8 +649,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   ? AppLocalizations.of(context)!.clickToSelectMcpTool
                   : AppLocalizations.of(context)!.noMcpToolConfigured),
       child: GestureDetector(
-        onTap:
-            hasMcpServices && !_isSending ? _showMcpServiceSelection : null,
+        onTap: hasMcpServices && !_isSending ? _showMcpServiceSelection : null,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
@@ -735,12 +660,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 size: 13,
                 color:
                     _isSending
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3)
                         : mcpCount > 0
                         ? Theme.of(context).colorScheme.onSurface
                         : hasMcpServices
-                        ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6)
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.3),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
@@ -755,12 +686,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         mcpCount > 0 ? FontWeight.w700 : FontWeight.w500,
                     color:
                         _isSending
-                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3)
                             : mcpCount > 0
                             ? Theme.of(context).colorScheme.onSurface
                             : hasMcpServices
-                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6)
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3),
                   ),
                 ),
               ),
@@ -827,7 +764,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       ),
     );
   }
-
 
   /// 显示MCP服务选择弹窗（多选）
   Future<void> _showMcpServiceSelection() async {
@@ -903,7 +839,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           '模型 MCP（默认启用，不可更改）：${modelMcpNames.join('、')}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.7),
                           ),
                         ),
                       ),
@@ -928,35 +866,50 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               )
                               : ListView.builder(
                                 shrinkWrap: true,
-                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
                                 itemCount: filtered.length,
                                 itemBuilder: (context, index) {
                                   final service = filtered[index];
-                                  final isModelMcp = modelMcpNames.contains(service.name);
-                                  final isSessionMcp = localSelected.contains(service.name);
+                                  final isModelMcp = modelMcpNames.contains(
+                                    service.name,
+                                  );
+                                  final isSessionMcp = localSelected.contains(
+                                    service.name,
+                                  );
                                   final isSelected = isModelMcp || isSessionMcp;
 
                                   return CheckboxListTile(
                                     dense: true,
                                     value: isSelected,
-                                    onChanged: isModelMcp
-                                        ? null // 模型MCP不可更改
-                                        : (checked) {
-                                            if (checked == true) {
-                                              if (!localSelected.contains(service.name)) {
-                                                localSelected.add(service.name);
+                                    onChanged:
+                                        isModelMcp
+                                            ? null // 模型MCP不可更改
+                                            : (checked) {
+                                              if (checked == true) {
+                                                if (!localSelected.contains(
+                                                  service.name,
+                                                )) {
+                                                  localSelected.add(
+                                                    service.name,
+                                                  );
+                                                }
+                                              } else {
+                                                localSelected.remove(
+                                                  service.name,
+                                                );
                                               }
-                                            } else {
-                                              localSelected.remove(service.name);
-                                            }
-                                            setDialogState(() {});
-                                          },
+                                              setDialogState(() {});
+                                            },
                                     title: Row(
                                       children: [
                                         Flexible(
                                           child: Text(
                                             service.name,
-                                            style: const TextStyle(fontSize: 13),
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                            ),
                                           ),
                                         ),
                                         if (isModelMcp) ...[
@@ -971,13 +924,17 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                                   .colorScheme
                                                   .primary
                                                   .withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(4),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                             child: Text(
                                               '模型',
                                               style: TextStyle(
                                                 fontSize: 10,
-                                                color: Theme.of(context).colorScheme.primary,
+                                                color:
+                                                    Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary,
                                               ),
                                             ),
                                           ),
@@ -992,18 +949,18 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
                                                 fontSize: 12,
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.onSurface.withOpacity(0.5),
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withOpacity(0.5),
                                               ),
                                             )
                                             : null,
                                     controlAffinity:
                                         ListTileControlAffinity.leading,
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                        ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
                                   );
                                 },
                               ),
@@ -1026,7 +983,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         children: [
                           Expanded(
                             child: TextButton(
-                              onPressed: () => Navigator.of(dialogContext).pop(),
+                              onPressed:
+                                  () => Navigator.of(dialogContext).pop(),
                               child: const Text('取消'),
                             ),
                           ),
@@ -1084,7 +1042,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     // 如果会话名是默认的"新对话"，自动改为第一个 MCP 服务名
     if (selectedServers.isNotEmpty &&
         updatedSession.name == AppLocalizations.of(context)!.newSession) {
-      updatedSession = updatedSession.copyWith(title: selectedServers.first.name);
+      updatedSession = updatedSession.copyWith(
+        title: selectedServers.first.name,
+      );
     }
 
     await sessionController.updateSession(updatedSession);
@@ -1404,7 +1364,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         _streamingMessageIds.remove(botMessageId);
       });
       widget.onStreamingChanged?.call(_streamingMessageIds);
-
     } catch (e) {
       rethrow;
     } finally {
@@ -1634,5 +1593,4 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       _inputFocusNode.requestFocus();
     });
   }
-
 }

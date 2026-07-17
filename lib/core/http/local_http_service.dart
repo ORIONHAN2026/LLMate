@@ -20,6 +20,8 @@ import 'middleware/api_key_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/model_tool_guard.dart';
 import 'middleware/user_message_guard.dart';
+import 'middleware/risk_control_guard.dart';
+import 'sensitive_masker.dart';
 import 'stream_round.dart' show streamSingleRound;
 import '../../controllers/mcp_controller.dart';
 import '../../models/responses/chunk.dart';
@@ -254,6 +256,7 @@ class LocalHttpService {
           .addMiddleware(apiKeyGuard) //api判断,装载session
           .addMiddleware(quotaGuard) //配额判断
           .addMiddleware(modelToolGuard) //模型工具判断，装载body
+          .addMiddleware(riskControlGuard) //风控脱敏：手机号/身份证号等*
           .addMiddleware(userMessageGuard); //创建用户消息
 
       return pipeline.addHandler((Request req) {
@@ -471,11 +474,16 @@ class LocalHttpService {
 
               // 回填 tool 结果消息到对话历史（每个工具一条）
               for (final r in executionResult.executionResults) {
+                final rawResult = r['result']?.toString() ?? '';
+                // 风控脱敏：工具返回内容同样可能含手机号/身份证号等敏感信息，
+                // 沿用与转发大模型一致的脱敏开关
+                final maskedResult =
+                    maskSensitiveText(rawResult, riskControlOptionsOf(request));
                 (body['messages'] as List<dynamic>).add({
                   'role': 'tool',
                   'tool_call_id': r['id'],
                   'content':
-                      r['isError'] == true ? '错误: ${r['result']}' : r['result'],
+                      r['isError'] == true ? '错误: $maskedResult' : maskedResult,
                 });
               }
 
@@ -654,10 +662,13 @@ class LocalHttpService {
             '${now.minute.toString().padLeft(2, '0')}-'
             '${now.second.toString().padLeft(2, '0')}';
 
+        // 从请求 context 读取风控脱敏开关（与转发给大模型的脱敏策略保持一致）
+        final riskOptions = riskControlOptionsOf(request);
+
         final logData = <String, dynamic>{
-          'originRequest': originRequest,
-          'middleRequest': body ?? {},
-          'response': responseContent ?? '',
+          'originRequest': maskSensitiveJson(originRequest, riskOptions),
+          'middleRequest': body != null ? maskSensitiveBody(body, riskOptions) : {},
+          'response': maskSensitiveText(responseContent ?? '', riskOptions),
         };
 
         if (error != null) {

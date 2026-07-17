@@ -2,14 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
 import '../http/local_http_service.dart';
 import '../../models/bigmodel/chat_model.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
 import './openai_provider.dart';
 import './common/message_builder.dart';
-import './common/system_prompts.dart';
 import './modes/mode_utils.dart';
 
 /// LLM 客户端（聊天窗口侧代理）
@@ -55,7 +53,6 @@ class LlmClient {
     }
 
     final messages = await _buildMessages(
-      model: model,
       userMessage: userMessage,
       session: _session,
     );
@@ -205,39 +202,21 @@ class LlmClient {
 
   // ======================== 消息构建 ========================
 
-  /// 构建完整的消息列表（系统提示词 + 历史消息 + 用户消息）
+  /// 构建发送给 HTTP 服务的消息列表。
+  ///
+  /// 仅包含会话历史 + 当前用户消息；系统提示词（模型级 / 会话级等）
+  /// 由 HTTP 服务端 [modelToolGuard] 统一注入，客户端不再组装。
   Future<List<Map<String, dynamic>>> _buildMessages({
-    required ChatModel? model,
     required ChatMessage userMessage,
     required ChatSession session,
   }) async {
     final messages = <Map<String, dynamic>>[];
-    // 1. 通用系统提示词
-    messages.addAll(
-      buildBaseSystemMessages(
-        model: model,
-        session: session,
-        thinkEnabled: session.deepThink,
-      ),
-    );
-
-    // 2. 历史消息
+    // 1. 历史消息
     if (session.messages.isNotEmpty) {
       appendHistoryMessages(messages, session, userMessage);
     }
-
-    // 3. 核心规则 + 语言（紧邻用户消息前）
-    messages.add({'role': 'system', 'content': CommonSystemPrompts.coreRules});
-    messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.responseLanguage(
-        Get.locale?.languageCode ?? 'zh',
-      ),
-    });
-
-    // 4. 用户消息
+    // 2. 当前用户消息
     messages.add({'role': 'user', 'content': buildUserContent(userMessage)});
-
     return messages;
   }
 }

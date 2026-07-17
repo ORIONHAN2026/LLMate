@@ -10,6 +10,7 @@ import './controllers/theme_controller.dart';
 import './controllers/locale_controller.dart';
 import './controllers/domain_controller.dart';
 import './controllers/mcp_controller.dart';
+import './controllers/audit_controller.dart';
 import './features/chat/pages/home.dart';
 import './pages/loading_page.dart';
 import './core/http/local_http_service.dart';
@@ -81,6 +82,9 @@ void main() async {
 
   // 初始化 LocalHttpServiceController（本地服务控制）
   Get.put(LocalHttpServiceController());
+
+  // 初始化 AuditController（审计日志读写）
+  Get.put(AuditController());
 
   // 启动 HTTP 服务（使用配置的 HTTP 端口，默认 80）
   final port = domainController.domainConfig.value.httpPort;

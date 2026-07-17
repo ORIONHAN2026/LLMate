@@ -12,6 +12,7 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart' as cors;
 
 import '../../controllers/domain_controller.dart';
 import '../../controllers/session_controller.dart';
+import '../../controllers/audit_controller.dart';
 import '../../data/storage_paths.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
@@ -547,13 +548,15 @@ class LocalHttpService {
             'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
           );
 
-          // ── 保存完整请求/响应日志 ──
-          _saveRequestResponseLog(
-            request: request,
+          // ── 保存完整请求/响应审计日志 ──
+          AuditController.instance.saveRequestResponseLog(
+            requestId: request.context['requestId'] as String? ?? '',
+            originBodyStr: request.context['originBody'] as String? ?? '',
             body: body,
             responseContent: contentBuffer.toString(),
             sessionId: session.sessionId,
             modelId: session.chatModel?.modelId ?? 'unknown',
+            maskOptions: riskControlOptionsOf(request),
             error: null,
           );
 
@@ -568,17 +571,17 @@ class LocalHttpService {
           // ── 异步 IIFE 内部异常 ──
           debugPrint('❌ 流式代理错误: $e');
 
-          // 即使出错也尝试保存已有的请求/响应日志
-          try {
-            _saveRequestResponseLog(
-              request: request,
-              body: null,
-              responseContent: null,
-              sessionId: session.sessionId,
-              modelId: session.chatModel?.modelId ?? 'unknown',
-              error: e.toString(),
-            );
-          } catch (_) {}
+          // 即使出错也尝试保存已有的请求/响应审计日志
+          AuditController.instance.saveRequestResponseLog(
+            requestId: request.context['requestId'] as String? ?? '',
+            originBodyStr: request.context['originBody'] as String? ?? '',
+            body: null,
+            responseContent: '',
+            sessionId: session.sessionId,
+            modelId: session.chatModel?.modelId ?? 'unknown',
+            maskOptions: riskControlOptionsOf(request),
+            error: e.toString(),
+          );
 
           streamController.addError(e);
           await streamController.close();
@@ -618,80 +621,6 @@ class LocalHttpService {
         },
       );
     }
-  }
-
-  /// 保存完整的请求/响应日志到会话配置目录下的 audit 子目录
-  ///
-  /// 保存路径：~/.llmate/chats/{sessionId}/audit/
-  /// 文件名格式：年-月-日-时-分-秒-requestId.json
-  /// 内容包含：
-  ///   - originRequest: 第三方客户端发送的原始请求体
-  ///   - middleRequest: 中间件处理后最终发送给 LLM 的请求体
-  ///   - response: 累计回复给第三方客户端的完整内容
-  static void _saveRequestResponseLog({
-    required Request request,
-    Map<String, dynamic>? body,
-    String? responseContent,
-    required String sessionId,
-    required String modelId,
-    String? error,
-  }) {
-    () async {
-      try {
-        final originBodyStr = request.context['originBody'] as String? ?? '';
-
-        // 解析原始请求体
-        dynamic originRequest;
-        if (originBodyStr.isNotEmpty) {
-          try {
-            originRequest = jsonDecode(originBodyStr);
-          } catch (_) {
-            originRequest = originBodyStr;
-          }
-        } else {
-          originRequest = {};
-        }
-
-        // 构建时间戳：年-月-日-时-分-秒
-        final now = DateTime.now();
-        final timestamp =
-            '${now.year}-'
-            '${now.month.toString().padLeft(2, '0')}-'
-            '${now.day.toString().padLeft(2, '0')}-'
-            '${now.hour.toString().padLeft(2, '0')}-'
-            '${now.minute.toString().padLeft(2, '0')}-'
-            '${now.second.toString().padLeft(2, '0')}';
-
-        // 从请求 context 读取风控脱敏开关（与转发给大模型的脱敏策略保持一致）
-        final riskOptions = riskControlOptionsOf(request);
-
-        final logData = <String, dynamic>{
-          'originRequest': maskSensitiveJson(originRequest, riskOptions),
-          'middleRequest': body != null ? maskSensitiveBody(body, riskOptions) : {},
-          'response': maskSensitiveText(responseContent ?? '', riskOptions),
-        };
-
-        if (error != null) {
-          logData['error'] = error;
-        }
-
-        // 确保目录存在：~/.llmate/audit/
-        final dir = Directory('${StoragePaths.root}/audit');
-        if (!await dir.exists()) {
-          await dir.create(recursive: true);
-        }
-
-        final filename = '$timestamp-$modelId-$sessionId-audit.json';
-        final file = File('${dir.path}/$filename');
-        await file.writeAsString(
-          const JsonEncoder.withIndent('  ').convert(logData),
-        );
-
-        debugPrint('📝 [RequestLog] 请求日志已保存: ${file.path}');
-      } catch (e) {
-        debugPrint('⚠️ [RequestLog] 保存请求日志失败: $e');
-      }
-    }();
   }
 
   /// 保存用量统计（按分/时/日/月/年 五个粒度）

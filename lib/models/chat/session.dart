@@ -126,7 +126,7 @@ class ChatSession {
   /// 会话头像 emoji
   final String emoji;
 
-  /// 会话分组名称，null 或空字符串表示未分组
+  /// 会话所属组织名称，null 或空字符串表示未指定
   final String? group;
 
   /// 运行时动态解析的模型对象（不持久化，由 modelId 解析而来）
@@ -140,6 +140,9 @@ class ChatSession {
 
   /// 免授权模式：开启后外部请求无需提供 API Key 即可访问
   final bool noAuthEnabled;
+
+  /// 是否禁用该会话：禁用后任何调用（应用内与外部 HTTP 请求）均返回错误
+  final bool isDisabled;
 
   // === 用量配额设置 ===
 
@@ -198,6 +201,7 @@ class ChatSession {
     this.quotaPeriodStart,
     this.quotaRequestCount = 0,
     this.noAuthEnabled = false,
+    this.isDisabled = false,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcps = mcps,
        emoji = emoji ?? randomEmoji(),
@@ -401,6 +405,7 @@ class ChatSession {
     bool clearQuotaPeriodStart = false,
     int? quotaRequestCount,
     bool? noAuthEnabled,
+    bool? isDisabled,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -472,6 +477,7 @@ class ChatSession {
               : (quotaPeriodStart ?? this.quotaPeriodStart),
       quotaRequestCount: quotaRequestCount ?? this.quotaRequestCount,
       noAuthEnabled: noAuthEnabled ?? this.noAuthEnabled,
+      isDisabled: isDisabled ?? this.isDisabled,
     );
   }
 
@@ -575,6 +581,7 @@ class ChatSession {
               : null,
       quotaRequestCount: json['quotaRequestCount'] as int? ?? 0,
       noAuthEnabled: json['noAuthEnabled'] as bool? ?? false,
+      isDisabled: json['isDisabled'] as bool? ?? false,
     );
   }
 
@@ -614,6 +621,7 @@ class ChatSession {
         'quotaPeriodStart': quotaPeriodStart!.toIso8601String(),
       'quotaRequestCount': quotaRequestCount,
       'noAuthEnabled': noAuthEnabled,
+      'isDisabled': isDisabled,
     };
   }
 }

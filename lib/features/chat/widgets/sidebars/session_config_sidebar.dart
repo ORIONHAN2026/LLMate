@@ -618,8 +618,8 @@ class SessionConfigSidebar {
         _buildEditableConfigItem(
           context,
           icon: Icons.grid_view,
-          label: '分组',
-          value: session.group ?? '未分组',
+          label: '组织',
+          value: session.group ?? '未指定',
           onChanged: (newGroup) {
             final sessionController = Get.find<SessionController>();
             sessionController.updateSession(
@@ -687,6 +687,8 @@ class SessionConfigSidebar {
         ),
         const SizedBox(height: 8),
         _buildNoAuthToggle(context, session),
+        const SizedBox(height: 8),
+        _buildDisabledToggle(context, session),
       ],
     );
   }
@@ -846,6 +848,95 @@ class SessionConfigSidebar {
                 final sessionController = Get.find<SessionController>();
                 sessionController.updateSession(
                   session.copyWith(noAuthEnabled: val),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 禁用会话开关：开启后该会话的任何调用（应用内 / 外部 HTTP）都会返回错误
+  static Widget _buildDisabledToggle(BuildContext context, ChatSession session) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color:
+            session.isDisabled
+                ? Theme.of(context).colorScheme.error.withValues(alpha: 0.08)
+                : Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border:
+            session.isDisabled
+                ? Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.error.withValues(alpha: 0.3),
+                  width: 1,
+                )
+                : null,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            session.isDisabled ? Icons.block : Icons.check_circle_outline,
+            size: 16,
+            color:
+                session.isDisabled
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '禁用会话',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color:
+                        session.isDisabled
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                Text(
+                  session.isDisabled
+                      ? '⚠️ 已禁用，调用将返回错误'
+                      : '开启后该会话将无法被调用',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        session.isDisabled
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.error.withValues(alpha: 0.7)
+                            : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.75,
+            child: CupertinoSwitch(
+              value: session.isDisabled,
+              activeTrackColor: Theme.of(context).colorScheme.error,
+              onChanged: (val) {
+                final sessionController = Get.find<SessionController>();
+                sessionController.updateSession(
+                  session.copyWith(isDisabled: val),
                 );
               },
             ),
@@ -2113,6 +2204,8 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildNoAuthToggle(context, session),
+                    const SizedBox(height: 8),
+                    SessionConfigSidebar._buildDisabledToggle(context, session),
                   ],
                 ),
               ),

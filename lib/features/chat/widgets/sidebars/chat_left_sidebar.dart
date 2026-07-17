@@ -408,7 +408,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
   }) {
     final sessions = chatSessions ?? widget.chatSessions;
 
-    // 分离收藏和非收藏会话
+    // 收集收藏会话（在各自分组中仍保留显示，此处用于收藏区重复展示）
     final favoriteSessions = <int>[];
     final ungroupedSessions = <int>[];
     final groupMap = <String, List<int>>{}; // groupName -> [indices]
@@ -416,9 +416,9 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
     for (int i = 0; i < sessions.length; i++) {
       final session = sessions[i];
 
+      // 收藏的会话仍保留在其所属分组/未分组中，同时在收藏区重复显示
       if (session.isFavorite) {
         favoriteSessions.add(i);
-        continue;
       }
 
       final groupName =

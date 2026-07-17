@@ -542,6 +542,7 @@ class SessionController extends GetxController {
       'quotaPeriodStart': session.quotaPeriodStart?.toIso8601String(),
       'quotaRequestCount': session.quotaRequestCount,
       'noAuthEnabled': session.noAuthEnabled,
+      'isDisabled': session.isDisabled,
     };
   }
 
@@ -604,6 +605,7 @@ class SessionController extends GetxController {
       completionTokens: entity['completionTokens'] as int? ?? 0,
       totalTokens: entity['totalTokens'] as int? ?? 0,
       noAuthEnabled: entity['noAuthEnabled'] as bool? ?? false,
+      isDisabled: entity['isDisabled'] as bool? ?? false,
     );
   }
 }

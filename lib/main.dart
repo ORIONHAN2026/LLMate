@@ -291,7 +291,7 @@ class _AppInitializerState extends State<AppInitializer> {
       final sessionController = Get.put(SessionController());
       final mcpController = Get.put(McpController());
 
-      // 加载 MCP 配置数据
+      // 初始化 MCP 配置数据
       await mcpController.loadAll();
 
       // 加载会话数据（首次启动会由 SessionController 自动 seed 默认会话）

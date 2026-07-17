@@ -19,6 +19,7 @@ import '../../data/storage_paths.dart';
 import '../../models/chat/session.dart';
 import '../../models/chat/message.dart';
 import 'middleware/api_key_guard.dart';
+import 'middleware/disabled_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/model_tool_guard.dart';
 import 'middleware/user_message_guard.dart';
@@ -216,9 +217,9 @@ class LocalHttpService {
 
     // 模型列表路由（返回当前会话绑定的模型，兼容 OpenAI /v1/models 格式）
     router.get('/<segment>/models', (Request request, String sessionId) async {
-      final pipeline = const Pipeline().addMiddleware(
-        apiKeyGuard,
-      ); // API Key 校验，装载 session
+      final pipeline = const Pipeline()
+          .addMiddleware(apiKeyGuard) // API Key 校验，装载 session
+          .addMiddleware(disabledGuard); // 禁用状态检查
 
       return pipeline.addHandler((Request req) {
         return _handleModelsList(req);
@@ -255,6 +256,7 @@ class LocalHttpService {
       // 响应返回：业务处理（直接更新会话/审计） → userMessage → audit → modelTool → quota → apiKey
       final pipeline = const Pipeline()
           .addMiddleware(apiKeyGuard) //api判断,装载session
+          .addMiddleware(disabledGuard) //禁用状态检查
           .addMiddleware(quotaGuard) //配额判断
           .addMiddleware(modelToolGuard) //模型工具判断，装载body
           .addMiddleware(riskControlGuard) //风控脱敏：手机号/身份证号等*

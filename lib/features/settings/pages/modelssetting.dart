@@ -86,22 +86,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
   // 加载模型列表
   Future<void> _loadModels() async {
-    final modelsData = await modelController.loadModels();
-    final models =
-        modelsData.map((modelData) {
-          // 确保所有必需字段都存在，如果没有modelId则自动生成
-          if (modelData['modelId'] == null) {
-            modelData['modelId'] = ChatModel.generateModelId();
-          }
-
-          // 确保businessType有值
-          if (modelData['businessType'] == null) {
-            modelData['businessType'] =
-                AppLocalizations.of(context)!.defaultConversation;
-          }
-
-          return ChatModel.fromMap(modelData);
-        }).toList();
+    final models = await modelController.loadModels();
 
     setState(() {
       _availableModels = models;
@@ -127,12 +112,6 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       }
     }
     return modelId;
-  }
-
-  // 保存模型列表
-  Future<void> _saveModels() async {
-    final modelsData = _availableModels.map((model) => model.toMap()).toList();
-    await modelController.saveModelsData(modelsData);
   }
 
   // 清理使用已删除模型的会话中的 chatModel 字段
@@ -180,7 +159,6 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
 
   @override
   void dispose() {
-    _saveModels(); // 页面关闭时保存数据
     super.dispose();
   }
 
@@ -422,7 +400,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     setState(() {
       _availableModels.add(copiedModel);
     });
-    await _saveModels();
+    await modelController.addModel(copiedModel);
 
     // 显示成功提示
     SnackBarUtils.showSuccess(
@@ -513,7 +491,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         });
 
         // 保存模型到本地存储
-        await _saveModels();
+        await modelController.updateModel(updatedModel);
 
         // 同步更新所有使用该模型的会话
         await sessionController.updateModelInSessions(updatedModel);
@@ -545,7 +523,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         // 清理使用该模型的会话中的 chatModel 字段
         await _clearModelFromSessions(modelId);
 
-        await _saveModels();
+        await modelController.deleteModel(modelId);
       },
     );
   }
@@ -561,10 +539,11 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       },
     ).then((result) async {
       if (result != null) {
+        final newModel = ChatModel.fromMap(result);
         setState(() {
-          _availableModels.add(ChatModel.fromMap(result));
+          _availableModels.add(newModel);
         });
-        await _saveModels();
+        await modelController.addModel(newModel);
       }
     });
   }
@@ -575,7 +554,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     bool isSelected, {
     String? provider,
   }) {
-    final iconPath = ModelIconUtils.resolveIconPath(
+    final iconPath = ModelController.resolveIconPath(
       platform: provider,
       modelName: modelName,
     );

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'dart:async';
 import '../../../controllers/session_controller.dart';
+import '../../../controllers/message_controller.dart';
 import '../../../controllers/mcp_controller.dart';
 import '../../../models/models.dart';
 import '../../../core/llm/llm_framework.dart';
@@ -171,8 +172,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Future<void> _loadModels() async {
     try {
       final modelController = Get.find<ModelController>();
-      final modelMaps = await modelController.loadModels();
-      final models = modelMaps.map((map) => ChatModel.fromMap(map)).toList();
+      final models = await modelController.loadModels();
       setState(() {
         _availableModels = models;
         if (models.isNotEmpty && !models.any((m) => m.name == _selectedModel)) {
@@ -239,7 +239,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             );
 
     final newSession = ChatSession(
-      sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+      sessionId: ChatSession.generateSessionId(),
       name: AppLocalizations.of(context)!.newSession,
       createdAt: DateTime.now(),
       messages: [],
@@ -1137,6 +1137,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
 
     sessionController.updateSession(updatedSession);
+    // 用户消息单条落盘
+    MessageController.instance.addMessage(userMessage);
 
     setState(() {});
 
@@ -1208,6 +1210,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       );
 
       sessionController.updateSession(updateSession);
+      // AI 消息单条落盘
+      MessageController.instance.addMessage(botMessage);
       setState(() {});
 
       // 调用API生成流式响应
@@ -1263,6 +1267,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           botMessage.isToolCalling = false;
           updateSession = updateSession.copyWith(isSending: false);
           sessionController.updateSession(updateSession);
+          // 落盘最终 AI 消息
+          MessageController.instance.updateMessage(botMessage);
           setState(() {});
           break; // 收到 done 后立即退出循环
         }
@@ -1310,6 +1316,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             );
 
             sessionController.updateSession(updateSession);
+            // 流式更新期间持续落盘 AI 消息
+            MessageController.instance.updateMessage(botMessage);
             setState(() {});
 
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1333,9 +1341,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         (msg) => msg.msgId == botMessageId,
       );
 
+      ChatMessage? finalBotMessage;
       if (messageIndex != -1) {
         final updatedMessages = List<ChatMessage>.from(updateSession.messages);
-        updatedMessages[messageIndex] = botMessage.copyWith(
+        finalBotMessage = botMessage.copyWith(
           isError:
               accumulatedContent.startsWith('请求失败') ||
               accumulatedContent.startsWith('API 错误') ||
@@ -1348,7 +1357,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           completionTokens: estimatedOutputTokens,
           totalTokens: estimatedTotalTokens,
         );
+        updatedMessages[messageIndex] = finalBotMessage;
         updateSession = updateSession.copyWith(messages: updatedMessages);
+      }
+      // 落盘最终的 AI 消息（含性能统计）
+      if (finalBotMessage != null) {
+        MessageController.instance.updateMessage(finalBotMessage);
       }
 
       // 流式响应完成，无论是否找到 bot 消息，都必须重置发送状态
@@ -1459,6 +1473,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       sessionController.updateSession(
         currentSession.copyWith(messages: updatedMessages, isSending: false),
       );
+      // 错误消息单条落盘
+      MessageController.instance.addMessage(errorMessage);
       setState(() {});
 
       _scrollToBottom();
@@ -1567,6 +1583,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 更新会话
     sessionController.updateSession(clearedSession);
+    // 清空 DB 中的消息（保留会话与目录）
+    MessageController.instance.clearMessages(currentSession.sessionId);
 
     // 清空相关的UI状态
     setState(() {

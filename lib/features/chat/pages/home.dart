@@ -110,9 +110,8 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         // 保存当前选中的模型名称
         final currentSelectedModel = _selectedModel;
 
-        // 加载模型并转换为ChatModel
-        _availableModels =
-            models.map((modelMap) => ChatModel.fromMap(modelMap)).toList();
+        // 加载模型
+        _availableModels = models;
 
         // 检查当前选中的模型是否仍然存在
         final stillExists = _availableModels.any(
@@ -193,7 +192,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     }
 
     final newSession = ChatSession(
-      sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+      sessionId: ChatSession.generateSessionId(),
       name: AppLocalizations.of(context)!.newSession,
       createdAt: DateTime.now(),
       messages: [],

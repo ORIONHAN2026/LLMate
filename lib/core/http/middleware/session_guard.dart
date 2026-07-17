@@ -3,6 +3,7 @@ import 'package:get/get.dart' hide Response;
 import 'package:shelf/shelf.dart';
 
 import '../../../controllers/session_controller.dart';
+import '../../../controllers/message_controller.dart';
 import '../../../models/chat/chat_session.dart';
 import '../../../models/chat/chat_message.dart';
 import '../../../models/chat/content_block.dart';
@@ -59,7 +60,7 @@ Handler sessionGuard(Handler innerHandler) {
             final userMessage =
                 request.context['userMessage'] as ChatMessage?;
 
-            _updateSession(
+            await _updateSession(
               session: data.session,
               userMessage: userMessage,
               content: data.content,
@@ -84,7 +85,7 @@ Handler sessionGuard(Handler innerHandler) {
 /// 流结束后更新本地会话：追加 AI 回复消息 + token 统计 + 配额计数 + 计费
 ///
 /// 用户消息已由 [messageGuard] 中间件在请求路径上预创建，通过 [userMessage] 传入。
-void _updateSession({
+Future<void> _updateSession({
   required ChatSession session,
   ChatMessage? userMessage,
   required String content,
@@ -92,7 +93,7 @@ void _updateSession({
   int? completionTokens,
   required DateTime generationStartTime,
   List<ToolCall>? toolCalls,
-}) {
+}) async {
   try {
     final sessionController = Get.find<SessionController>();
     final now = DateTime.now();
@@ -144,6 +145,12 @@ void _updateSession({
 
     // updateSession 内部会调用 _recalculateBilling 自动计算费用
     sessionController.updateSession(updatedSession);
+
+    // 单条消息落盘（用户消息 + AI 回复），替代批量写入
+    final messageController = MessageController.instance;
+    for (final m in newMessages) {
+      await messageController.addMessage(m);
+    }
 
     final userPreview =
         userMessage != null

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -102,54 +101,18 @@ class AuditController extends GetxController {
   /// 审计数据库路径：~/.llmate/autits.db
   static String get _dbPath => p.join(StoragePaths.root, 'autits.db');
 
-  /// 旧版审计目录（迁移源）：~/.llmate/audit/
-  static String get _legacyAuditDir => p.join(StoragePaths.root, 'audit');
-
   /// sembast store 名称
   static const String _storeName = 'audit_logs';
   final _store = stringMapStoreFactory.store(_storeName);
 
   Database? _db;
-  bool _migrated = false;
 
   /// 懒加载并打开 sembast 数据库（单例）
   Future<Database> get _database async {
     if (_db != null) return _db!;
     await StoragePaths.ensureRoot();
     _db = await databaseFactoryIo.openDatabase(_dbPath);
-    await _maybeMigrate(_db!);
     return _db!;
-  }
-
-  /// 一次性将旧版 `audit/*.json` 文件迁移进数据库（仅当数据库为空时执行一次）
-  Future<void> _maybeMigrate(Database db) async {
-    if (_migrated) return;
-    _migrated = true;
-    try {
-      final legacyDir = Directory(_legacyAuditDir);
-      if (!await legacyDir.exists()) return;
-      final count = await _store.count(db);
-      if (count > 0) return; // 库中已有数据，跳过迁移
-
-      final files = (await legacyDir.list().toList())
-          .whereType<File>()
-          .where((f) => f.path.endsWith('-audit.json'))
-          .toList();
-
-      for (final f in files) {
-        try {
-          final json =
-              jsonDecode(await f.readAsString()) as Map<String, dynamic>;
-          await _store.add(db, json);
-        } catch (_) {
-          // 单条解析失败不影响其他条目
-        }
-      }
-      await legacyDir.delete(recursive: true);
-      debugPrint('📦 [Audit] 已迁移旧审计文件至 autits.db');
-    } catch (_) {
-      // 迁移失败不影响新写入
-    }
   }
 
   /// 写出前对原始请求体字符串做解析 + 脱敏
@@ -197,7 +160,11 @@ class AuditController extends GetxController {
       );
 
       final db = await _database;
-      await _store.add(db, entry.toJson());
+      if (entry.requestId != null && entry.requestId!.isNotEmpty) {
+        await _store.record(entry.requestId!).put(db, entry.toJson());
+      } else {
+        await _store.add(db, entry.toJson());
+      }
 
       // 更新内存缓存（最新在前）
       recentLogs.insert(0, entry);
@@ -260,6 +227,57 @@ class AuditController extends GetxController {
       debugPrint('🧹 [Audit] 已清空审计日志');
     } catch (e) {
       debugPrint('⚠️ [Audit] 清空审计日志失败: $e');
+    }
+  }
+
+  // ==================== 单条审计日志：增 / 删 / 改 / 查 ====================
+
+  /// 新增单条审计日志（若 requestId 非空则以其为 key upsert，否则追加）
+  Future<void> addAudit(AuditLog log) async {
+    try {
+      final db = await _database;
+      if (log.requestId != null && log.requestId!.isNotEmpty) {
+        await _store.record(log.requestId!).put(db, log.toJson());
+      } else {
+        await _store.add(db, log.toJson());
+      }
+      recentLogs.insert(0, log);
+      if (recentLogs.length > _maxCached) {
+        recentLogs.removeRange(_maxCached, recentLogs.length);
+      }
+    } catch (e) {
+      debugPrint('⚠️ [Audit] 新增单条审计失败: $e');
+    }
+  }
+
+  /// 查询单条审计日志（按 requestId）
+  Future<AuditLog?> getAudit(String requestId) async {
+    if (requestId.isEmpty) return null;
+    return loadAuditById(requestId);
+  }
+
+  /// 更新单条审计日志（按 requestId 定位并 put）
+  Future<void> updateAudit(AuditLog log) async {
+    if (log.requestId == null || log.requestId!.isEmpty) return;
+    try {
+      final db = await _database;
+      await _store.record(log.requestId!).put(db, log.toJson());
+      final idx = recentLogs.indexWhere((l) => l.requestId == log.requestId);
+      if (idx != -1) recentLogs[idx] = log;
+    } catch (e) {
+      debugPrint('⚠️ [Audit] 更新单条审计失败: $e');
+    }
+  }
+
+  /// 删除单条审计日志（按 requestId 定位并删除）
+  Future<void> deleteAudit(String requestId) async {
+    if (requestId.isEmpty) return;
+    try {
+      final db = await _database;
+      await _store.record(requestId).delete(db);
+      recentLogs.removeWhere((l) => l.requestId == requestId);
+    } catch (e) {
+      debugPrint('⚠️ [Audit] 删除单条审计失败: $e');
     }
   }
 }

@@ -1,4 +1,5 @@
 import 'package:llmate/controllers/session_controller.dart';
+import 'package:llmate/controllers/message_controller.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/models/models.dart';
 import 'package:llmate/utils/snackbar_utils.dart';
@@ -679,9 +680,15 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
         );
         if (messageIndex != -1) {
           // 保留到指定消息为止的所有消息
-          final updatedMessages = session.messages.sublist(0, messageIndex + 1);
-          final updatedSession = session.copyWith(messages: updatedMessages);
+          final keptMessages = session.messages.sublist(0, messageIndex + 1);
+          final removedMessages = session.messages.sublist(messageIndex + 1);
+          final updatedSession = session.copyWith(messages: keptMessages);
           sessionController.updateSession(updatedSession);
+          // 逐条删除被裁剪掉的消息（单条删除，替代批量写入）
+          final messageController = MessageController.instance;
+          for (final m in removedMessages) {
+            await messageController.deleteMessage(m);
+          }
 
           // 通知父组件更新
           if (mounted) {

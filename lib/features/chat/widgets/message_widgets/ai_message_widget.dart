@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:llmate/controllers/session_controller.dart';
+import 'package:llmate/controllers/message_controller.dart';
 import 'package:llmate/models/models.dart';
 import 'package:llmate/utils/snackbar_utils.dart';
 import 'package:llmate/core/llm/llm_client.dart';
@@ -768,64 +769,77 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     String actionName,
     RegenerateActionType actionType,
   ) async {
-    final messages = session.messages;
+      final messages = session.messages;
 
-    try {
-      ChatSession updatedSession;
+      try {
+        ChatSession updatedSession;
+        ChatMessage? botMessageToUpdate;
+        List<ChatMessage> removedMessages = [];
 
-      switch (actionType) {
-        case RegenerateActionType.regenerateThisReply:
-          // 重新生成此回复：只替换当前消息内容，保留前后所有消息
-          if (targetIndex < 0 || targetIndex >= messages.length) {
-            if (mounted) {
-              SnackBarUtils.showError(
-                context,
-                AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
-              );
+        switch (actionType) {
+          case RegenerateActionType.regenerateThisReply:
+            // 重新生成此回复：只替换当前消息内容，保留前后所有消息
+            if (targetIndex < 0 || targetIndex >= messages.length) {
+              if (mounted) {
+                SnackBarUtils.showError(
+                  context,
+                  AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
+                );
+              }
+              return;
             }
-            return;
-          }
 
-          // 创建一个临时的更新会话，将目标消息内容清空但保留消息位置
-          final updatedMessages = List<ChatMessage>.from(messages);
-          updatedMessages[targetIndex] = ChatMessage(
-            msgId: messages[targetIndex].msgId,
-            role: MessageRole.bot,
-            content: '', // 清空内容，准备重新生成
-            timestamp: messages[targetIndex].timestamp,
-            sessionId: session.sessionId,
-            isError: false,
-          );
+            // 创建一个临时的更新会话，将目标消息内容清空但保留消息位置
+            final updatedMessages = List<ChatMessage>.from(messages);
+            final newBot = ChatMessage(
+              msgId: messages[targetIndex].msgId,
+              role: MessageRole.bot,
+              content: '', // 清空内容，准备重新生成
+              timestamp: messages[targetIndex].timestamp,
+              sessionId: session.sessionId,
+              isError: false,
+            );
+            updatedMessages[targetIndex] = newBot;
+            botMessageToUpdate = newBot;
 
-          updatedSession = session.copyWith(
-            messages: updatedMessages,
-            isSending: true,
-          );
-          break;
+            updatedSession = session.copyWith(
+              messages: updatedMessages,
+              isSending: true,
+            );
+            break;
 
-        case RegenerateActionType.regenerateFromHere:
-        case RegenerateActionType.regenerate:
-        case RegenerateActionType.regenerateLastReply:
-          // 其他情况：删除从目标索引开始的所有消息
-          if (targetIndex < 0 || targetIndex > messages.length) {
-            if (mounted) {
-              SnackBarUtils.showError(
-                context,
-                AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
-              );
+          case RegenerateActionType.regenerateFromHere:
+          case RegenerateActionType.regenerate:
+          case RegenerateActionType.regenerateLastReply:
+            // 其他情况：删除从目标索引开始的所有消息
+            if (targetIndex < 0 || targetIndex > messages.length) {
+              if (mounted) {
+                SnackBarUtils.showError(
+                  context,
+                  AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
+                );
+              }
+              return;
             }
-            return;
-          }
 
-          final updatedMessages = messages.sublist(0, targetIndex);
-          updatedSession = session.copyWith(
-            messages: updatedMessages,
-            isSending: true,
-          );
-          break;
-      }
+            final updatedMessages = messages.sublist(0, targetIndex);
+            removedMessages = messages.sublist(targetIndex);
+            updatedSession = session.copyWith(
+              messages: updatedMessages,
+              isSending: true,
+            );
+            break;
+        }
 
-      await sessionController.updateSession(updatedSession);
+        await sessionController.updateSession(updatedSession);
+        // 单条落盘（替代批量写入）
+        final messageController = MessageController.instance;
+        if (botMessageToUpdate != null) {
+          messageController.updateMessage(botMessageToUpdate);
+        }
+        for (final m in removedMessages) {
+          messageController.deleteMessage(m);
+        }
 
       // 生成新的AI回复
       await _generateAIResponse(
@@ -902,6 +916,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           shouldStopResponse: false,
         );
         await sessionController.updateSession(session);
+        // AI 消息单条落盘
+        MessageController.instance.addMessage(botMessage);
         widget.onUpdate?.call();
       }
 
@@ -982,7 +998,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               accumulatedContent.startsWith('网络连接错误') ||
               accumulatedContent.startsWith('连接错误');
 
-          updatedMessages[messageIndex] = ChatMessage(
+          final builtMessage = ChatMessage(
             msgId: botMessageId,
             role: MessageRole.bot,
             content: accumulatedContent,
@@ -997,12 +1013,16 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             // 在流式更新过程中不设置结束时间
           );
 
+          updatedMessages[messageIndex] = builtMessage;
+
           currentSession = currentSession.copyWith(
             messages: updatedMessages,
             isSending: true,
           );
 
           await sessionController.updateSession(currentSession);
+          // 流式更新期间持续落盘 AI 消息
+          MessageController.instance.updateMessage(builtMessage);
 
           // 强制触发UI更新 - 关键修复
           if (mounted) {
@@ -1027,7 +1047,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
       if (messageIndex != -1) {
         final updatedMessages = List<ChatMessage>.from(currentSession.messages);
-        updatedMessages[messageIndex] = ChatMessage(
+        final finalBotMessage = ChatMessage(
           msgId: botMessageId,
           role: MessageRole.bot,
           content: accumulatedContent,
@@ -1047,6 +1067,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           completionTokens: estimatedOutputTokens,
           totalTokens: estimatedTotalTokens,
         );
+        updatedMessages[messageIndex] = finalBotMessage;
 
         final finalSession = currentSession.copyWith(
           messages: updatedMessages,
@@ -1054,6 +1075,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         );
 
         await sessionController.updateSession(finalSession);
+        // 落盘最终的 AI 消息（含性能统计）
+        MessageController.instance.updateMessage(finalBotMessage);
       }
 
       // 无论是否找到 bot 消息，都必须重置发送状态
@@ -1272,7 +1295,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
         // 创建新会话
         final newSession = ChatSession(
-          sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+          sessionId: ChatSession.generateSessionId(),
           name: l10n.newChatFromHistory,
           createdAt: DateTime.now(),
           messages: historyMessages,
@@ -1282,6 +1305,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
         // 添加新会话到控制器
         sessionController.addSession(newSession);
+        // 逐条落盘历史消息（替代批量写入）
+        final messageController = MessageController.instance;
+        for (final m in historyMessages) {
+          await messageController.addMessage(m);
+        }
 
         // 通知父组件更新
         widget.onUpdate?.call();

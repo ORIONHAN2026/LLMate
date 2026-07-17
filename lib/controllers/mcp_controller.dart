@@ -387,11 +387,12 @@ class McpController extends GetxController {
   }) async {
     try {
       final modelController = Get.find<ModelController>();
-      if (modelController.models.isEmpty) {
+      final models = await modelController.loadModels();
+      if (models.isEmpty) {
         debugPrint('⚠️ [MCP-Summarize] 没有可用模型');
         return null;
       }
-      final ChatModel model = modelController.models.last;
+      final ChatModel model = models.last;
       final provider = OpenAiProvider();
       provider.configure(model);
       final toolSummary = StringBuffer();

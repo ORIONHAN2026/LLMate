@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
@@ -33,93 +30,18 @@ class UsageController extends GetxController {
   /// 用量数据库路径：~/.llmate/usages.db
   static String get _dbPath => p.join(StoragePaths.root, 'usages.db');
 
-  /// 旧版用量目录（迁移源）：~/.llmate/usage/
-  static String get _legacyUsageDir => p.join(StoragePaths.root, 'usage');
-
   /// sembast store 名称（每条记录为一次请求的用量明细）
   static const String _storeName = 'usage_details';
   final _store = stringMapStoreFactory.store(_storeName);
 
   Database? _db;
-  bool _migrated = false;
 
   /// 懒加载并打开 sembast 数据库（单例）
   Future<Database> get _database async {
     if (_db != null) return _db!;
     await StoragePaths.ensureRoot();
     _db = await databaseFactoryIo.openDatabase(_dbPath);
-    await _maybeMigrate(_db!);
     return _db!;
-  }
-
-  /// 一次性将旧版 `usage/*.json` 中的用量明细迁移进数据库。
-  ///
-  /// 旧文件按「时间戳-模型-会话-usage.json」命名，其内部的 `details` 为原始
-  /// 请求明细列表；逐条写入数据库，并依据 (timestamp+model+cost) 去重，避免
-  /// 不同粒度文件（分/时/日…）导入重复数据。仅当数据库中尚无对应明细时写入，
-  /// 旧目录保留作备份。
-  Future<void> _maybeMigrate(Database db) async {
-    if (_migrated) return;
-    _migrated = true;
-    try {
-      final legacyDir = Directory(_legacyUsageDir);
-      if (!await legacyDir.exists()) return;
-
-      final files = (await legacyDir.list().toList())
-          .whereType<File>()
-          .where((f) => f.path.endsWith('-usage.json'))
-          .toList();
-
-      int migrated = 0;
-      for (final f in files) {
-        try {
-          final json =
-              jsonDecode(await f.readAsString()) as Map<String, dynamic>;
-          final stats = UsageStats.fromJson(json);
-          // 从文件名尽力恢复 sessionId（旧文件名末段为 -{modelId}-{sessionId}-usage）
-          final sessionId = _sessionIdFromFilename(p.basename(f.path));
-          for (final d in stats.details) {
-            final key = _detailKey(d);
-            final existing = await _store.record(key).get(db);
-            if (existing == null) {
-              await _store.record(key).put(db, {
-                'sessionId': sessionId,
-                ...d.toJson(),
-              });
-              migrated++;
-            }
-          }
-        } catch (_) {
-          // 单文件解析失败不影响其他文件
-        }
-      }
-      if (migrated > 0) {
-        debugPrint('📦 [Usage] 已迁移 $migrated 条旧用量明细至 usages.db');
-      }
-    } catch (e) {
-      debugPrint('⚠️ [Usage] 迁移旧用量失败: $e');
-    }
-  }
-
-  /// 从旧文件名恢复 sessionId（尽力而为，无法可靠拆分时返回 'unknown'）
-  static String _sessionIdFromFilename(String basename) {
-    final name = basename.replaceAll('-usage.json', '');
-    final parts = name.split('-');
-    // 文件名结构：{时间戳段...}-{modelId 段...}-{sessionId 段...}
-    // 时间戳段长度决定粒度：5=分钟 4=小时 3=天 2=月 1=年
-    int tsLen;
-    switch (parts.length) {
-      case 5: tsLen = 5; break;
-      case 4: tsLen = 4; break;
-      case 3: tsLen = 3; break;
-      case 2: tsLen = 2; break;
-      case 1: tsLen = 1; break;
-      default: tsLen = 0;
-    }
-    if (tsLen == 0 || parts.length <= tsLen) return 'unknown';
-    // 剩余部分中：最后一段为 sessionId 的最后一段，前面为 modelId + sessionId
-    // 由于 modelId / sessionId 内部均可能含 '-'，无法精确拆分，故整体作为 sessionId 占位
-    return parts.sublist(tsLen).join('-');
   }
 
   /// 明细去重键（时间戳 + 模型 + 费用，避免不同粒度文件重复导入）
@@ -232,6 +154,57 @@ class UsageController extends GetxController {
       debugPrint('🧹 [Usage] 已清空用量数据');
     } catch (e) {
       debugPrint('⚠️ [Usage] 清空用量数据失败: $e');
+    }
+  }
+
+  // ==================== 单条用量明细：增 / 删 / 改 / 查 ====================
+
+  /// 新增单条用量明细（按明细 key upsert）
+  Future<void> addUsage(UsageDetail detail, {String? sessionId}) async {
+    try {
+      final db = await _database;
+      await _store.record(_detailKey(detail)).put(db, {
+        'sessionId': sessionId ?? '',
+        ...detail.toJson(),
+      });
+    } catch (e) {
+      debugPrint('⚠️ [Usage] 新增单条用量失败: $e');
+    }
+  }
+
+  /// 更新单条用量明细（按明细 key upsert）
+  Future<void> updateUsage(UsageDetail detail, {String? sessionId}) async {
+    try {
+      final db = await _database;
+      await _store.record(_detailKey(detail)).put(db, {
+        'sessionId': sessionId ?? '',
+        ...detail.toJson(),
+      });
+    } catch (e) {
+      debugPrint('⚠️ [Usage] 更新单条用量失败: $e');
+    }
+  }
+
+  /// 查询单条用量明细（按明细 key）
+  Future<UsageDetail?> getUsage(UsageDetail detail) async {
+    try {
+      final db = await _database;
+      final rec = await _store.record(_detailKey(detail)).get(db);
+      if (rec == null) return null;
+      return UsageDetail.fromJson(rec);
+    } catch (e) {
+      debugPrint('⚠️ [Usage] 查询单条用量失败: $e');
+      return null;
+    }
+  }
+
+  /// 删除单条用量明细（按明细 key）
+  Future<void> deleteUsage(UsageDetail detail) async {
+    try {
+      final db = await _database;
+      await _store.record(_detailKey(detail)).delete(db);
+    } catch (e) {
+      debugPrint('⚠️ [Usage] 删除单条用量失败: $e');
     }
   }
 }

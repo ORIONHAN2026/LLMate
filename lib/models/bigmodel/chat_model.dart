@@ -232,7 +232,7 @@ class ChatModel {
 
   /// 根据模型的 platform、protocol、name/model 字段获取对应的图标路径
   String? getIconPath() {
-    return ModelIconUtils.resolveIconPath(
+    return ModelController.resolveIconPath(
       platform: platform,
       protocol: protocol,
       modelName: displayName,

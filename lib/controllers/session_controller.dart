@@ -8,7 +8,6 @@ import 'package:sembast/sembast_io.dart';
 
 import '../models/chat/chat_session.dart';
 import '../models/bigmodel/chat_model.dart';
-import '../data/file_storage.dart';
 import '../data/storage_service.dart';
 
 import './model_controller.dart';
@@ -51,45 +50,26 @@ class SessionController extends GetxController {
   final _store = stringMapStoreFactory.store(_storeName);
 
   Database? _db;
-  static bool _migrated = false;
 
   /// 懒加载并打开 sembast 数据库（单例）
   Future<Database> get _database async {
     if (_db != null) return _db!;
     await StoragePaths.ensureRoot();
     _db = await databaseFactoryIo.openDatabase(_dbPath);
-    await _maybeMigrate(_db!);
     return _db!;
   }
 
-  /// 一次性将旧版 chats/{sid}/session.json 迁移进 sessions.db
-  ///
-  /// 仅当数据库中尚不存在同名记录时写入，避免覆盖；旧文件保留作备份。
-  Future<void> _maybeMigrate(Database db) async {
-    if (_migrated) return;
-    _migrated = true;
-    try {
-      final ids = await StoragePaths.listSessionIds();
-      if (ids.isEmpty) return;
-      int migrated = 0;
-      for (final sid in ids) {
-        final data = await FileStorage.readJson(StoragePaths.sessionFile(sid));
-        if (data == null) continue;
-        final key = data['sessionId'] as String? ?? sid;
-        final existing = await _store.record(key).get(db);
-        if (existing == null) {
-          await _store.record(key).put(db, data);
-          migrated++;
-        }
-      }
-      if (migrated > 0) {
-        debugPrint('📦 [Session] 已迁移 $migrated 个旧会话至 sessions.db');
-      }
-    } catch (e) {
-      debugPrint('⚠️ [Session] 迁移旧会话失败: $e');
-    }
+  /// 将单个会话 upsert 到数据库（key 为 sessionId）
+  Future<void> _upsertSession(Database db, ChatSession session) async {
+    final data = _sessionToMap(session);
+    data['isCurrent'] = currentSession.value?.sessionId == session.sessionId;
+    await _store.record(session.sessionId).put(db, data);
   }
 
+  /// 用新的完整列表替换内存列表，并逐条 upsert 每个会话到数据库。
+  ///
+  /// 与 MessageController 原则一致：多条会话的持久化通过逐条 [_upsertSession]
+  /// 完成，不再整体替换后删除旧记录。
   Future<void> setSessions(List<ChatSession> newSessions) async {
     sessions.value = newSessions;
     if (newSessions.isNotEmpty && currentSession.value == null) {
@@ -120,11 +100,11 @@ class SessionController extends GetxController {
     if (s.modelId != null && s.modelId!.isNotEmpty) {
       try {
         final modelController = Get.find<ModelController>();
-        final m = modelController.models.firstWhere(
-          (m) => m.modelId == s.modelId,
-        );
-        s = s.copyWith(chatModel: m);
-        updated = true;
+        final m = await modelController.getModel(s.modelId!);
+        if (m != null) {
+          s = s.copyWith(chatModel: m);
+          updated = true;
+        }
       } catch (_) {}
     }
 
@@ -197,17 +177,9 @@ class SessionController extends GetxController {
     required bool isCurrent,
   }) async {
     try {
-      // === 1. 持久化所有会话元数据到 sessions.db ===
-      await _persistSessionsToDb();
-
-      // === 2. 持久化当前会话的消息（委托给 MessageController）===
-      if (isCurrent) {
-        await MessageController.instance.persistMessages(
-          updatedSession.sessionId,
-          updatedSession.messages,
-        );
-      }
-
+      // === 1. 持久化所有会话元数据到 sessions.db（逐条 upsert）===
+      await _persistSessions();
+      // 消息由 MessageController 以单条增删改方式落盘，此处不再批量写入。
     } catch (e) {
       debugPrint('合并持久化失败: $e');
     }
@@ -235,7 +207,7 @@ class SessionController extends GetxController {
     if (isCurrent) {
       currentSession.value = updatedSession;
     }
-    await MessageController.instance.persistMessage(updateMessage);
+    await MessageController.instance.updateMessage(updateMessage);
   }
 
   /// 删除消息（会话内存更新 + 消息落盘委托给 MessageController）
@@ -284,11 +256,11 @@ class SessionController extends GetxController {
       if (target.modelId != null && target.modelId!.isNotEmpty) {
         try {
           final modelController = Get.find<ModelController>();
-          final m = modelController.models.firstWhere(
-            (m) => m.modelId == target.modelId,
-          );
-          target = target.copyWith(chatModel: m);
-          sessions[targetIndex] = target;
+          final m = await modelController.getModel(target.modelId!);
+          if (m != null) {
+            target = target.copyWith(chatModel: m);
+            sessions[targetIndex] = target;
+          }
         } catch (_) {}
       }
 
@@ -373,25 +345,6 @@ class SessionController extends GetxController {
     });
   }
 
-  /// 更新会话消息并持久化（消息落盘委托给 MessageController）
-  Future<void> updateSessionMessages(
-    String sessionId,
-    List<ChatMessage> messages,
-  ) async {
-    return Future.microtask(() async {
-      final idx = sessions.indexWhere((s) => s.sessionId == sessionId);
-      if (idx != -1) {
-        final updated = sessions[idx].copyWith(messages: messages);
-        sessions[idx] = updated;
-        final isCurrent = currentSession.value?.sessionId == sessionId;
-        if (isCurrent) {
-          currentSession.value = updated;
-        }
-        await MessageController.instance.persistMessages(sessionId, messages);
-      }
-    });
-  }
-
   /// 清空所有会话并持久化
   Future<void> clearAllSessions() async {
     sessions.clear();
@@ -445,7 +398,7 @@ class SessionController extends GetxController {
       ChatModel? selectedModel;
       try {
         final modelController = Get.find<ModelController>();
-        final available = modelController.models;
+        final available = await modelController.loadModels();
         if (available.isNotEmpty) {
           selectedModel = available.firstWhere(
             (m) => m.name == 'DeepSeekR1',
@@ -482,6 +435,11 @@ class SessionController extends GetxController {
       );
 
       await addSession(sessionWithWelcome);
+      // 持久化欢迎消息（单条落盘，替代原有的批量消息写入）
+      final welcome = sessionWithWelcome.messages.firstOrNull;
+      if (welcome != null) {
+        await MessageController.instance.addMessage(welcome);
+      }
       debugPrint('🌱 已创建默认会话（首次启动）');
     } catch (e) {
       debugPrint('⚠️ 创建默认会话失败: $e');
@@ -496,30 +454,14 @@ class SessionController extends GetxController {
   // ==================== 内部持久化方法 ====================
 
   Future<void> _persistSessions() async {
-    // 同步写入 sessions.db
+    // 同步写入 sessions.db（逐条 upsert，不再整体替换）
     try {
-      await _persistSessionsToDb();
+      final db = await _database;
+      for (final session in sessions) {
+        await _upsertSession(db, session);
+      }
     } catch (e) {
       debugPrint('保存会话到 sessions.db 失败: $e');
-    }
-  }
-
-  /// 将当前会话列表同步写入 sessions.db，并清理已不在列表中的旧记录
-  Future<void> _persistSessionsToDb() async {
-    final db = await _database;
-    final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
-    for (final session in sessions) {
-      final data = _sessionToMap(session);
-      data['isCurrent'] =
-          currentSession.value?.sessionId == session.sessionId;
-      await _store.record(session.sessionId).put(db, data);
-    }
-    final existing = await _store.find(db);
-    for (final rec in existing) {
-      final sid = (rec.value as Map<String, dynamic>)['sessionId'] as String? ?? '';
-      if (!currentSessionIds.contains(sid)) {
-        await _store.record(sid).delete(db);
-      }
     }
   }
 
@@ -610,9 +552,7 @@ class SessionController extends GetxController {
     if (modelId != null && modelId.isNotEmpty) {
       try {
         final modelController = Get.find<ModelController>();
-        chatModel = modelController.models.firstWhere(
-          (m) => m.modelId == modelId,
-        );
+        chatModel = await modelController.getModel(modelId);
       } catch (_) {}
     }
 

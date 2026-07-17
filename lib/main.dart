@@ -14,7 +14,6 @@ import './features/chat/pages/home.dart';
 import './pages/loading_page.dart';
 import './core/http/local_http_service.dart';
 
-import './models/bigmodel/chat_model.dart';
 import './data/storage_service.dart';
 
 // 最小窗口宽度组成: 左侧边栏最小 150 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
@@ -287,15 +286,10 @@ class _AppInitializerState extends State<AppInitializer> {
   Future<void> _initializeApp() async {
     try {
       // 初始化全局GetX控制器
-      final modelController = Get.put(ModelController());
+      Get.put(ModelController());
       Get.put(MessageController());
       final sessionController = Get.put(SessionController());
       final mcpController = Get.put(McpController());
-
-      // 加载模型数据
-      final modelMaps = await modelController.loadModels();
-      final models = modelMaps.map((m) => ChatModel.fromMap(m)).toList();
-      modelController.setModels(models);
 
       // 加载 MCP 配置数据
       await mcpController.loadAll();

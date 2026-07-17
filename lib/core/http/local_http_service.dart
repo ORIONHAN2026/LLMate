@@ -12,6 +12,7 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart' as cors;
 
 import '../../controllers/settings_controller.dart';
 import '../../controllers/session_controller.dart';
+import '../../controllers/message_controller.dart';
 import '../../controllers/audit_controller.dart';
 import '../../controllers/usage_controller.dart';
 import '../../data/storage_paths.dart';
@@ -535,6 +536,10 @@ class LocalHttpService {
             session.promptTokens += promptTokens;
             session.completionTokens += completionTokens;
             session.totalTokens += totalTokens;
+            // 单条消息落盘（替代批量写入）
+            final messageController = MessageController.instance;
+            await messageController.addMessage(userMessage!);
+            await messageController.addMessage(botMessage);
             // updateSession 内部会调用 _recalculateBilling 自动计算费用
             sessionController.updateSession(session);
             // 强制通知所有监听者刷新 UI（确保非当前 session 的变更也能反映到侧边栏等位置）

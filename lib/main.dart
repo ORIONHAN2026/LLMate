@@ -6,9 +6,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import './controllers/model_controller.dart';
 import './controllers/session_controller.dart';
-import './controllers/theme_controller.dart';
-import './controllers/locale_controller.dart';
-import './controllers/domain_controller.dart';
+import './controllers/message_controller.dart';
+import './controllers/settings_controller.dart';
 import './controllers/mcp_controller.dart';
 import './controllers/audit_controller.dart';
 import './features/chat/pages/home.dart';
@@ -16,7 +15,6 @@ import './pages/loading_page.dart';
 import './core/http/local_http_service.dart';
 
 import './models/bigmodel/chat_model.dart';
-import 'models/chat/chat_session.dart';
 import './data/storage_service.dart';
 
 // 最小窗口宽度组成: 左侧边栏最小 150 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
@@ -65,17 +63,11 @@ void main() async {
     });
   }
 
-  // 初始化文件存储（必须在 ThemeController 之前）
+  // 初始化文件存储（必须在 SettingsController 之前）
   await StorageService.instance.initialize();
 
-  // 在应用启动前初始化 ThemeController
-  Get.put(ThemeController());
-
-  // 初始化 LocaleController（语言设置）
-  Get.put(LocaleController());
-
-  // 初始化 DomainController（域名管理）
-  final domainController = Get.put(DomainController());
+  // 初始化 SettingsController（统一设置：主题 / 域名 / 语言）
+  final settingsController = Get.put(SettingsController());
 
   // 确保域名配置加载完成
   await Future.delayed(const Duration(milliseconds: 100));
@@ -87,7 +79,7 @@ void main() async {
   Get.put(AuditController());
 
   // 启动 HTTP 服务（使用配置的 HTTP 端口，默认 80）
-  final port = domainController.domainConfig.value.httpPort;
+  final port = settingsController.domainConfig.value.httpPort;
   LocalHttpService.start(port: port, allowExternal: true);
 
   runApp(const MyApp());
@@ -98,14 +90,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<ThemeController>(
+    return GetBuilder<SettingsController>(
       builder: (themeController) {
-        final localeController = Get.find<LocaleController>();
+        final settings = Get.find<SettingsController>();
         return Obx(
           () => GetMaterialApp(
             title: 'LLMate',
             debugShowCheckedModeBanner: false,
-            locale: localeController.locale.value,
+            locale: settings.locale.value,
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -296,6 +288,7 @@ class _AppInitializerState extends State<AppInitializer> {
     try {
       // 初始化全局GetX控制器
       final modelController = Get.put(ModelController());
+      Get.put(MessageController());
       final sessionController = Get.put(SessionController());
       final mcpController = Get.put(McpController());
 
@@ -307,41 +300,8 @@ class _AppInitializerState extends State<AppInitializer> {
       // 加载 MCP 配置数据
       await mcpController.loadAll();
 
-      // 加载会话数据
+      // 加载会话数据（首次启动会由 SessionController 自动 seed 默认会话）
       await sessionController.loadAll();
-
-      // 如果没有会话，自动创建一个默认会话（模拟手动按钮行为）
-      if (sessionController.sessions.isEmpty) {
-        // 严格模拟 home.dart 中 _createNewSession 的模型匹配逻辑
-        ChatModel? selectedModelObject;
-        try {
-          final modelController = Get.find<ModelController>();
-          final availableModels = modelController.models;
-          if (availableModels.isNotEmpty) {
-            const defaultModelName = 'DeepSeekR1';
-            try {
-              selectedModelObject = availableModels.firstWhere(
-                (m) => m.name == defaultModelName,
-              );
-            } catch (_) {
-              // 没找到 DeepSeekR1，使用第一个可用模型
-              selectedModelObject = availableModels.first;
-            }
-          }
-        } catch (_) {
-          // ModelController 不可用
-        }
-
-        final defaultSession = ChatSession(
-          sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: '新对话',
-          createdAt: DateTime.now(),
-          messages: [],
-          chatModel: selectedModelObject, // 有可用模型时自动绑定
-          inputContent: '',
-        );
-        await sessionController.addSession(defaultSession);
-      }
 
       // 确保加载页面至少显示500ms，避免闪烁
       await Future.delayed(const Duration(milliseconds: 500));

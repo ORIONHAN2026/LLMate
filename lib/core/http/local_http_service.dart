@@ -10,13 +10,13 @@ import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart' as cors;
 
-import '../../controllers/domain_controller.dart';
+import '../../controllers/settings_controller.dart';
 import '../../controllers/session_controller.dart';
 import '../../controllers/audit_controller.dart';
+import '../../controllers/usage_controller.dart';
 import '../../data/storage_paths.dart';
 import '../../models/chat/chat_session.dart';
 import '../../models/chat/chat_message.dart';
-import '../../models/chat/usage_stats.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/model_tool_guard.dart';
@@ -40,7 +40,7 @@ class LocalHttpServiceController extends GetxController {
 
   void _syncPortFromDomain() {
     try {
-      final domainController = Get.find<DomainController>();
+      final domainController = Get.find<SettingsController>();
       port.value = domainController.domainConfig.value.httpPort;
     } catch (_) {}
   }
@@ -167,7 +167,7 @@ class LocalHttpService {
   /// 加载 HTTPS 安全上下文（从域名配置中获取证书）
   static SecurityContext? _loadSecurityContext() {
     try {
-      final domainController = Get.find<DomainController>();
+      final domainController = Get.find<SettingsController>();
       final config = domainController.domainConfig.value;
       if (!config.httpsEnabled) return null;
 
@@ -287,12 +287,7 @@ class LocalHttpService {
       }
 
       final data = <Map<String, dynamic>>[
-        {
-          'id': 'auto',
-          'object': 'model',
-          'created': 0,
-          'owned_by': 'llmate',
-        },
+        {'id': 'auto', 'object': 'model', 'created': 0, 'owned_by': 'llmate'},
       ];
 
       return Response.ok(
@@ -444,11 +439,12 @@ class LocalHttpService {
             streamController.add(Chunk.fromReason("大模型正在执行MCP服务").toIntList());
 
             // ── 执行 MCP 工具 ──
-            final executionResult = await McpController.instance.executeToolCalls(
-              session: session,
-              toolCalls: toolCallParams,
-              cleanContent: '',
-            );
+            final executionResult = await McpController.instance
+                .executeToolCalls(
+                  session: session,
+                  toolCalls: toolCallParams,
+                  cleanContent: '',
+                );
 
             if (executionResult != null &&
                 executionResult.executionResults.isNotEmpty) {
@@ -478,8 +474,10 @@ class LocalHttpService {
                 final rawResult = r['result']?.toString() ?? '';
                 // 风控脱敏：工具返回内容同样可能含手机号/身份证号等敏感信息，
                 // 沿用与转发大模型一致的脱敏开关
-                final maskedResult =
-                    maskSensitiveText(rawResult, riskControlOptionsOf(request));
+                final maskedResult = maskSensitiveText(
+                  rawResult,
+                  riskControlOptionsOf(request),
+                );
                 (body['messages'] as List<dynamic>).add({
                   'role': 'tool',
                   'tool_call_id': r['id'],
@@ -560,6 +558,17 @@ class LocalHttpService {
             error: null,
           );
 
+          // ── 保存最新一次请求/响应到 log/log.json（覆盖写入）──
+          await _saveLatestLog(
+            request: request,
+            sessionId: session.sessionId,
+            modelId: session.chatModel?.modelId ?? 'unknown',
+            originBody: request.context['originBody'] as String? ?? '',
+            body: body,
+            responseContent: contentBuffer.toString(),
+            error: null,
+          );
+
           // ── 保存按分钟累计的用量统计 ──
           _saveUsageStats(
             session: session,
@@ -580,6 +589,17 @@ class LocalHttpService {
             sessionId: session.sessionId,
             modelId: session.chatModel?.modelId ?? 'unknown',
             maskOptions: riskControlOptionsOf(request),
+            error: e.toString(),
+          );
+
+          // ── 即使出错也保存最新一次请求/响应到 log/log.json（覆盖写入）──
+          await _saveLatestLog(
+            request: request,
+            sessionId: session.sessionId,
+            modelId: session.chatModel?.modelId ?? 'unknown',
+            originBody: request.context['originBody'] as String? ?? '',
+            body: body,
+            responseContent: '',
             error: e.toString(),
           );
 
@@ -623,15 +643,10 @@ class LocalHttpService {
     }
   }
 
-  /// 保存用量统计（按分/时/日/月/年 五个粒度）
+  /// 保存用量统计（写入用量数据库 `~/.llmate/usages.db`）
   ///
-  /// 保存路径：~/.llmate/usage/
-  /// 文件名格式（以粒度区分）：
-  ///   - 分钟：年-月-日-时-分-{modelId}-{sessionId}-usage.json
-  ///   - 小时：年-月-日-时-{modelId}-{sessionId}-usage.json
-  ///   - 天：  年-月-日-{modelId}-{sessionId}-usage.json
-  ///   - 月：  年-月-{modelId}-{sessionId}-usage.json
-  ///   - 年：  年-{modelId}-{sessionId}-usage.json
+  /// 由 [UsageController] 负责持久化，按次记录 token 与费用明细；
+  /// 看板所需的分/时/日/月/年聚合视图在读取时由 [UsageLoader] 实时计算。
   static void _saveUsageStats({
     required ChatSession session,
     required DateTime startTime,
@@ -654,79 +669,57 @@ class LocalHttpService {
           requestCost += completionTokens * model!.completionPrice! / 1000000.0;
         }
 
-        final detail = UsageDetail(
-          timestamp: startTime,
+        await UsageController.instance.recordUsage(
+          sessionId: sessionId,
+          modelId: modelId,
           promptTokens: promptTokens,
           completionTokens: completionTokens,
           cost: requestCost,
-          model: modelId,
           currency: currency,
+          timestamp: startTime,
         );
-
-        final dir = Directory('${StoragePaths.root}/usage');
-        if (!await dir.exists()) {
-          await dir.create(recursive: true);
-        }
-
-        final y = startTime.year.toString();
-        final mo = startTime.month.toString().padLeft(2, '0');
-        final d = startTime.day.toString().padLeft(2, '0');
-        final h = startTime.hour.toString().padLeft(2, '0');
-        final mi = startTime.minute.toString().padLeft(2, '0');
-
-        // 按粒度从细到粗：分 → 时 → 日 → 月 → 年
-        final timestamps = [
-          '$y-$mo-$d-$h-$mi',
-          '$y-$mo-$d-$h',
-          '$y-$mo-$d',
-          '$y-$mo',
-          y,
-        ];
-
-        for (final ts in timestamps) {
-          await _accumulateUsage(
-            dir: dir,
-            filename: '$ts-$modelId-$sessionId-usage.json',
-            detail: detail,
-          );
-        }
       } catch (e) {
         debugPrint('⚠️ [Usage] 保存用量统计失败: $e');
       }
     }();
   }
 
-  /// 对单个时间粒度的用量文件进行读取-累加-写入
-  static Future<void> _accumulateUsage({
-    required Directory dir,
-    required String filename,
-    required UsageDetail detail,
+  /// 保存最新一次请求/响应的「实时日志」到 `~/.llmate/log/log.json`
+  ///
+  /// 每次新请求都会**覆盖写入**该文件（非追加），便于随时打开查看最近一次交互的
+  /// 请求报文（客户端原始 body + 实际发往 LLM 的 body）与返回报文（响应内容）。
+  static Future<void> _saveLatestLog({
+    required Request request,
+    required String sessionId,
+    required String modelId,
+    required String originBody,
+    required Map<String, dynamic> body,
+    required String responseContent,
+    String? error,
   }) async {
-    final file = File('${dir.path}/$filename');
-
-    UsageStats stats;
-    if (await file.exists()) {
-      try {
-        final content = await file.readAsString();
-        stats = UsageStats.fromJson(
-            jsonDecode(content) as Map<String, dynamic>);
-      } catch (_) {
-        stats = UsageStats.empty();
+    try {
+      final logDir = Directory('${StoragePaths.root}/log');
+      if (!await logDir.exists()) {
+        await logDir.create(recursive: true);
       }
-    } else {
-      stats = UsageStats.empty();
+      final log = <String, dynamic>{
+        'timestamp': DateTime.now().toIso8601String(),
+        'requestId': request.context['requestId'] as String? ?? '',
+        'sessionId': sessionId,
+        'modelId': modelId,
+        'method': request.method,
+        'uri': request.requestedUri.toString(),
+        'originBody': originBody,
+        'sentBody': body,
+        'response': responseContent,
+        if (error != null) 'error': error,
+      };
+      final file = File('${logDir.path}/log.json');
+      await file.writeAsString(
+        const JsonEncoder.withIndent('  ').convert(log),
+      );
+    } catch (e) {
+      debugPrint('⚠️ [Log] 保存实时日志失败: $e');
     }
-
-    stats.add(detail);
-
-    await file.writeAsString(
-      const JsonEncoder.withIndent('  ').convert(stats.toJson()),
-    );
-
-    debugPrint(
-      '📊 [Usage] 用量统计已更新: ${file.path} '
-      '(请求数=${stats.requests}, 总量=${stats.totalTokens}, '
-      '费用=${stats.costsByCurrency})',
-    );
   }
 }

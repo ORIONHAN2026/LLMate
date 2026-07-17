@@ -1,7 +1,0 @@
-[
-  {
-    "name": "doc.find",
-    "id": "call_f655299d6d1c408998b04b4b",
-    "result": "MCP 执行失败: McpError (-32602): Tool \"doc.find\" is missing required parameters: [file_url, text], please use the parameter names defined in the protocol: [\"file_url\", \"text\"], trace_id:870ee122edc545228c71dd0fbc046639"
-  }
-]

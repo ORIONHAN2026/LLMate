@@ -1,13 +1,63 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:path/path.dart' as p;
+import 'package:sembast/sembast_io.dart';
+
 import '../../../models/bigmodel/chat_model.dart';
-import '../../../data/storage_service.dart';
+import '../../../data/file_storage.dart';
+import '../../../data/storage_paths.dart';
 
 class ModelController extends GetxController {
   var models = <ChatModel>[].obs;
   var selectedModel = ''.obs;
   var apiUrl = ''.obs;
+
+  /// 模型数据库路径：~/.llmate/models.db
+  static String get _dbPath => p.join(StoragePaths.root, 'models.db');
+
+  /// sembast store 名称（每个 record 的 key 为 modelId）
+  static const String _storeName = 'models';
+  final _store = stringMapStoreFactory.store(_storeName);
+
+  Database? _db;
+  static bool _migrated = false;
+
+  /// 懒加载并打开 sembast 数据库（单例）
+  Future<Database> get _database async {
+    if (_db != null) return _db!;
+    await StoragePaths.ensureRoot();
+    _db = await databaseFactoryIo.openDatabase(_dbPath);
+    await _maybeMigrate(_db!);
+    return _db!;
+  }
+
+  /// 一次性将旧版 models.json 中的模型迁移进 models.db
+  ///
+  /// 仅当数据库中尚不存在同名记录时写入，避免覆盖；旧文件保留作备份。
+  Future<void> _maybeMigrate(Database db) async {
+    if (_migrated) return;
+    _migrated = true;
+    try {
+      final list = await FileStorage.readJsonList(StoragePaths.modelsFile);
+      if (list == null || list.isEmpty) return;
+      int migrated = 0;
+      for (final m in list) {
+        final map = m as Map<String, dynamic>;
+        final id = map['modelId'] as String? ?? '';
+        if (id.isEmpty) continue;
+        final existing = await _store.record(id).get(db);
+        if (existing == null) {
+          await _store.record(id).put(db, map);
+          migrated++;
+        }
+      }
+      if (migrated > 0) {
+        debugPrint('📦 [Model] 已迁移 $migrated 个旧模型至 models.db');
+      }
+    } catch (e) {
+      debugPrint('⚠️ [Model] 迁移旧模型失败: $e');
+    }
+  }
 
   void setModels(List<ChatModel> newModels) {
     models.value = newModels;
@@ -26,33 +76,51 @@ class ModelController extends GetxController {
 
   // ========== 模型持久化存储操作 ==========
 
-  /// 保存所有模型数据
+  /// 保存所有模型数据（整体替换：写入当前列表，并清理 db 中已不在列表的旧模型）
   Future<void> saveModels() async {
     try {
-      final store = StorageService.instance.store;
-      final modelsData = models.map((m) => m.toMap()).toList();
-      await store.isarChatModels.putAll(modelsData);
+      final db = await _database;
+      final currentIds = models.map((m) => m.modelId).toSet();
+      for (final m in models) {
+        await _store.record(m.modelId).put(db, m.toMap());
+      }
+      // 清理已从列表中移除的旧模型，保持与旧 ModelStore.putAll（整体替换）一致
+      final existing = await _store.find(db);
+      for (final rec in existing) {
+        final mid = (rec.value as Map<String, dynamic>)['modelId'] as String? ?? rec.key;
+        if (!currentIds.contains(mid)) {
+          await _store.record(mid).delete(db);
+        }
+      }
     } catch (e) {
       debugPrint('保存模型失败: $e');
     }
   }
 
-  /// 加载所有模型数据
+  /// 加载所有模型数据（从 models.db 读取）
   Future<List<Map<String, dynamic>>> loadModels() async {
     try {
-      final store = StorageService.instance.store;
-      return await store.isarChatModels.findAll();
+      final db = await _database;
+      final records = await _store.find(db);
+      return records
+          .map((r) => r.value as Map<String, dynamic>)
+          .toList();
     } catch (e) {
       debugPrint('加载模型失败: $e');
       return [];
     }
   }
 
-  /// 保存指定的模型列表数据
+  /// 保存指定的模型列表数据（仅写入 models.db）
   Future<void> saveModelsData(List<Map<String, dynamic>> modelsData) async {
     try {
-      final store = StorageService.instance.store;
-      await store.isarChatModels.putAll(modelsData);
+      final db = await _database;
+      for (final m in modelsData) {
+        final id = m['modelId'] as String? ?? '';
+        if (id.isNotEmpty) {
+          await _store.record(id).put(db, m);
+        }
+      }
     } catch (e) {
       debugPrint('保存模型失败: $e');
     }
@@ -61,8 +129,8 @@ class ModelController extends GetxController {
   /// 根据 modelId 删除单个模型
   Future<void> deleteModelById(String modelId) async {
     try {
-      final store = StorageService.instance.store;
-      await store.isarChatModels.delete(modelId);
+      final db = await _database;
+      await _store.record(modelId).delete(db);
     } catch (e) {
       debugPrint('从存储删除模型失败: $e');
     }
@@ -71,8 +139,8 @@ class ModelController extends GetxController {
   /// 清除所有模型数据
   Future<void> clearAllModels() async {
     try {
-      final store = StorageService.instance.store;
-      await store.isarChatModels.clear();
+      final db = await _database;
+      await _store.delete(db);
     } catch (e) {
       debugPrint('清除模型数据失败: $e');
     }

@@ -11,7 +11,7 @@ import '../data/storage_paths.dart';
 
 /// 单条审计日志条目
 ///
-/// 持久化于 sembast 数据库 `~/.llmate/audit.db` 的 `audit_logs` store 中。
+/// 持久化于 sembast 数据库 `~/.llmate/autits.db` 的 `audit_logs` store 中。
 class AuditLog {
   final String? requestId;
   final DateTime timestamp;
@@ -73,14 +73,14 @@ class AuditLog {
 /// 审计控制器
 ///
 /// 集中负责请求/响应审计日志的「读」与「写」，底层使用嵌入式 NoSQL 数据库
-/// [sembast]，数据库文件位于 `~/.llmate/audit.db`，store 名为 `audit_logs`。
+/// [sembast]，数据库文件位于 `~/.llmate/autits.db`，store 名为 `audit_logs`。
 ///
-///   - 写：[saveRequestResponseLog] 将日志写入 `audit.db`，并在内存保留
+///   - 写：[saveRequestResponseLog] 将日志写入 `autits.db`，并在内存保留
 ///     最近若干条供 UI 展示。落盘前会按风控开关（[SensitiveMaskOptions]）对
 ///     手机号 / 身份证号等敏感信息进行 * 号脱敏。
 ///   - 读：[loadAuditLogs] / [loadAuditById] 从数据库加载审计日志（供审计查看界面）。
 ///   - 旧版基于 `~/.llmate/audit/*.json` 的审计文件会在首次打开数据库时
-///     自动迁移进 `audit.db` 并删除旧目录，避免数据丢失。
+///     自动迁移进 `autits.db` 并删除旧目录，避免数据丢失。
 ///
 /// 该控制器在 [LocalHttpService] 中被调用：每次大模型请求结束后，由 HTTP 层
 /// 调用 [saveRequestResponseLog] 把本次请求/响应写入审计日志。
@@ -99,8 +99,8 @@ class AuditController extends GetxController {
   /// 内存缓存最大保留条数
   static const int _maxCached = 200;
 
-  /// 审计数据库路径：~/.llmate/audit.db
-  static String get _dbPath => p.join(StoragePaths.root, 'audit.db');
+  /// 审计数据库路径：~/.llmate/autits.db
+  static String get _dbPath => p.join(StoragePaths.root, 'autits.db');
 
   /// 旧版审计目录（迁移源）：~/.llmate/audit/
   static String get _legacyAuditDir => p.join(StoragePaths.root, 'audit');
@@ -146,7 +146,7 @@ class AuditController extends GetxController {
         }
       }
       await legacyDir.delete(recursive: true);
-      debugPrint('📦 [Audit] 已迁移旧审计文件至 audit.db');
+      debugPrint('📦 [Audit] 已迁移旧审计文件至 autits.db');
     } catch (_) {
       // 迁移失败不影响新写入
     }

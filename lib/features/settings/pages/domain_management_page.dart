@@ -8,7 +8,7 @@ import 'package:path/path.dart' as p;
 
 import '../../../data/storage_paths.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../controllers/domain_controller.dart';
+import '../../../controllers/settings_controller.dart';
 import '../../../core/http/local_http_service.dart';
 
 /// 域名管理页面
@@ -23,7 +23,7 @@ class DomainManagementPage extends StatefulWidget {
 }
 
 class _DomainManagementPageState extends State<DomainManagementPage> {
-  late final DomainController _controller;
+  late final SettingsController _controller;
   late final TextEditingController _domainController;
   late final TextEditingController _httpPortController;
   late final TextEditingController _httpsPortController;
@@ -34,7 +34,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
   @override
   void initState() {
     super.initState();
-    _controller = Get.find<DomainController>();
+    _controller = Get.find<SettingsController>();
     final config = _controller.domainConfig.value;
     _domainController = TextEditingController(text: config.domain);
     _httpPortController = TextEditingController(text: config.httpPort.toString());

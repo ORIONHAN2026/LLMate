@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:get/get.dart';
 
-import '../../../controllers/theme_controller.dart';
-import '../../../controllers/locale_controller.dart';
+import '../../../controllers/settings_controller.dart';
 
 /// 其他设置页面，包含语言设置和皮肤设置
 class OtherSettingsPage extends StatelessWidget {
@@ -15,8 +14,8 @@ class OtherSettingsPage extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final themeController = Get.find<ThemeController>();
-    final localeController = Get.find<LocaleController>();
+    final themeController = Get.find<SettingsController>();
+    final localeController = Get.find<SettingsController>();
 
     return Scaffold(
       appBar: StandardAppBar(
@@ -56,7 +55,7 @@ class OtherSettingsPage extends StatelessWidget {
 
   Widget _buildLanguageOption(
     BuildContext context,
-    LocaleController localeController,
+    SettingsController localeController,
     ColorScheme colorScheme,
     AppLocalizations l10n,
   ) {
@@ -152,7 +151,7 @@ class OtherSettingsPage extends StatelessWidget {
   }
 
   Widget _buildSkinOptions(
-    ThemeController themeController,
+    SettingsController themeController,
     ColorScheme colorScheme,
     AppLocalizations l10n,
   ) {

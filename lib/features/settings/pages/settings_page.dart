@@ -3,8 +3,7 @@ import '../../../widgets/standard_app_bar.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../controllers/theme_controller.dart';
-import '../../../controllers/locale_controller.dart';
+import '../../../controllers/settings_controller.dart';
 import './modelssetting.dart';
 import '../../mcp/pages/mcp_management_page.dart';
 
@@ -204,8 +203,8 @@ class _GeneralSettingsTab extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final themeController = Get.find<ThemeController>();
-    final localeController = Get.find<LocaleController>();
+    final themeController = Get.find<SettingsController>();
+    final localeController = Get.find<SettingsController>();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
@@ -240,7 +239,7 @@ class _GeneralSettingsTab extends StatelessWidget {
 
   Widget _buildLanguageOption(
     BuildContext context,
-    LocaleController localeController,
+    SettingsController localeController,
     ColorScheme colorScheme,
     AppLocalizations l10n,
   ) {
@@ -336,7 +335,7 @@ class _GeneralSettingsTab extends StatelessWidget {
   }
 
   Widget _buildSkinOptions(
-    ThemeController themeController,
+    SettingsController themeController,
     ColorScheme colorScheme,
     AppLocalizations l10n,
   ) {

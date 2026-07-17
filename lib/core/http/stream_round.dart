@@ -87,95 +87,125 @@ Future<StreamRoundResult> streamSingleRound({
     // 按 index 累积 tool_calls 增量（SSE 流中同一个 tool_call 的 arguments 可能分多个 chunk 到达）
     final Map<int, Chunk> toolCallList = {};
 
-    await for (final chunk in response) {
-      final raw = utf8.decode(chunk, allowMalformed: true);
+    // 使用流式 UTF-8 解码器：自动缓冲跨字节边界的多字节字符，
+    // 避免逐片 utf8.decode 把中文等字符切断成乱码 / 截断 JSON。
+    String lineBuffer = '';
+    await for (final raw in response.transform(utf8.decoder)) {
       debugPrint('chunk: $raw');
 
-      final trimmed = raw.trim();
-      // 非 SSE data 行 → 直接透传（如注释行、空行）
-      if (!trimmed.startsWith('data:')) {
-        controller.add(chunk);
-        continue;
-      }
+      lineBuffer += raw;
+      final lines = lineBuffer.split('\n');
+      // 最后一项是不完整的半行，留待下一次拼接
+      lineBuffer = lines.removeLast();
 
-      try {
-        final sseChunk = Chunk.fromIntList(chunk);
-        final choice =
-            sseChunk.choices.isNotEmpty ? sseChunk.choices.first : null;
-        final delta = choice?.delta;
+      for (final rawLine in lines) {
+        final trimmed = rawLine.trim();
+        // 空行（SSE 事件分隔符）跳过
+        if (trimmed.isEmpty) continue;
 
-        // 文本内容 → 透传给客户端并累积
-        if (delta?.content != null) {
-          controller.add(sseChunk.toIntList());
-          debugPrint('sseChunk content: $raw');
-          contentBuffer.write(delta!.content);
+        // 非 SSE data 行（注释 / ping 等）→ 原样透传字节
+        if (!trimmed.startsWith('data:')) {
+          controller.add(utf8.encode('$rawLine\n'));
+          continue;
         }
 
-        // 推理/思考内容（reasoning） → 透传并累积
-        if (delta?.reasoningContent != null) {
-          controller.add(sseChunk.toIntList());
-          debugPrint('sseChunk reasoning: $raw');
-          reasonBuffer.write(delta!.reasoningContent);
-        }
+        try {
+          final sseChunk = Chunk.fromString(trimmed);
+          final choice =
+              sseChunk.choices.isNotEmpty ? sseChunk.choices.first : null;
+          final delta = choice?.delta;
 
-        // Token 用量 → 暂存，由调用方决定如何使用
-        if (sseChunk.usage != null) {
-          promptTokens += sseChunk.usage!.promptTokens!;
-          completionTokens += sseChunk.usage!.completionTokens!;
-        }
+          // 文本内容 → 透传给客户端并累积
+          if (delta?.content != null) {
+            controller.add(sseChunk.toIntList());
+            debugPrint('sseChunk content: $trimmed');
+            contentBuffer.write(delta!.content);
+          }
 
-        // tool_calls → 按 index 增量合并（不透传给客户端，由 ToolLoop 统一处理）
-        if (delta?.toolCalls != null) {
-          for (final tc in delta!.toolCalls!) {
-            final idx = tc.index ?? 0;
-            if (toolCallList[idx] == null) {
-              // 首次出现该 index，直接存储整个 Chunk
-              toolCallList[idx] = sseChunk;
-            } else {
-              // 后续增量：与已存储的 Chunk 合并 arguments
-              final existingChunk = toolCallList[idx]!;
-              final existingChoice = existingChunk.choices.firstOrNull;
-              final existingTc = existingChoice?.delta?.toolCalls?.firstWhere(
-                (t) => (t.index ?? 0) == idx,
-                orElse: () => tc,
-              );
+          // 推理/思考内容（reasoning） → 透传并累积
+          if (delta?.reasoningContent != null) {
+            controller.add(sseChunk.toIntList());
+            debugPrint('sseChunk reasoning: $trimmed');
+            reasonBuffer.write(delta!.reasoningContent);
+          }
 
-              final mergedId = tc.id ?? existingTc?.id;
-              final mergedType = tc.type ?? existingTc?.type;
-              final mergedName =
-                  tc.function?.name ?? existingTc?.function?.name;
-              final mergedArgs =
-                  (existingTc?.function?.arguments ?? '') +
-                  (tc.function?.arguments ?? '');
+          // Token 用量 → 暂存，由调用方决定如何使用
+          if (sseChunk.usage != null) {
+            promptTokens += sseChunk.usage!.promptTokens!;
+            completionTokens += sseChunk.usage!.completionTokens!;
+          }
 
-              final mergedTc = ToolCall(
-                index: idx,
-                id: mergedId,
-                type: mergedType,
-                function: ToolCallFunction(
-                  name: mergedName,
-                  arguments: mergedArgs,
-                ),
-              );
+          // tool_calls → 按 index 增量合并（不透传给客户端，由 ToolLoop 统一处理）
+          if (delta?.toolCalls != null) {
+            for (final tc in delta!.toolCalls!) {
+              final idx = tc.index ?? 0;
+              if (toolCallList[idx] == null) {
+                // 首次出现该 index，直接存储整个 Chunk
+                toolCallList[idx] = sseChunk;
+              } else {
+                // 后续增量：与已存储的 Chunk 合并 arguments
+                final existingChunk = toolCallList[idx]!;
+                final existingChoice = existingChunk.choices.firstOrNull;
+                final existingTc = existingChoice?.delta?.toolCalls
+                    ?.firstWhere(
+                  (t) => (t.index ?? 0) == idx,
+                  orElse: () => tc,
+                );
 
-              final mergedDelta = OpenAIDelta(toolCalls: [mergedTc]);
-              final mergedChoice = ChunkChoice(
-                index: existingChoice?.index ?? 0,
-                delta: mergedDelta,
-                finishReason: existingChoice?.finishReason,
-              );
-              toolCallList[idx] = Chunk(
-                id: existingChunk.id,
-                object: existingChunk.object,
-                created: existingChunk.created,
-                model: existingChunk.model,
-                choices: [mergedChoice],
-              );
+                final mergedId = tc.id ?? existingTc?.id;
+                final mergedType = tc.type ?? existingTc?.type;
+                final mergedName =
+                    tc.function?.name ?? existingTc?.function?.name;
+                final mergedArgs =
+                    (existingTc?.function?.arguments ?? '') +
+                    (tc.function?.arguments ?? '');
+
+                final mergedTc = ToolCall(
+                  index: idx,
+                  id: mergedId,
+                  type: mergedType,
+                  function: ToolCallFunction(
+                    name: mergedName,
+                    arguments: mergedArgs,
+                  ),
+                );
+
+                final mergedDelta = OpenAIDelta(toolCalls: [mergedTc]);
+                final mergedChoice = ChunkChoice(
+                  index: existingChoice?.index ?? 0,
+                  delta: mergedDelta,
+                  finishReason: existingChoice?.finishReason,
+                );
+                toolCallList[idx] = Chunk(
+                  id: existingChunk.id,
+                  object: existingChunk.object,
+                  created: existingChunk.created,
+                  model: existingChunk.model,
+                  choices: [mergedChoice],
+                );
+              }
             }
           }
+        } catch (_) {
+          // 忽略解析失败的行（非 JSON 的 SSE 行等）
         }
-      } catch (_) {
-        // 忽略解析失败的行（非 JSON 的 SSE 行等）
+      }
+    }
+
+    // 流结束前若仍有未换行的尾随半行，尝试补解析一次
+    if (lineBuffer.trim().isNotEmpty) {
+      final trimmed = lineBuffer.trim();
+      if (trimmed.startsWith('data:')) {
+        try {
+          final sseChunk = Chunk.fromString(trimmed);
+          final choice =
+              sseChunk.choices.isNotEmpty ? sseChunk.choices.first : null;
+          final delta = choice?.delta;
+          if (delta?.content != null) contentBuffer.write(delta!.content);
+          if (delta?.reasoningContent != null) {
+            reasonBuffer.write(delta!.reasoningContent);
+          }
+        } catch (_) {}
       }
     }
 

@@ -3,14 +3,17 @@ import 'package:llmate/models/chat/chat_setting.dart';
 import 'package:llmate/models/chat/contract_info.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:path/path.dart' as p;
+import 'package:sembast/sembast_io.dart';
 
 import '../models/chat/chat_session.dart';
 import '../models/bigmodel/chat_model.dart';
+import '../data/file_storage.dart';
 import '../data/storage_service.dart';
-import '../data/storage_paths.dart';
 
 import './model_controller.dart';
 import './mcp_controller.dart';
+import './message_controller.dart';
 
 /// 从会话存储实体中解析 MCP 文件夹名（兼容旧格式 mcpId / mcp Map）
 String? _resolveMcpFolder(Map<String, dynamic> entity) {
@@ -39,6 +42,53 @@ List<String>? _resolveMcpFolders(Map<String, dynamic> entity) {
 class SessionController extends GetxController {
   var sessions = <ChatSession>[].obs;
   var currentSession = Rxn<ChatSession>();
+
+  /// 会话数据库路径：~/.llmate/sessions.db
+  static String get _dbPath => p.join(StoragePaths.root, 'sessions.db');
+
+  /// sembast store 名称（每个 record 的 key 为 sessionId）
+  static const String _storeName = 'sessions';
+  final _store = stringMapStoreFactory.store(_storeName);
+
+  Database? _db;
+  static bool _migrated = false;
+
+  /// 懒加载并打开 sembast 数据库（单例）
+  Future<Database> get _database async {
+    if (_db != null) return _db!;
+    await StoragePaths.ensureRoot();
+    _db = await databaseFactoryIo.openDatabase(_dbPath);
+    await _maybeMigrate(_db!);
+    return _db!;
+  }
+
+  /// 一次性将旧版 chats/{sid}/session.json 迁移进 sessions.db
+  ///
+  /// 仅当数据库中尚不存在同名记录时写入，避免覆盖；旧文件保留作备份。
+  Future<void> _maybeMigrate(Database db) async {
+    if (_migrated) return;
+    _migrated = true;
+    try {
+      final ids = await StoragePaths.listSessionIds();
+      if (ids.isEmpty) return;
+      int migrated = 0;
+      for (final sid in ids) {
+        final data = await FileStorage.readJson(StoragePaths.sessionFile(sid));
+        if (data == null) continue;
+        final key = data['sessionId'] as String? ?? sid;
+        final existing = await _store.record(key).get(db);
+        if (existing == null) {
+          await _store.record(key).put(db, data);
+          migrated++;
+        }
+      }
+      if (migrated > 0) {
+        debugPrint('📦 [Session] 已迁移 $migrated 个旧会话至 sessions.db');
+      }
+    } catch (e) {
+      debugPrint('⚠️ [Session] 迁移旧会话失败: $e');
+    }
+  }
 
   Future<void> setSessions(List<ChatSession> newSessions) async {
     sessions.value = newSessions;
@@ -141,50 +191,20 @@ class SessionController extends GetxController {
     return session;
   }
 
-  /// 合并持久化：session.json + message.json + memory.md + 相关文件
+  /// 合并持久化：会话元数据（sessions.db）+ 消息（委托 MessageController）
   Future<void> _persistSessionAndCurrent(
     ChatSession updatedSession, {
     required bool isCurrent,
   }) async {
     try {
-      final store = StorageService.instance.store;
+      // === 1. 持久化所有会话元数据到 sessions.db ===
+      await _persistSessionsToDb();
 
-      // === 1. 持久化所有会话元数据 ===
-      final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
-      for (final session in sessions) {
-        final sessionData = _sessionToMap(session);
-        sessionData['isCurrent'] =
-            currentSession.value?.sessionId == session.sessionId;
-        await store.isarChatSessions.put(sessionData);
-      }
-
-      // 删除不在当前列表中的旧会话
-      final allSessions = await store.isarChatSessions.findAll();
-      for (final entity in allSessions) {
-        final sid = entity['sessionId'] as String;
-        if (!currentSessionIds.contains(sid)) {
-          await store.isarChatSessions.delete(sid);
-        }
-      }
-
-      // === 2. 持久化当前会话的消息 ===
+      // === 2. 持久化当前会话的消息（委托给 MessageController）===
       if (isCurrent) {
-        final messages = updatedSession.messages;
-        final messagesJson = messages.map((m) => m.toJson()).toList();
-        // 安全防护：如果当前内存中消息为空，先检查磁盘是否已有数据，避免空列表覆盖
-        if (messagesJson.isEmpty) {
-          final existingMessages =
-              await store.isarChatMessages.getBySessionId(updatedSession.sessionId);
-          if (existingMessages.isNotEmpty) {
-            debugPrint(
-              '⚠️ 安全防护：跳过空消息持久化，保留磁盘 ${existingMessages.length} 条消息 (session: ${updatedSession.sessionId})',
-            );
-            return; // 不覆盖磁盘已有数据
-          }
-        }
-        await store.isarChatMessages.putAll(
+        await MessageController.instance.persistMessages(
           updatedSession.sessionId,
-          messagesJson,
+          updatedSession.messages,
         );
       }
 
@@ -193,7 +213,7 @@ class SessionController extends GetxController {
     }
   }
 
-  /// 更新消息并持久化
+  /// 更新消息并持久化（消息落盘委托给 MessageController）
   Future<void> updateMessage(ChatMessage updateMessage) async {
     final sessionIndex = sessions.indexWhere(
       (s) => s.sessionId == updateMessage.sessionId,
@@ -215,10 +235,10 @@ class SessionController extends GetxController {
     if (isCurrent) {
       currentSession.value = updatedSession;
     }
-    await _persistSessionAndCurrent(updatedSession, isCurrent: isCurrent);
+    await MessageController.instance.persistMessage(updateMessage);
   }
 
-  /// 删除消息
+  /// 删除消息（会话内存更新 + 消息落盘委托给 MessageController）
   Future<void> deleteMessage(ChatMessage message) async {
     final sessionIndex = sessions.indexWhere(
       (s) => s.sessionId == message.sessionId,
@@ -240,7 +260,7 @@ class SessionController extends GetxController {
     if (isCurrent) {
       currentSession.value = updatedSession;
     }
-    await _persistSessionAndCurrent(updatedSession, isCurrent: isCurrent);
+    await MessageController.instance.deleteMessage(message);
   }
 
   /// 切换到指定会话并持久化
@@ -295,14 +315,19 @@ class SessionController extends GetxController {
       }
     }
 
-    // 从文件系统删除
+    // 从文件系统删除消息并清理会话目录（memory/mcp/business 等，由 MessageController 负责）
     try {
-      final store = StorageService.instance.store;
-      await store.isarChatSessions.delete(sessionId);
-      // 删除会话目录（包含 session.json, message.json, memory.md 等）
-      await store.isarChatMessages.delete(sessionId);
+      await MessageController.instance.deleteMessagesBySession(sessionId);
     } catch (e) {
       debugPrint('删除会话失败: $e');
+    }
+
+    // 从 sessions.db 删除
+    try {
+      final db = await _database;
+      await _store.record(sessionId).delete(db);
+    } catch (e) {
+      debugPrint('删除会话 DB 失败: $e');
     }
   }
 
@@ -348,7 +373,7 @@ class SessionController extends GetxController {
     });
   }
 
-  /// 更新会话消息并持久化
+  /// 更新会话消息并持久化（消息落盘委托给 MessageController）
   Future<void> updateSessionMessages(
     String sessionId,
     List<ChatMessage> messages,
@@ -362,7 +387,7 @@ class SessionController extends GetxController {
         if (isCurrent) {
           currentSession.value = updated;
         }
-        await _persistSessionAndCurrent(updated, isCurrent: isCurrent);
+        await MessageController.instance.persistMessages(sessionId, messages);
       }
     });
   }
@@ -374,16 +399,17 @@ class SessionController extends GetxController {
     await _persistSessions();
   }
 
-  /// 加载所有会话和当前会话（消息懒加载）
+  /// 加载所有会话和当前会话（消息懒加载，从 sessions.db 读取）
   Future<void> loadAll() async {
     try {
-      final store = StorageService.instance.store;
-      final isarSessions = await store.isarChatSessions.findAll();
+      final db = await _database;
+      final records = await _store.find(db);
 
       final List<ChatSession> loaded = [];
       ChatSession? current;
 
-      for (final entity in isarSessions) {
+      for (final rec in records) {
+        final entity = rec.value as Map<String, dynamic>;
         final session = await _mapToSession(entity);
         loaded.add(session);
         if (entity['isCurrent'] == true) {
@@ -399,59 +425,112 @@ class SessionController extends GetxController {
       } else {
         currentSession.value = null;
       }
+
+      // 首次启动（无任何会话）时，自动创建一个默认会话，确保应用有初始配置
+      if (sessions.isEmpty) {
+        await _seedDefaultSession();
+      }
     } catch (e) {
       debugPrint('加载会话失败: $e');
     }
   }
 
-  /// 为指定会话加载消息
-  Future<List<ChatMessage>> loadMessages(String sessionId) async {
+  /// 首次启动时创建一个默认会话（含一条欢迎消息），并持久化到 db。
+  ///
+  /// 默认会话会尝试绑定一个可用模型（优先 DeepSeekR1，否则取第一个），
+  /// 与首页「新建会话」的模型匹配逻辑保持一致。
+  Future<void> _seedDefaultSession() async {
     try {
-      final store = StorageService.instance.store;
-      final messagesData = await store.isarChatMessages.getBySessionId(
-        sessionId,
+      // 复用首页的模型匹配逻辑：优先 DeepSeekR1，否则第一个可用模型
+      ChatModel? selectedModel;
+      try {
+        final modelController = Get.find<ModelController>();
+        final available = modelController.models;
+        if (available.isNotEmpty) {
+          selectedModel = available.firstWhere(
+            (m) => m.name == 'DeepSeekR1',
+            orElse: () => available.first,
+          );
+        }
+      } catch (_) {
+        // ModelController 未初始化时跳过模型绑定
+      }
+
+      final welcomeMessage = ChatMessage(
+        msgId: 'welcome_${DateTime.now().millisecondsSinceEpoch}',
+        role: MessageRole.bot,
+        content:
+            '👋 你好，我是 LLMate！\n\n我可以帮你写代码、回答问题、分析文件，还能调用 MCP 工具完成更复杂的任务。\n\n直接下方输入框开始对话吧～',
+        timestamp: DateTime.now(),
+        sessionId: null, // 创建会话后回填
       );
 
-      return messagesData
-          .map((m) {
-            try {
-              return ChatMessage.fromJson(m);
-            } catch (_) {
-              return null;
-            }
-          })
-          .whereType<ChatMessage>()
-          .toList();
+      final defaultSession = ChatSession(
+        sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: '新对话',
+        createdAt: DateTime.now(),
+        messages: [welcomeMessage.copyWith(sessionId: null)],
+        chatModel: selectedModel,
+        inputContent: '',
+      );
+
+      // 回填欢迎消息的 sessionId 并加入会话
+      final sessionWithWelcome = defaultSession.copyWith(
+        messages: [
+          welcomeMessage.copyWith(sessionId: defaultSession.sessionId),
+        ],
+      );
+
+      await addSession(sessionWithWelcome);
+      debugPrint('🌱 已创建默认会话（首次启动）');
     } catch (e) {
-      debugPrint('加载会话消息失败: $e');
-      return [];
+      debugPrint('⚠️ 创建默认会话失败: $e');
     }
+  }
+
+  /// 为指定会话加载消息（委托给 MessageController）
+  Future<List<ChatMessage>> loadMessages(String sessionId) async {
+    return MessageController.instance.loadMessages(sessionId);
   }
 
   // ==================== 内部持久化方法 ====================
 
   Future<void> _persistSessions() async {
+    // 同步写入 sessions.db
     try {
-      final store = StorageService.instance.store;
-      final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
-
-      for (final session in sessions) {
-        final sessionData = _sessionToMap(session);
-        sessionData['isCurrent'] =
-            currentSession.value?.sessionId == session.sessionId;
-        await store.isarChatSessions.put(sessionData);
-      }
-
-      // 删除不在当前列表中的旧会话
-      final allSessions = await store.isarChatSessions.findAll();
-      for (final entity in allSessions) {
-        final sid = entity['sessionId'] as String;
-        if (!currentSessionIds.contains(sid)) {
-          await store.isarChatSessions.delete(sid);
-        }
-      }
+      await _persistSessionsToDb();
     } catch (e) {
-      debugPrint('保存会话失败: $e');
+      debugPrint('保存会话到 sessions.db 失败: $e');
+    }
+  }
+
+  /// 将当前会话列表同步写入 sessions.db，并清理已不在列表中的旧记录
+  Future<void> _persistSessionsToDb() async {
+    final db = await _database;
+    final currentSessionIds = sessions.map((s) => s.sessionId).toSet();
+    for (final session in sessions) {
+      final data = _sessionToMap(session);
+      data['isCurrent'] =
+          currentSession.value?.sessionId == session.sessionId;
+      await _store.record(session.sessionId).put(db, data);
+    }
+    final existing = await _store.find(db);
+    for (final rec in existing) {
+      final sid = (rec.value as Map<String, dynamic>)['sessionId'] as String? ?? '';
+      if (!currentSessionIds.contains(sid)) {
+        await _store.record(sid).delete(db);
+      }
+    }
+  }
+
+  /// 从 sessions.db 读取单条会话元数据
+  Future<Map<String, dynamic>?> _getSessionFromDb(String sid) async {
+    try {
+      final db = await _database;
+      final rec = await _store.record(sid).get(db);
+      return rec as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -464,21 +543,23 @@ class SessionController extends GetxController {
       }
     }
 
-    // 从文件系统搜索
+    // 从 sessions.db + messages.db 搜索
     try {
-      final store = StorageService.instance.store;
-      final ids = await StoragePaths.listSessionIds();
-      for (final sid in ids) {
-        final messagesData = await store.isarChatMessages.getBySessionId(sid);
-        if (messagesData.any((m) => m['id'] == messageId)) {
-          final sessionData = await store.isarChatSessions.getBySessionId(sid);
+      final db = await _database;
+      final records = await _store.find(db);
+      for (final rec in records) {
+        final sid = (rec.value as Map<String, dynamic>)['sessionId'] as String? ?? '';
+        final messagesData =
+            await MessageController.instance.loadMessages(sid);
+        if (messagesData.any((m) => m.msgId == messageId)) {
+          final sessionData = await _getSessionFromDb(sid);
           if (sessionData != null) {
             return await _mapToSession(sessionData);
           }
         }
       }
     } catch (e) {
-      debugPrint('从文件搜索会话失败: $e');
+      debugPrint('从 DB 搜索会话失败: $e');
     }
 
     return null;

@@ -1,5 +1,0 @@
-{
-  "content": "writePage工具通过MCP连接器\"wechatpublic\"提供，但该连接器当前处于断开状态，导致无法直接调用。作为替代方案，我已创建了一个本地HTML测试页面，内容为\"我是测试\"，您可以通过预览面板查看。\n\n如果您需要使用writePage功能生成在线网页，需要先连接\"wechatpublic\"连接器。您可以尝试在连接器管理页面中启用该连接器",
-  "statusCode": 200,
-  "durationMs": 25319
-}

@@ -1,7 +1,0 @@
-[
-  {
-    "name": "doc.find",
-    "id": "call_7d79824745014932b46446d2",
-    "result": "{\"data\":{\"read_result\":{\"trace_id\":\"fd1e05c3c59d44c9ab81eea415ab192e\"},\"text_and_locations\":[{\"range\":{\"begin\":11,\"end\":17},\"related_text\":\"统一收银4月运维报告[数据运营服务]本月恢复泰和瑞通与茄豆数据传输，并定时跟进商户对接情况，数\"}],\"trace_id\":\"fd1e05c3c59d44c9ab81eea415ab192e\"},\"trace_id\":\"fd1e05c3c59d44c9ab81eea415ab192e\"}"
-  }
-]

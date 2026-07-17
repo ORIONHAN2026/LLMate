@@ -6,7 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/session_controller.dart';
-import '../../../../controllers/domain_controller.dart';
+import '../../../../controllers/settings_controller.dart';
 import '../../../../models/chat/chat_session.dart';
 import '../../../../models/bigmodel/chat_model.dart';
 import '../../../../utils/snackbar_utils.dart';
@@ -413,7 +413,7 @@ class SessionConfigSidebar {
   /// 智能构建服务地址（有域名用域名，无域名用本地）
   static String _buildSmartServiceUrl(String sessionId) {
     try {
-      final domainController = Get.find<DomainController>();
+      final domainController = Get.find<SettingsController>();
       if (domainController.isConfigured) {
         return _buildServiceUrl(sessionId);
       }
@@ -424,7 +424,7 @@ class SessionConfigSidebar {
   /// 构建服务地址（根据域名配置动态拼接）
   static String _buildServiceUrl(String sessionId) {
     try {
-      final domainController = Get.find<DomainController>();
+      final domainController = Get.find<SettingsController>();
       if (domainController.isConfigured) {
         final config = domainController.domainConfig.value;
         final scheme = config.httpsEnabled ? 'https' : 'http';
@@ -444,7 +444,7 @@ class SessionConfigSidebar {
   static String _buildLocalUrl(String sessionId, String host) {
     int port = 80;
     try {
-      final domainController = Get.find<DomainController>();
+      final domainController = Get.find<SettingsController>();
       port = domainController.domainConfig.value.httpPort;
     } catch (_) {}
     // 默认端口不显示

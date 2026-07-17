@@ -1,5 +1,5 @@
 import 'package:llmate/controllers/session_controller.dart';
-import 'package:llmate/controllers/theme_controller.dart';
+import 'package:llmate/controllers/settings_controller.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/widgets/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
@@ -587,7 +587,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
 
   // 底部主题切换按钮
   Widget _buildThemeToggle() {
-    final themeController = Get.find<ThemeController>();
+    final themeController = Get.find<SettingsController>();
     return Obx(() {
       final isDark = themeController.isDarkMode.value;
       return InkWell(

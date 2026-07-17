@@ -1,10 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:path/path.dart' as p;
-
-import '../../../../data/storage_paths.dart';
-import '../../../../models/chat/usage_stats.dart';
+import '../../../../controllers/usage_controller.dart';
 
 /// 图表数据点
 class UsageChartPoint {
@@ -25,7 +19,8 @@ class UsageChartPoint {
   });
 }
 
-/// 用量数据加载器，从 ~/.llmate/usage/ 读取按时间粒度保存的统计文件
+/// 用量数据加载器，从用量数据库（[UsageController] / `~/.llmate/usages.db`）读取
+/// 原始用量明细，并按指定时间粒度聚合成曲线数据点。
 class UsageLoader {
   UsageLoader._();
 
@@ -40,101 +35,64 @@ class UsageLoader {
     DateTime? start,
     DateTime? end,
   }) async {
-    final usageDir = Directory(p.join(StoragePaths.root, 'usage'));
-    if (!await usageDir.exists()) return [];
+    final details = await UsageController.instance.loadDetails(
+      sessionId: sessionId,
+      modelId: modelId,
+      start: start,
+      end: end,
+    );
 
-    final suffix = '-$sessionId-usage.json';
-    final entries = await usageDir.list().toList();
+    final Map<DateTime, UsageChartPoint> buckets = {};
+    for (final d in details) {
+      final bucket = _bucketStart(d.timestamp, granularity);
+      if (bucket == null) continue;
 
-    final files = entries.whereType<File>().where(
-          (f) => p.basename(f.path).endsWith(suffix),
+      final existing = buckets[bucket];
+      if (existing == null) {
+        buckets[bucket] = UsageChartPoint(
+          timestamp: bucket,
+          totalTokens: d.totalTokens,
+          promptTokens: d.promptTokens,
+          completionTokens: d.completionTokens,
+          totalCost: d.cost,
+          costsByCurrency: {d.currency: d.cost},
         );
-
-    final points = <UsageChartPoint>[];
-
-    for (final file in files) {
-      final name = p.basenameWithoutExtension(file.path);
-      // 去掉末尾的 -{modelId}-{sessionId}-usage，剩下时间戳部分
-      final nameWithoutSuffix = name.replaceAll('-$modelId-$sessionId-usage', '');
-
-      final parts = nameWithoutSuffix.split('-');
-      // parts 长度 = 粒度：5=分钟, 4=小时, 3=天, 2=月, 1=年
-      final fileGranularity = _granularityFromParts(parts.length);
-      if (fileGranularity != granularity) continue;
-
-      final timestamp = _parseTimestamp(parts);
-      if (timestamp == null) continue;
-
-      // 范围过滤
-      if (start != null && timestamp.isBefore(start)) continue;
-      if (end != null && timestamp.isAfter(end)) continue;
-
-      try {
-        final content = await file.readAsString();
-        final stats = UsageStats.fromJson(
-            jsonDecode(content) as Map<String, dynamic>);
-
-        points.add(UsageChartPoint(
-          timestamp: timestamp,
-          totalTokens: stats.totalTokens,
-          promptTokens: stats.promptTokens,
-          completionTokens: stats.completionTokens,
-          totalCost: stats.totalCost,
-          costsByCurrency: stats.costsByCurrency,
-        ));
-      } catch (_) {
-        // 跳过解析失败的文件
+      } else {
+        buckets[bucket] = UsageChartPoint(
+          timestamp: bucket,
+          totalTokens: existing.totalTokens + d.totalTokens,
+          promptTokens: existing.promptTokens + d.promptTokens,
+          completionTokens: existing.completionTokens + d.completionTokens,
+          totalCost: existing.totalCost + d.cost,
+          costsByCurrency: {
+            ...existing.costsByCurrency,
+            d.currency: (existing.costsByCurrency[d.currency] ?? 0) + d.cost,
+          },
+        );
       }
     }
 
-    points.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final points = buckets.values.toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     return points;
   }
 
-  static String _granularityFromParts(int count) {
-    switch (count) {
-      case 5: return 'minute';
-      case 4: return 'hour';
-      case 3: return 'day';
-      case 2: return 'month';
-      case 1: return 'year';
-      default: return 'unknown';
-    }
-  }
-
-  static DateTime? _parseTimestamp(List<String> parts) {
-    try {
-      switch (parts.length) {
-        case 5: // minute: 年-月-日-时-分
-          return DateTime(
-            int.parse(parts[0]),
-            int.parse(parts[1]),
-            int.parse(parts[2]),
-            int.parse(parts[3]),
-            int.parse(parts[4]),
-          );
-        case 4: // hour: 年-月-日-时
-          return DateTime(
-            int.parse(parts[0]),
-            int.parse(parts[1]),
-            int.parse(parts[2]),
-            int.parse(parts[3]),
-          );
-        case 3: // day: 年-月-日
-          return DateTime(
-            int.parse(parts[0]),
-            int.parse(parts[1]),
-            int.parse(parts[2]),
-          );
-        case 2: // month: 年-月
-          return DateTime(int.parse(parts[0]), int.parse(parts[1]));
-        case 1: // year: 年
-          return DateTime(int.parse(parts[0]));
-        default:
-          return null;
-      }
-    } catch (_) {
-      return null;
+  /// 将时间戳对齐到指定粒度的起始时刻（聚合桶）
+  static DateTime? _bucketStart(DateTime t, String granularity) {
+    switch (granularity) {
+      case 'minute':
+        return DateTime(t.year, t.month, t.day, t.hour, t.minute);
+      case 'hour':
+        return DateTime(t.year, t.month, t.day, t.hour);
+      case 'day':
+        return DateTime(t.year, t.month, t.day);
+      case 'month':
+        return DateTime(t.year, t.month);
+      case 'year':
+        return DateTime(t.year);
+      default:
+        return null;
     }
   }
 }
+

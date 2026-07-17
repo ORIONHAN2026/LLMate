@@ -35,12 +35,13 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
   void initState() {
     super.initState();
     _controller = Get.find<SettingsController>();
-    final config = _controller.domainConfig.value;
-    _domainController = TextEditingController(text: config.domain);
-    _httpPortController = TextEditingController(text: config.httpPort.toString());
-    _httpsPortController = TextEditingController(text: config.httpsPort.toString());
-    _certPath = config.certPath;
-    _keyPath = config.keyPath;
+    _domainController = TextEditingController(text: _controller.domain.value);
+    _httpPortController =
+        TextEditingController(text: _controller.httpPort.value.toString());
+    _httpsPortController =
+        TextEditingController(text: _controller.httpsPort.value.toString());
+    _certPath = _controller.certPath.value;
+    _keyPath = _controller.keyPath.value;
   }
 
   @override
@@ -745,7 +746,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
         _keyPath != null &&
         _keyPath!.isNotEmpty;
 
-    final config = DomainConfig(
+    await _controller.saveConfig(
       domain: cleanDomain,
       certPath: _certPath,
       keyPath: _keyPath,
@@ -753,7 +754,5 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
       httpPort: httpPort,
       httpsPort: httpsPort,
     );
-
-    await _controller.saveConfig(config);
   }
 }

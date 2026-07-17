@@ -4,7 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:sembast/sembast_io.dart';
 
 import '../data/storage_paths.dart';
-import '../models/chat/usage_stats.dart';
+import '../models/chat/usage.dart';
 
 /// 用量控制器
 ///
@@ -103,11 +103,14 @@ class UsageController extends GetxController {
       }
       // timestamp 以 ISO8601 字符串存储，可直接按字典序做范围过滤
       if (start != null) {
-        filters.add(Filter.greaterThanOrEquals(
-            'timestamp', start.toIso8601String()));
+        filters.add(
+          Filter.greaterThanOrEquals('timestamp', start.toIso8601String()),
+        );
       }
       if (end != null) {
-        filters.add(Filter.lessThanOrEquals('timestamp', end.toIso8601String()));
+        filters.add(
+          Filter.lessThanOrEquals('timestamp', end.toIso8601String()),
+        );
       }
       final finder = Finder(
         filter: filters.isEmpty ? null : Filter.and(filters),
@@ -115,9 +118,7 @@ class UsageController extends GetxController {
         limit: limit,
       );
       final records = await _store.find(db, finder: finder);
-      return records
-          .map((r) => UsageDetail.fromJson(r.value))
-          .toList();
+      return records.map((r) => UsageDetail.fromJson(r.value)).toList();
     } catch (e) {
       debugPrint('⚠️ [Usage] 读取用量明细失败: $e');
       return [];

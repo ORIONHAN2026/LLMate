@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:sembast/sembast_io.dart';
 
-import '../models/chat/chat_message.dart';
+import '../models/chat/message.dart';
 import '../data/file_storage.dart';
 import '../data/storage_paths.dart';
 
@@ -57,8 +57,8 @@ class MessageController extends GetxController {
     Database db,
     String sessionId,
   ) async {
-    final record = await _store.record(sessionId).get(db)
-        as Map<String, dynamic>?;
+    final record =
+        await _store.record(sessionId).get(db) as Map<String, dynamic>?;
     if (record != null && record['messages'] is List) {
       return (record['messages'] as List).cast<Map<String, dynamic>>().toList();
     }

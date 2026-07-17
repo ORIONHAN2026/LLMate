@@ -1,5 +1,5 @@
-import '../../../models/bigmodel/chat_model.dart';
-import '../../../models/chat/chat_session.dart';
+import '../../../models/model.dart';
+import '../../../models/chat/session.dart';
 import '../../../controllers/mcp_controller.dart';
 
 import './system_prompts.dart';
@@ -15,10 +15,13 @@ class MessageBuilder {
     String providerPrompt = '',
   }) {
     return buildSystemMessages(
-      model: model,
-      session: session,
-      providerPrompt: providerPrompt,
-    ).map((m) => m['content'] as String).where((c) => c.isNotEmpty).join('\n\n');
+          model: model,
+          session: session,
+          providerPrompt: providerPrompt,
+        )
+        .map((m) => m['content'] as String)
+        .where((c) => c.isNotEmpty)
+        .join('\n\n');
   }
 
   /// 构建多条独立的 system 消息
@@ -30,12 +33,11 @@ class MessageBuilder {
     final systemMessages = <Map<String, dynamic>>[];
 
     // 1. 用户自定义系统提示词（取自模型配置）
-    if (model?.chatSettings?.systemPrompt != null &&
-        model!.chatSettings!.systemPrompt.isNotEmpty) {
+    if (model?.systemPrompt != null && model!.systemPrompt!.isNotEmpty) {
       systemMessages.add({
         'role': 'system',
         'content':
-            '[MODEL SYSTEM PROMPT] This is the highest-priority instruction. In any conflict with other instructions (including the session system prompt), this prompt takes precedence.\n\n${model.chatSettings!.systemPrompt}',
+            '[MODEL SYSTEM PROMPT] This is the highest-priority instruction. In any conflict with other instructions (including the session system prompt), this prompt takes precedence.\n\n${model.systemPrompt}',
       });
     }
 
@@ -69,11 +71,11 @@ class MessageBuilder {
     }
 
     // 5. 连接器关系描述提示词
-    if (session?.connectPrompt != null &&
-        session!.connectPrompt!.isNotEmpty) {
-      final mcpNames = session.mcps != null && session.mcps!.isNotEmpty
-          ? session.mcps!.join(', ')
-          : '未选择连接器';
+    if (session?.connectPrompt != null && session!.connectPrompt!.isNotEmpty) {
+      final mcpNames =
+          session.mcps != null && session.mcps!.isNotEmpty
+              ? session.mcps!.join(', ')
+              : '未选择连接器';
       systemMessages.add({
         'role': 'system',
         'content': '连接器【$mcpNames】的使用关系：${session.connectPrompt}',

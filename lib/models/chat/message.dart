@@ -1,4 +1,4 @@
-import './content_block.dart';
+import '../../features/chat/widgets/message_widgets/content_block.dart';
 
 enum MessageRole { user, bot, tool }
 
@@ -11,7 +11,7 @@ class ChatMessage {
   final DateTime timestamp;
   final String? sessionId;
   final bool isError;
-   
+
   // 消息关联字段
   final String? pairedMsgId; // 配对的消息ID（用于关联用户消息和AI回复）
 

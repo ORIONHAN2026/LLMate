@@ -29,73 +29,6 @@ extension McpTransportTypeExt on McpTransportType {
   }
 }
 
-/// MCP工具信息模型
-class McpTool {
-  final String name;
-  final String description;
-  final Map<String, dynamic> inputSchema;
-
-  const McpTool({
-    required this.name,
-    required this.description,
-    required this.inputSchema,
-  });
-
-  factory McpTool.fromJson(Map<String, dynamic> json) {
-    return McpTool(
-      name: json['name'] as String? ?? '',
-      description: json['description'] as String? ?? '',
-      inputSchema: json['inputSchema'] as Map<String, dynamic>? ?? {},
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'description': description,
-      'inputSchema': inputSchema,
-    };
-  }
-
-  /// 转为 OpenAI function calling 格式
-  Map<String, dynamic> toOpenAIFunction() {
-    final func = <String, dynamic>{
-      'type': 'function',
-      'function': <String, dynamic>{
-        'name': name,
-        'description': description,
-      },
-    };
-    if (inputSchema.isNotEmpty) {
-      final schema = Map<String, dynamic>.from(inputSchema);
-      schema.putIfAbsent('type', () => 'object');
-      schema.putIfAbsent('properties', () => <String, dynamic>{});
-      func['function']['parameters'] = schema;
-    } else {
-      func['function']['parameters'] = {
-        'type': 'object',
-        'properties': <String, dynamic>{},
-        'required': <String>[],
-      };
-    }
-    return func;
-  }
-
-  @override
-  String toString() {
-    return 'McpTool(name: $name, description: $description)';
-  }
-}
-
-/// MCP 服务模型
-///
-/// 与磁盘上的 `server.json` 完全对应，合并了原 `config.json`（工具/描述等元信息）
-/// 与原 `server.json`（连接配置：command/args/env/url 等）的内容。
-///
-/// 字段说明：
-/// - 连接配置：command / args / env / workingDirectory（Stdio 型）、
-///   url / type / headers / body（URL 型）、timeout（通用）
-/// - 元信息：description / version / prompt / tools / lastUpdated
 class Mcp {
   final String name; // 唯一标识（与文件夹名一致）
   final String? description; // 描述
@@ -158,15 +91,15 @@ class Mcp {
 
     // 兜底：确保 name 有有效值
     final rawName = name.isNotEmpty ? name : (data['name'] as String? ?? '');
-    final fallback = rawName.isNotEmpty
-        ? rawName
-        : 'mcp_${jsonEncode(json).hashCode}';
+    final fallback =
+        rawName.isNotEmpty ? rawName : 'mcp_${jsonEncode(json).hashCode}';
     final effectiveName = rawName.isNotEmpty ? rawName : fallback;
 
     final toolsList = data['tools'] as List<dynamic>?;
-    final tools = toolsList
-        ?.map((tool) => McpTool.fromJson(tool as Map<String, dynamic>))
-        .toList();
+    final tools =
+        toolsList
+            ?.map((tool) => McpTool.fromJson(tool as Map<String, dynamic>))
+            .toList();
 
     final lastUpdatedStr = data['lastUpdated'] as String?;
     final lastUpdated =
@@ -181,12 +114,14 @@ class Mcp {
       workingDirectory: data['workingDirectory'] as String?,
       timeout: data['timeout'] as int?,
       url: data['url'] as String?,
-      headers: data['headers'] != null
-          ? Map<String, String>.from(data['headers'])
-          : null,
-      body: data['body'] != null
-          ? Map<String, dynamic>.from(data['body'] as Map)
-          : null,
+      headers:
+          data['headers'] != null
+              ? Map<String, String>.from(data['headers'])
+              : null,
+      body:
+          data['body'] != null
+              ? Map<String, dynamic>.from(data['body'] as Map)
+              : null,
       type: McpTransportTypeExt.fromString(data['type'] as String?),
       version: data['version'] as String?,
       prompt: data['prompt'] as String?,
@@ -197,9 +132,7 @@ class Mcp {
 
   /// 序列化为 server.json（与本对象内容完全对应）
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {
-      'name': name,
-    };
+    final Map<String, dynamic> data = {'name': name};
     if (description != null) data['description'] = description;
 
     // Stdio 类型配置
@@ -277,3 +210,68 @@ class Mcp {
     return 'Mcp(name: $name, command: $command, url: $url, tools: ${tools?.length ?? 0})';
   }
 }
+
+/// MCP工具信息模型
+class McpTool {
+  final String name;
+  final String description;
+  final Map<String, dynamic> inputSchema;
+
+  const McpTool({
+    required this.name,
+    required this.description,
+    required this.inputSchema,
+  });
+
+  factory McpTool.fromJson(Map<String, dynamic> json) {
+    return McpTool(
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      inputSchema: json['inputSchema'] as Map<String, dynamic>? ?? {},
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'description': description,
+      'inputSchema': inputSchema,
+    };
+  }
+
+  /// 转为 OpenAI function calling 格式
+  Map<String, dynamic> toOpenAIFunction() {
+    final func = <String, dynamic>{
+      'type': 'function',
+      'function': <String, dynamic>{'name': name, 'description': description},
+    };
+    if (inputSchema.isNotEmpty) {
+      final schema = Map<String, dynamic>.from(inputSchema);
+      schema.putIfAbsent('type', () => 'object');
+      schema.putIfAbsent('properties', () => <String, dynamic>{});
+      func['function']['parameters'] = schema;
+    } else {
+      func['function']['parameters'] = {
+        'type': 'object',
+        'properties': <String, dynamic>{},
+        'required': <String>[],
+      };
+    }
+    return func;
+  }
+
+  @override
+  String toString() {
+    return 'McpTool(name: $name, description: $description)';
+  }
+}
+
+/// MCP 服务模型
+///
+/// 与磁盘上的 `server.json` 完全对应，合并了原 `config.json`（工具/描述等元信息）
+/// 与原 `server.json`（连接配置：command/args/env/url 等）的内容。
+///
+/// 字段说明：
+/// - 连接配置：command / args / env / workingDirectory（Stdio 型）、
+///   url / type / headers / body（URL 型）、timeout（通用）
+/// - 元信息：description / version / prompt / tools / lastUpdated

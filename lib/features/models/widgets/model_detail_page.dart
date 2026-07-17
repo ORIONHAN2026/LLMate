@@ -1,6 +1,5 @@
 import 'package:llmate/l10n/app_localizations.dart';
-import 'package:llmate/models/bigmodel/chat_model.dart';
-import 'package:llmate/models/chat/chat_setting.dart';
+import 'package:llmate/models/model.dart';
 import 'package:llmate/utils/snackbar_utils.dart';
 import 'package:llmate/features/models/widgets/model_config_tab.dart';
 import 'package:llmate/widgets/confirm_delete_dialog.dart';
@@ -62,23 +61,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
     _modelNameController.text = _currentModel.name;
 
     // 初始化系统提示词控制器
-    _systemPromptController.text =
-        _currentModel.chatSettings?.systemPrompt ?? '';
-
-    // 如果模型的语言需要标准化，更新模型
-    final normalizedReplyLanguage = _currentModel.chatSettings?.replyLanguage;
-
-    if (normalizedReplyLanguage != _currentModel.chatSettings?.replyLanguage) {
-      final updatedChatSettings = (_currentModel.chatSettings ??
-              ChatSettings(
-                conversationName: '新对话',
-                systemPrompt: '',
-                temperature: 0.7,
-                replyLanguage: 'auto',
-              ))
-          .copyWith(replyLanguage: normalizedReplyLanguage);
-      _currentModel = _currentModel.copyWith(chatSettings: updatedChatSettings);
-    }
+    _systemPromptController.text = _currentModel.systemPrompt ?? '';
   }
 
   @override

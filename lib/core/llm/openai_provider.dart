@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../../models/bigmodel/chat_model.dart';
+import '../../models/model.dart';
 import '../../models/responses/openai_response.dart';
-import '../../models/chat/chat_session.dart';
-import '../../models/chat/chat_message.dart';
+import '../../models/chat/session.dart';
+import '../../models/chat/message.dart';
 
 /// OpenAI 兼容协议 Provider
 ///
@@ -55,7 +55,7 @@ class OpenAiProvider {
       'messages': messages,
       'stream': stream,
       'max_tokens': 4000,
-      'temperature': _model!.chatSettings?.temperature ?? 0.7,
+      'temperature': _model!.temperature ?? 0.7,
     };
 
     if (tools != null && tools.isNotEmpty) {

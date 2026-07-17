@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 
 import '../../../controllers/mcp_controller.dart';
 import '../../../controllers/session_controller.dart';
-import '../../../models/chat/mcp_config.dart';
+import '../../../models/chat/mcp.dart';
 import '../../../utils/snackbar_utils.dart';
 
 class McpManagementPage extends StatefulWidget {

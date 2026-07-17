@@ -1,4 +1,4 @@
-import '../../../../models/chat/chat_message.dart';
+import '../../../../models/chat/message.dart';
 
 // 重新生成操作类型枚举
 enum RegenerateActionType {

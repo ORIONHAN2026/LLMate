@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shelf/shelf.dart';
 
-import '../../../models/chat/chat_session.dart';
+import '../../../models/chat/session.dart';
 
 /// 审计日志目录
 const String _auditLogDir = 'log_request';
@@ -12,20 +12,21 @@ const String _auditLogDir = 'log_request';
 /// 审计回调函数类型
 ///
 /// 业务层在处理完请求/响应后，调用此回调补全审计条目中的实际内容。
-typedef AuditCallback = void Function({
-  Map<String, dynamic>? rawRequest,
-  Map<String, dynamic>? organizedRequest,
-  Map<String, dynamic>? rawResponse,
-  String? responseContent,
-  int? promptTokens,
-  int? completionTokens,
-  int? totalTokens,
-  int? reasoningTokens,
-  int? cachedTokens,
-  double? cost,
-  String? error,
-  List<Map<String, dynamic>>? toolCallResults,
-});
+typedef AuditCallback =
+    void Function({
+      Map<String, dynamic>? rawRequest,
+      Map<String, dynamic>? organizedRequest,
+      Map<String, dynamic>? rawResponse,
+      String? responseContent,
+      int? promptTokens,
+      int? completionTokens,
+      int? totalTokens,
+      int? reasoningTokens,
+      int? cachedTokens,
+      double? cost,
+      String? error,
+      List<Map<String, dynamic>>? toolCallResults,
+    });
 
 /// 审计中间件
 ///
@@ -81,38 +82,43 @@ Handler auditGuard(Handler innerHandler) {
     };
 
     // 注入审计回调到 context，供业务层补充响应内容
-    final completer = _AuditCompleter(auditEntry: auditEntry, startTime: startTime);
-    final updatedRequest = request.change(context: {
-      ...request.context,
-      'auditCallback': ({
-        Map<String, dynamic>? rawRequest,
-        Map<String, dynamic>? organizedRequest,
-        Map<String, dynamic>? rawResponse,
-        String? responseContent,
-        int? promptTokens,
-        int? completionTokens,
-        int? totalTokens,
-        int? reasoningTokens,
-        int? cachedTokens,
-        double? cost,
-        String? error,
-        List<Map<String, dynamic>>? toolCallResults,
-      }) =>
-          completer.complete(
-            rawRequest: rawRequest,
-            organizedRequest: organizedRequest,
-            rawResponse: rawResponse,
-            responseContent: responseContent,
-            promptTokens: promptTokens,
-            completionTokens: completionTokens,
-            totalTokens: totalTokens,
-            reasoningTokens: reasoningTokens,
-            cachedTokens: cachedTokens,
-            cost: cost,
-            error: error,
-            toolCallResults: toolCallResults,
-          ),
-    });
+    final completer = _AuditCompleter(
+      auditEntry: auditEntry,
+      startTime: startTime,
+    );
+    final updatedRequest = request.change(
+      context: {
+        ...request.context,
+        'auditCallback':
+            ({
+              Map<String, dynamic>? rawRequest,
+              Map<String, dynamic>? organizedRequest,
+              Map<String, dynamic>? rawResponse,
+              String? responseContent,
+              int? promptTokens,
+              int? completionTokens,
+              int? totalTokens,
+              int? reasoningTokens,
+              int? cachedTokens,
+              double? cost,
+              String? error,
+              List<Map<String, dynamic>>? toolCallResults,
+            }) => completer.complete(
+              rawRequest: rawRequest,
+              organizedRequest: organizedRequest,
+              rawResponse: rawResponse,
+              responseContent: responseContent,
+              promptTokens: promptTokens,
+              completionTokens: completionTokens,
+              totalTokens: totalTokens,
+              reasoningTokens: reasoningTokens,
+              cachedTokens: cachedTokens,
+              cost: cost,
+              error: error,
+              toolCallResults: toolCallResults,
+            ),
+      },
+    );
 
     // 执行下游 handler
     final response = await innerHandler(updatedRequest);
@@ -120,11 +126,10 @@ Handler auditGuard(Handler innerHandler) {
     // 补充基础响应信息（状态码、耗时），实际落盘由业务层回调触发
     final duration = DateTime.now().difference(startTime);
     auditEntry['response'] ??= <String, dynamic>{};
-    (auditEntry['response'] as Map<String, dynamic>)
-        .addAll({
-          'statusCode': response.statusCode,
-          'durationMs': duration.inMilliseconds,
-        });
+    (auditEntry['response'] as Map<String, dynamic>).addAll({
+      'statusCode': response.statusCode,
+      'durationMs': duration.inMilliseconds,
+    });
 
     return response;
   };
@@ -153,10 +158,13 @@ class _AuditCompleter {
     String? error,
     List<Map<String, dynamic>>? toolCallResults,
   }) {
-    final responseMap = (auditEntry['response'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+    final responseMap =
+        (auditEntry['response'] as Map<String, dynamic>?) ??
+        <String, dynamic>{};
 
     if (rawRequest != null) auditEntry['rawRequest'] = rawRequest;
-    if (organizedRequest != null) auditEntry['organizedRequest'] = organizedRequest;
+    if (organizedRequest != null)
+      auditEntry['organizedRequest'] = organizedRequest;
 
     if (rawResponse != null) {
       responseMap['rawResponse'] = rawResponse;
@@ -164,7 +172,9 @@ class _AuditCompleter {
     if (responseContent != null) {
       responseMap['content'] = responseContent;
     }
-    if (promptTokens != null || completionTokens != null || totalTokens != null) {
+    if (promptTokens != null ||
+        completionTokens != null ||
+        totalTokens != null) {
       responseMap['usage'] = {
         'promptTokens': promptTokens,
         'completionTokens': completionTokens,
@@ -211,13 +221,18 @@ Map<String, dynamic> _buildRawRequest(
   }
 
   // 复制其他参数
-  if (parsedBody?['max_tokens'] != null) result['max_tokens'] = parsedBody!['max_tokens'];
-  if (parsedBody?['temperature'] != null) result['temperature'] = parsedBody!['temperature'];
+  if (parsedBody?['max_tokens'] != null)
+    result['max_tokens'] = parsedBody!['max_tokens'];
+  if (parsedBody?['temperature'] != null)
+    result['temperature'] = parsedBody!['temperature'];
   if (parsedBody?['top_p'] != null) result['top_p'] = parsedBody!['top_p'];
-  if (parsedBody?['frequency_penalty'] != null) result['frequency_penalty'] = parsedBody!['frequency_penalty'];
-  if (parsedBody?['presence_penalty'] != null) result['presence_penalty'] = parsedBody!['presence_penalty'];
+  if (parsedBody?['frequency_penalty'] != null)
+    result['frequency_penalty'] = parsedBody!['frequency_penalty'];
+  if (parsedBody?['presence_penalty'] != null)
+    result['presence_penalty'] = parsedBody!['presence_penalty'];
   if (parsedBody?['stop'] != null) result['stop'] = parsedBody!['stop'];
-  if (parsedBody?['thinking'] != null) result['thinking'] = parsedBody!['thinking'];
+  if (parsedBody?['thinking'] != null)
+    result['thinking'] = parsedBody!['thinking'];
 
   return result;
 }
@@ -225,14 +240,12 @@ Map<String, dynamic> _buildRawRequest(
 /// 提取客户端 IP 地址
 String _extractClientIp(Request request) {
   final forwarded =
-      request.headers['x-forwarded-for'] ??
-      request.headers['X-Forwarded-For'];
+      request.headers['x-forwarded-for'] ?? request.headers['X-Forwarded-For'];
   if (forwarded != null && forwarded.isNotEmpty) {
     return forwarded.split(',').first.trim();
   }
 
-  final realIp =
-      request.headers['x-real-ip'] ?? request.headers['X-Real-IP'];
+  final realIp = request.headers['x-real-ip'] ?? request.headers['X-Real-IP'];
   if (realIp != null && realIp.isNotEmpty) {
     return realIp.trim();
   }
@@ -264,34 +277,40 @@ void _writeAuditLog(Map<String, dynamic> entry) {
 
       // 1. 收到的请求（原始）
       final rawRequest = entry['rawRequest'] ?? {};
-      await File('${dir.path}/request.json')
-          .writeAsString(encoder.convert(rawRequest));
+      await File(
+        '${dir.path}/request.json',
+      ).writeAsString(encoder.convert(rawRequest));
 
       // 2. 根据会话组织后的请求
       final organizedRequest = entry['organizedRequest'] ?? {};
-      await File('${dir.path}/request_organized.json')
-          .writeAsString(encoder.convert(organizedRequest));
+      await File(
+        '${dir.path}/request_organized.json',
+      ).writeAsString(encoder.convert(organizedRequest));
 
       // 3. 返回
       final responseMap = <String, dynamic>{};
       final resp = entry['response'] as Map<String, dynamic>?;
       if (resp != null) {
         if (resp['content'] != null) responseMap['content'] = resp['content'];
-        if (resp['rawResponse'] != null) responseMap['rawResponse'] = resp['rawResponse'];
+        if (resp['rawResponse'] != null)
+          responseMap['rawResponse'] = resp['rawResponse'];
         if (resp['usage'] != null) responseMap['usage'] = resp['usage'];
         if (resp['error'] != null) responseMap['error'] = resp['error'];
-        if (resp['statusCode'] != null) responseMap['statusCode'] = resp['statusCode'];
+        if (resp['statusCode'] != null)
+          responseMap['statusCode'] = resp['statusCode'];
         if (resp['cost'] != null) responseMap['cost'] = resp['cost'];
         responseMap['durationMs'] = resp['durationMs'] ?? 0;
       }
-      await File('${dir.path}/response.json')
-          .writeAsString(encoder.convert(responseMap));
+      await File(
+        '${dir.path}/response.json',
+      ).writeAsString(encoder.convert(responseMap));
 
       // 4. 工具调用结果
       final toolCallResults = entry['toolCallResults'] as List?;
       if (toolCallResults != null && toolCallResults.isNotEmpty) {
-        await File('${dir.path}/tool_calls.json')
-            .writeAsString(encoder.convert(toolCallResults));
+        await File(
+          '${dir.path}/tool_calls.json',
+        ).writeAsString(encoder.convert(toolCallResults));
       }
 
       debugPrint('📝 [Audit] 请求日志已写入: ${dir.path}');

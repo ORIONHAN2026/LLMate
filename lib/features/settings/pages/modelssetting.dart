@@ -5,11 +5,10 @@ import '../../../widgets/standard_app_bar.dart';
 import '../../../controllers/session_controller.dart';
 import '../../../controllers/model_controller.dart';
 // Update the import path below to the correct relative path if the file exists elsewhere, for example:
-import '../../../models/chat/chat_session.dart';
+import '../../../models/chat/session.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../models/bigmodel/chat_model.dart';
-import '../../../models/bigmodel/model_data.dart';
+import '../../../models/model.dart';
 import '../../models/pages/add_online_model_dialog.dart';
 import '../../models/widgets/model_detail_page.dart';
 

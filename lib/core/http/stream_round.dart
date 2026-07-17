@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../../controllers/mcp_controller.dart';
-import '../../models/chat/chat_session.dart';
+import '../../models/chat/session.dart';
 import '../../models/responses/chunk.dart';
 import '../../models/responses/openai_response.dart'
     show OpenAIDelta, ToolCall, ToolCallFunction;
@@ -146,8 +146,7 @@ Future<StreamRoundResult> streamSingleRound({
                 // 后续增量：与已存储的 Chunk 合并 arguments
                 final existingChunk = toolCallList[idx]!;
                 final existingChoice = existingChunk.choices.firstOrNull;
-                final existingTc = existingChoice?.delta?.toolCalls
-                    ?.firstWhere(
+                final existingTc = existingChoice?.delta?.toolCalls?.firstWhere(
                   (t) => (t.index ?? 0) == idx,
                   orElse: () => tc,
                 );

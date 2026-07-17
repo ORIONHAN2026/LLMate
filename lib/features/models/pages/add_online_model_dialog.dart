@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../models/bigmodel/model_data.dart';
-import '../../../models/bigmodel/chat_model.dart';
-import '../../../models/chat/chat_session.dart';
+import '../../../models/model.dart';
+import '../../../models/chat/session.dart';
 import '../../../core/llm/openai_provider.dart';
 
 class AddOnlineModelDialog extends StatefulWidget {
@@ -89,11 +88,20 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             // 步骤指示器
             Row(
               children: [
-                _buildStepIndicator(0, AppLocalizations.of(context)!.selectProvider),
+                _buildStepIndicator(
+                  0,
+                  AppLocalizations.of(context)!.selectProvider,
+                ),
                 _buildStepConnector(),
-                _buildStepIndicator(1, AppLocalizations.of(context)!.configureParams),
+                _buildStepIndicator(
+                  1,
+                  AppLocalizations.of(context)!.configureParams,
+                ),
                 _buildStepConnector(),
-                _buildStepIndicator(2, AppLocalizations.of(context)!.checkConfig),
+                _buildStepIndicator(
+                  2,
+                  AppLocalizations.of(context)!.checkConfig,
+                ),
                 _buildStepConnector(),
                 _buildStepIndicator(3, AppLocalizations.of(context)!.setName),
               ],
@@ -142,7 +150,11 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
-                  child: Text(_currentStep == 3 ? AppLocalizations.of(context)!.done : AppLocalizations.of(context)!.nextStep),
+                  child: Text(
+                    _currentStep == 3
+                        ? AppLocalizations.of(context)!.done
+                        : AppLocalizations.of(context)!.nextStep,
+                  ),
                 ),
               ],
             ),
@@ -262,7 +274,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     _testPassed = false;
                     _testResponse = '';
                   });
-
                 },
                 child: Container(
                   padding: const EdgeInsets.all(12),
@@ -388,7 +399,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   color:
                       isSelected
                           ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 const SizedBox(width: 6),
                 Flexible(
@@ -400,7 +413,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       color:
                           isSelected
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                              : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.8),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -414,7 +429,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 AppLocalizations.of(context)!.customProviderDesc,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
                   height: 1.3,
                 ),
                 maxLines: 2,
@@ -484,7 +501,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppLocalizations.of(context)!.configureProviderParams(selectedProviderData['name']),
+            AppLocalizations.of(
+              context,
+            )!.configureProviderParams(selectedProviderData['name']),
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -594,7 +613,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   _testPassed = false;
                   _testResponse = '';
                 }
-
               });
             },
           ),
@@ -737,217 +755,200 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Column(
-                        children:
-                            (selectedProviderData['models']
-                                    as List<Map<String, dynamic>>)
-                                .map((model) {
-                                  final isSelected =
-                                      _selectedOnlineModel == model['id'];
-                                  final hasCapabilities =
-                                      model['context'] != null;
-                                  return InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedOnlineModel = model['id'];
-                                        // 不需要重置该模型的规格选择，保持用户已选择的状态
-                                      });
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
+                children:
+                    (selectedProviderData['models'] as List<Map<String, dynamic>>).map((
+                      model,
+                    ) {
+                      final isSelected = _selectedOnlineModel == model['id'];
+                      final hasCapabilities = model['context'] != null;
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedOnlineModel = model['id'];
+                            // 不需要重置该模型的规格选择，保持用户已选择的状态
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                isSelected
+                                    ? Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withOpacity(0.08)
+                                    : null,
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Theme.of(
+                                  context,
+                                ).dividerColor.withOpacity(0.5),
+                                width: 0.5,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color:
+                                        isSelected
+                                            ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .outline
+                                                .withOpacity(0.5),
+                                    width: 2,
+                                  ),
+                                  color:
+                                      isSelected
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.primary
+                                          : Colors.transparent,
+                                ),
+                                child:
+                                    isSelected
+                                        ? Icon(
+                                          Icons.circle,
+                                          size: 8,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.onPrimary,
+                                        )
+                                        : null,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${model['name']}${_selectedModelSizes[model['id']]?.isNotEmpty == true ? ':${_selectedModelSizes[model['id']]}' : ''}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight:
+                                            isSelected
+                                                ? FontWeight.w500
+                                                : FontWeight.normal,
                                         color:
                                             isSelected
-                                                ? Theme.of(context)
+                                                ? Theme.of(
+                                                  context,
+                                                ).colorScheme.primary
+                                                : Theme.of(context)
                                                     .colorScheme
-                                                    .primary
-                                                    .withOpacity(0.08)
-                                                : null,
-                                        border: Border(
-                                          bottom: BorderSide(
-                                            color: Theme.of(
-                                              context,
-                                            ).dividerColor.withOpacity(0.5),
-                                            width: 0.5,
-                                          ),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 16,
-                                            height: 16,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color:
-                                                    isSelected
-                                                        ? Theme.of(
-                                                          context,
-                                                        ).colorScheme.primary
-                                                        : Theme.of(context)
-                                                            .colorScheme
-                                                            .outline
-                                                            .withOpacity(0.5),
-                                                width: 2,
-                                              ),
-                                              color:
-                                                  isSelected
-                                                      ? Theme.of(
-                                                        context,
-                                                      ).colorScheme.primary
-                                                      : Colors.transparent,
-                                            ),
-                                            child:
-                                                isSelected
-                                                    ? Icon(
-                                                      Icons.circle,
-                                                      size: 8,
-                                                      color:
-                                                          Theme.of(context)
-                                                              .colorScheme
-                                                              .onPrimary,
-                                                    )
-                                                    : null,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  '${model['name']}${_selectedModelSizes[model['id']]?.isNotEmpty == true ? ':${_selectedModelSizes[model['id']]}' : ''}',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight:
-                                                        isSelected
-                                                            ? FontWeight.w500
-                                                            : FontWeight.normal,
-                                                    color:
-                                                        isSelected
-                                                            ? Theme.of(context)
-                                                                .colorScheme
-                                                                .primary
-                                                            : Theme.of(context)
-                                                                .colorScheme
-                                                                .onSurface
-                                                                .withOpacity(
-                                                                  0.8,
-                                                                ),
-                                                  ),
-                                                ),
-                                                // 模型能力指标（带勾选标记）
-                                                if (hasCapabilities) ...[
-                                                  const SizedBox(height: 4),
-                                                  _buildCapabilityTags(
-                                                    model,
-                                                    isSelected,
-                                                  ),
-                                                ] else if (model['specs'] !=
-                                                    null) ...[
-                                                  const SizedBox(height: 2),
-                                                  Text(
-                                                    model['specs'],
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .onSurface
-                                                          .withOpacity(0.5),
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ],
-
-                                                // 如果模型有 size 字段且选中了该模型，显示 size 选择标签
-                                                if (isSelected &&
-                                                    model['size'] != null &&
-                                                    (model['size'] as List)
-                                                        .isNotEmpty) ...[
-                                                  const SizedBox(height: 8),
-                                                  Wrap(
-                                                    spacing: 6,
-                                                    runSpacing: 4,
-                                                    children:
-                                                        (model['size'] as List<String>).map((
-                                                          size,
-                                                        ) {
-                                                          final isSizeSelected =
-                                                              _selectedModelSizes[model['id']] ==
-                                                              size;
-                                                          return GestureDetector(
-                                                            onTap: () {
-                                                              setState(() {
-                                                                _selectedModelSizes[model['id']] =
-                                                                    size;
-                                                              });
-                                                            },
-                                                            child: Container(
-                                                              padding:
-                                                                  const EdgeInsets.symmetric(
-                                                                    horizontal:
-                                                                        8,
-                                                                    vertical: 4,
-                                                                  ),
-                                                              decoration: BoxDecoration(
-                                                                color:
-                                                                    isSizeSelected
-                                                                        ? const Color(
-                                                                          0xFF1F2937,
-                                                                        )
-                                                                        : const Color(
-                                                                          0xFF1F2937,
-                                                                        ).withValues(
-                                                                          alpha:
-                                                                              0.1,
-                                                                        ),
-                                                                borderRadius:
-                                                                    BorderRadius.circular(
-                                                                      12,
-                                                                    ),
-                                                                border: Border.all(
-                                                                  color: const Color(
-                                                                    0xFF1F2937,
-                                                                  ),
-                                                                  width: 1,
-                                                                ),
-                                                              ),
-                                                              child: Text(
-                                                                size,
-                                                                style: TextStyle(
-                                                                  fontSize: 10,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
-                                                                  color:
-                                                                      isSizeSelected
-                                                                          ? Colors
-                                                                              .white
-                                                                          : const Color(
-                                                                            0xFF1F2937,
-                                                                          ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }).toList(),
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                                    .onSurface
+                                                    .withOpacity(0.8),
                                       ),
                                     ),
-                                  );
-                                })
-                                .toList(),
-                      ),
+                                    // 模型能力指标（带勾选标记）
+                                    if (hasCapabilities) ...[
+                                      const SizedBox(height: 4),
+                                      _buildCapabilityTags(model, isSelected),
+                                    ] else if (model['specs'] != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        model['specs'],
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.5),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+
+                                    // 如果模型有 size 字段且选中了该模型，显示 size 选择标签
+                                    if (isSelected &&
+                                        model['size'] != null &&
+                                        (model['size'] as List).isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        children:
+                                            (model['size'] as List<String>).map((
+                                              size,
+                                            ) {
+                                              final isSizeSelected =
+                                                  _selectedModelSizes[model['id']] ==
+                                                  size;
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  setState(() {
+                                                    _selectedModelSizes[model['id']] =
+                                                        size;
+                                                  });
+                                                },
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        isSizeSelected
+                                                            ? const Color(
+                                                              0xFF1F2937,
+                                                            )
+                                                            : const Color(
+                                                              0xFF1F2937,
+                                                            ).withValues(
+                                                              alpha: 0.1,
+                                                            ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                        0xFF1F2937,
+                                                      ),
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    size,
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color:
+                                                          isSizeSelected
+                                                              ? Colors.white
+                                                              : const Color(
+                                                                0xFF1F2937,
+                                                              ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+              ),
             ),
           ] else ...[
             // 自定义模型输入
@@ -1039,7 +1040,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               if (trimmedValue != value) {
                 _apiUrlController.value = TextEditingValue(
                   text: trimmedValue,
-                  selection: TextSelection.collapsed(offset: trimmedValue.length),
+                  selection: TextSelection.collapsed(
+                    offset: trimmedValue.length,
+                  ),
                 );
               }
               setState(() {
@@ -1095,7 +1098,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               if (trimmedValue != value) {
                 _apiKeyController.value = TextEditingValue(
                   text: trimmedValue,
-                  selection: TextSelection.collapsed(offset: trimmedValue.length),
+                  selection: TextSelection.collapsed(
+                    offset: trimmedValue.length,
+                  ),
                 );
               }
               setState(() {
@@ -1245,7 +1250,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             controller: _modelNameController,
             style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
-              hintText: AppLocalizations.of(context)!.enterModelNameHint(platformDisplayName),
+              hintText: AppLocalizations.of(
+                context,
+              )!.enterModelNameHint(platformDisplayName),
               hintStyle: const TextStyle(fontSize: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
@@ -1424,12 +1431,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         'currency': currency,
         'apiKey': inputApiKey,
         'apiUrl': finalApiUrl,
-        'chatSettings': {
-          'conversationName': AppLocalizations.of(context)!.newConversationDefault,
-          'systemPrompt': '',
-          'temperature': 1.0,
-          'replyLanguage': '',
-        },
+        'conversationName': AppLocalizations.of(context)!.newConversationDefault,
+        'systemPrompt': '',
+        'temperature': 1.0,
+        'replyLanguage': '',
       };
       Navigator.pop(context, newModel);
     }
@@ -1922,12 +1927,14 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       String accumulatedResponse = '';
       bool hasReceived = false;
 
-      await for (final chunkMap in provider.sendMessageStream(
-        messages: [
-          {'role': 'user', 'content': '你好'},
-        ],
-        session: testSession,
-      ).timeout(const Duration(seconds: 10))) {
+      await for (final chunkMap in provider
+          .sendMessageStream(
+            messages: [
+              {'role': 'user', 'content': '你好'},
+            ],
+            session: testSession,
+          )
+          .timeout(const Duration(seconds: 10))) {
         hasReceived = true;
 
         final chunk = chunkMap['content'] ?? '';
@@ -1982,7 +1989,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         _isTesting = false;
         _testCompleted = true;
         _testPassed = false;
-        _testResponse = AppLocalizations.of(context)!.connectionFailed(e.toString());
+        _testResponse = AppLocalizations.of(
+          context,
+        )!.connectionFailed(e.toString());
       });
     }
   }
@@ -1994,6 +2003,4 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       _testResponse = '';
     });
   }
-
 }
-

@@ -7,8 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../../controllers/settings_controller.dart';
-import '../../../../models/chat/chat_session.dart';
-import '../../../../models/bigmodel/chat_model.dart';
+import '../../../../models/chat/session.dart';
+import '../../../../models/model.dart';
 import '../../../../utils/snackbar_utils.dart';
 import '../../../../widgets/confirm_delete_dialog.dart';
 
@@ -426,12 +426,14 @@ class SessionConfigSidebar {
     try {
       final domainController = Get.find<SettingsController>();
       if (domainController.isConfigured) {
-        final config = domainController.domainConfig.value;
-        final scheme = config.httpsEnabled ? 'https' : 'http';
-        final port = config.httpsEnabled ? config.httpsPort : config.httpPort;
+        final scheme = domainController.httpsEnabled.value ? 'https' : 'http';
+        final port =
+            domainController.httpsEnabled.value
+                ? domainController.httpsPort.value
+                : domainController.httpPort.value;
         // 默认端口不显示
         final host =
-            '$scheme://${config.domain}${(scheme == 'http' && port != 80) || (scheme == 'https' && port != 443) ? ':$port' : ''}';
+            '$scheme://${domainController.domain.value}${(scheme == 'http' && port != 80) || (scheme == 'https' && port != 443) ? ':$port' : ''}';
         return '$host/$sessionId';
       }
     } catch (_) {
@@ -445,7 +447,7 @@ class SessionConfigSidebar {
     int port = 80;
     try {
       final domainController = Get.find<SettingsController>();
-      port = domainController.domainConfig.value.httpPort;
+      port = domainController.httpPort.value;
     } catch (_) {}
     // 默认端口不显示
     final portPart = port != 80 ? ':$port' : '';

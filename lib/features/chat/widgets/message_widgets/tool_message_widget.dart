@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import '../../../../models/chat/chat_message.dart';
+import '../../../../models/chat/message.dart';
 
 /// 工具消息组件
 class ToolMessageWidget extends StatelessWidget {

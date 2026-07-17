@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import '../../../models/bigmodel/chat_model.dart';
-import '../../../models/chat/chat_session.dart';
-import '../../../models/chat/chat_message.dart';
-import '../../../models/chat/mcp_config.dart';
+import '../../../models/model.dart';
+import '../../../models/chat/session.dart';
+import '../../../models/chat/message.dart';
+import '../../../models/chat/mcp.dart';
 import '../../../controllers/mcp_controller.dart';
 
 import '../../../data/storage_paths.dart';
@@ -217,13 +217,12 @@ List<Map<String, dynamic>> buildBaseSystemMessages({
 }) {
   final messages = <Map<String, dynamic>>[];
 
-  if (model?.chatSettings?.systemPrompt != null &&
-      model!.chatSettings!.systemPrompt.isNotEmpty) {
+  if (model?.systemPrompt != null && model!.systemPrompt!.isNotEmpty) {
     messages.add({
       'role': 'system',
       'name': 'model_system_prompt',
       'content':
-          '[MODEL SYSTEM PROMPT] This is the highest-priority instruction. In any conflict with other instructions (including the session system prompt), this prompt takes precedence.\n\n${model.chatSettings!.systemPrompt}',
+          '[MODEL SYSTEM PROMPT] This is the highest-priority instruction. In any conflict with other instructions (including the session system prompt), this prompt takes precedence.\n\n${model.systemPrompt}',
     });
   }
 

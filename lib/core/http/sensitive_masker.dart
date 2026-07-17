@@ -1,6 +1,6 @@
 /// 脱敏选项：分别控制手机号、身份证号是否脱敏
 ///
-/// 由大模型设置（[ChatSettings.maskPhone] / [ChatSettings.maskIdCard]）驱动，
+/// 由大模型设置（[ChatModel.maskPhone] / [ChatModel.maskIdCard]）驱动，
 /// 仅当对应开关开启时才对匹配到的敏感信息进行 * 号替换。
 class SensitiveMaskOptions {
   /// 是否脱敏手机号

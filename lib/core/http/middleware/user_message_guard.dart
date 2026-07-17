@@ -1,7 +1,7 @@
 import 'package:shelf/shelf.dart';
 
-import '../../../models/chat/chat_session.dart';
-import '../../../models/chat/chat_message.dart';
+import '../../../models/chat/session.dart';
+import '../../../models/chat/message.dart';
 
 /// 用户消息创建中间件（请求路径 / 前置处理）
 ///
@@ -28,10 +28,9 @@ Handler userMessageGuard(Handler innerHandler) {
       sessionId: session.sessionId,
     );
 
-    final updatedRequest = request.change(context: {
-      ...request.context,
-      'userMessage': userMessage,
-    });
+    final updatedRequest = request.change(
+      context: {...request.context, 'userMessage': userMessage},
+    );
 
     return innerHandler(updatedRequest);
   };

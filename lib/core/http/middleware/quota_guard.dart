@@ -5,7 +5,7 @@ import 'package:get/get.dart' hide Response;
 import 'package:shelf/shelf.dart';
 
 import '../../../controllers/session_controller.dart';
-import '../../../models/chat/chat_session.dart';
+import '../../../models/chat/session.dart';
 
 /// 用量配额检查中间件
 ///

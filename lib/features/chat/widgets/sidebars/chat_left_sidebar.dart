@@ -4,7 +4,7 @@ import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/widgets/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../../models/chat/chat_session.dart';
+import '../../../../models/chat/session.dart';
 
 // 会话项组件
 class _SessionItem extends StatefulWidget {

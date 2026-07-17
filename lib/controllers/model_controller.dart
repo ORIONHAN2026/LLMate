@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:sembast/sembast_io.dart';
 
-import '../../../models/bigmodel/chat_model.dart';
+import '../models/model.dart';
 import '../../../data/storage_paths.dart';
 
 class ModelController extends GetxController {
@@ -110,7 +110,10 @@ class ModelController extends GetxController {
       if (p.contains('claude') || p.contains('anthropic')) {
         return 'assets/icons/claude-color.webp';
       }
-      if (p.contains('qwen') || p.contains('通义') || p.contains('百炼') || p.contains('阿里')) {
+      if (p.contains('qwen') ||
+          p.contains('通义') ||
+          p.contains('百炼') ||
+          p.contains('阿里')) {
         return 'assets/icons/qwen-color.webp';
       }
       if (p.contains('hunyuan') || p.contains('混元') || p.contains('腾讯')) {
@@ -125,7 +128,10 @@ class ModelController extends GetxController {
       if (p.contains('minimax')) {
         return 'assets/icons/yuanbao-color.webp';
       }
-      if (p.contains('xiaomi') || p.contains('小米') || p.contains('milm') || p.contains('mimo')) {
+      if (p.contains('xiaomi') ||
+          p.contains('小米') ||
+          p.contains('milm') ||
+          p.contains('mimo')) {
         return 'assets/icons/xiaomi.webp';
       }
     }
@@ -151,7 +157,9 @@ class ModelController extends GetxController {
       if (name.contains('claude') || name.contains('anthropic')) {
         return 'assets/icons/claude-color.webp';
       }
-      if (name.contains('gemini') || name.contains('bard') || name.contains('google')) {
+      if (name.contains('gemini') ||
+          name.contains('bard') ||
+          name.contains('google')) {
         return 'assets/icons/gemini-color.webp';
       }
       if (name.contains('qwen') || name.contains('tongyi')) {
@@ -160,7 +168,9 @@ class ModelController extends GetxController {
       if (name.contains('hunyuan') || name.contains('混元')) {
         return 'assets/icons/tencent-color.webp';
       }
-      if (name.contains('glm') || name.contains('zhipu') || name.contains('智谱')) {
+      if (name.contains('glm') ||
+          name.contains('zhipu') ||
+          name.contains('智谱')) {
         return 'assets/icons/yuanbao-color.webp';
       }
       if (name.contains('kimi') || name.contains('moonshot')) {
@@ -195,16 +205,17 @@ class ModelController extends GetxController {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
-        child: iconPath != null
-            ? _buildAssetIcon(
-                iconPath,
-                isSelected ? Colors.white : Colors.grey[600],
-              )
-            : Icon(
-                Icons.desktop_windows,
-                color: isSelected ? Colors.white : Colors.grey[600],
-                size: 16,
-              ),
+        child:
+            iconPath != null
+                ? _buildAssetIcon(
+                  iconPath,
+                  isSelected ? Colors.white : Colors.grey[600],
+                )
+                : Icon(
+                  Icons.desktop_windows,
+                  color: isSelected ? Colors.white : Colors.grey[600],
+                  size: 16,
+                ),
       ),
     );
   }

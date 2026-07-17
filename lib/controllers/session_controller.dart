@@ -1,13 +1,12 @@
-import 'package:llmate/models/chat/chat_message.dart';
-import 'package:llmate/models/chat/chat_setting.dart';
-import 'package:llmate/models/chat/contract_info.dart';
+import 'package:llmate/models/chat/message.dart';
+import 'package:llmate/models/chat/setting.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:sembast/sembast_io.dart';
 
-import '../models/chat/chat_session.dart';
-import '../models/bigmodel/chat_model.dart';
+import '../models/chat/session.dart';
+import '../models/model.dart';
 import '../data/storage_service.dart';
 
 import './model_controller.dart';
@@ -490,9 +489,9 @@ class SessionController extends GetxController {
       final db = await _database;
       final records = await _store.find(db);
       for (final rec in records) {
-        final sid = (rec.value as Map<String, dynamic>)['sessionId'] as String? ?? '';
-        final messagesData =
-            await MessageController.instance.loadMessages(sid);
+        final sid =
+            (rec.value as Map<String, dynamic>)['sessionId'] as String? ?? '';
+        final messagesData = await MessageController.instance.loadMessages(sid);
         if (messagesData.any((m) => m.msgId == messageId)) {
           final sessionData = await _getSessionFromDb(sid);
           if (sessionData != null) {
@@ -521,7 +520,8 @@ class SessionController extends GetxController {
       'scrollPosition': session.scrollPosition,
       'inputContent': session.inputContent,
       'modelId': session.modelId,
-      if (session.mcps != null && session.mcps!.isNotEmpty) 'mcps': session.mcps,
+      if (session.mcps != null && session.mcps!.isNotEmpty)
+        'mcps': session.mcps,
       'deepThink': session.deepThink,
       'connectPrompt': session.connectPrompt,
       'sessionQuickCommands':
@@ -587,7 +587,6 @@ class SessionController extends GetxController {
       deepThink: entity['deepThink'] as bool? ?? false,
       connectPrompt: entity['connectPrompt'] as String?,
       sessionQuickCommands: commands,
-      contracts: await _loadContracts(entity['sessionId'] as String? ?? ''),
       emoji: entity['emoji'] as String?,
       apiKey: entity['apiKey'] as String?,
       group: entity['group'] as String?,
@@ -606,126 +605,5 @@ class SessionController extends GetxController {
       totalTokens: entity['totalTokens'] as int? ?? 0,
       noAuthEnabled: entity['noAuthEnabled'] as bool? ?? false,
     );
-  }
-
-  /// 从 business.md 加载合约要点
-  Future<List<ContractInfo>?> _loadContracts(String sessionId) async {
-    if (sessionId.isEmpty) return null;
-    try {
-      final content = await SessionFileStore.readBusiness(sessionId);
-      if (content == null || content.trim().isEmpty) return null;
-      return _parseContractsFromMarkdown(content);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// 从 Markdown 解析合约列表
-  List<ContractInfo> _parseContractsFromMarkdown(String markdown) {
-    final contracts = <ContractInfo>[];
-    // 按 ## 分割合同段落
-    final sections = markdown.split(RegExp(r'^## ', multiLine: true));
-
-    for (final section in sections) {
-      final trimmed = section.trim();
-      if (trimmed.isEmpty) continue;
-
-      final lines = trimmed.split('\n');
-      final name = lines.first.trim();
-      if (name.isEmpty || name == '合约要点' || name.startsWith('# ')) continue;
-
-      String? contractType;
-      String? startDate, endDate, signingDate;
-      String? paymentClause, paymentSchedule, breachClause, liabilityClause;
-      final parties = <ContractParty>[];
-
-      for (int i = 1; i < lines.length; i++) {
-        final line = lines[i].trim();
-        if (line.isEmpty || line == '---') continue;
-
-        // 单值字段: **标签**: 值
-        final kvMatch = RegExp(r'^\*\*(.+?)\*\*:\s*(.*)').firstMatch(line);
-        if (kvMatch != null) {
-          final label = kvMatch.group(1)!;
-          final value = kvMatch.group(2)!.trim();
-          switch (label) {
-            case '合同类型':
-              contractType = value;
-            case '收支条款':
-              paymentClause = _readMultilineBlock(lines, i + 1);
-            case '支付计划':
-              paymentSchedule = _readMultilineBlock(lines, i + 1);
-            case '违约条款':
-              breachClause = _readMultilineBlock(lines, i + 1);
-            case '违约责任':
-              liabilityClause = _readMultilineBlock(lines, i + 1);
-            case '签署方':
-              // 跳过，下面用 - 解析
-              break;
-            case '合同期限':
-              // 跳过，下面用 - 解析
-              break;
-          }
-          continue;
-        }
-
-        // 签署方: - **角色**: 名称
-        final partyMatch = RegExp(
-          r'^-\s*\*\*(.+?)\*\*:\s*(.+)',
-        ).firstMatch(line);
-        if (partyMatch != null) {
-          parties.add(
-            ContractParty(
-              role: partyMatch.group(1)!,
-              name: partyMatch.group(2)!.trim(),
-            ),
-          );
-          continue;
-        }
-
-        // 期限项: - 标签: 值
-        final periodMatch = RegExp(r'^-\s*(.+?):\s*(.+)').firstMatch(line);
-        if (periodMatch != null) {
-          final label = periodMatch.group(1)!;
-          final value = periodMatch.group(2)!.trim();
-          if (label.contains('起始'))
-            startDate = value;
-          else if (label.contains('结束'))
-            endDate = value;
-          else if (label.contains('签订') || label.contains('签署'))
-            signingDate = value;
-        }
-      }
-
-      contracts.add(
-        ContractInfo(
-          name: name,
-          parties: parties,
-          contractType: contractType,
-          startDate: startDate,
-          endDate: endDate,
-          signingDate: signingDate,
-          paymentClause: paymentClause,
-          paymentSchedule: paymentSchedule,
-          breachClause: breachClause,
-          liabilityClause: liabilityClause,
-        ),
-      );
-    }
-
-    return contracts;
-  }
-
-  /// 从当前位置读取多行文本块（直到遇到下一个 **标签**: 或 --- 或空行后跟 **标签**:）
-  String _readMultilineBlock(List<String> lines, int start) {
-    final buf = StringBuffer();
-    for (int i = start; i < lines.length; i++) {
-      final line = lines[i].trim();
-      if (line == '---') break;
-      if (line.startsWith('**') && line.contains('**:')) break;
-      if (buf.isNotEmpty) buf.writeln();
-      buf.write(line);
-    }
-    return buf.toString().trim();
   }
 }

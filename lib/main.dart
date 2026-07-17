@@ -78,7 +78,7 @@ void main() async {
   Get.put(AuditController());
 
   // 启动 HTTP 服务（使用配置的 HTTP 端口，默认 80）
-  final port = settingsController.domainConfig.value.httpPort;
+  final port = settingsController.httpPort.value;
   LocalHttpService.start(port: port, allowExternal: true);
 
   runApp(const MyApp());

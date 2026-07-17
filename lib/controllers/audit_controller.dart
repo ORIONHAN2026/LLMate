@@ -7,67 +7,11 @@ import 'package:sembast/sembast_io.dart';
 
 import '../core/http/sensitive_masker.dart';
 import '../data/storage_paths.dart';
+import '../models/audit.dart';
 
-/// 单条审计日志条目
-///
-/// 持久化于 sembast 数据库 `~/.llmate/autits.db` 的 `audit_logs` store 中。
-class AuditLog {
-  final String? requestId;
-  final DateTime timestamp;
-  final String sessionId;
-  final String modelId;
-
-  /// 第三方客户端发送的原始请求体（已按风控开关脱敏）
-  final dynamic originRequest;
-
-  /// 中间件处理后最终发送给 LLM 的请求体（已按风控开关脱敏）
-  final dynamic middleRequest;
-
-  /// 累计回复给第三方客户端的完整内容（已按风控开关脱敏）
-  final String response;
-
-  /// 若请求处理出错，记录错误信息
-  final String? error;
-
-  AuditLog({
-    this.requestId,
-    required this.timestamp,
-    required this.sessionId,
-    required this.modelId,
-    this.originRequest,
-    this.middleRequest,
-    required this.response,
-    this.error,
-  });
-
-  factory AuditLog.fromJson(Map<String, dynamic> json) {
-    return AuditLog(
-      requestId: json['requestId'] as String?,
-      timestamp:
-          DateTime.tryParse(json['timestamp'] as String? ?? '') ??
-          DateTime.now(),
-      sessionId: json['sessionId'] as String? ?? '',
-      modelId: json['modelId'] as String? ?? '',
-      originRequest: json['originRequest'],
-      middleRequest: json['middleRequest'],
-      response: json['response'] as String? ?? '',
-      error: json['error'] as String?,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      if (requestId != null) 'requestId': requestId,
-      'timestamp': timestamp.toIso8601String(),
-      'sessionId': sessionId,
-      'modelId': modelId,
-      'originRequest': originRequest,
-      'middleRequest': middleRequest,
-      'response': response,
-      if (error != null) 'error': error,
-    };
-  }
-}
+// 供既有调用方沿用：直接 `import 'audit_controller.dart'` 即可访问 [AuditLog]，
+// 无需额外导入 models。
+export '../models/audit.dart';
 
 /// 审计控制器
 ///
@@ -153,8 +97,7 @@ class AuditController extends GetxController {
         sessionId: sessionId,
         modelId: modelId,
         originRequest: _parseAndMaskOrigin(originBodyStr, maskOptions),
-        middleRequest:
-            body != null ? maskSensitiveBody(body, maskOptions) : {},
+        middleRequest: body != null ? maskSensitiveBody(body, maskOptions) : {},
         response: maskSensitiveText(responseContent, maskOptions),
         error: error,
       );
@@ -189,7 +132,8 @@ class AuditController extends GetxController {
     try {
       final db = await _database;
       final finder = Finder(
-        filter: sessionId != null ? Filter.equals('sessionId', sessionId) : null,
+        filter:
+            sessionId != null ? Filter.equals('sessionId', sessionId) : null,
         sortOrders: [SortOrder('timestamp', false)],
         limit: limit,
       );

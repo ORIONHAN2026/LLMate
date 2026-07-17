@@ -1,11 +1,10 @@
 import 'dart:math' as math;
 import 'package:uuid/uuid.dart';
-import 'package:llmate/models/bigmodel/chat_model.dart';
-import 'package:llmate/models/chat/mcp_config.dart';
+import 'package:llmate/models/model.dart';
+import 'package:llmate/models/chat/mcp.dart';
 
-import './chat_message.dart';
-import './chat_setting.dart';
-import './contract_info.dart';
+import 'message.dart';
+import 'setting.dart';
 
 /// 生成会话级别的 API Key
 /// 格式: lm-{32位随机hex字符串}
@@ -119,9 +118,6 @@ class ChatSession {
   /// 计算公式: promptTokens * promptPrice / 1,000,000 + completionTokens * completionPrice / 1,000,000
   double get totalCost => _calculateCost(promptTokens, completionTokens);
 
-  /// 合约要点列表（商务模式下，由 contract_inspect 工具写入）
-  final List<ContractInfo>? contracts;
-
   // ============================
 
   /// 绑定的模型ID，用于动态加载 chatModel
@@ -188,7 +184,6 @@ class ChatSession {
     this.connectPrompt,
     this.systemPrompt,
     this.sessionQuickCommands = const [],
-    this.contracts,
     this.promptTokens = 0,
     this.completionTokens = 0,
     this.totalTokens = 0,
@@ -386,8 +381,6 @@ class ChatSession {
     String? systemPrompt,
     bool clearSystemPrompt = false,
     List<ChatCommand>? sessionQuickCommands,
-    List<ContractInfo>? contracts,
-    bool clearContracts = false,
     int? promptTokens,
     int? completionTokens,
     int? totalTokens,
@@ -452,7 +445,6 @@ class ChatSession {
       systemPrompt:
           clearSystemPrompt ? null : (systemPrompt ?? this.systemPrompt),
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
-      contracts: clearContracts ? null : (contracts ?? this.contracts),
       promptTokens: promptTokens ?? this.promptTokens,
       completionTokens: completionTokens ?? this.completionTokens,
       totalTokens: totalTokens ?? this.totalTokens,
@@ -563,10 +555,6 @@ class ChatSession {
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
               .toList() ??
           [],
-      contracts:
-          (json['contracts'] as List<dynamic>?)
-              ?.map((c) => ContractInfo.fromJson(c as Map<String, dynamic>))
-              .toList(),
       promptTokens: json['promptTokens'] as int? ?? 0,
       completionTokens: json['completionTokens'] as int? ?? 0,
       totalTokens: json['totalTokens'] as int? ?? 0,
@@ -607,8 +595,6 @@ class ChatSession {
         'systemPrompt': systemPrompt,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
-      if (contracts != null)
-        'contracts': contracts!.map((c) => c.toJson()).toList(),
       'promptTokens': promptTokens,
       'completionTokens': completionTokens,
       'totalTokens': totalTokens,

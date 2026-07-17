@@ -16,8 +16,8 @@ import '../../controllers/message_controller.dart';
 import '../../controllers/audit_controller.dart';
 import '../../controllers/usage_controller.dart';
 import '../../data/storage_paths.dart';
-import '../../models/chat/chat_session.dart';
-import '../../models/chat/chat_message.dart';
+import '../../models/chat/session.dart';
+import '../../models/chat/message.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/model_tool_guard.dart';
@@ -42,7 +42,7 @@ class LocalHttpServiceController extends GetxController {
   void _syncPortFromDomain() {
     try {
       final domainController = Get.find<SettingsController>();
-      port.value = domainController.domainConfig.value.httpPort;
+      port.value = domainController.httpPort.value;
     } catch (_) {}
   }
 
@@ -169,11 +169,10 @@ class LocalHttpService {
   static SecurityContext? _loadSecurityContext() {
     try {
       final domainController = Get.find<SettingsController>();
-      final config = domainController.domainConfig.value;
-      if (!config.httpsEnabled) return null;
+      if (!domainController.httpsEnabled.value) return null;
 
-      final certPath = config.certPath;
-      final keyPath = config.keyPath;
+      final certPath = domainController.certPath.value;
+      final keyPath = domainController.keyPath.value;
       if (certPath == null || keyPath == null) return null;
 
       final certFile = File(certPath);
@@ -720,9 +719,7 @@ class LocalHttpService {
         if (error != null) 'error': error,
       };
       final file = File('${logDir.path}/log.json');
-      await file.writeAsString(
-        const JsonEncoder.withIndent('  ').convert(log),
-      );
+      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(log));
     } catch (e) {
       debugPrint('⚠️ [Log] 保存实时日志失败: $e');
     }

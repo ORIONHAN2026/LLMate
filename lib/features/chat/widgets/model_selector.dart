@@ -3,7 +3,7 @@ import 'package:llmate/utils/snackbar_utils.dart';
 import 'package:llmate/utils/responsive_utils.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:llmate/controllers/session_controller.dart';
-import 'package:llmate/models/chat/chat_session.dart';
+import 'package:llmate/models/chat/session.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -48,7 +48,7 @@ class _ModelSelectorState extends State<ModelSelector> {
         widget.currentSession!.chatModel!.model.isNotEmpty) {
       final chatModel = widget.currentSession!.chatModel!;
       final platform = chatModel.platform ?? 'Unknown';
-      final prompt = chatModel.chatSettings?.systemPrompt ?? '';
+      final prompt = chatModel.systemPrompt ?? '';
       if (prompt.isNotEmpty) {
         return "$platform/${chatModel.model} | $prompt ";
       }
@@ -167,14 +167,10 @@ class _ModelSelectorState extends State<ModelSelector> {
                                               .withOpacity(0.6),
                                         ),
                                       ),
-                                      if (model.chatSettings?.systemPrompt !=
-                                              null &&
-                                          model
-                                              .chatSettings!
-                                              .systemPrompt!
-                                              .isNotEmpty)
+                                      if (model.systemPrompt != null &&
+                                          model.systemPrompt!.isNotEmpty)
                                         Text(
-                                          model.chatSettings!.systemPrompt!,
+                                          model.systemPrompt!,
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: Theme.of(context)
@@ -326,10 +322,10 @@ class _ModelSelectorState extends State<ModelSelector> {
                             ),
                           ),
 
-                          model.chatSettings?.systemPrompt != null &&
-                                  model.chatSettings!.systemPrompt!.isNotEmpty
+                          model.systemPrompt != null &&
+                                  model.systemPrompt!.isNotEmpty
                               ? Text(
-                                "${model.chatSettings?.systemPrompt ?? ''}",
+                                "${model.systemPrompt ?? ''}",
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: Theme.of(

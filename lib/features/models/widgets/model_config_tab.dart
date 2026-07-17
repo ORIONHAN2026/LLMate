@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:llmate/l10n/app_localizations.dart';
-import 'package:llmate/models/bigmodel/chat_model.dart';
-import 'package:llmate/models/chat/mcp_config.dart';
+import 'package:llmate/models/model.dart';
+import 'package:llmate/models/chat/mcp.dart';
 import 'package:llmate/utils/snackbar_utils.dart';
-import 'package:llmate/models/chat/chat_setting.dart';
 import 'package:llmate/controllers/mcp_controller.dart';
 
 class ModelConfigTab extends StatefulWidget {
@@ -60,10 +59,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
       setState(() {
         _mcpServices = List<Mcp>.from(_mcpController.configs);
         // 解析已绑定的 MCP 信息
-        _selectedMcpServers = _selectedMcpNames
-            .map((n) => _mcpController.getMcp(n))
-            .whereType<Mcp>()
-            .toList();
+        _selectedMcpServers =
+            _selectedMcpNames
+                .map((n) => _mcpController.getMcp(n))
+                .whereType<Mcp>()
+                .toList();
       });
     }
   }
@@ -89,8 +89,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   }
 
   void _initializeData() {
-    _systemPromptController.text =
-        _currentModel.chatSettings?.systemPrompt ?? '';
+    _systemPromptController.text = _currentModel.systemPrompt ?? '';
   }
 
   @override
@@ -102,10 +101,19 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           controller: _tabController,
           isScrollable: true,
           tabs: [
-            Tab(text: loc.basicInfo, icon: const Icon(Icons.info_outline, size: 16)),
-            Tab(text: loc.billingSettings, icon: const Icon(Icons.monetization_on_outlined, size: 16)),
+            Tab(
+              text: loc.basicInfo,
+              icon: const Icon(Icons.info_outline, size: 16),
+            ),
+            Tab(
+              text: loc.billingSettings,
+              icon: const Icon(Icons.monetization_on_outlined, size: 16),
+            ),
             Tab(text: loc.modelParams, icon: const Icon(Icons.tune, size: 16)),
-            Tab(text: loc.mcpSettings, icon: const Icon(Icons.grid_view, size: 16)),
+            Tab(
+              text: loc.mcpSettings,
+              icon: const Icon(Icons.grid_view, size: 16),
+            ),
             Tab(text: '安全设置', icon: const Icon(Icons.security, size: 16)),
           ],
         ),
@@ -138,11 +146,20 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         children: [
           _buildEditableModelNameItem(),
           const SizedBox(height: 8),
-          _buildConfigItem(AppLocalizations.of(context)!.modelLabel, _currentModel.model),
+          _buildConfigItem(
+            AppLocalizations.of(context)!.modelLabel,
+            _currentModel.model,
+          ),
           const SizedBox(height: 8),
-          _buildConfigItem(AppLocalizations.of(context)!.platformLabel, _currentModel.platform ?? AppLocalizations.of(context)!.unknown),
+          _buildConfigItem(
+            AppLocalizations.of(context)!.platformLabel,
+            _currentModel.platform ?? AppLocalizations.of(context)!.unknown,
+          ),
           const SizedBox(height: 8),
-          _buildConfigItem(AppLocalizations.of(context)!.apiAddress, _currentModel.apiUrl ?? widget.apiUrl),
+          _buildConfigItem(
+            AppLocalizations.of(context)!.apiAddress,
+            _currentModel.apiUrl ?? widget.apiUrl,
+          ),
         ],
       ),
     );
@@ -189,9 +206,8 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   // ========== 安全设置 Tab（敏感信息脱敏开关） ==========
   // 注：本 Tab 文案使用中文硬编码，未接入 gen-l10n，避免改动多语言资源文件。
   Widget _buildSecurityTab() {
-    final settings = _currentModel.chatSettings;
-    final maskPhone = settings?.maskPhone ?? false;
-    final maskIdCard = settings?.maskIdCard ?? false;
+    final maskPhone = _currentModel.maskPhone;
+    final maskIdCard = _currentModel.maskIdCard;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -241,7 +257,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Theme.of(context).dividerColor.withOpacity(0.3),
@@ -265,16 +283,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   }
 
   void _updateSecuritySetting({bool? maskPhone, bool? maskIdCard}) {
-    final updatedChatSettings = (_currentModel.chatSettings ??
-            ChatSettings(
-              conversationName: AppLocalizations.of(context)!.newConversationDefault,
-              systemPrompt: '',
-              temperature: 1.0,
-              replyLanguage: '',
-            ))
-        .copyWith(maskPhone: maskPhone, maskIdCard: maskIdCard);
     setState(() {
-      _currentModel = _currentModel.copyWith(chatSettings: updatedChatSettings);
+      _currentModel = _currentModel.copyWith(
+        maskPhone: maskPhone,
+        maskIdCard: maskIdCard,
+      );
     });
     widget.onModelUpdated(_currentModel);
   }
@@ -381,7 +394,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                 child: Text(
                                   _currentModel.name.isNotEmpty
                                       ? _currentModel.name
-                                      : AppLocalizations.of(context)!.notSetDoubleClickToEdit,
+                                      : AppLocalizations.of(
+                                        context,
+                                      )!.notSetDoubleClickToEdit,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color:
@@ -441,7 +456,10 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   void _saveModelName() {
     final newModelName = _modelNameController.text.trim();
     if (newModelName.isEmpty) {
-      SnackBarUtils.showError(context, AppLocalizations.of(context)!.modelNameCannotBeEmpty);
+      SnackBarUtils.showError(
+        context,
+        AppLocalizations.of(context)!.modelNameCannotBeEmpty,
+      );
       return;
     }
 
@@ -454,9 +472,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     widget.onModelUpdated(_currentModel);
 
     // 显示保存成功提示
-    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.modelNameSaved);
+    SnackBarUtils.showSuccess(
+      context,
+      AppLocalizations.of(context)!.modelNameSaved,
+    );
   }
-
 
   // ========== 模型参数 (Temperature + System Prompt) ==========
 
@@ -476,7 +496,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               ),
             ),
             Text(
-              '${(_currentModel.chatSettings?.temperature ?? 1.0).toStringAsFixed(1)} (${_getTemperatureLabel(_currentModel.chatSettings?.temperature ?? 1.0)})',
+              '${(_currentModel.temperature ?? 1.0).toStringAsFixed(1)} (${_getTemperatureLabel(_currentModel.temperature ?? 1.0)})',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -497,23 +517,13 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             trackHeight: 3,
           ),
           child: Slider(
-            value: _currentModel.chatSettings?.temperature ?? 1.0,
+            value: _currentModel.temperature ?? 1.0,
             min: 0.0,
             max: 2.0,
             divisions: 20,
             onChanged: (value) {
               setState(() {
-                  final updatedChatSettings = (_currentModel.chatSettings ??
-                          ChatSettings(
-                            conversationName: AppLocalizations.of(context)!.newConversationDefault,
-                            systemPrompt: '',
-                            temperature: 1.0,
-                            replyLanguage: '',
-                          ))
-                      .copyWith(temperature: value);
-                _currentModel = _currentModel.copyWith(
-                  chatSettings: updatedChatSettings,
-                );
+                _currentModel = _currentModel.copyWith(temperature: value);
               });
               widget.onModelUpdated(_currentModel);
             },
@@ -614,18 +624,8 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           onChanged: (value) {
             _debounceTimer?.cancel();
             _debounceTimer = Timer(const Duration(seconds: 1), () {
-              final updatedChatSettings = (_currentModel.chatSettings ??
-                      ChatSettings(
-                        conversationName: AppLocalizations.of(context)!.newConversationDefault,
-                        systemPrompt: '',
-                        temperature: 1.0,
-                        replyLanguage: '',
-                      ))
-                  .copyWith(systemPrompt: value);
               setState(() {
-                _currentModel = _currentModel.copyWith(
-                  chatSettings: updatedChatSettings,
-                );
+                _currentModel = _currentModel.copyWith(systemPrompt: value);
               });
               widget.onModelUpdated(_currentModel);
             });
@@ -666,19 +666,29 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         const SizedBox(height: 6),
         Row(
           children: [
-            _buildCurrencyChip(AppLocalizations.of(context)!.cny, '¥', isCNY, () {
-              setState(() {
-                _currentModel = _currentModel.copyWith(currency: 'CNY');
-              });
-              widget.onModelUpdated(_currentModel);
-            }),
+            _buildCurrencyChip(
+              AppLocalizations.of(context)!.cny,
+              '¥',
+              isCNY,
+              () {
+                setState(() {
+                  _currentModel = _currentModel.copyWith(currency: 'CNY');
+                });
+                widget.onModelUpdated(_currentModel);
+              },
+            ),
             const SizedBox(width: 8),
-            _buildCurrencyChip(AppLocalizations.of(context)!.usd, '\$', !isCNY, () {
-              setState(() {
-                _currentModel = _currentModel.copyWith(currency: 'USD');
-              });
-              widget.onModelUpdated(_currentModel);
-            }),
+            _buildCurrencyChip(
+              AppLocalizations.of(context)!.usd,
+              '\$',
+              !isCNY,
+              () {
+                setState(() {
+                  _currentModel = _currentModel.copyWith(currency: 'USD');
+                });
+                widget.onModelUpdated(_currentModel);
+              },
+            ),
           ],
         ),
       ],
@@ -686,20 +696,26 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   }
 
   Widget _buildCurrencyChip(
-      String label, String symbol, bool isSelected, VoidCallback onTap) {
+    String label,
+    String symbol,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          color:
+              isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).dividerColor,
+            color:
+                isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).dividerColor,
             width: 1.5,
           ),
         ),
@@ -711,9 +727,10 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: isSelected
-                    ? Colors.white
-                    : Theme.of(context).colorScheme.onSurface,
+                color:
+                    isSelected
+                        ? Colors.white
+                        : Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(width: 6),
@@ -721,9 +738,12 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: isSelected
-                    ? Colors.white
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                color:
+                    isSelected
+                        ? Colors.white
+                        : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.8),
               ),
             ),
           ],
@@ -899,7 +919,10 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             TextButton.icon(
               onPressed: _clearMcpBinding,
               icon: const Icon(Icons.link_off, size: 14),
-              label: Text(AppLocalizations.of(context)!.clearAllMcpBindings, style: const TextStyle(fontSize: 12)),
+              label: Text(
+                AppLocalizations.of(context)!.clearAllMcpBindings,
+                style: const TextStyle(fontSize: 12),
+              ),
               style: TextButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
               ),
@@ -909,10 +932,12 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           // 已绑定 MCP 的详情卡片
           if (_selectedMcpServers.isNotEmpty) ...[
             const SizedBox(height: 16),
-            ..._selectedMcpServers.map((mcp) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _buildMcpInfoCard(mcp),
-            )),
+            ..._selectedMcpServers.map(
+              (mcp) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildMcpInfoCard(mcp),
+              ),
+            ),
           ],
         ],
       ),
@@ -925,9 +950,13 @@ class _ModelConfigTabState extends State<ModelConfigTab>
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.3)),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -937,7 +966,10 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               Expanded(
                 child: Text(
                   mcp.name,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               IconButton(
@@ -962,12 +994,13 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           const SizedBox(height: 6),
           Row(
             children: [
-              _buildInfoChip(Icons.build, AppLocalizations.of(context)!.xToolsCount(toolCount)),
+              _buildInfoChip(
+                Icons.build,
+                AppLocalizations.of(context)!.xToolsCount(toolCount),
+              ),
               if (mcp.url != null && mcp.url!.isNotEmpty) ...[
                 const SizedBox(width: 8),
-                Flexible(
-                  child: _buildInfoChip(Icons.link, mcp.url!),
-                ),
+                Flexible(child: _buildInfoChip(Icons.link, mcp.url!)),
               ],
             ],
           ),
@@ -1014,15 +1047,19 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final query = searchController.text.toLowerCase();
-            final filtered = _mcpServices.where((s) {
-              if (query.isEmpty) return true;
-              return s.name.toLowerCase().contains(query) ||
-                  (s.description?.toLowerCase().contains(query) ?? false);
-            }).toList();
+            final filtered =
+                _mcpServices.where((s) {
+                  if (query.isEmpty) return true;
+                  return s.name.toLowerCase().contains(query) ||
+                      (s.description?.toLowerCase().contains(query) ?? false);
+                }).toList();
 
             return AlertDialog(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              title: Text(AppLocalizations.of(context)!.selectMcpServiceMultiSelect, style: const TextStyle(fontSize: 15)),
+              title: Text(
+                AppLocalizations.of(context)!.selectMcpServiceMultiSelect,
+                style: const TextStyle(fontSize: 15),
+              ),
               content: SizedBox(
                 width: 350,
                 height: 400,
@@ -1049,51 +1086,69 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                     ),
                     const SizedBox(height: 8),
                     Expanded(
-                      child: filtered.isEmpty
-                          ? Center(
-                              child: Text(
-                                _mcpServices.isEmpty ? AppLocalizations.of(context)!.noMcpServiceAddFirst : AppLocalizations.of(context)!.noMatchingResults,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withOpacity(0.4),
+                      child:
+                          filtered.isEmpty
+                              ? Center(
+                                child: Text(
+                                  _mcpServices.isEmpty
+                                      ? AppLocalizations.of(
+                                        context,
+                                      )!.noMcpServiceAddFirst
+                                      : AppLocalizations.of(
+                                        context,
+                                      )!.noMatchingResults,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.4),
+                                  ),
                                 ),
-                              ),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: filtered.length,
-                              itemBuilder: (context, index) {
-                                final service = filtered[index];
-                                final isSelected = dialogSelected.contains(service.name);
-                                return CheckboxListTile(
-                                  dense: true,
-                                  controlAffinity: ListTileControlAffinity.leading,
-                                  value: isSelected,
-                                  onChanged: (checked) {
-                                    setDialogState(() {
-                                      if (checked == true) {
-                                        if (!dialogSelected.contains(service.name)) {
-                                          dialogSelected.add(service.name);
+                              )
+                              : ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: filtered.length,
+                                itemBuilder: (context, index) {
+                                  final service = filtered[index];
+                                  final isSelected = dialogSelected.contains(
+                                    service.name,
+                                  );
+                                  return CheckboxListTile(
+                                    dense: true,
+                                    controlAffinity:
+                                        ListTileControlAffinity.leading,
+                                    value: isSelected,
+                                    onChanged: (checked) {
+                                      setDialogState(() {
+                                        if (checked == true) {
+                                          if (!dialogSelected.contains(
+                                            service.name,
+                                          )) {
+                                            dialogSelected.add(service.name);
+                                          }
+                                        } else {
+                                          dialogSelected.remove(service.name);
                                         }
-                                      } else {
-                                        dialogSelected.remove(service.name);
-                                      }
-                                    });
-                                  },
-                                  title: Text(service.name,
-                                      style: const TextStyle(fontSize: 13)),
-                                  subtitle: service.description?.isNotEmpty == true
-                                      ? Text(service.description!,
-                                          style: const TextStyle(fontSize: 11),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis)
-                                      : null,
-                                );
-                              },
-                            ),
+                                      });
+                                    },
+                                    title: Text(
+                                      service.name,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                    subtitle:
+                                        service.description?.isNotEmpty == true
+                                            ? Text(
+                                              service.description!,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            )
+                                            : null,
+                                  );
+                                },
+                              ),
                     ),
                   ],
                 ),
@@ -1101,7 +1156,10 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(AppLocalizations.of(context)!.cancel, style: const TextStyle(fontSize: 12)),
+                  child: Text(
+                    AppLocalizations.of(context)!.cancel,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
                 TextButton(
                   onPressed: () {
@@ -1109,7 +1167,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                     _applyMcpSelection(dialogSelected);
                   },
                   child: Text(
-                    AppLocalizations.of(context)!.confirmWithCount(dialogSelected.length),
+                    AppLocalizations.of(
+                      context,
+                    )!.confirmWithCount(dialogSelected.length),
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
@@ -1128,10 +1188,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   }
 
   void _applyMcpSelection(List<String> selectedNames) {
-    final servers = selectedNames
-        .map((n) => _mcpController.getMcp(n))
-        .whereType<Mcp>()
-        .toList();
+    final servers =
+        selectedNames
+            .map((n) => _mcpController.getMcp(n))
+            .whereType<Mcp>()
+            .toList();
 
     setState(() {
       _selectedMcpNames = List<String>.from(selectedNames);

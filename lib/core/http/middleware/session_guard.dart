@@ -4,9 +4,9 @@ import 'package:shelf/shelf.dart';
 
 import '../../../controllers/session_controller.dart';
 import '../../../controllers/message_controller.dart';
-import '../../../models/chat/chat_session.dart';
-import '../../../models/chat/chat_message.dart';
-import '../../../models/chat/content_block.dart';
+import '../../../models/chat/session.dart';
+import '../../../models/chat/message.dart';
+import '../../../features/chat/widgets/message_widgets/content_block.dart';
 import '../../../models/responses/openai_response.dart' show ToolCall;
 import 'audit_guard.dart';
 
@@ -45,38 +45,40 @@ typedef StreamCompleteCallback = void Function(StreamCompletionData data);
 /// 通过 `request.context['streamComplete']` 向业务层暴露完成回调。
 Handler sessionGuard(Handler innerHandler) {
   return (Request request) async {
-    final updatedRequest = request.change(context: {
-      ...request.context,
-      'streamComplete': (StreamCompletionData data) {
-        // 异步执行，不阻塞任何流程
-        () async {
-          if (data.error != null) {
-            debugPrint('❌ [SessionGuard] 流处理失败: ${data.error}');
-            final auditCallback =
-                request.context['auditCallback'] as AuditCallback?;
-            auditCallback?.call(error: 'Stream error: ${data.error}');
-          } else {
-            // 从 userMessageGuard 中间件中获取预创建的用户消息
-            final userMessage =
-                request.context['userMessage'] as ChatMessage?;
+    final updatedRequest = request.change(
+      context: {
+        ...request.context,
+        'streamComplete': (StreamCompletionData data) {
+          // 异步执行，不阻塞任何流程
+          () async {
+            if (data.error != null) {
+              debugPrint('❌ [SessionGuard] 流处理失败: ${data.error}');
+              final auditCallback =
+                  request.context['auditCallback'] as AuditCallback?;
+              auditCallback?.call(error: 'Stream error: ${data.error}');
+            } else {
+              // 从 userMessageGuard 中间件中获取预创建的用户消息
+              final userMessage =
+                  request.context['userMessage'] as ChatMessage?;
 
-            await _updateSession(
-              session: data.session,
-              userMessage: userMessage,
-              content: data.content,
-              generationStartTime: data.generationStartTime,
-              promptTokens: data.promptTokens,
-              completionTokens: data.completionTokens,
-            );
+              await _updateSession(
+                session: data.session,
+                userMessage: userMessage,
+                content: data.content,
+                generationStartTime: data.generationStartTime,
+                promptTokens: data.promptTokens,
+                completionTokens: data.completionTokens,
+              );
 
-            // 审计回调：补全响应内容
-            final auditCallback =
-                request.context['auditCallback'] as AuditCallback?;
-            auditCallback?.call(responseContent: data.content);
-          }
-        }();
+              // 审计回调：补全响应内容
+              final auditCallback =
+                  request.context['auditCallback'] as AuditCallback?;
+              auditCallback?.call(responseContent: data.content);
+            }
+          }();
+        },
       },
-    });
+    );
 
     return innerHandler(updatedRequest);
   };
@@ -135,10 +137,9 @@ Future<void> _updateSession({
       if (userMessage != null) userMessage,
       botMessage,
     ];
-    var updatedSession = session.copyWith(messages: [
-      ...session.messages,
-      ...newMessages,
-    ]);
+    var updatedSession = session.copyWith(
+      messages: [...session.messages, ...newMessages],
+    );
 
     // 记录一次请求（配额计数）
     updatedSession = updatedSession.recordRequest();
@@ -154,8 +155,10 @@ Future<void> _updateSession({
 
     final userPreview =
         userMessage != null
-            ? userMessage.content
-                .substring(0, userMessage.content.length.clamp(0, 30))
+            ? userMessage.content.substring(
+              0,
+              userMessage.content.length.clamp(0, 30),
+            )
             : '';
     debugPrint(
       '✅ 会话已更新: ${session.sessionId}, '

@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shelf/shelf.dart';
 
 import '../../../controllers/mcp_controller.dart';
-import '../../../models/chat/chat_session.dart';
+import '../../../models/chat/session.dart';
 import 'audit_guard.dart';
 
 /// 请求增强中间件：模型替换 + 工具注入
@@ -60,7 +60,7 @@ Handler modelToolGuard(Handler innerHandler) {
       var insertIndex = 0;
 
       // 3.1 模型级系统提示词
-      final modelSystemPrompt = session.chatModel?.chatSettings?.systemPrompt;
+      final modelSystemPrompt = session.chatModel?.systemPrompt;
       if (modelSystemPrompt != null && modelSystemPrompt.isNotEmpty) {
         messages.insert(insertIndex++, {
           'role': 'system',

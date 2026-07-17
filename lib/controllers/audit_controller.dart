@@ -4,13 +4,14 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
+import 'package:sembast/sembast_io.dart';
 
 import '../core/http/sensitive_masker.dart';
 import '../data/storage_paths.dart';
 
 /// 单条审计日志条目
 ///
-/// 对应磁盘文件 `~/.llmate/audit/{timestamp}-{modelId}-{sessionId}-audit.json`。
+/// 持久化于 sembast 数据库 `~/.llmate/audit.db` 的 `audit_logs` store 中。
 class AuditLog {
   final String? requestId;
   final DateTime timestamp;
@@ -71,11 +72,15 @@ class AuditLog {
 
 /// 审计控制器
 ///
-/// 集中负责请求/响应审计日志的「读」与「写」：
-///   - 写：[saveRequestResponseLog] 落盘到 `~/.llmate/audit/`，并在内存保留
+/// 集中负责请求/响应审计日志的「读」与「写」，底层使用嵌入式 NoSQL 数据库
+/// [sembast]，数据库文件位于 `~/.llmate/audit.db`，store 名为 `audit_logs`。
+///
+///   - 写：[saveRequestResponseLog] 将日志写入 `audit.db`，并在内存保留
 ///     最近若干条供 UI 展示。落盘前会按风控开关（[SensitiveMaskOptions]）对
 ///     手机号 / 身份证号等敏感信息进行 * 号脱敏。
-///   - 读：[loadAuditLogs] / [loadAuditById] 从磁盘加载审计日志（供审计查看界面）。
+///   - 读：[loadAuditLogs] / [loadAuditById] 从数据库加载审计日志（供审计查看界面）。
+///   - 旧版基于 `~/.llmate/audit/*.json` 的审计文件会在首次打开数据库时
+///     自动迁移进 `audit.db` 并删除旧目录，避免数据丢失。
 ///
 /// 该控制器在 [LocalHttpService] 中被调用：每次大模型请求结束后，由 HTTP 层
 /// 调用 [saveRequestResponseLog] 把本次请求/响应写入审计日志。
@@ -94,8 +99,58 @@ class AuditController extends GetxController {
   /// 内存缓存最大保留条数
   static const int _maxCached = 200;
 
-  /// 审计日志根目录：~/.llmate/audit/
-  static String get _auditDirPath => p.join(StoragePaths.root, 'audit');
+  /// 审计数据库路径：~/.llmate/audit.db
+  static String get _dbPath => p.join(StoragePaths.root, 'audit.db');
+
+  /// 旧版审计目录（迁移源）：~/.llmate/audit/
+  static String get _legacyAuditDir => p.join(StoragePaths.root, 'audit');
+
+  /// sembast store 名称
+  static const String _storeName = 'audit_logs';
+  final _store = stringMapStoreFactory.store(_storeName);
+
+  Database? _db;
+  bool _migrated = false;
+
+  /// 懒加载并打开 sembast 数据库（单例）
+  Future<Database> get _database async {
+    if (_db != null) return _db!;
+    await StoragePaths.ensureRoot();
+    _db = await databaseFactoryIo.openDatabase(_dbPath);
+    await _maybeMigrate(_db!);
+    return _db!;
+  }
+
+  /// 一次性将旧版 `audit/*.json` 文件迁移进数据库（仅当数据库为空时执行一次）
+  Future<void> _maybeMigrate(Database db) async {
+    if (_migrated) return;
+    _migrated = true;
+    try {
+      final legacyDir = Directory(_legacyAuditDir);
+      if (!await legacyDir.exists()) return;
+      final count = await _store.count(db);
+      if (count > 0) return; // 库中已有数据，跳过迁移
+
+      final files = (await legacyDir.list().toList())
+          .whereType<File>()
+          .where((f) => f.path.endsWith('-audit.json'))
+          .toList();
+
+      for (final f in files) {
+        try {
+          final json =
+              jsonDecode(await f.readAsString()) as Map<String, dynamic>;
+          await _store.add(db, json);
+        } catch (_) {
+          // 单条解析失败不影响其他条目
+        }
+      }
+      await legacyDir.delete(recursive: true);
+      debugPrint('📦 [Audit] 已迁移旧审计文件至 audit.db');
+    } catch (_) {
+      // 迁移失败不影响新写入
+    }
+  }
 
   /// 写出前对原始请求体字符串做解析 + 脱敏
   static dynamic _parseAndMaskOrigin(
@@ -141,7 +196,8 @@ class AuditController extends GetxController {
         error: error,
       );
 
-      await _writeToFile(entry);
+      final db = await _database;
+      await _store.add(db, entry.toJson());
 
       // 更新内存缓存（最新在前）
       recentLogs.insert(0, entry);
@@ -155,31 +211,6 @@ class AuditController extends GetxController {
     }
   }
 
-  /// 将单条审计日志写入磁盘
-  Future<void> _writeToFile(AuditLog entry) async {
-    final dir = Directory(_auditDirPath);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-
-    // 文件名时间戳：年-月-日-时-分-秒（与历史文件命名保持一致）
-    final ts = entry.timestamp;
-    final timestamp =
-        '${ts.year}-'
-        '${ts.month.toString().padLeft(2, '0')}-'
-        '${ts.day.toString().padLeft(2, '0')}-'
-        '${ts.hour.toString().padLeft(2, '0')}-'
-        '${ts.minute.toString().padLeft(2, '0')}-'
-        '${ts.second.toString().padLeft(2, '0')}';
-
-    final filename =
-        '$timestamp-${entry.modelId}-${entry.sessionId}-audit.json';
-    final file = File(p.join(dir.path, filename));
-    await file.writeAsString(
-      const JsonEncoder.withIndent('  ').convert(entry.toJson()),
-    );
-  }
-
   /// ── 读：加载审计日志 ──
   ///
   /// [sessionId] 为 null 时加载全部会话的日志；否则只返回该会话的日志。
@@ -189,32 +220,14 @@ class AuditController extends GetxController {
     int limit = _maxCached,
   }) async {
     try {
-      final dir = Directory(_auditDirPath);
-      if (!await dir.exists()) return [];
-
-      final files = (await dir.list().toList())
-          .whereType<File>()
-          .where((f) => f.path.endsWith('-audit.json'))
-          .toList();
-
-      // 文件名带时间戳，字典序即时间序；倒序取最新在前
-      files.sort((a, b) => b.path.compareTo(a.path));
-
-      final result = <AuditLog>[];
-      for (final f in files) {
-        try {
-          final content = await f.readAsString();
-          final log = AuditLog.fromJson(
-            jsonDecode(content) as Map<String, dynamic>,
-          );
-          if (sessionId != null && log.sessionId != sessionId) continue;
-          result.add(log);
-          if (result.length >= limit) break;
-        } catch (_) {
-          // 单条解析失败不影响其他条目
-        }
-      }
-      return result;
+      final db = await _database;
+      final finder = Finder(
+        filter: sessionId != null ? Filter.equals('sessionId', sessionId) : null,
+        sortOrders: [SortOrder('timestamp', false)],
+        limit: limit,
+      );
+      final records = await _store.find(db, finder: finder);
+      return records.map((r) => AuditLog.fromJson(r.value)).toList();
     } catch (e) {
       debugPrint('⚠️ [Audit] 读取审计日志失败: $e');
       return [];
@@ -223,21 +236,26 @@ class AuditController extends GetxController {
 
   /// ── 读：按 requestId 读取单条审计日志 ──
   Future<AuditLog?> loadAuditById(String requestId) async {
-    final logs = await loadAuditLogs(limit: _maxCached);
     try {
-      return logs.firstWhere((e) => e.requestId == requestId);
-    } catch (_) {
+      final db = await _database;
+      final finder = Finder(
+        filter: Filter.equals('requestId', requestId),
+        limit: 1,
+      );
+      final records = await _store.find(db, finder: finder);
+      if (records.isEmpty) return null;
+      return AuditLog.fromJson(records.first.value);
+    } catch (e) {
+      debugPrint('⚠️ [Audit] 按 requestId 读取失败: $e');
       return null;
     }
   }
 
-  /// ── 写：清空所有审计日志（磁盘 + 内存）──
+  /// ── 写：清空所有审计日志（数据库 + 内存）──
   Future<void> clearAuditLogs() async {
     try {
-      final dir = Directory(_auditDirPath);
-      if (await dir.exists()) {
-        await dir.delete(recursive: true);
-      }
+      final db = await _database;
+      await _store.delete(db);
       recentLogs.clear();
       debugPrint('🧹 [Audit] 已清空审计日志');
     } catch (e) {

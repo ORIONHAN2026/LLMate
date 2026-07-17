@@ -44,6 +44,7 @@ dependencies:
   get: ^4.7.2
   path_provider: ^2.1.3
   path: ^1.8.3  # 路径操作库
+  sembast: ^3.7.0  # 嵌入式 NoSQL 数据库（审计日志存储，~/.llmate/audit.db）
   shelf: ^1.4.2
   shelf_router: ^1.1.4
   shelf_cors_headers: ^0.1.5

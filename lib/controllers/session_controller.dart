@@ -466,7 +466,7 @@ class SessionController extends GetxController {
       );
 
       final defaultSession = ChatSession(
-        sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+        sessionId: ChatSession.generateSessionId(),
         name: '新对话',
         createdAt: DateTime.now(),
         messages: [welcomeMessage.copyWith(sessionId: null)],

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import '../chat/chat_setting.dart';
 import '../chat/mcp_config.dart';
@@ -58,9 +59,8 @@ class ChatModel {
 
   /// 生成唯一的模型ID
   static String generateModelId() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final random = Random().nextInt(9999);
-    return 'model_${timestamp}_$random';
+    const uuid = Uuid();
+    return 'model${uuid.v4()}';
   }
 
   /// 从 Map 创建 ChatModel
@@ -96,11 +96,15 @@ class ChatModel {
           map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
       updatedAt:
           map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
-      promptPrice: map['promptPrice']?.toDouble() ?? map['inputPrice']?.toDouble(),
-      completionPrice: map['completionPrice']?.toDouble() ?? map['outputPrice']?.toDouble(),
+      promptPrice:
+          map['promptPrice']?.toDouble() ?? map['inputPrice']?.toDouble(),
+      completionPrice:
+          map['completionPrice']?.toDouble() ?? map['outputPrice']?.toDouble(),
       currency: map['currency'] as String?,
       chatSettings: settings,
-      mcps: (map['mcps'] as List<dynamic>?)?.cast<String>() ?? (map['mcp'] is String ? [map['mcp'] as String] : null),
+      mcps:
+          (map['mcps'] as List<dynamic>?)?.cast<String>() ??
+          (map['mcp'] is String ? [map['mcp'] as String] : null),
     );
   }
 
@@ -140,11 +144,7 @@ class ChatModel {
 
   /// 创建空的 ChatModel 实例
   static ChatModel empty() {
-    return const ChatModel(
-      modelId: "",
-      name: '请设置',
-      model: '未设置对话大模型',
-    );
+    return const ChatModel(modelId: "", name: '请设置', model: '未设置对话大模型');
   }
 
   /// 创建新的 ChatModel 实例（带自动生成的ID）
@@ -354,7 +354,6 @@ class ChatModel {
       return Colors.grey[600]!;
     }
   }
-
 }
 
 /// 业务类型枚举

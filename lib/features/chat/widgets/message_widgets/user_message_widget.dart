@@ -720,7 +720,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
         // 创建新会话
         final newSession = ChatSession(
-          sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
+          sessionId: ChatSession.generateSessionId(),
           name: l10n.newChatFromHistory,
           createdAt: DateTime.now(),
           messages: historyMessages,

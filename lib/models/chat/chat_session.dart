@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:uuid/uuid.dart';
 import 'package:llmate/models/bigmodel/chat_model.dart';
 import 'package:llmate/models/chat/mcp_config.dart';
 
@@ -73,6 +74,13 @@ String randomEmoji() {
 // 聊天会话类
 class ChatSession {
   final String sessionId;
+
+  /// 生成唯一的会话ID（session_ 前缀 + UUID v4）
+  static String generateSessionId() {
+    const uuid = Uuid();
+    return 'session${uuid.v4()}';
+  }
+
   String name;
   final DateTime createdAt;
   final bool isFavorite;
@@ -349,7 +357,11 @@ class ChatSession {
       }
     }
 
-    return (inputTokens: inputTotal, outputTokens: outputTotal, cost: _calculateCost(inputTotal, outputTotal));
+    return (
+      inputTokens: inputTotal,
+      outputTokens: outputTotal,
+      cost: _calculateCost(inputTotal, outputTotal),
+    );
   }
 
   ChatSession copyWith({
@@ -507,15 +519,19 @@ class ChatSession {
 
     // 解析 mcpServers 列表（新格式），兼容旧格式 mcpServer
     if (json['mcpServers'] is List) {
-      mcpServersList ??= (json['mcpServers'] as List)
-          .map((m) => Mcp.fromMap(m as Map<String, dynamic>))
-          .toList();
-    } else if (mcpServersList == null && json['mcpServer'] is Map<String, dynamic>) {
+      mcpServersList ??=
+          (json['mcpServers'] as List)
+              .map((m) => Mcp.fromMap(m as Map<String, dynamic>))
+              .toList();
+    } else if (mcpServersList == null &&
+        json['mcpServer'] is Map<String, dynamic>) {
       mcpServersList = [Mcp.fromMap(json['mcpServer'])];
     }
 
     // 如果 mcps 为空但 mcpServers 有数据，从 mcpServers 派生 mcps（兼容旧数据）
-    if (mcpsList == null && mcpServersList != null && mcpServersList.isNotEmpty) {
+    if (mcpsList == null &&
+        mcpServersList != null &&
+        mcpServersList.isNotEmpty) {
       mcpsList = mcpServersList.map((s) => s.name).toList();
     }
 

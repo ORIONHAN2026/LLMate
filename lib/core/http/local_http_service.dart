@@ -21,7 +21,7 @@ import 'middleware/quota_guard.dart';
 import 'middleware/model_tool_guard.dart';
 import 'middleware/user_message_guard.dart';
 import 'stream_round.dart' show streamSingleRound;
-import '../tools/tool_execution_service.dart';
+import '../../controllers/mcp_controller.dart';
 import '../../models/responses/chunk.dart';
 
 /// HTTP 服务控制器
@@ -338,6 +338,10 @@ class LocalHttpService {
       final session = request.context['session'] as ChatSession;
       final body = request.context['body'] as Map<String, dynamic>;
 
+      // 应用内聊天标记：由聊天窗口自身负责消息持久化，服务侧跳过写入以避免重复
+      final isInApp =
+          (request.headers['x-llmate-inapp'] ?? '').toLowerCase() == 'true';
+
       // 客户端断开时取消后端请求
       bool cancelStream = false;
       streamController.onCancel = () {
@@ -436,7 +440,7 @@ class LocalHttpService {
             streamController.add(Chunk.fromReason("大模型正在执行MCP服务").toIntList());
 
             // ── 执行 MCP 工具 ──
-            final executionResult = await ToolExecutionService.executeToolCalls(
+            final executionResult = await McpController.instance.executeToolCalls(
               session: session,
               toolCalls: toolCallParams,
               cleanContent: '',
@@ -492,41 +496,43 @@ class LocalHttpService {
           debugPrint('🔄 [ToolLoop] 流式请求完成，总内容长度：${contentBuffer.length}');
 
           // ── 更新本地会话：创建 AI 消息 + token 统计 + 计费 ──
-          final sessionController = Get.find<SessionController>();
-          final userMessage = request.context['userMessage'] as ChatMessage?;
-          final now = DateTime.now();
-
+          // 应用内聊天（X-LLMate-InApp）由聊天窗口自身负责持久化，跳过此处写入避免重复
           final totalTokens = promptTokens + completionTokens;
+          if (!isInApp) {
+            final sessionController = Get.find<SessionController>();
+            final userMessage = request.context['userMessage'] as ChatMessage?;
+            final now = DateTime.now();
 
-          // 创建 AI 回复消息
-          final botMsgId = '${now.millisecondsSinceEpoch}_bot';
-          final botMessage = ChatMessage(
-            msgId: botMsgId,
-            role: MessageRole.bot,
-            content: contentBuffer.toString(),
-            reason: reasonBuffer.toString(),
-            timestamp: now,
-            sessionId: session.sessionId,
-            pairedMsgId: userMessage?.msgId,
-            generationStartTime: generationStartTime,
-            generationEndTime: now,
-            promptTokens: promptTokens,
-            completionTokens: completionTokens,
-            totalTokens: totalTokens > 0 ? totalTokens : null,
-            generationDuration: now.difference(generationStartTime),
-          );
-          session.messages.add(userMessage!);
-          session.messages.add(botMessage);
-          // 追加用户消息 + AI 回复到会话
+            // 创建 AI 回复消息
+            final botMsgId = '${now.millisecondsSinceEpoch}_bot';
+            final botMessage = ChatMessage(
+              msgId: botMsgId,
+              role: MessageRole.bot,
+              content: contentBuffer.toString(),
+              reason: reasonBuffer.toString(),
+              timestamp: now,
+              sessionId: session.sessionId,
+              pairedMsgId: userMessage?.msgId,
+              generationStartTime: generationStartTime,
+              generationEndTime: now,
+              promptTokens: promptTokens,
+              completionTokens: completionTokens,
+              totalTokens: totalTokens > 0 ? totalTokens : null,
+              generationDuration: now.difference(generationStartTime),
+            );
+            session.messages.add(userMessage!);
+            session.messages.add(botMessage);
+            // 追加用户消息 + AI 回复到会话
 
-          session.quotaRequestCount++;
-          session.promptTokens += promptTokens;
-          session.completionTokens += completionTokens;
-          session.totalTokens += totalTokens;
-          // updateSession 内部会调用 _recalculateBilling 自动计算费用
-          sessionController.updateSession(session);
-          // 强制通知所有监听者刷新 UI（确保非当前 session 的变更也能反映到侧边栏等位置）
-          sessionController.update();
+            session.quotaRequestCount++;
+            session.promptTokens += promptTokens;
+            session.completionTokens += completionTokens;
+            session.totalTokens += totalTokens;
+            // updateSession 内部会调用 _recalculateBilling 自动计算费用
+            sessionController.updateSession(session);
+            // 强制通知所有监听者刷新 UI（确保非当前 session 的变更也能反映到侧边栏等位置）
+            sessionController.update();
+          }
 
           debugPrint(
             '✅ 会话已更新: ${session.sessionId}, '

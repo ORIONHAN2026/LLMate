@@ -2,7 +2,7 @@
 title: 配置 MCP
 type: docs
 prev: docs/07-add-mcp
-next: docs/09-features
+next: docs/02-features
 weight: 8
 ---
 

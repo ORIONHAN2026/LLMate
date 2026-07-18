@@ -32,17 +32,17 @@ weight: 1
 
 ### Windows
 
-**v1.1.0** · x64 / ARM64
+**x64 / ARM64**
 
-> ⚠️ Windows 版本正在开发中，敬请期待
+> ⚠️ Windows 官方安装包正在筹备中。可参考 [源码编译安装](/docs/02-source-build/) 自行构建 `flutter build windows --release`。
 
 ---
 
 ### Linux
 
-**v1.1.0** · AppImage / deb / rpm
+**AppImage / deb / rpm**
 
-> ⚠️ Linux 版本正在开发中，敬请期待
+> ⚠️ Linux 官方安装包正在筹备中。可参考 [源码编译安装](/docs/02-source-build/) 自行构建 `flutter build linux --release`。
 
 ---
 

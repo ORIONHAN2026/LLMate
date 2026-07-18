@@ -26,11 +26,17 @@ LLMate 支持接入主流大模型供应商，统一管理企业的所有 AI 模
 
 ### 支持的供应商
 
-目前支持以下主流大模型供应商：
+目前内置预设以下主流大模型供应商：
 
 - **OpenAI** — GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo
-- **DeepSeek** — DeepSeek-V3, DeepSeek-R1
+- **Anthropic Claude** — Claude 系列
 - **Google Gemini** — Gemini 2.0 Flash, Gemini 1.5 Pro
-- **阿里云百炼** — 通义千问系列
+- **DeepSeek** — DeepSeek-V3, DeepSeek-R1
+- **阿里云百炼** — 通义千问（Qwen）系列
+- **智谱 AI** — GLM 系列
+- **Ollama** — 本地运行开源模型（默认 `127.0.0.1:11434`）
 - **腾讯云 TokenHub** — 混元大模型
+- **Kimi（Moonshot）** — Moonshot 系列
 - **小米 Mimo** — MiMo 系列
+
+> 未列出的供应商，可在添加时选择 **自定义**，填写 Base URL 并选择协议（OpenAI / Anthropic / Gemini 兼容格式）接入。

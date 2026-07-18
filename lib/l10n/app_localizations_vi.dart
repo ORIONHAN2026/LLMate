@@ -657,51 +657,52 @@ class AppLocalizationsVi extends AppLocalizations {
   String get workingDirCleared => '工作目录已清除';
 
   @override
-  String get noWorkingDir => 'Please set the contract file directory first';
+  String get noWorkingDir => 'Vui lòng thiết lập thư mục tệp hợp đồng trước';
 
   @override
-  String get parseContract => 'Parse Contract';
+  String get parseContract => 'Phân tích hợp đồng';
 
   @override
-  String get parseContractHint => 'Parse contract files in working directory';
+  String get parseContractHint =>
+      'Phân tích các tệp hợp đồng trong thư mục làm việc';
 
   @override
   String get parseContractPrompt =>
-      'The following are document files in the working directory. Please first determine which files are actual contract documents (not attachments, descriptions, or other non-contract files). Then, only for files confirmed as contracts, use the contract_inspect tool to write each contract\'s information.\n\nWriting rules:\n- For each contract, first call action=add to create a contract entry (fill in contractName, contractType, paymentClause, paymentSchedule, breachClause, liabilityClause, startDate, endDate, signingDate, etc.)\n- Then call action=addParty for each party, adding Party A, Party B, etc. one by one\n- Also briefly explain in your reply which files were determined as non-contract and why';
+      'Sau đây là các tệp tài liệu trong thư mục làm việc. Đầu tiên, hãy xác định tệp nào là tài liệu hợp đồng thực sự (không phải tệp đính kèm, mô tả hoặc tệp không phải hợp đồng khác). Sau đó, chỉ đối với các tệp được xác nhận là hợp đồng, hãy dùng công cụ contract_inspect để ghi thông tin của từng hợp đồng.\n\nQuy tắc ghi:\n- Với mỗi hợp đồng, trước tiên gọi action=add để tạo mục hợp đồng (điền contractName, contractType, paymentClause, paymentSchedule, breachClause, liabilityClause, startDate, endDate, signingDate, v.v.)\n- Sau đó gọi action=addParty cho từng bên, thêm Bên A, Bên B, v.v. lần lượt\n- Cũng giải thích ngắn gọn trong câu trả lời tệp nào được xác định là không phải hợp đồng và tại sao';
 
   @override
-  String get contractPoints => 'Contract Points';
+  String get contractPoints => 'Điểm hợp đồng';
 
   @override
-  String get noContracts => 'No contract points';
+  String get noContracts => 'Không có điểm hợp đồng';
 
   @override
   String get contractParsing =>
-      'Contract points will appear here after parsing';
+      'Các điểm hợp đồng sẽ hiển thị ở đây sau khi phân tích';
 
   @override
-  String get contractParty => 'Parties';
+  String get contractParty => 'Các bên';
 
   @override
-  String get contractPaymentClause => 'Payment Clause';
+  String get contractPaymentClause => 'Điều khoản thanh toán';
 
   @override
-  String get contractPaymentSchedule => 'Payment Schedule';
+  String get contractPaymentSchedule => 'Lịch thanh toán';
 
   @override
-  String get contractBreachClause => 'Breach Clause';
+  String get contractBreachClause => 'Điều khoản vi phạm';
 
   @override
-  String get contractLiability => 'Liability';
+  String get contractLiability => 'Trách nhiệm';
 
   @override
-  String get contractPeriod => 'Contract Period';
+  String get contractPeriod => 'Thời hạn hợp đồng';
 
   @override
-  String get contractSigningDate => 'Signing Date';
+  String get contractSigningDate => 'Ngày ký';
 
   @override
-  String get contractTypeLabel => 'Contract Type';
+  String get contractTypeLabel => 'Loại hợp đồng';
 
   @override
   String nRounds(Object n) {
@@ -1512,17 +1513,17 @@ class AppLocalizationsVi extends AppLocalizations {
       'After setting, the session service URL will use this address. HTTP default port 80, HTTPS default port 443.';
 
   @override
-  String get portSettings => 'Port Settings';
+  String get portSettings => 'Cài đặt cổng';
 
   @override
-  String get httpPort => 'HTTP Port';
+  String get httpPort => 'Cổng HTTP';
 
   @override
-  String get httpsPort => 'HTTPS Port';
+  String get httpsPort => 'Cổng HTTPS';
 
   @override
   String get portDesc =>
-      'HTTP listening port, default 80. HTTPS listening port, default 443. Restart the service to apply changes.';
+      'Cổng lắng nghe HTTP, mặc định 80. Cổng lắng nghe HTTPS, mặc định 443. Khởi động lại dịch vụ để áp dụng.';
 
   @override
   String get sslCertificate => 'SSL Certificate';
@@ -1566,52 +1567,53 @@ class AppLocalizationsVi extends AppLocalizations {
   String get usd => 'USD';
 
   @override
-  String get loadingPageSubtitle => 'Intelligent Enterprise AI Workspace';
+  String get loadingPageSubtitle =>
+      'Không gian làm việc AI doanh nghiệp thông minh';
 
   @override
-  String get billingSettings => 'Billing';
+  String get billingSettings => 'Thanh toán';
 
   @override
-  String get mcpSettings => 'MCP Settings';
+  String get mcpSettings => 'Cài đặt MCP';
 
   @override
-  String get currencyTypeLabel => 'Currency Type';
+  String get currencyTypeLabel => 'Loại tiền tệ';
 
   @override
-  String get inputPriceLabel => 'Input Price';
+  String get inputPriceLabel => 'Giá đầu vào';
 
   @override
-  String get outputPriceLabel => 'Output Price';
+  String get outputPriceLabel => 'Giá đầu ra';
 
   @override
   String pricePerMillionTokens(Object unit) {
-    return '$unit/M Tokens';
+    return '$unit/triệu token';
   }
 
   @override
   String priceUnitDescription(Object unit) {
-    return 'Price: $unit/Million Tokens. Used for cumulative session cost calculation.';
+    return 'Giá: $unit/triệu token. Dùng để tính chi phí tích lũy phiên.';
   }
 
   @override
-  String get examplePriceHint => 'e.g. 0.14';
+  String get examplePriceHint => 'ví dụ 0,14';
 
   @override
   String get mcpBindingDescription =>
-      'After binding MCP services to the model, sessions using this model will automatically inject these MCP tools. Session MCP and model MCP will automatically merge and deduplicate.';
+      'Sau khi liên kết dịch vụ MCP với mô hình, các phiên sử dụng mô hình này sẽ tự động chèn các công cụ MCP này. MCP của phiên và MCP của mô hình sẽ tự động hợp nhất và loại bỏ trùng lặp.';
 
   @override
-  String get addMcpServiceButton => 'Add MCP Service';
+  String get addMcpServiceButton => 'Thêm dịch vụ MCP';
 
   @override
-  String get clearAllMcpBindings => 'Clear All MCP Bindings';
+  String get clearAllMcpBindings => 'Xóa tất cả liên kết MCP';
 
   @override
-  String get selectMcpServiceMultiSelect => 'Select MCP Service (Multi-select)';
+  String get selectMcpServiceMultiSelect => 'Chọn dịch vụ MCP (nhiều lựa chọn)';
 
   @override
   String get noMcpServiceAddFirst =>
-      'No MCP services, please add in MCP Management first';
+      'Chưa có dịch vụ MCP, vui lòng thêm trong Quản lý MCP trước';
 
   @override
   String confirmWithCount(Object count) {
@@ -1619,25 +1621,398 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get temperaturePrecise => 'Precise';
+  String get temperaturePrecise => 'Chính xác';
 
   @override
-  String get temperatureConservative => 'Conservative';
+  String get temperatureConservative => 'Bảo thủ';
 
   @override
-  String get temperatureNeutral => 'Neutral';
+  String get temperatureNeutral => 'Trung lập';
 
   @override
-  String get temperatureCreative => 'Creative';
+  String get temperatureCreative => 'Sáng tạo';
 
   @override
-  String get temperatureRandom => 'Random';
+  String get temperatureRandom => 'Ngẫu nhiên';
 
   @override
   String xToolsCount(Object n) {
-    return '$n tools';
+    return '$n công cụ';
   }
 
   @override
-  String get newConversationDefault => 'New Conversation';
+  String get newConversationDefault => 'Cuộc hội thoại mới';
+
+  @override
+  String get usageDashboard => 'Bảng điều khiển sử dụng';
+
+  @override
+  String get globalUsageDashboard => 'Bảng điều khiển sử dụng toàn hệ thống';
+
+  @override
+  String sessionUsageTitle(Object name) {
+    return 'Sử dụng $name';
+  }
+
+  @override
+  String get noSessionData => 'Không có dữ liệu phiên';
+
+  @override
+  String get noUsageData => 'Không có dữ liệu sử dụng';
+
+  @override
+  String get overview => 'Tổng quan';
+
+  @override
+  String get statMessages => 'Tin nhắn';
+
+  @override
+  String get totalMessages => 'Tổng số tin nhắn';
+
+  @override
+  String get inputTokens => 'Token đầu vào';
+
+  @override
+  String get outputTokens => 'Token đầu ra';
+
+  @override
+  String get totalCostLabel => 'Tổng chi phí';
+
+  @override
+  String get tokenDistribution => 'Phân bổ Token';
+
+  @override
+  String get modelInfo => 'Thông tin mô hình';
+
+  @override
+  String get quotaLimitSection => 'Giới hạn hạn ngạch';
+
+  @override
+  String get usageCurve => 'Đường cong sử dụng';
+
+  @override
+  String get totalSessions => 'Tổng số phiên';
+
+  @override
+  String get totalTokens => 'Tổng Token';
+
+  @override
+  String get byModel => 'Theo mô hình';
+
+  @override
+  String get allSessions => 'Tất cả phiên';
+
+  @override
+  String moreSessionsNoData(Object count) {
+    return 'Còn $count phiên khác không có dữ liệu sử dụng';
+  }
+
+  @override
+  String get inputLabel => 'Đầu vào';
+
+  @override
+  String get outputLabel => 'Đầu ra';
+
+  @override
+  String get noQuotaLimit => 'Chưa đặt giới hạn hạn ngạch';
+
+  @override
+  String sessionsCountSuffix(Object count) {
+    return '$count phiên';
+  }
+
+  @override
+  String get granMinute => 'Phút';
+
+  @override
+  String get granHour => 'Giờ';
+
+  @override
+  String get granDay => 'Ngày';
+
+  @override
+  String get granMonth => 'Tháng';
+
+  @override
+  String get granYear => 'Năm';
+
+  @override
+  String get selectDate => 'Chọn ngày';
+
+  @override
+  String get rangeStart => 'Bắt đầu';
+
+  @override
+  String get rangeEnd => 'Kết thúc';
+
+  @override
+  String get startDateHelp => 'Ngày bắt đầu';
+
+  @override
+  String get endDateHelp => 'Ngày kết thúc';
+
+  @override
+  String get tokenToggle => 'Token';
+
+  @override
+  String get costToggle => 'Chi phí';
+
+  @override
+  String chartLegendCost(Object symbol) {
+    return 'Chi phí ($symbol)';
+  }
+
+  @override
+  String get noSessionConfig => 'Chưa có cấu hình phiên';
+
+  @override
+  String get resetApiKey => 'Đặt lại khóa API';
+
+  @override
+  String get resetApiKeyConfirm =>
+      'Đặt lại khóa API của phiên này? Sau khi đặt lại, khóa cũ sẽ ngay lập tức không hợp lệ và các yêu cầu bên ngoài dùng khóa cũ sẽ không thể truy cập.';
+
+  @override
+  String get confirmReset => 'Xác nhận đặt lại';
+
+  @override
+  String get connectorSkillRelation =>
+      'Mô tả mối quan hệ giữa trình kết nối và kỹ năng';
+
+  @override
+  String modelPricing(Object unit) {
+    return 'Giá mô hình ($unit/triệu Token)';
+  }
+
+  @override
+  String get billingInfoLabel => 'Thông tin thanh toán';
+
+  @override
+  String get cumulativeInputTokens => 'Token đầu vào tích lũy';
+
+  @override
+  String get cumulativeOutputTokens => 'Token đầu ra tích lũy';
+
+  @override
+  String get cumulativeCost => 'Chi phí tích lũy';
+
+  @override
+  String get basicInfoLabel => 'Thông tin cơ bản';
+
+  @override
+  String get sessionName => 'Tên phiên';
+
+  @override
+  String get organization => 'Tổ chức';
+
+  @override
+  String get groupLabel => 'Nhóm';
+
+  @override
+  String get notSpecified => 'Chưa chỉ định';
+
+  @override
+  String get notGrouped => 'Chưa nhóm';
+
+  @override
+  String get boundModel => 'Mô hình đã liên kết';
+
+  @override
+  String get relatedPrompt => 'Prompt liên quan';
+
+  @override
+  String get messageCountLabel => 'Số lượng tin nhắn';
+
+  @override
+  String get serviceConfigLabel => 'Cấu hình dịch vụ';
+
+  @override
+  String get serviceAddress => 'Địa chỉ dịch vụ';
+
+  @override
+  String get mcpLabel => 'MCP';
+
+  @override
+  String get modelMcp => 'Mô hình MCP';
+
+  @override
+  String get sessionMcp => 'Phiên MCP';
+
+  @override
+  String get notBound => 'Chưa liên kết';
+
+  @override
+  String get addMcpHint =>
+      'Bạn có thể thêm dịch vụ MCP trong Quản lý mô hình hoặc ô nhập tin nhắn trò chuyện';
+
+  @override
+  String get usageQuotaLabel => 'Hạn ngạch sử dụng';
+
+  @override
+  String get noAuthAccess => 'Truy cập không cần xác thực';
+
+  @override
+  String get noAuthEnabledDesc =>
+      '⚠️ Đã tắt xác thực, bất kỳ ai cũng có thể truy cập';
+
+  @override
+  String get noAuthDisabledDesc => 'Bật: truy cập mà không cần khóa API';
+
+  @override
+  String get disableSession => 'Vô hiệu hóa phiên';
+
+  @override
+  String get disabledEnabledDesc => '⚠️ Đã vô hiệu hóa, lệnh gọi sẽ trả về lỗi';
+
+  @override
+  String get disabledDisabledDesc => 'Bật: phiên này sẽ không thể được gọi';
+
+  @override
+  String get systemPromptHint =>
+      'Thiết lập vai trò/hành vi cho phiên này, ví dụ: bạn là một cố vấn pháp lý chuyên nghiệp...';
+
+  @override
+  String get systemPromptDesc =>
+      'Được đặt làm lệnh ưu tiên cao nhất, tự động chèn vào các yêu cầu bên thứ ba. Để trống nếu không chèn.';
+
+  @override
+  String get tokenUsageLimit => 'Giới hạn sử dụng Token';
+
+  @override
+  String costBudgetLimit(Object unit) {
+    return 'Ngân sách chi phí ($unit)';
+  }
+
+  @override
+  String get requestLimit => 'Giới hạn số yêu cầu';
+
+  @override
+  String get noLimit => 'Không giới hạn';
+
+  @override
+  String get enableUsageLimit => 'Bật giới hạn sử dụng';
+
+  @override
+  String get reachLimitReject =>
+      'Yêu cầu mới sẽ bị từ chối sau khi đạt giới hạn';
+
+  @override
+  String get resetPeriod => 'Chu kỳ đặt lại';
+
+  @override
+  String get resetPeriodNever => 'Không tự động đặt lại';
+
+  @override
+  String get resetPeriodDaily => 'Đặt lại hàng ngày';
+
+  @override
+  String get resetPeriodMonthly => 'Đặt lại hàng tháng';
+
+  @override
+  String get quotaExhausted => 'Đã hết hạn ngạch';
+
+  @override
+  String get currentUsageStatus => 'Trạng thái sử dụng hiện tại';
+
+  @override
+  String get quotaTokenLabel => 'Token';
+
+  @override
+  String get quotaCostLabel => 'Chi phí';
+
+  @override
+  String get quotaRequestLabel => 'Yêu cầu';
+
+  @override
+  String get manualResetUsage => 'Đặt lại thủ công';
+
+  @override
+  String get manualResetConfirmDesc => 'Xác định đặt lại thủ công';
+
+  @override
+  String get manualResetWarning =>
+      'Sau khi đặt lại, Token, chi phí và số lượng yêu cầu trong chu kỳ hiện tại sẽ được xóa, và thời gian bắt đầu chu kỳ sẽ được cập nhật thành thời gian hiện tại.';
+
+  @override
+  String get tokenUsage => 'Sử dụng Token';
+
+  @override
+  String get costUsage => 'Sử dụng chi phí';
+
+  @override
+  String get resetValue => 'Đặt lại';
+
+  @override
+  String get apiKeyReset => 'Đã đặt lại khóa API';
+
+  @override
+  String get securitySettings => 'Bảo mật';
+
+  @override
+  String get sensitiveInfoMasking => 'Che giấu thông tin nhạy cảm';
+
+  @override
+  String get sensitiveInfoMaskingDesc =>
+      'Khi bật, thông tin tương ứng trong tin nhắn gửi đến mô hình và trong nhật ký kiểm toán cục bộ sẽ được thay thế bằng \'*\' để ngăn rò rỉ quyền riêng tư dạng văn bản.';
+
+  @override
+  String get maskPhoneTitle => 'Che giấu số điện thoại';
+
+  @override
+  String get maskPhoneSubtitle =>
+      'Thay thế số điện thoại trong tin nhắn bằng \'*\'';
+
+  @override
+  String get maskIdCardTitle => 'Che giấu số CMND/CCCD';
+
+  @override
+  String get maskIdCardSubtitle =>
+      'Thay thế số CMND/CCCD trong tin nhắn bằng \'*\'';
+
+  @override
+  String get sessionDetails => 'Chi tiết phiên';
+
+  @override
+  String get modelDetails => 'Chi tiết mô hình';
+
+  @override
+  String modelDetailsWithPlatform(String platform) {
+    return 'Chi tiết mô hình · $platform';
+  }
+
+  @override
+  String get japanese => 'Tiếng Nhật';
+
+  @override
+  String get japaneseDesc => 'Tiếng Nhật';
+
+  @override
+  String get korean => 'Hàn';
+
+  @override
+  String get koreanDesc => 'Hàn';
+
+  @override
+  String get thai => 'Thái';
+
+  @override
+  String get thaiDesc => 'Thái';
+
+  @override
+  String get vietnamese => 'Việt';
+
+  @override
+  String get vietnameseDesc => 'Việt';
+
+  @override
+  String get french => 'Pháp';
+
+  @override
+  String get frenchDesc => 'Pháp';
+
+  @override
+  String get german => 'Đức';
+
+  @override
+  String get germanDesc => 'Đức';
 }

@@ -2,6 +2,7 @@ import '../../../widgets/standard_app_bar.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:llmate/l10n/app_localizations.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../models/model.dart';
 import '../../../models/chat/session.dart';
@@ -131,14 +132,15 @@ class _UsageDashboardState extends State<UsageDashboard> {
     final isDark = theme.brightness == Brightness.dark;
     final sessionController = Get.find<SessionController>();
     final session = widget.session;
+    final l10n = AppLocalizations.of(context)!;
 
     if (session == null) {
       return Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: _buildAppBar('使用量仪表盘'),
+        appBar: _buildAppBar(l10n.usageDashboard),
         body: Center(
           child: Text(
-            '暂无会话数据',
+            l10n.noSessionData,
             style: TextStyle(
               fontSize: 15,
               color: theme.colorScheme.onSurface.withOpacity(0.5),
@@ -150,7 +152,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: _buildAppBar('${session.name} 使用量'),
+      appBar: _buildAppBar(l10n.sessionUsageTitle(session.name)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -179,7 +181,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionTitle(theme, '概览'),
+                  _buildSectionTitle(theme, l10n.overview),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 12,
@@ -188,7 +190,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                       _buildStatCard(
                         theme,
                         isDark: isDark,
-                        title: '消息数',
+                        title: l10n.statMessages,
                         value: '$messageCount',
                         icon: Icons.message_outlined,
                         accentColor: const Color(0xFF7C3AED),
@@ -196,7 +198,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                       _buildStatCard(
                         theme,
                         isDark: isDark,
-                        title: '输入 Token',
+                        title: l10n.inputTokens,
                         value: _formatTokenCount(promptTokens),
                         icon: Icons.arrow_upward,
                         accentColor: const Color(0xFF2563EB),
@@ -204,7 +206,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                       _buildStatCard(
                         theme,
                         isDark: isDark,
-                        title: '输出 Token',
+                        title: l10n.outputTokens,
                         value: _formatTokenCount(completionTokens),
                         icon: Icons.arrow_downward,
                         accentColor: const Color(0xFF059669),
@@ -212,7 +214,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                       _buildStatCard(
                         theme,
                         isDark: isDark,
-                        title: '总费用',
+                        title: l10n.totalCostLabel,
                         value:
                             '${_getCurrencySymbol(currentSession.chatModel)}${totalCost.toStringAsFixed(4)}',
                         icon: Icons.attach_money,
@@ -221,16 +223,17 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  _buildSectionTitle(theme, 'Token 分布'),
+                  _buildSectionTitle(theme, l10n.tokenDistribution),
                   const SizedBox(height: 12),
                   _buildTokenDistributionCard(
                     theme,
                     isDark,
                     promptTokens,
                     completionTokens,
+                    l10n,
                   ),
                   const SizedBox(height: 24),
-                  _buildSectionTitle(theme, '模型信息'),
+                  _buildSectionTitle(theme, l10n.modelInfo),
                   const SizedBox(height: 12),
                   _buildSessionModelInfoCard(
                     theme,
@@ -240,10 +243,11 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     promptTokens,
                     completionTokens,
                     totalCost,
+                    l10n,
                   ),
                   if (quotaEnabled) ...[
                     const SizedBox(height: 24),
-                    _buildSectionTitle(theme, '配额限制'),
+                    _buildSectionTitle(theme, l10n.quotaLimitSection),
                     const SizedBox(height: 12),
                     _buildQuotaCard(
                       theme,
@@ -253,6 +257,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                       tokenLimit,
                       costLimit,
                       currentSession.chatModel,
+                      l10n,
                     ),
                   ],
                 ],
@@ -261,13 +266,13 @@ class _UsageDashboardState extends State<UsageDashboard> {
 
             // ===== 用量曲线 (独立于 Obx，依赖 _chartData state) =====
             const SizedBox(height: 24),
-            _buildSectionTitle(theme, '用量曲线'),
+            _buildSectionTitle(theme, l10n.usageCurve),
             const SizedBox(height: 12),
-            _buildGranularitySelector(theme, isDark),
+            _buildGranularitySelector(theme, isDark, l10n),
             const SizedBox(height: 12),
-            _buildDateRangeSelector(theme, isDark),
+            _buildDateRangeSelector(theme, isDark, l10n),
             const SizedBox(height: 12),
-            _buildChartToggle(theme),
+            _buildChartToggle(theme, l10n),
             const SizedBox(height: 12),
             SizedBox(
               height: 220,
@@ -315,10 +320,11 @@ class _UsageDashboardState extends State<UsageDashboard> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final sessionController = Get.find<SessionController>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: _buildAppBar('全局使用量仪表盘'),
+      appBar: _buildAppBar(l10n.globalUsageDashboard),
       body: Obx(() {
         final sessions = sessionController.sessions;
         if (sessions.isEmpty) {
@@ -333,7 +339,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  '暂无使用数据',
+                  l10n.noUsageData,
                   style: TextStyle(
                     fontSize: 15,
                     color: theme.colorScheme.onSurface.withOpacity(0.5),
@@ -393,7 +399,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle(theme, '概览'),
+              _buildSectionTitle(theme, l10n.overview),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 12,
@@ -402,7 +408,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   _buildStatCard(
                     theme,
                     isDark: isDark,
-                    title: '总会话数',
+                    title: l10n.totalSessions,
                     value: '${sessions.length}',
                     icon: Icons.chat_bubble_outline,
                     accentColor: const Color(0xFF2563EB),
@@ -410,7 +416,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   _buildStatCard(
                     theme,
                     isDark: isDark,
-                    title: '总消息数',
+                    title: l10n.totalMessages,
                     value: '$totalMessages',
                     icon: Icons.message_outlined,
                     accentColor: const Color(0xFF7C3AED),
@@ -418,7 +424,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   _buildStatCard(
                     theme,
                     isDark: isDark,
-                    title: '总 Token',
+                    title: l10n.totalTokens,
                     value: _formatTokenCount(totalPrompt + totalCompletion),
                     icon: Icons.token_outlined,
                     accentColor: const Color(0xFF059669),
@@ -426,7 +432,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   _buildStatCard(
                     theme,
                     isDark: isDark,
-                    title: '总费用',
+                    title: l10n.totalCostLabel,
                     value: '\$${totalCost.toStringAsFixed(4)}',
                     icon: Icons.attach_money,
                     accentColor: const Color(0xFFDC2626),
@@ -434,16 +440,17 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 ],
               ),
               const SizedBox(height: 24),
-              _buildSectionTitle(theme, 'Token 分布'),
+              _buildSectionTitle(theme, l10n.tokenDistribution),
               const SizedBox(height: 12),
               _buildTokenDistributionCard(
                 theme,
                 isDark,
                 totalPrompt,
                 totalCompletion,
+                l10n,
               ),
               const SizedBox(height: 24),
-              _buildSectionTitle(theme, '按模型统计'),
+              _buildSectionTitle(theme, l10n.byModel),
               const SizedBox(height: 12),
               ...modelStats.entries.map(
                 (entry) => Padding(
@@ -453,28 +460,29 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     isDark,
                     entry.key,
                     entry.value,
+                    l10n,
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              _buildSectionTitle(theme, '所有会话'),
+              _buildSectionTitle(theme, l10n.allSessions),
               const SizedBox(height: 12),
               if (sortedWithTokens.isEmpty)
-                _buildEmptySessionsHint(theme)
+                _buildEmptySessionsHint(theme, l10n)
               else ...[
                 ...sortedWithTokens
                     .take(8)
                     .map(
                       (session) => Padding(
                         padding: const EdgeInsets.only(bottom: 8),
-                        child: _buildSessionUsageRow(theme, isDark, session),
+                        child: _buildSessionUsageRow(theme, isDark, session, l10n),
                       ),
                     ),
                 if (emptyCount > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      '另有 $emptyCount 个会话暂无使用数据',
+                      l10n.moreSessionsNoData(emptyCount),
                       style: TextStyle(
                         fontSize: 12,
                         color: theme.colorScheme.onSurface.withOpacity(0.4),
@@ -596,6 +604,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     bool isDark,
     int totalPrompt,
     int totalCompletion,
+    AppLocalizations l10n,
   ) {
     final total = totalPrompt + totalCompletion;
     final promptRatio = total > 0 ? totalPrompt / total : 0.0;
@@ -620,7 +629,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               _legendDot(accentBlue),
               const SizedBox(width: 6),
               Text(
-                '输入: ${_formatTokenCount(totalPrompt)}',
+                '${l10n.inputLabel}: ${_formatTokenCount(totalPrompt)}',
                 style: TextStyle(
                   fontSize: 13,
                   color: theme.colorScheme.onSurface,
@@ -630,7 +639,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               _legendDot(accentPurple),
               const SizedBox(width: 6),
               Text(
-                '输出: ${_formatTokenCount(totalCompletion)}',
+                '${l10n.outputLabel}: ${_formatTokenCount(totalCompletion)}',
                 style: TextStyle(
                   fontSize: 13,
                   color: theme.colorScheme.onSurface,
@@ -702,6 +711,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     int promptTokens,
     int completionTokens,
     double totalCost,
+    AppLocalizations l10n,
   ) {
     final total = promptTokens + completionTokens;
     final promptRatio = total > 0 ? promptTokens / total : 0.0;
@@ -762,7 +772,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 _legendDot(accentBlue),
                 const SizedBox(width: 4),
                 Text(
-                  '输入 ${_formatTokenCount(promptTokens)}',
+                  '${l10n.inputLabel} ${_formatTokenCount(promptTokens)}',
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurface.withOpacity(0.55),
@@ -772,7 +782,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 _legendDot(accentPurple),
                 const SizedBox(width: 4),
                 Text(
-                  '输出 ${_formatTokenCount(completionTokens)}',
+                  '${l10n.outputLabel} ${_formatTokenCount(completionTokens)}',
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurface.withOpacity(0.55),
@@ -837,6 +847,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     int? tokenLimit,
     double? costLimit,
     ChatModel? chatModel,
+    AppLocalizations l10n,
   ) {
     return Container(
       width: double.infinity,
@@ -861,7 +872,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Token 用量',
+                    l10n.tokenUsage,
                     style: TextStyle(
                       fontSize: 13,
                       color: theme.colorScheme.onSurface,
@@ -910,7 +921,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '费用用量',
+                    l10n.costUsage,
                     style: TextStyle(
                       fontSize: 13,
                       color: theme.colorScheme.onSurface,
@@ -949,7 +960,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
           if ((tokenLimit == null || tokenLimit <= 0) &&
               (costLimit == null || costLimit <= 0))
             Text(
-              '未设置配额限制',
+              l10n.noQuotaLimit,
               style: TextStyle(
                 fontSize: 13,
                 color: theme.colorScheme.onSurface.withOpacity(0.4),
@@ -965,6 +976,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     bool isDark,
     String name,
     _ModelUsage usage,
+    AppLocalizations l10n,
   ) {
     final modelTotal = usage.promptTokens + usage.completionTokens;
     final promptRatio = modelTotal > 0 ? usage.promptTokens / modelTotal : 0.0;
@@ -1018,7 +1030,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               ),
               const SizedBox(width: 8),
               Text(
-                '${usage.sessionCount}个会话',
+                l10n.sessionsCountSuffix(usage.sessionCount),
                 style: TextStyle(
                   fontSize: 11,
                   color: theme.colorScheme.onSurface.withOpacity(0.4),
@@ -1033,7 +1045,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 _legendDot(accentBlue),
                 const SizedBox(width: 4),
                 Text(
-                  '输入 ${_formatTokenCount(usage.promptTokens)}',
+                  '${l10n.inputLabel} ${_formatTokenCount(usage.promptTokens)}',
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurface.withOpacity(0.55),
@@ -1043,7 +1055,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 _legendDot(accentPurple),
                 const SizedBox(width: 4),
                 Text(
-                  '输出 ${_formatTokenCount(usage.completionTokens)}',
+                  '${l10n.outputLabel} ${_formatTokenCount(usage.completionTokens)}',
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurface.withOpacity(0.55),
@@ -1100,7 +1112,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     );
   }
 
-  Widget _buildEmptySessionsHint(ThemeData theme) {
+  Widget _buildEmptySessionsHint(ThemeData theme, AppLocalizations l10n) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -1126,7 +1138,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
           ),
           const SizedBox(height: 8),
           Text(
-            '暂无使用数据',
+            l10n.noUsageData,
             style: TextStyle(
               fontSize: 13,
               color: theme.colorScheme.onSurface.withOpacity(0.4),
@@ -1141,6 +1153,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     ThemeData theme,
     bool isDark,
     ChatSession session,
+    AppLocalizations l10n,
   ) {
     final total = session.promptTokens + session.completionTokens;
     final promptRatio = total > 0 ? session.promptTokens / total : 0.0;
@@ -1188,7 +1201,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 _legendDot(accentBlue),
                 const SizedBox(width: 4),
                 Text(
-                  '输入 ${_formatTokenCount(session.promptTokens)}',
+                  '${l10n.inputLabel} ${_formatTokenCount(session.promptTokens)}',
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurface.withOpacity(0.55),
@@ -1198,7 +1211,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 _legendDot(accentPurple),
                 const SizedBox(width: 4),
                 Text(
-                  '输出 ${_formatTokenCount(session.completionTokens)}',
+                  '${l10n.outputLabel} ${_formatTokenCount(session.completionTokens)}',
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurface.withOpacity(0.55),
@@ -1271,13 +1284,17 @@ class _UsageDashboardState extends State<UsageDashboard> {
 
   // ==================== 用量曲线 ====================
 
-  Widget _buildGranularitySelector(ThemeData theme, bool isDark) {
-    const options = [
-      ('分', 'minute'),
-      ('小时', 'hour'),
-      ('天', 'day'),
-      ('月', 'month'),
-      ('年', 'year'),
+  Widget _buildGranularitySelector(
+    ThemeData theme,
+    bool isDark,
+    AppLocalizations l10n,
+  ) {
+    final options = [
+      (l10n.granMinute, 'minute'),
+      (l10n.granHour, 'hour'),
+      (l10n.granDay, 'day'),
+      (l10n.granMonth, 'month'),
+      (l10n.granYear, 'year'),
     ];
 
     return Row(
@@ -1324,7 +1341,11 @@ class _UsageDashboardState extends State<UsageDashboard> {
   /// 时间区间选择器：根据粒度变化形态
   /// - 分/小时：选「某一天」
   /// - 天/月/年：选「开始 ~ 结束」范围
-  Widget _buildDateRangeSelector(ThemeData theme, bool isDark) {
+  Widget _buildDateRangeSelector(
+    ThemeData theme,
+    bool isDark,
+    AppLocalizations l10n,
+  ) {
     final chipBg = isDark ? const Color(0xFF2D2F3A) : const Color(0xFFF3F4F6);
     final borderColor =
         isDark ? const Color(0xFF3A3D4A) : const Color(0xFFE5E7EB);
@@ -1343,7 +1364,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
             theme: theme,
             bg: chipBg,
             borderColor: borderColor,
-            label: day == null ? '选择日期' : _fmtByGran(day),
+            label: day == null ? l10n.selectDate : _fmtByGran(day),
             onTap: _pickDay,
           ),
         ],
@@ -1362,7 +1383,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
           theme: theme,
           bg: chipBg,
           borderColor: borderColor,
-          label: _rangeStart == null ? '开始' : _fmtByGran(_rangeStart!),
+          label: _rangeStart == null ? l10n.rangeStart : _fmtByGran(_rangeStart!),
           onTap: () => _pickRange(isStart: true),
         ),
         Padding(
@@ -1379,7 +1400,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
           theme: theme,
           bg: chipBg,
           borderColor: borderColor,
-          label: _rangeEnd == null ? '结束' : _fmtByGran(_rangeEnd!),
+          label: _rangeEnd == null ? l10n.rangeEnd : _fmtByGran(_rangeEnd!),
           onTap: () => _pickRange(isStart: false),
         ),
         if (_rangeStart != null || _rangeEnd != null)
@@ -1434,12 +1455,13 @@ class _UsageDashboardState extends State<UsageDashboard> {
 
   /// 分/小时：选择某一天
   Future<void> _pickDay() async {
+    final l10n = AppLocalizations.of(context)!;
     final picked = await showDatePicker(
       context: context,
       initialDate: _rangeStart ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 1)),
-      helpText: '选择日期',
+      helpText: l10n.selectDate,
     );
     if (picked == null) return;
     setState(() {
@@ -1459,6 +1481,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
 
   /// 天/月/年：选择范围起点或终点
   Future<void> _pickRange({required bool isStart}) async {
+    final l10n = AppLocalizations.of(context)!;
     final current =
         isStart ? _rangeStart ?? DateTime.now() : _rangeEnd ?? DateTime.now();
     final picked = await showDatePicker(
@@ -1466,7 +1489,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
       initialDate: current,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 1)),
-      helpText: isStart ? '开始日期' : '结束日期',
+      helpText: isStart ? l10n.startDateHelp : l10n.endDateHelp,
     );
     if (picked == null) return;
 
@@ -1515,7 +1538,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     }
   }
 
-  Widget _buildChartToggle(ThemeData theme) {
+  Widget _buildChartToggle(ThemeData theme, AppLocalizations l10n) {
     return ValueListenableBuilder<bool>(
       valueListenable: _showTokens,
       builder:
@@ -1526,7 +1549,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   children: [
                     _toggleChip(
                       theme: theme,
-                      label: 'Token',
+                      label: l10n.tokenToggle,
                       color: const Color(0xFF2563EB),
                       selected: showToken,
                       onTap: () => _showTokens.value = !_showTokens.value,
@@ -1534,7 +1557,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     const SizedBox(width: 8),
                     _toggleChip(
                       theme: theme,
-                      label: '费用',
+                      label: l10n.costToggle,
                       color: const Color(0xFFDC2626),
                       selected: showCost,
                       onTap: () => _showCost.value = !_showCost.value,

@@ -5,7 +5,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_fr.dart';
+import 'app_localizations_ja.dart';
+import 'app_localizations_ko.dart';
 import 'app_localizations_th.dart';
 import 'app_localizations_vi.dart';
 import 'app_localizations_zh.dart';
@@ -96,7 +100,11 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
+    Locale('de'),
     Locale('en'),
+    Locale('fr'),
+    Locale('ja'),
+    Locale('ko'),
     Locale('th'),
     Locale('vi'),
     Locale('zh'),
@@ -3107,6 +3115,702 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New Conversation'**
   String get newConversationDefault;
+
+  /// No description provided for @usageDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage Dashboard'**
+  String get usageDashboard;
+
+  /// No description provided for @globalUsageDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Global Usage Dashboard'**
+  String get globalUsageDashboard;
+
+  /// No description provided for @sessionUsageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} Usage'**
+  String sessionUsageTitle(Object name);
+
+  /// No description provided for @noSessionData.
+  ///
+  /// In en, this message translates to:
+  /// **'No session data'**
+  String get noSessionData;
+
+  /// No description provided for @noUsageData.
+  ///
+  /// In en, this message translates to:
+  /// **'No usage data'**
+  String get noUsageData;
+
+  /// No description provided for @overview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get overview;
+
+  /// No description provided for @statMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get statMessages;
+
+  /// No description provided for @totalMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Messages'**
+  String get totalMessages;
+
+  /// No description provided for @inputTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Input Tokens'**
+  String get inputTokens;
+
+  /// No description provided for @outputTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Output Tokens'**
+  String get outputTokens;
+
+  /// No description provided for @totalCostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Cost'**
+  String get totalCostLabel;
+
+  /// No description provided for @tokenDistribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Token Distribution'**
+  String get tokenDistribution;
+
+  /// No description provided for @modelInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Info'**
+  String get modelInfo;
+
+  /// No description provided for @quotaLimitSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Quota Limit'**
+  String get quotaLimitSection;
+
+  /// No description provided for @usageCurve.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage Curve'**
+  String get usageCurve;
+
+  /// No description provided for @totalSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Sessions'**
+  String get totalSessions;
+
+  /// No description provided for @totalTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Tokens'**
+  String get totalTokens;
+
+  /// No description provided for @byModel.
+  ///
+  /// In en, this message translates to:
+  /// **'By Model'**
+  String get byModel;
+
+  /// No description provided for @allSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'All Sessions'**
+  String get allSessions;
+
+  /// No description provided for @moreSessionsNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'Another {count} sessions have no usage data'**
+  String moreSessionsNoData(Object count);
+
+  /// No description provided for @inputLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Input'**
+  String get inputLabel;
+
+  /// No description provided for @outputLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Output'**
+  String get outputLabel;
+
+  /// No description provided for @noQuotaLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'No quota limit set'**
+  String get noQuotaLimit;
+
+  /// No description provided for @sessionsCountSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sessions'**
+  String sessionsCountSuffix(Object count);
+
+  /// No description provided for @granMinute.
+  ///
+  /// In en, this message translates to:
+  /// **'Minute'**
+  String get granMinute;
+
+  /// No description provided for @granHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Hour'**
+  String get granHour;
+
+  /// No description provided for @granDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get granDay;
+
+  /// No description provided for @granMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get granMonth;
+
+  /// No description provided for @granYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get granYear;
+
+  /// No description provided for @selectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date'**
+  String get selectDate;
+
+  /// No description provided for @rangeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get rangeStart;
+
+  /// No description provided for @rangeEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get rangeEnd;
+
+  /// No description provided for @startDateHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get startDateHelp;
+
+  /// No description provided for @endDateHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'End date'**
+  String get endDateHelp;
+
+  /// No description provided for @tokenToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Token'**
+  String get tokenToggle;
+
+  /// No description provided for @costToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost'**
+  String get costToggle;
+
+  /// No description provided for @chartLegendCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost ({symbol})'**
+  String chartLegendCost(Object symbol);
+
+  /// No description provided for @noSessionConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'No session configuration'**
+  String get noSessionConfig;
+
+  /// No description provided for @resetApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset API Key'**
+  String get resetApiKey;
+
+  /// No description provided for @resetApiKeyConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset this session\'s API key? After resetting, the old key will be invalid immediately and external requests using the old key will be unable to access.'**
+  String get resetApiKeyConfirm;
+
+  /// No description provided for @confirmReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Reset'**
+  String get confirmReset;
+
+  /// No description provided for @connectorSkillRelation.
+  ///
+  /// In en, this message translates to:
+  /// **'Connector and skill relation description'**
+  String get connectorSkillRelation;
+
+  /// No description provided for @modelPricing.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Pricing ({unit}/M Tokens)'**
+  String modelPricing(Object unit);
+
+  /// No description provided for @billingInfoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing Info'**
+  String get billingInfoLabel;
+
+  /// No description provided for @cumulativeInputTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Cumulative Input Tokens'**
+  String get cumulativeInputTokens;
+
+  /// No description provided for @cumulativeOutputTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Cumulative Output Tokens'**
+  String get cumulativeOutputTokens;
+
+  /// No description provided for @cumulativeCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Cumulative Cost'**
+  String get cumulativeCost;
+
+  /// No description provided for @basicInfoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic Info'**
+  String get basicInfoLabel;
+
+  /// No description provided for @sessionName.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Name'**
+  String get sessionName;
+
+  /// No description provided for @organization.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization'**
+  String get organization;
+
+  /// No description provided for @groupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Group'**
+  String get groupLabel;
+
+  /// No description provided for @notSpecified.
+  ///
+  /// In en, this message translates to:
+  /// **'Not specified'**
+  String get notSpecified;
+
+  /// No description provided for @notGrouped.
+  ///
+  /// In en, this message translates to:
+  /// **'Ungrouped'**
+  String get notGrouped;
+
+  /// No description provided for @boundModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bound Model'**
+  String get boundModel;
+
+  /// No description provided for @relatedPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Related Prompt'**
+  String get relatedPrompt;
+
+  /// No description provided for @messageCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Message Count'**
+  String get messageCountLabel;
+
+  /// No description provided for @serviceConfigLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Config'**
+  String get serviceConfigLabel;
+
+  /// No description provided for @serviceAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Address'**
+  String get serviceAddress;
+
+  /// No description provided for @mcpLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP'**
+  String get mcpLabel;
+
+  /// No description provided for @modelMcp.
+  ///
+  /// In en, this message translates to:
+  /// **'Model MCP'**
+  String get modelMcp;
+
+  /// No description provided for @sessionMcp.
+  ///
+  /// In en, this message translates to:
+  /// **'Session MCP'**
+  String get sessionMcp;
+
+  /// No description provided for @notBound.
+  ///
+  /// In en, this message translates to:
+  /// **'Not bound'**
+  String get notBound;
+
+  /// No description provided for @addMcpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can add MCP services in Model Management or the chat input box'**
+  String get addMcpHint;
+
+  /// No description provided for @usageQuotaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage Quota'**
+  String get usageQuotaLabel;
+
+  /// No description provided for @noAuthAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'No-auth Access'**
+  String get noAuthAccess;
+
+  /// No description provided for @noAuthEnabledDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ Auth disabled, anyone can access'**
+  String get noAuthEnabledDesc;
+
+  /// No description provided for @noAuthDisabledDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled: access without API Key'**
+  String get noAuthDisabledDesc;
+
+  /// No description provided for @disableSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable Session'**
+  String get disableSession;
+
+  /// No description provided for @disabledEnabledDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ Disabled, calls will return error'**
+  String get disabledEnabledDesc;
+
+  /// No description provided for @disabledDisabledDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled: this session will not be callable'**
+  String get disabledDisabledDesc;
+
+  /// No description provided for @systemPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the role/behavior for this session, e.g. you are a professional legal advisor...'**
+  String get systemPromptHint;
+
+  /// No description provided for @systemPromptDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as the highest-priority instruction, auto-injected for third-party requests. Leave empty to not inject.'**
+  String get systemPromptDesc;
+
+  /// No description provided for @tokenUsageLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Token Usage Limit'**
+  String get tokenUsageLimit;
+
+  /// No description provided for @costBudgetLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost Budget Limit ({unit})'**
+  String costBudgetLimit(Object unit);
+
+  /// No description provided for @requestLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Limit'**
+  String get requestLimit;
+
+  /// No description provided for @noLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'No limit'**
+  String get noLimit;
+
+  /// No description provided for @enableUsageLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Usage Limit'**
+  String get enableUsageLimit;
+
+  /// No description provided for @reachLimitReject.
+  ///
+  /// In en, this message translates to:
+  /// **'New requests will be rejected after the limit is reached'**
+  String get reachLimitReject;
+
+  /// No description provided for @resetPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Period'**
+  String get resetPeriod;
+
+  /// No description provided for @resetPeriodNever.
+  ///
+  /// In en, this message translates to:
+  /// **'No auto reset'**
+  String get resetPeriodNever;
+
+  /// No description provided for @resetPeriodDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset daily'**
+  String get resetPeriodDaily;
+
+  /// No description provided for @resetPeriodMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset monthly'**
+  String get resetPeriodMonthly;
+
+  /// No description provided for @quotaExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'Quota Exhausted'**
+  String get quotaExhausted;
+
+  /// No description provided for @currentUsageStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Usage Status'**
+  String get currentUsageStatus;
+
+  /// No description provided for @quotaTokenLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Token'**
+  String get quotaTokenLabel;
+
+  /// No description provided for @quotaCostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost'**
+  String get quotaCostLabel;
+
+  /// No description provided for @quotaRequestLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests'**
+  String get quotaRequestLabel;
+
+  /// No description provided for @manualResetUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual Reset Usage'**
+  String get manualResetUsage;
+
+  /// No description provided for @manualResetConfirmDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Determine to manually reset'**
+  String get manualResetConfirmDesc;
+
+  /// No description provided for @manualResetWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'After reset, the current period\'s Token usage, cost, and request count will be cleared, and the period start time will be updated to the current time.'**
+  String get manualResetWarning;
+
+  /// No description provided for @tokenUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Token Usage'**
+  String get tokenUsage;
+
+  /// No description provided for @costUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost Usage'**
+  String get costUsage;
+
+  /// No description provided for @resetValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get resetValue;
+
+  /// No description provided for @apiKeyReset.
+  ///
+  /// In en, this message translates to:
+  /// **'API key reset'**
+  String get apiKeyReset;
+
+  /// No description provided for @securitySettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get securitySettings;
+
+  /// No description provided for @sensitiveInfoMasking.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensitive Info Masking'**
+  String get sensitiveInfoMasking;
+
+  /// No description provided for @sensitiveInfoMaskingDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, the corresponding information in messages sent to the model and in local audit logs will be replaced with \'*\' to prevent plaintext privacy leaks.'**
+  String get sensitiveInfoMaskingDesc;
+
+  /// No description provided for @maskPhoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mask Phone Numbers'**
+  String get maskPhoneTitle;
+
+  /// No description provided for @maskPhoneSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace phone numbers in messages with \'*\''**
+  String get maskPhoneSubtitle;
+
+  /// No description provided for @maskIdCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mask ID Card Numbers'**
+  String get maskIdCardTitle;
+
+  /// No description provided for @maskIdCardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace ID card numbers in messages with \'*\''**
+  String get maskIdCardSubtitle;
+
+  /// No description provided for @sessionDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Details'**
+  String get sessionDetails;
+
+  /// No description provided for @modelDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Details'**
+  String get modelDetails;
+
+  /// Model details subtitle with platform name
+  ///
+  /// In en, this message translates to:
+  /// **'Model Details · {platform}'**
+  String modelDetailsWithPlatform(String platform);
+
+  /// No description provided for @japanese.
+  ///
+  /// In en, this message translates to:
+  /// **'日本語'**
+  String get japanese;
+
+  /// No description provided for @japaneseDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Japanese'**
+  String get japaneseDesc;
+
+  /// No description provided for @korean.
+  ///
+  /// In en, this message translates to:
+  /// **'한국어'**
+  String get korean;
+
+  /// No description provided for @koreanDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Korean'**
+  String get koreanDesc;
+
+  /// No description provided for @thai.
+  ///
+  /// In en, this message translates to:
+  /// **'ไทย'**
+  String get thai;
+
+  /// No description provided for @thaiDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Thai'**
+  String get thaiDesc;
+
+  /// No description provided for @vietnamese.
+  ///
+  /// In en, this message translates to:
+  /// **'Tiếng Việt'**
+  String get vietnamese;
+
+  /// No description provided for @vietnameseDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Vietnamese'**
+  String get vietnameseDesc;
+
+  /// No description provided for @french.
+  ///
+  /// In en, this message translates to:
+  /// **'Français'**
+  String get french;
+
+  /// No description provided for @frenchDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'French'**
+  String get frenchDesc;
+
+  /// No description provided for @german.
+  ///
+  /// In en, this message translates to:
+  /// **'Deutsch'**
+  String get german;
+
+  /// No description provided for @germanDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'German'**
+  String get germanDesc;
 }
 
 class _AppLocalizationsDelegate
@@ -3119,8 +3823,16 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'th', 'vi', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+    'de',
+    'en',
+    'fr',
+    'ja',
+    'ko',
+    'th',
+    'vi',
+    'zh',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -3129,8 +3841,16 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'de':
+      return AppLocalizationsDe();
     case 'en':
       return AppLocalizationsEn();
+    case 'fr':
+      return AppLocalizationsFr();
+    case 'ja':
+      return AppLocalizationsJa();
+    case 'ko':
+      return AppLocalizationsKo();
     case 'th':
       return AppLocalizationsTh();
     case 'vi':

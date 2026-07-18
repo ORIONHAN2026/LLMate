@@ -170,8 +170,9 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                 Text(
                   _currentModel.platform != null &&
                           _currentModel.platform!.isNotEmpty
-                      ? '模型详情 · ${_currentModel.platform}'
-                      : '模型详情',
+                      ? AppLocalizations.of(context)!
+                          .modelDetailsWithPlatform(_currentModel.platform!)
+                      : AppLocalizations.of(context)!.modelDetails,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

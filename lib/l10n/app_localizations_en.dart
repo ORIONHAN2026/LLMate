@@ -1659,4 +1659,377 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newConversationDefault => 'New Conversation';
+
+  @override
+  String get usageDashboard => 'Usage Dashboard';
+
+  @override
+  String get globalUsageDashboard => 'Global Usage Dashboard';
+
+  @override
+  String sessionUsageTitle(Object name) {
+    return '$name Usage';
+  }
+
+  @override
+  String get noSessionData => 'No session data';
+
+  @override
+  String get noUsageData => 'No usage data';
+
+  @override
+  String get overview => 'Overview';
+
+  @override
+  String get statMessages => 'Messages';
+
+  @override
+  String get totalMessages => 'Total Messages';
+
+  @override
+  String get inputTokens => 'Input Tokens';
+
+  @override
+  String get outputTokens => 'Output Tokens';
+
+  @override
+  String get totalCostLabel => 'Total Cost';
+
+  @override
+  String get tokenDistribution => 'Token Distribution';
+
+  @override
+  String get modelInfo => 'Model Info';
+
+  @override
+  String get quotaLimitSection => 'Quota Limit';
+
+  @override
+  String get usageCurve => 'Usage Curve';
+
+  @override
+  String get totalSessions => 'Total Sessions';
+
+  @override
+  String get totalTokens => 'Total Tokens';
+
+  @override
+  String get byModel => 'By Model';
+
+  @override
+  String get allSessions => 'All Sessions';
+
+  @override
+  String moreSessionsNoData(Object count) {
+    return 'Another $count sessions have no usage data';
+  }
+
+  @override
+  String get inputLabel => 'Input';
+
+  @override
+  String get outputLabel => 'Output';
+
+  @override
+  String get noQuotaLimit => 'No quota limit set';
+
+  @override
+  String sessionsCountSuffix(Object count) {
+    return '$count sessions';
+  }
+
+  @override
+  String get granMinute => 'Minute';
+
+  @override
+  String get granHour => 'Hour';
+
+  @override
+  String get granDay => 'Day';
+
+  @override
+  String get granMonth => 'Month';
+
+  @override
+  String get granYear => 'Year';
+
+  @override
+  String get selectDate => 'Select date';
+
+  @override
+  String get rangeStart => 'Start';
+
+  @override
+  String get rangeEnd => 'End';
+
+  @override
+  String get startDateHelp => 'Start date';
+
+  @override
+  String get endDateHelp => 'End date';
+
+  @override
+  String get tokenToggle => 'Token';
+
+  @override
+  String get costToggle => 'Cost';
+
+  @override
+  String chartLegendCost(Object symbol) {
+    return 'Cost ($symbol)';
+  }
+
+  @override
+  String get noSessionConfig => 'No session configuration';
+
+  @override
+  String get resetApiKey => 'Reset API Key';
+
+  @override
+  String get resetApiKeyConfirm =>
+      'Reset this session\'s API key? After resetting, the old key will be invalid immediately and external requests using the old key will be unable to access.';
+
+  @override
+  String get confirmReset => 'Confirm Reset';
+
+  @override
+  String get connectorSkillRelation =>
+      'Connector and skill relation description';
+
+  @override
+  String modelPricing(Object unit) {
+    return 'Model Pricing ($unit/M Tokens)';
+  }
+
+  @override
+  String get billingInfoLabel => 'Billing Info';
+
+  @override
+  String get cumulativeInputTokens => 'Cumulative Input Tokens';
+
+  @override
+  String get cumulativeOutputTokens => 'Cumulative Output Tokens';
+
+  @override
+  String get cumulativeCost => 'Cumulative Cost';
+
+  @override
+  String get basicInfoLabel => 'Basic Info';
+
+  @override
+  String get sessionName => 'Session Name';
+
+  @override
+  String get organization => 'Organization';
+
+  @override
+  String get groupLabel => 'Group';
+
+  @override
+  String get notSpecified => 'Not specified';
+
+  @override
+  String get notGrouped => 'Ungrouped';
+
+  @override
+  String get boundModel => 'Bound Model';
+
+  @override
+  String get relatedPrompt => 'Related Prompt';
+
+  @override
+  String get messageCountLabel => 'Message Count';
+
+  @override
+  String get serviceConfigLabel => 'Service Config';
+
+  @override
+  String get serviceAddress => 'Service Address';
+
+  @override
+  String get mcpLabel => 'MCP';
+
+  @override
+  String get modelMcp => 'Model MCP';
+
+  @override
+  String get sessionMcp => 'Session MCP';
+
+  @override
+  String get notBound => 'Not bound';
+
+  @override
+  String get addMcpHint =>
+      'You can add MCP services in Model Management or the chat input box';
+
+  @override
+  String get usageQuotaLabel => 'Usage Quota';
+
+  @override
+  String get noAuthAccess => 'No-auth Access';
+
+  @override
+  String get noAuthEnabledDesc => '⚠️ Auth disabled, anyone can access';
+
+  @override
+  String get noAuthDisabledDesc => 'Enabled: access without API Key';
+
+  @override
+  String get disableSession => 'Disable Session';
+
+  @override
+  String get disabledEnabledDesc => '⚠️ Disabled, calls will return error';
+
+  @override
+  String get disabledDisabledDesc =>
+      'Enabled: this session will not be callable';
+
+  @override
+  String get systemPromptHint =>
+      'Set the role/behavior for this session, e.g. you are a professional legal advisor...';
+
+  @override
+  String get systemPromptDesc =>
+      'Set as the highest-priority instruction, auto-injected for third-party requests. Leave empty to not inject.';
+
+  @override
+  String get tokenUsageLimit => 'Token Usage Limit';
+
+  @override
+  String costBudgetLimit(Object unit) {
+    return 'Cost Budget Limit ($unit)';
+  }
+
+  @override
+  String get requestLimit => 'Request Limit';
+
+  @override
+  String get noLimit => 'No limit';
+
+  @override
+  String get enableUsageLimit => 'Enable Usage Limit';
+
+  @override
+  String get reachLimitReject =>
+      'New requests will be rejected after the limit is reached';
+
+  @override
+  String get resetPeriod => 'Reset Period';
+
+  @override
+  String get resetPeriodNever => 'No auto reset';
+
+  @override
+  String get resetPeriodDaily => 'Reset daily';
+
+  @override
+  String get resetPeriodMonthly => 'Reset monthly';
+
+  @override
+  String get quotaExhausted => 'Quota Exhausted';
+
+  @override
+  String get currentUsageStatus => 'Current Usage Status';
+
+  @override
+  String get quotaTokenLabel => 'Token';
+
+  @override
+  String get quotaCostLabel => 'Cost';
+
+  @override
+  String get quotaRequestLabel => 'Requests';
+
+  @override
+  String get manualResetUsage => 'Manual Reset Usage';
+
+  @override
+  String get manualResetConfirmDesc => 'Determine to manually reset';
+
+  @override
+  String get manualResetWarning =>
+      'After reset, the current period\'s Token usage, cost, and request count will be cleared, and the period start time will be updated to the current time.';
+
+  @override
+  String get tokenUsage => 'Token Usage';
+
+  @override
+  String get costUsage => 'Cost Usage';
+
+  @override
+  String get resetValue => 'Reset';
+
+  @override
+  String get apiKeyReset => 'API key reset';
+
+  @override
+  String get securitySettings => 'Security';
+
+  @override
+  String get sensitiveInfoMasking => 'Sensitive Info Masking';
+
+  @override
+  String get sensitiveInfoMaskingDesc =>
+      'When enabled, the corresponding information in messages sent to the model and in local audit logs will be replaced with \'*\' to prevent plaintext privacy leaks.';
+
+  @override
+  String get maskPhoneTitle => 'Mask Phone Numbers';
+
+  @override
+  String get maskPhoneSubtitle =>
+      'Replace phone numbers in messages with \'*\'';
+
+  @override
+  String get maskIdCardTitle => 'Mask ID Card Numbers';
+
+  @override
+  String get maskIdCardSubtitle =>
+      'Replace ID card numbers in messages with \'*\'';
+
+  @override
+  String get sessionDetails => 'Session Details';
+
+  @override
+  String get modelDetails => 'Model Details';
+
+  @override
+  String modelDetailsWithPlatform(String platform) {
+    return 'Model Details · $platform';
+  }
+
+  @override
+  String get japanese => '日本語';
+
+  @override
+  String get japaneseDesc => 'Japanese';
+
+  @override
+  String get korean => '한국어';
+
+  @override
+  String get koreanDesc => 'Korean';
+
+  @override
+  String get thai => 'ไทย';
+
+  @override
+  String get thaiDesc => 'Thai';
+
+  @override
+  String get vietnamese => 'Tiếng Việt';
+
+  @override
+  String get vietnameseDesc => 'Vietnamese';
+
+  @override
+  String get french => 'Français';
+
+  @override
+  String get frenchDesc => 'French';
+
+  @override
+  String get german => 'Deutsch';
+
+  @override
+  String get germanDesc => 'German';
 }

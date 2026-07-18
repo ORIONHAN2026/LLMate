@@ -520,5 +520,160 @@
       "n": {}
     }
   },
-  "newConversationDefault": "新对话"
+  "newConversationDefault": "新对话",
+  "usageDashboard": "使用量仪表盘",
+  "globalUsageDashboard": "全局使用量仪表盘",
+  "@sessionUsageTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "sessionUsageTitle": "{name} 使用量",
+  "noSessionData": "暂无会话数据",
+  "noUsageData": "暂无使用数据",
+  "overview": "概览",
+  "statMessages": "消息数",
+  "totalMessages": "总消息数",
+  "inputTokens": "输入 Token",
+  "outputTokens": "输出 Token",
+  "totalCostLabel": "总费用",
+  "tokenDistribution": "Token 分布",
+  "modelInfo": "模型信息",
+  "quotaLimitSection": "配额限制",
+  "usageCurve": "用量曲线",
+  "totalSessions": "总会话数",
+  "totalTokens": "总 Token",
+  "byModel": "按模型统计",
+  "allSessions": "所有会话",
+  "@moreSessionsNoData": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "moreSessionsNoData": "另有 {count} 个会话暂无使用数据",
+  "inputLabel": "输入",
+  "outputLabel": "输出",
+  "noQuotaLimit": "未设置配额限制",
+  "@sessionsCountSuffix": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "sessionsCountSuffix": "{count}个会话",
+  "granMinute": "分",
+  "granHour": "小时",
+  "granDay": "天",
+  "granMonth": "月",
+  "granYear": "年",
+  "selectDate": "选择日期",
+  "rangeStart": "开始",
+  "rangeEnd": "结束",
+  "startDateHelp": "开始日期",
+  "endDateHelp": "结束日期",
+  "tokenToggle": "Token",
+  "costToggle": "费用",
+  "@chartLegendCost": {
+    "placeholders": {
+      "symbol": {}
+    }
+  },
+  "chartLegendCost": "费用 ({symbol})",
+  "noSessionConfig": "暂无会话配置",
+  "resetApiKey": "重置 API 密钥",
+  "resetApiKeyConfirm": "确定要重置该会话的 API 密钥吗？重置后旧密钥将立即失效，使用旧密钥的外部请求将无法访问。",
+  "confirmReset": "确认重置",
+  "connectorSkillRelation": "连接器和技能的关联描述",
+  "@modelPricing": {
+    "placeholders": {
+      "unit": {}
+    }
+  },
+  "modelPricing": "模型定价（{unit}/百万Token）",
+  "billingInfoLabel": "计费信息",
+  "cumulativeInputTokens": "累计输入Token",
+  "cumulativeOutputTokens": "累计输出Token",
+  "cumulativeCost": "累计费用",
+  "basicInfoLabel": "基础信息",
+  "sessionName": "会话名称",
+  "organization": "组织",
+  "groupLabel": "分组",
+  "notSpecified": "未指定",
+  "notGrouped": "未分组",
+  "boundModel": "绑定模型",
+  "relatedPrompt": "关联提示词",
+  "messageCountLabel": "消息数量",
+  "serviceConfigLabel": "服务配置",
+  "serviceAddress": "服务地址",
+  "mcpLabel": "MCP",
+  "modelMcp": "模型MCP",
+  "sessionMcp": "会话MCP",
+  "notBound": "未绑定",
+  "addMcpHint": "可在模型管理或聊天输入框处添加 MCP 服务",
+  "usageQuotaLabel": "用量配额",
+  "noAuthAccess": "免授权访问",
+  "noAuthEnabledDesc": "⚠️ 已关闭认证，任何人均可访问",
+  "noAuthDisabledDesc": "开启后不需要 API Key 即可访问",
+  "disableSession": "禁用会话",
+  "disabledEnabledDesc": "⚠️ 已禁用，调用将返回错误",
+  "disabledDisabledDesc": "开启后该会话将无法被调用",
+  "systemPromptHint": "为该会话设定角色/行为，如：你是一名专业的法律顾问……",
+  "systemPromptDesc": "设置后将作为最高优先级指令，在第三方请求时自动注入。留空则不注入。",
+  "tokenUsageLimit": "Token 用量上限",
+  "@costBudgetLimit": {
+    "placeholders": {
+      "unit": {}
+    }
+  },
+  "costBudgetLimit": "费用预算上限（{unit}）",
+  "requestLimit": "请求次数上限",
+  "noLimit": "不限制",
+  "enableUsageLimit": "启用用量限制",
+  "reachLimitReject": "达到上限后将拒绝新的请求",
+  "resetPeriod": "重置周期",
+  "resetPeriodNever": "不自动重置",
+  "resetPeriodDaily": "每天重置",
+  "resetPeriodMonthly": "每月重置",
+  "quotaExhausted": "配额已用尽",
+  "currentUsageStatus": "当前用量状态",
+  "quotaTokenLabel": "Token",
+  "quotaCostLabel": "费用",
+  "quotaRequestLabel": "请求",
+  "manualResetUsage": "手动重置用量",
+  "manualResetConfirmDesc": "确定要手动重置",
+  "manualResetWarning": "重置后当前周期的 Token 用量、费用和请求次数将清零，周期起始时间更新为当前时间。",
+  "tokenUsage": "Token 用量",
+  "costUsage": "费用用量",
+  "resetValue": "重置",
+  "apiKeyReset": "API 密钥已重置",
+  "securitySettings": "安全设置",
+  "sensitiveInfoMasking": "敏感信息脱敏",
+  "sensitiveInfoMaskingDesc": "开启后，发送给大模型的消息及本地审计日志中的对应信息将被 * 号替换，防止明文隐私泄露。",
+  "maskPhoneTitle": "手机号脱敏",
+  "maskPhoneSubtitle": "将消息中的手机号替换为 * 号",
+  "maskIdCardTitle": "身份证号脱敏",
+  "maskIdCardSubtitle": "将消息中的身份证号替换为 * 号",
+  "sessionDetails": "会话详情",
+  "modelDetails": "模型详情",
+  "modelDetailsWithPlatform": "模型详情 · {platform}",
+  "@modelDetailsWithPlatform": {
+    "description": "模型详情副标题，含平台名",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "OpenAI"
+      }
+    }
+  },
+  "japanese": "日语",
+  "japaneseDesc": "日语",
+  "korean": "韩语",
+  "koreanDesc": "韩语",
+  "thai": "泰语",
+  "thaiDesc": "泰语",
+  "vietnamese": "越南语",
+  "vietnameseDesc": "越南语",
+  "french": "法语",
+  "frenchDesc": "法语",
+  "german": "德语",
+  "germanDesc": "德语"
 }

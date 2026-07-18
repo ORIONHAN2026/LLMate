@@ -520,5 +520,160 @@
       "n": {}
     }
   },
-  "newConversationDefault": "New Conversation"
+  "newConversationDefault": "New Conversation",
+  "usageDashboard": "Usage Dashboard",
+  "globalUsageDashboard": "Global Usage Dashboard",
+  "@sessionUsageTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "sessionUsageTitle": "{name} Usage",
+  "noSessionData": "No session data",
+  "noUsageData": "No usage data",
+  "overview": "Overview",
+  "statMessages": "Messages",
+  "totalMessages": "Total Messages",
+  "inputTokens": "Input Tokens",
+  "outputTokens": "Output Tokens",
+  "totalCostLabel": "Total Cost",
+  "tokenDistribution": "Token Distribution",
+  "modelInfo": "Model Info",
+  "quotaLimitSection": "Quota Limit",
+  "usageCurve": "Usage Curve",
+  "totalSessions": "Total Sessions",
+  "totalTokens": "Total Tokens",
+  "byModel": "By Model",
+  "allSessions": "All Sessions",
+  "@moreSessionsNoData": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "moreSessionsNoData": "Another {count} sessions have no usage data",
+  "inputLabel": "Input",
+  "outputLabel": "Output",
+  "noQuotaLimit": "No quota limit set",
+  "@sessionsCountSuffix": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "sessionsCountSuffix": "{count} sessions",
+  "granMinute": "Minute",
+  "granHour": "Hour",
+  "granDay": "Day",
+  "granMonth": "Month",
+  "granYear": "Year",
+  "selectDate": "Select date",
+  "rangeStart": "Start",
+  "rangeEnd": "End",
+  "startDateHelp": "Start date",
+  "endDateHelp": "End date",
+  "tokenToggle": "Token",
+  "costToggle": "Cost",
+  "@chartLegendCost": {
+    "placeholders": {
+      "symbol": {}
+    }
+  },
+  "chartLegendCost": "Cost ({symbol})",
+  "noSessionConfig": "No session configuration",
+  "resetApiKey": "Reset API Key",
+  "resetApiKeyConfirm": "Reset this session's API key? After resetting, the old key will be invalid immediately and external requests using the old key will be unable to access.",
+  "confirmReset": "Confirm Reset",
+  "connectorSkillRelation": "Connector and skill relation description",
+  "@modelPricing": {
+    "placeholders": {
+      "unit": {}
+    }
+  },
+  "modelPricing": "Model Pricing ({unit}/M Tokens)",
+  "billingInfoLabel": "Billing Info",
+  "cumulativeInputTokens": "Cumulative Input Tokens",
+  "cumulativeOutputTokens": "Cumulative Output Tokens",
+  "cumulativeCost": "Cumulative Cost",
+  "basicInfoLabel": "Basic Info",
+  "sessionName": "Session Name",
+  "organization": "Organization",
+  "groupLabel": "Group",
+  "notSpecified": "Not specified",
+  "notGrouped": "Ungrouped",
+  "boundModel": "Bound Model",
+  "relatedPrompt": "Related Prompt",
+  "messageCountLabel": "Message Count",
+  "serviceConfigLabel": "Service Config",
+  "serviceAddress": "Service Address",
+  "mcpLabel": "MCP",
+  "modelMcp": "Model MCP",
+  "sessionMcp": "Session MCP",
+  "notBound": "Not bound",
+  "addMcpHint": "You can add MCP services in Model Management or the chat input box",
+  "usageQuotaLabel": "Usage Quota",
+  "noAuthAccess": "No-auth Access",
+  "noAuthEnabledDesc": "⚠️ Auth disabled, anyone can access",
+  "noAuthDisabledDesc": "Enabled: access without API Key",
+  "disableSession": "Disable Session",
+  "disabledEnabledDesc": "⚠️ Disabled, calls will return error",
+  "disabledDisabledDesc": "Enabled: this session will not be callable",
+  "systemPromptHint": "Set the role/behavior for this session, e.g. you are a professional legal advisor...",
+  "systemPromptDesc": "Set as the highest-priority instruction, auto-injected for third-party requests. Leave empty to not inject.",
+  "tokenUsageLimit": "Token Usage Limit",
+  "@costBudgetLimit": {
+    "placeholders": {
+      "unit": {}
+    }
+  },
+  "costBudgetLimit": "Cost Budget Limit ({unit})",
+  "requestLimit": "Request Limit",
+  "noLimit": "No limit",
+  "enableUsageLimit": "Enable Usage Limit",
+  "reachLimitReject": "New requests will be rejected after the limit is reached",
+  "resetPeriod": "Reset Period",
+  "resetPeriodNever": "No auto reset",
+  "resetPeriodDaily": "Reset daily",
+  "resetPeriodMonthly": "Reset monthly",
+  "quotaExhausted": "Quota Exhausted",
+  "currentUsageStatus": "Current Usage Status",
+  "quotaTokenLabel": "Token",
+  "quotaCostLabel": "Cost",
+  "quotaRequestLabel": "Requests",
+  "manualResetUsage": "Manual Reset Usage",
+  "manualResetConfirmDesc": "Determine to manually reset",
+  "manualResetWarning": "After reset, the current period's Token usage, cost, and request count will be cleared, and the period start time will be updated to the current time.",
+  "tokenUsage": "Token Usage",
+  "costUsage": "Cost Usage",
+  "resetValue": "Reset",
+  "apiKeyReset": "API key reset",
+  "securitySettings": "Security",
+  "sensitiveInfoMasking": "Sensitive Info Masking",
+  "sensitiveInfoMaskingDesc": "When enabled, the corresponding information in messages sent to the model and in local audit logs will be replaced with '*' to prevent plaintext privacy leaks.",
+  "maskPhoneTitle": "Mask Phone Numbers",
+  "maskPhoneSubtitle": "Replace phone numbers in messages with '*'",
+  "maskIdCardTitle": "Mask ID Card Numbers",
+  "maskIdCardSubtitle": "Replace ID card numbers in messages with '*'",
+  "sessionDetails": "Session Details",
+  "modelDetails": "Model Details",
+  "modelDetailsWithPlatform": "Model Details · {platform}",
+  "@modelDetailsWithPlatform": {
+    "description": "Model details subtitle with platform name",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "OpenAI"
+      }
+    }
+  },
+  "japanese": "日本語",
+  "japaneseDesc": "Japanese",
+  "korean": "한국어",
+  "koreanDesc": "Korean",
+  "thai": "ไทย",
+  "thaiDesc": "Thai",
+  "vietnamese": "Tiếng Việt",
+  "vietnameseDesc": "Vietnamese",
+  "french": "Français",
+  "frenchDesc": "French",
+  "german": "Deutsch",
+  "germanDesc": "German"
 }

@@ -1622,4 +1622,369 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get newConversationDefault => '新对话';
+
+  @override
+  String get usageDashboard => '使用量仪表盘';
+
+  @override
+  String get globalUsageDashboard => '全局使用量仪表盘';
+
+  @override
+  String sessionUsageTitle(Object name) {
+    return '$name 使用量';
+  }
+
+  @override
+  String get noSessionData => '暂无会话数据';
+
+  @override
+  String get noUsageData => '暂无使用数据';
+
+  @override
+  String get overview => '概览';
+
+  @override
+  String get statMessages => '消息数';
+
+  @override
+  String get totalMessages => '总消息数';
+
+  @override
+  String get inputTokens => '输入 Token';
+
+  @override
+  String get outputTokens => '输出 Token';
+
+  @override
+  String get totalCostLabel => '总费用';
+
+  @override
+  String get tokenDistribution => 'Token 分布';
+
+  @override
+  String get modelInfo => '模型信息';
+
+  @override
+  String get quotaLimitSection => '配额限制';
+
+  @override
+  String get usageCurve => '用量曲线';
+
+  @override
+  String get totalSessions => '总会话数';
+
+  @override
+  String get totalTokens => '总 Token';
+
+  @override
+  String get byModel => '按模型统计';
+
+  @override
+  String get allSessions => '所有会话';
+
+  @override
+  String moreSessionsNoData(Object count) {
+    return '另有 $count 个会话暂无使用数据';
+  }
+
+  @override
+  String get inputLabel => '输入';
+
+  @override
+  String get outputLabel => '输出';
+
+  @override
+  String get noQuotaLimit => '未设置配额限制';
+
+  @override
+  String sessionsCountSuffix(Object count) {
+    return '$count个会话';
+  }
+
+  @override
+  String get granMinute => '分';
+
+  @override
+  String get granHour => '小时';
+
+  @override
+  String get granDay => '天';
+
+  @override
+  String get granMonth => '月';
+
+  @override
+  String get granYear => '年';
+
+  @override
+  String get selectDate => '选择日期';
+
+  @override
+  String get rangeStart => '开始';
+
+  @override
+  String get rangeEnd => '结束';
+
+  @override
+  String get startDateHelp => '开始日期';
+
+  @override
+  String get endDateHelp => '结束日期';
+
+  @override
+  String get tokenToggle => 'Token';
+
+  @override
+  String get costToggle => '费用';
+
+  @override
+  String chartLegendCost(Object symbol) {
+    return '费用 ($symbol)';
+  }
+
+  @override
+  String get noSessionConfig => '暂无会话配置';
+
+  @override
+  String get resetApiKey => '重置 API 密钥';
+
+  @override
+  String get resetApiKeyConfirm =>
+      '确定要重置该会话的 API 密钥吗？重置后旧密钥将立即失效，使用旧密钥的外部请求将无法访问。';
+
+  @override
+  String get confirmReset => '确认重置';
+
+  @override
+  String get connectorSkillRelation => '连接器和技能的关联描述';
+
+  @override
+  String modelPricing(Object unit) {
+    return '模型定价（$unit/百万Token）';
+  }
+
+  @override
+  String get billingInfoLabel => '计费信息';
+
+  @override
+  String get cumulativeInputTokens => '累计输入Token';
+
+  @override
+  String get cumulativeOutputTokens => '累计输出Token';
+
+  @override
+  String get cumulativeCost => '累计费用';
+
+  @override
+  String get basicInfoLabel => '基础信息';
+
+  @override
+  String get sessionName => '会话名称';
+
+  @override
+  String get organization => '组织';
+
+  @override
+  String get groupLabel => '分组';
+
+  @override
+  String get notSpecified => '未指定';
+
+  @override
+  String get notGrouped => '未分组';
+
+  @override
+  String get boundModel => '绑定模型';
+
+  @override
+  String get relatedPrompt => '关联提示词';
+
+  @override
+  String get messageCountLabel => '消息数量';
+
+  @override
+  String get serviceConfigLabel => '服务配置';
+
+  @override
+  String get serviceAddress => '服务地址';
+
+  @override
+  String get mcpLabel => 'MCP';
+
+  @override
+  String get modelMcp => '模型MCP';
+
+  @override
+  String get sessionMcp => '会话MCP';
+
+  @override
+  String get notBound => '未绑定';
+
+  @override
+  String get addMcpHint => '可在模型管理或聊天输入框处添加 MCP 服务';
+
+  @override
+  String get usageQuotaLabel => '用量配额';
+
+  @override
+  String get noAuthAccess => '免授权访问';
+
+  @override
+  String get noAuthEnabledDesc => '⚠️ 已关闭认证，任何人均可访问';
+
+  @override
+  String get noAuthDisabledDesc => '开启后不需要 API Key 即可访问';
+
+  @override
+  String get disableSession => '禁用会话';
+
+  @override
+  String get disabledEnabledDesc => '⚠️ 已禁用，调用将返回错误';
+
+  @override
+  String get disabledDisabledDesc => '开启后该会话将无法被调用';
+
+  @override
+  String get systemPromptHint => '为该会话设定角色/行为，如：你是一名专业的法律顾问……';
+
+  @override
+  String get systemPromptDesc => '设置后将作为最高优先级指令，在第三方请求时自动注入。留空则不注入。';
+
+  @override
+  String get tokenUsageLimit => 'Token 用量上限';
+
+  @override
+  String costBudgetLimit(Object unit) {
+    return '费用预算上限（$unit）';
+  }
+
+  @override
+  String get requestLimit => '请求次数上限';
+
+  @override
+  String get noLimit => '不限制';
+
+  @override
+  String get enableUsageLimit => '启用用量限制';
+
+  @override
+  String get reachLimitReject => '达到上限后将拒绝新的请求';
+
+  @override
+  String get resetPeriod => '重置周期';
+
+  @override
+  String get resetPeriodNever => '不自动重置';
+
+  @override
+  String get resetPeriodDaily => '每天重置';
+
+  @override
+  String get resetPeriodMonthly => '每月重置';
+
+  @override
+  String get quotaExhausted => '配额已用尽';
+
+  @override
+  String get currentUsageStatus => '当前用量状态';
+
+  @override
+  String get quotaTokenLabel => 'Token';
+
+  @override
+  String get quotaCostLabel => '费用';
+
+  @override
+  String get quotaRequestLabel => '请求';
+
+  @override
+  String get manualResetUsage => '手动重置用量';
+
+  @override
+  String get manualResetConfirmDesc => '确定要手动重置';
+
+  @override
+  String get manualResetWarning =>
+      '重置后当前周期的 Token 用量、费用和请求次数将清零，周期起始时间更新为当前时间。';
+
+  @override
+  String get tokenUsage => 'Token 用量';
+
+  @override
+  String get costUsage => '费用用量';
+
+  @override
+  String get resetValue => '重置';
+
+  @override
+  String get apiKeyReset => 'API 密钥已重置';
+
+  @override
+  String get securitySettings => '安全设置';
+
+  @override
+  String get sensitiveInfoMasking => '敏感信息脱敏';
+
+  @override
+  String get sensitiveInfoMaskingDesc =>
+      '开启后，发送给大模型的消息及本地审计日志中的对应信息将被 * 号替换，防止明文隐私泄露。';
+
+  @override
+  String get maskPhoneTitle => '手机号脱敏';
+
+  @override
+  String get maskPhoneSubtitle => '将消息中的手机号替换为 * 号';
+
+  @override
+  String get maskIdCardTitle => '身份证号脱敏';
+
+  @override
+  String get maskIdCardSubtitle => '将消息中的身份证号替换为 * 号';
+
+  @override
+  String get sessionDetails => '会话详情';
+
+  @override
+  String get modelDetails => '模型详情';
+
+  @override
+  String modelDetailsWithPlatform(String platform) {
+    return '模型详情 · $platform';
+  }
+
+  @override
+  String get japanese => '日语';
+
+  @override
+  String get japaneseDesc => '日语';
+
+  @override
+  String get korean => '韩语';
+
+  @override
+  String get koreanDesc => '韩语';
+
+  @override
+  String get thai => '泰语';
+
+  @override
+  String get thaiDesc => '泰语';
+
+  @override
+  String get vietnamese => '越南语';
+
+  @override
+  String get vietnameseDesc => '越南语';
+
+  @override
+  String get french => '法语';
+
+  @override
+  String get frenchDesc => '法语';
+
+  @override
+  String get german => '德语';
+
+  @override
+  String get germanDesc => '德语';
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:llmate/l10n/app_localizations.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../../controllers/settings_controller.dart';
 import '../../../../models/chat/session.dart';
@@ -30,6 +31,7 @@ class SessionConfigSidebar {
 
   /// 构建空状态
   static Widget buildEmptyState(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -45,7 +47,7 @@ class SessionConfigSidebar {
             ),
             const SizedBox(height: 12),
             Text(
-              '暂无会话配置',
+              l10n.noSessionConfig,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(
@@ -55,7 +57,7 @@ class SessionConfigSidebar {
             ),
             const SizedBox(height: 4),
             Text(
-              '请先选择或创建一个会话',
+              l10n.selectOrCreateSession,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -163,10 +165,11 @@ class SessionConfigSidebar {
     VoidCallback? onReset,
   }) {
     final showReset = onReset != null;
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: () {
         Clipboard.setData(ClipboardData(text: value));
-        SnackBarUtils.showSuccess(context, '已复制到剪贴板');
+        SnackBarUtils.showSuccess(context, l10n.copiedToClipboard);
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -250,6 +253,7 @@ class SessionConfigSidebar {
     BuildContext context,
     ChatSession session,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder:
@@ -266,14 +270,14 @@ class SessionConfigSidebar {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 6),
-                const Text(
-                  '重置 API 密钥',
+                Text(
+                  l10n.resetApiKey,
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
             content: Text(
-              '确定要重置该会话的 API 密钥吗？重置后旧密钥将立即失效，使用旧密钥的外部请求将无法访问。',
+              l10n.resetApiKeyConfirm,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -294,7 +298,7 @@ class SessionConfigSidebar {
                   ),
                 ),
                 child: Text(
-                  '取消',
+                  l10n.cancel,
                   style: TextStyle(
                     color: Theme.of(context).textTheme.labelLarge?.color,
                     fontWeight: FontWeight.w500,
@@ -316,7 +320,7 @@ class SessionConfigSidebar {
                     borderRadius: BorderRadius.circular(6),
                   ),
                 ),
-                child: const Text('确认重置'),
+                child: Text(l10n.confirmReset),
               ),
             ],
           ),
@@ -328,12 +332,13 @@ class SessionConfigSidebar {
     final sessionController = Get.find<SessionController>();
     await sessionController.updateSession(session.copyWith(apiKey: newKey));
     if (context.mounted) {
-      SnackBarUtils.showSuccess(context, 'API 密钥已重置');
+      SnackBarUtils.showSuccess(context, l10n.apiKeyReset);
     }
   }
 
   /// 构建提示词卡片
   static Widget _buildPromptCard(BuildContext context, String prompt) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -360,7 +365,7 @@ class SessionConfigSidebar {
               ),
               const SizedBox(width: 6),
               Text(
-                '连接器和技能的关联描述',
+                l10n.connectorSkillRelation,
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(
@@ -460,8 +465,8 @@ class SessionConfigSidebar {
   }
 
   /// 获取货币单位名称
-  static String _getCurrencyName(ChatModel? model) {
-    return model?.currency == 'CNY' ? '元' : '美元';
+  static String _getCurrencyName(ChatModel? model, AppLocalizations l10n) {
+    return model?.currency == 'CNY' ? l10n.cny : l10n.usd;
   }
 
   /// 构建价格卡片
@@ -471,8 +476,9 @@ class SessionConfigSidebar {
     double? completionPrice,
     ChatModel? chatModel,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final symbol = _getCurrencySymbol(chatModel);
-    final currencyName = _getCurrencyName(chatModel);
+    final currencyName = _getCurrencyName(chatModel, l10n);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -499,7 +505,7 @@ class SessionConfigSidebar {
               ),
               const SizedBox(width: 6),
               Text(
-                '模型定价（$currencyName/百万Token）',
+                l10n.modelPricing(currencyName),
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(
@@ -512,7 +518,7 @@ class SessionConfigSidebar {
           const SizedBox(height: 8),
           if (promptPrice != null)
             Text(
-              '输入: $symbol${promptPrice.toStringAsFixed(2)}',
+              '${l10n.inputLabel}: $symbol${promptPrice.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -522,7 +528,7 @@ class SessionConfigSidebar {
             const SizedBox(height: 4),
           if (completionPrice != null)
             Text(
-              '输出: $symbol${completionPrice.toStringAsFixed(2)}',
+              '${l10n.outputLabel}: $symbol${completionPrice.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -540,15 +546,16 @@ class SessionConfigSidebar {
     bool showPriceCard = true,
   }) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, '计费信息'),
+        _buildSectionTitle(context, l10n.billingInfoLabel),
         const SizedBox(height: 8),
         _buildConfigItem(
           context,
           icon: Icons.arrow_circle_down,
-          label: '累计输入Token',
+          label: l10n.cumulativeInputTokens,
           value: _formatTokenCount(session.promptTokens),
           valueColor: theme.colorScheme.primary,
         ),
@@ -556,7 +563,7 @@ class SessionConfigSidebar {
         _buildConfigItem(
           context,
           icon: Icons.arrow_circle_up,
-          label: '累计输出Token',
+          label: l10n.cumulativeOutputTokens,
           value: _formatTokenCount(session.completionTokens),
           valueColor: theme.colorScheme.primary,
         ),
@@ -564,7 +571,7 @@ class SessionConfigSidebar {
         _buildConfigItem(
           context,
           icon: Icons.monetization_on_outlined,
-          label: '累计费用',
+          label: l10n.cumulativeCost,
           value:
               '${_getCurrencySymbol(session.chatModel)}${session.totalCost.toStringAsFixed(6)}',
           valueColor:
@@ -595,15 +602,16 @@ class SessionConfigSidebar {
     ChatSession session, {
     bool showMessageCount = true,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, '基础信息'),
+        _buildSectionTitle(context, l10n.basicInfoLabel),
         const SizedBox(height: 8),
         _buildEditableConfigItem(
           context,
           icon: Icons.chat_bubble_outline,
-          label: '会话名称',
+          label: l10n.sessionName,
           value: session.name,
           onChanged: (newName) {
             if (newName.trim().isNotEmpty && newName.trim() != session.name) {
@@ -618,8 +626,8 @@ class SessionConfigSidebar {
         _buildEditableConfigItem(
           context,
           icon: Icons.grid_view,
-          label: '组织',
-          value: session.group ?? '未指定',
+          label: l10n.organization,
+          value: session.group ?? l10n.notSpecified,
           onChanged: (newGroup) {
             final sessionController = Get.find<SessionController>();
             sessionController.updateSession(
@@ -631,11 +639,11 @@ class SessionConfigSidebar {
         _buildConfigItem(
           context,
           icon: Icons.language,
-          label: '绑定模型',
+          label: l10n.boundModel,
           value:
               session.chatModel != null
                   ? '${session.chatModel!.name} (${session.chatModel!.model})'
-                  : '未设置',
+                  : l10n.notSet,
           valueColor:
               session.chatModel != null
                   ? Theme.of(context).colorScheme.primary
@@ -644,7 +652,7 @@ class SessionConfigSidebar {
         if (session.connectPrompt != null &&
             session.connectPrompt!.isNotEmpty) ...[
           const SizedBox(height: 12),
-          _buildSectionTitle(context, '关联提示词'),
+          _buildSectionTitle(context, l10n.relatedPrompt),
           const SizedBox(height: 8),
           _buildPromptCard(context, session.connectPrompt!),
         ],
@@ -653,8 +661,8 @@ class SessionConfigSidebar {
           _buildConfigItem(
             context,
             icon: Icons.chat_bubble_outline,
-            label: '消息数量',
-            value: '${session.messages.length}条',
+            label: l10n.messageCountLabel,
+            value: l10n.messageCount(session.messages.length),
           ),
         ],
       ],
@@ -666,22 +674,23 @@ class SessionConfigSidebar {
     BuildContext context,
     ChatSession session,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, '服务配置'),
+        _buildSectionTitle(context, l10n.serviceConfigLabel),
         const SizedBox(height: 8),
         _buildCopyableConfigItem(
           context,
           icon: Icons.link,
-          label: '服务地址',
+          label: l10n.serviceAddress,
           value: _buildSmartServiceUrl(session.sessionId),
         ),
         const SizedBox(height: 8),
         _buildCopyableConfigItem(
           context,
           icon: Icons.shield,
-          label: 'API 密钥',
+          label: l10n.apiKeyLabel,
           value: session.apiKey,
           onReset: () => _resetApiKey(context, session),
         ),
@@ -695,20 +704,21 @@ class SessionConfigSidebar {
 
   /// MCP 分节
   static Widget buildMcpSection(BuildContext context, ChatSession session) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, 'MCP'),
+        _buildSectionTitle(context, l10n.mcpLabel),
         const SizedBox(height: 8),
         _buildConfigItem(
           context,
           icon: Icons.grid_view,
-          label: '模型MCP',
+          label: l10n.modelMcp,
           value:
               session.chatModel?.mcps != null &&
                       session.chatModel!.mcps!.isNotEmpty
                   ? session.chatModel!.mcps!.join(', ')
-                  : '未绑定',
+                  : l10n.notBound,
           valueColor:
               session.chatModel?.mcps != null &&
                       session.chatModel!.mcps!.isNotEmpty
@@ -719,11 +729,11 @@ class SessionConfigSidebar {
         _buildConfigItem(
           context,
           icon: Icons.layers,
-          label: '会话MCP',
+          label: l10n.sessionMcp,
           value:
               session.mcps != null && session.mcps!.isNotEmpty
                   ? session.mcps!.join(', ')
-                  : '未绑定',
+                  : l10n.notBound,
           valueColor:
               session.mcps != null && session.mcps!.isNotEmpty
                   ? Theme.of(context).colorScheme.primary
@@ -735,7 +745,7 @@ class SessionConfigSidebar {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              '可在模型管理或聊天输入框处添加 MCP 服务',
+              l10n.addMcpHint,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(
@@ -758,10 +768,11 @@ class SessionConfigSidebar {
 
   /// 用量配额分节
   static Widget buildQuotaSection(BuildContext context, ChatSession session) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(context, '用量配额'),
+        _buildSectionTitle(context, l10n.usageQuotaLabel),
         const SizedBox(height: 8),
         _QuotaConfigSection(session: session),
       ],
@@ -770,6 +781,7 @@ class SessionConfigSidebar {
 
   /// 免授权访问开关（独立构建，供精简边栏与详情页复用）
   static Widget _buildNoAuthToggle(BuildContext context, ChatSession session) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -808,7 +820,7 @@ class SessionConfigSidebar {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '免授权访问',
+                  l10n.noAuthAccess,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -822,8 +834,8 @@ class SessionConfigSidebar {
                 ),
                 Text(
                   session.noAuthEnabled
-                      ? '⚠️ 已关闭认证，任何人均可访问'
-                      : '开启后不需要 API Key 即可访问',
+                      ? l10n.noAuthEnabledDesc
+                      : l10n.noAuthDisabledDesc,
                   style: TextStyle(
                     fontSize: 12,
                     color:
@@ -859,6 +871,7 @@ class SessionConfigSidebar {
 
   /// 禁用会话开关：开启后该会话的任何调用（应用内 / 外部 HTTP）都会返回错误
   static Widget _buildDisabledToggle(BuildContext context, ChatSession session) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -897,7 +910,7 @@ class SessionConfigSidebar {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '禁用会话',
+                  l10n.disableSession,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -911,8 +924,8 @@ class SessionConfigSidebar {
                 ),
                 Text(
                   session.isDisabled
-                      ? '⚠️ 已禁用，调用将返回错误'
-                      : '开启后该会话将无法被调用',
+                      ? l10n.disabledEnabledDesc
+                      : l10n.disabledDisabledDesc,
                   style: TextStyle(
                     fontSize: 12,
                     color:
@@ -1164,10 +1177,11 @@ class _SessionSettingsSectionState extends State<_SessionSettingsSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SessionConfigSidebar._buildSectionTitle(context, '系统提示词'),
+        SessionConfigSidebar._buildSectionTitle(context, l10n.systemPrompt),
         const SizedBox(height: 8),
         TextField(
           controller: _systemPromptController,
@@ -1175,7 +1189,7 @@ class _SessionSettingsSectionState extends State<_SessionSettingsSection> {
           minLines: 3,
           style: const TextStyle(fontSize: 12),
           decoration: InputDecoration(
-            hintText: '为该会话设定角色/行为，如：你是一名专业的法律顾问……',
+            hintText: l10n.systemPromptHint,
             hintStyle: TextStyle(
               fontSize: 12,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
@@ -1198,7 +1212,7 @@ class _SessionSettingsSectionState extends State<_SessionSettingsSection> {
         ),
         const SizedBox(height: 6),
         Text(
-          '设置后将作为最高优先级指令，在第三方请求时自动注入。留空则不注入。',
+          l10n.systemPromptDesc,
           style: TextStyle(
             fontSize: 11,
             height: 1.5,
@@ -1309,6 +1323,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1317,7 +1332,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
 
         if (_session.quotaEnabled) ...[
           const SizedBox(height: 12),
-          SessionConfigSidebar._buildSectionTitle(context, '用量配额'),
+          SessionConfigSidebar._buildSectionTitle(context, l10n.usageQuotaLabel),
           const SizedBox(height: 8),
 
           // Token 用量上限
@@ -1325,9 +1340,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             context,
             controller: _tokenLimitController,
             icon: Icons.chat_bubble_outline,
-            label: 'Token 用量上限',
+            label: l10n.tokenUsageLimit,
             value: _session.quotaTokenLimit,
-            hint: '不限制',
+            hint: l10n.noLimit,
             onChanged: (val) {
               _updateSession(
                 _session.copyWith(
@@ -1344,10 +1359,11 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             context,
             controller: _costLimitController,
             icon: Icons.monetization_on_outlined,
-            label:
-                '费用预算上限（${SessionConfigSidebar._getCurrencyName(_session.chatModel)}）',
+            label: l10n.costBudgetLimit(
+              SessionConfigSidebar._getCurrencyName(_session.chatModel, l10n),
+            ),
             value: _session.quotaCostLimit,
-            hint: '不限制',
+            hint: l10n.noLimit,
             isDouble: true,
             onChanged: (val) {
               _updateSession(
@@ -1365,9 +1381,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             context,
             controller: _requestLimitController,
             icon: Icons.repeat,
-            label: '请求次数上限',
+            label: l10n.requestLimit,
             value: _session.quotaRequestLimit,
-            hint: '不限制',
+            hint: l10n.noLimit,
             onChanged: (val) {
               _updateSession(
                 _session.copyWith(
@@ -1397,6 +1413,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   }
 
   Widget _buildToggleRow(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -1435,7 +1452,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '启用用量限制',
+                  l10n.enableUsageLimit,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -1448,7 +1465,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                   ),
                 ),
                 Text(
-                  '达到上限后将拒绝新的请求',
+                  l10n.reachLimitReject,
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(
@@ -1589,7 +1606,12 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   }
 
   Widget _buildResetPeriodPicker(BuildContext context) {
-    final periods = {null: '不自动重置', 'daily': '每天重置', 'monthly': '每月重置'};
+    final l10n = AppLocalizations.of(context)!;
+    final periods = {
+      null: l10n.resetPeriodNever,
+      'daily': l10n.resetPeriodDaily,
+      'monthly': l10n.resetPeriodMonthly,
+    };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1614,7 +1636,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '重置周期',
+                  l10n.resetPeriod,
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(
@@ -1672,6 +1694,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   }
 
   Widget _buildQuotaStatusCard(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final periodBilling = _session.getPeriodBilling();
     final hasPeriod = _session.quotaPeriodStart != null;
     final effectiveTokens =
@@ -1720,7 +1743,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               ),
               const SizedBox(width: 6),
               Text(
-                quotaResult.exceeded ? '配额已用尽' : '当前用量状态',
+                quotaResult.exceeded ? l10n.quotaExhausted : l10n.currentUsageStatus,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -1736,7 +1759,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           if (_session.quotaTokenLimit != null)
             _buildQuotaProgress(
               context,
-              label: 'Token',
+              label: l10n.quotaTokenLabel,
               used: effectiveTokens,
               limit: _session.quotaTokenLimit!,
             ),
@@ -1744,7 +1767,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             if (_session.quotaTokenLimit != null) const SizedBox(height: 6),
             _buildQuotaProgress(
               context,
-              label: '费用',
+              label: l10n.quotaCostLabel,
               used: effectiveCost,
               limit: _session.quotaCostLimit!,
               isDouble: true,
@@ -1759,7 +1782,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               const SizedBox(height: 6),
             _buildQuotaProgress(
               context,
-              label: '请求',
+              label: l10n.quotaRequestLabel,
               used: _session.quotaRequestCount,
               limit: _session.quotaRequestLimit!,
             ),
@@ -1782,16 +1805,17 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   }
 
   void _handleManualReset(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final bool? shouldReset = await ConfirmDeleteDialog.show(
       context: context,
-      title: '手动重置用量',
-      itemName: '用量配额',
-      description: '确定要手动重置',
-      warningMessage: '重置后当前周期的 Token 用量、费用和请求次数将清零，周期起始时间更新为当前时间。',
+      title: l10n.manualResetUsage,
+      itemName: l10n.usageQuotaLabel,
+      description: l10n.manualResetConfirmDesc,
+      warningMessage: l10n.manualResetWarning,
       icon: Icons.undo,
       iconColor: Colors.orange,
-      confirmText: '重置',
-      cancelText: '取消',
+      confirmText: l10n.resetValue,
+      cancelText: l10n.cancel,
     );
 
     if (shouldReset == true) {
@@ -1809,6 +1833,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   }
 
   Widget _buildManualResetButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: () => _handleManualReset(context),
       child: Container(
@@ -1834,7 +1859,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             ),
             const SizedBox(width: 6),
             Text(
-              '手动重置用量',
+              l10n.manualResetUsage,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -1946,28 +1971,47 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
   final GlobalKey _quotaKey = GlobalKey();
   final GlobalKey _billingKey = GlobalKey();
 
-  late final List<_NavSection> _navSections;
-  String _activeSection = '基础信息';
+  late List<_NavSection> _navSections;
+  String? _activeSection;
 
   @override
   void initState() {
     super.initState();
-    _navSections = [
-      _NavSection(key: _basicInfoKey, label: '基础信息', icon: Icons.info_outline),
-      _NavSection(key: _serviceKey, label: '服务配置', icon: Icons.settings),
-      _NavSection(key: _mcpKey, label: 'MCP', icon: Icons.grid_view),
-      _NavSection(key: _quotaKey, label: '用量配额', icon: Icons.speed),
-      _NavSection(
-        key: _billingKey,
-        label: '计费信息',
-        icon: Icons.monetization_on_outlined,
-      ),
-    ];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _scrollController.addListener(_onScroll);
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final l10n = AppLocalizations.of(context)!;
+    _navSections = [
+      _NavSection(
+        key: _basicInfoKey,
+        label: l10n.basicInfoLabel,
+        icon: Icons.info_outline,
+      ),
+      _NavSection(
+        key: _serviceKey,
+        label: l10n.serviceConfigLabel,
+        icon: Icons.settings,
+      ),
+      _NavSection(key: _mcpKey, label: l10n.mcpLabel, icon: Icons.grid_view),
+      _NavSection(
+        key: _quotaKey,
+        label: l10n.usageQuotaLabel,
+        icon: Icons.speed,
+      ),
+      _NavSection(
+        key: _billingKey,
+        label: l10n.billingInfoLabel,
+        icon: Icons.monetization_on_outlined,
+      ),
+    ];
+    _activeSection ??= _navSections.first.label;
   }
 
   @override
@@ -2088,6 +2132,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
+    final l10n = AppLocalizations.of(context)!;
 
     return Row(
       children: [
@@ -2104,12 +2149,12 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SessionConfigSidebar._buildSectionTitle(context, '基础信息'),
+                    SessionConfigSidebar._buildSectionTitle(context, l10n.basicInfoLabel),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildEditableConfigItem(
                       context,
                       icon: Icons.chat_bubble_outline,
-                      label: '会话名称',
+                      label: l10n.sessionName,
                       value: session.name,
                       onChanged: (newName) {
                         if (newName.trim().isNotEmpty &&
@@ -2126,8 +2171,8 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     SessionConfigSidebar._buildEditableConfigItem(
                       context,
                       icon: Icons.grid_view,
-                      label: '分组',
-                      value: session.group ?? '未分组',
+                      label: l10n.groupLabel,
+                      value: session.group ?? l10n.notGrouped,
                       onChanged: (newGroup) {
                         final sessionController = Get.find<SessionController>();
                         sessionController.updateSession(
@@ -2139,11 +2184,11 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     SessionConfigSidebar._buildConfigItem(
                       context,
                       icon: Icons.language,
-                      label: '绑定模型',
+                      label: l10n.boundModel,
                       value:
                           session.chatModel != null
                               ? '${session.chatModel!.name} (${session.chatModel!.model})'
-                              : '未设置',
+                              : l10n.notSet,
                       valueColor:
                           session.chatModel != null
                               ? Theme.of(context).colorScheme.primary
@@ -2153,7 +2198,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     if (session.connectPrompt != null &&
                         session.connectPrompt!.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      SessionConfigSidebar._buildSectionTitle(context, '关联提示词'),
+                      SessionConfigSidebar._buildSectionTitle(context, l10n.relatedPrompt),
                       const SizedBox(height: 8),
                       SessionConfigSidebar._buildPromptCard(
                         context,
@@ -2164,8 +2209,8 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     SessionConfigSidebar._buildConfigItem(
                       context,
                       icon: Icons.chat_bubble_outline,
-                      label: '消息数量',
-                      value: '${session.messages.length}条',
+                      label: l10n.messageCountLabel,
+                      value: l10n.messageCount(session.messages.length),
                     ),
                   ],
                 ),
@@ -2180,12 +2225,12 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SessionConfigSidebar._buildSectionTitle(context, '服务配置'),
+                    SessionConfigSidebar._buildSectionTitle(context, l10n.serviceConfigLabel),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildCopyableConfigItem(
                       context,
                       icon: Icons.link,
-                      label: '服务地址',
+                      label: l10n.serviceAddress,
                       value: SessionConfigSidebar._buildSmartServiceUrl(
                         session.sessionId,
                       ),
@@ -2194,7 +2239,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     SessionConfigSidebar._buildCopyableConfigItem(
                       context,
                       icon: Icons.shield,
-                      label: 'API 密钥',
+                      label: l10n.apiKeyLabel,
                       value: session.apiKey,
                       onReset:
                           () => SessionConfigSidebar._resetApiKey(
@@ -2219,17 +2264,17 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SessionConfigSidebar._buildSectionTitle(context, 'MCP'),
+                    SessionConfigSidebar._buildSectionTitle(context, l10n.mcpLabel),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildConfigItem(
                       context,
                       icon: Icons.grid_view,
-                      label: '模型MCP',
+                      label: l10n.modelMcp,
                       value:
                           session.chatModel?.mcps != null &&
                                   session.chatModel!.mcps!.isNotEmpty
                               ? session.chatModel!.mcps!.join(', ')
-                              : '未绑定',
+                              : l10n.notBound,
                       valueColor:
                           session.chatModel?.mcps != null &&
                                   session.chatModel!.mcps!.isNotEmpty
@@ -2240,11 +2285,11 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     SessionConfigSidebar._buildConfigItem(
                       context,
                       icon: Icons.layers,
-                      label: '会话MCP',
+                      label: l10n.sessionMcp,
                       value:
                           session.mcps != null && session.mcps!.isNotEmpty
                               ? session.mcps!.join(', ')
-                              : '未绑定',
+                              : l10n.notBound,
                       valueColor:
                           session.mcps != null && session.mcps!.isNotEmpty
                               ? Theme.of(context).colorScheme.primary
@@ -2256,7 +2301,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          '可在模型管理或聊天输入框处添加 MCP 服务',
+                          l10n.addMcpHint,
                           style: TextStyle(
                             fontSize: 12,
                             color: Theme.of(
@@ -2277,7 +2322,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SessionConfigSidebar._buildSectionTitle(context, '用量配额'),
+                    SessionConfigSidebar._buildSectionTitle(context, l10n.usageQuotaLabel),
                     const SizedBox(height: 8),
                     _QuotaConfigSection(session: session),
                   ],

@@ -665,51 +665,50 @@ class AppLocalizationsTh extends AppLocalizations {
   String get workingDirCleared => 'ล้างไดเร็กทอรีการทำงานแล้ว';
 
   @override
-  String get noWorkingDir => 'Please set the contract file directory first';
+  String get noWorkingDir => 'กรุณาตั้งค่าไดเรกทอรีไฟล์สัญญาก่อน';
 
   @override
-  String get parseContract => 'Parse Contract';
+  String get parseContract => 'วิเคราะห์สัญญา';
 
   @override
-  String get parseContractHint => 'Parse contract files in working directory';
+  String get parseContractHint => 'วิเคราะห์ไฟล์สัญญาในไดเรกทอรีการทำงาน';
 
   @override
   String get parseContractPrompt =>
-      'The following are document files in the working directory. Please first determine which files are actual contract documents (not attachments, descriptions, or other non-contract files). Then, only for files confirmed as contracts, use the contract_inspect tool to write each contract\'s information.\n\nWriting rules:\n- For each contract, first call action=add to create a contract entry (fill in contractName, contractType, paymentClause, paymentSchedule, breachClause, liabilityClause, startDate, endDate, signingDate, etc.)\n- Then call action=addParty for each party, adding Party A, Party B, etc. one by one\n- Also briefly explain in your reply which files were determined as non-contract and why';
+      'ต่อไปนี้เป็นไฟล์เอกสารในไดเรกทอรีการทำงาน ก่อนอื่นให้ระบุว่าไฟล์ใดเป็นเอกสารสัญญาที่แท้จริง (ไม่ใช่ไฟล์แนบ คำอธิบาย หรือไฟล์ที่ไม่ใช่สัญญาอื่นๆ) จากนั้นสำหรับเฉพาะไฟล์ที่ยืนยันว่าเป็นสัญญา ให้ใช้เครื่องมือ contract_inspect เพื่อเขียนข้อมูลของแต่ละสัญญา\n\nกฎการเขียน:\n- สำหรับแต่ละสัญญา ให้เรียก action=add ก่อนเพื่อสร้างรายการสัญญา (กรอก contractName, contractType, paymentClause, paymentSchedule, breachClause, liabilityClause, startDate, endDate, signingDate ฯลฯ)\n- จากนั้นเรียก action=addParty สำหรับแต่ละฝ่าย โดยเพิ่มฝ่าย ก. ฝ่าย ข. ทีละรายการ\n- และอธิบายสั้นๆ ในคำตอบว่ามีไฟล์ใดบ้างที่ระบุว่าไม่ใช่สัญญาและเหตุผล';
 
   @override
-  String get contractPoints => 'Contract Points';
+  String get contractPoints => 'จุดสัญญา';
 
   @override
-  String get noContracts => 'No contract points';
+  String get noContracts => 'ไม่มีจุดสัญญา';
 
   @override
-  String get contractParsing =>
-      'Contract points will appear here after parsing';
+  String get contractParsing => 'จุดสัญญาจะปรากฏที่นี่หลังจากการวิเคราะห์';
 
   @override
-  String get contractParty => 'Parties';
+  String get contractParty => 'คู่สัญญา';
 
   @override
-  String get contractPaymentClause => 'Payment Clause';
+  String get contractPaymentClause => 'ข้อกำหนดการชำระเงิน';
 
   @override
-  String get contractPaymentSchedule => 'Payment Schedule';
+  String get contractPaymentSchedule => 'กำหนดการชำระเงิน';
 
   @override
-  String get contractBreachClause => 'Breach Clause';
+  String get contractBreachClause => 'ข้อกำหนดการผิดสัญญา';
 
   @override
-  String get contractLiability => 'Liability';
+  String get contractLiability => 'ความรับผิดชอบ';
 
   @override
-  String get contractPeriod => 'Contract Period';
+  String get contractPeriod => 'ระยะเวลาสัญญา';
 
   @override
-  String get contractSigningDate => 'Signing Date';
+  String get contractSigningDate => 'วันที่ลงนาม';
 
   @override
-  String get contractTypeLabel => 'Contract Type';
+  String get contractTypeLabel => 'ประเภทสัญญา';
 
   @override
   String nRounds(Object n) {
@@ -1532,17 +1531,17 @@ class AppLocalizationsTh extends AppLocalizations {
       'After setting, the session service URL will use this address. HTTP default port 80, HTTPS default port 443.';
 
   @override
-  String get portSettings => 'Port Settings';
+  String get portSettings => 'การตั้งค่าพอร์ต';
 
   @override
-  String get httpPort => 'HTTP Port';
+  String get httpPort => 'พอร์ต HTTP';
 
   @override
-  String get httpsPort => 'HTTPS Port';
+  String get httpsPort => 'พอร์ต HTTPS';
 
   @override
   String get portDesc =>
-      'HTTP listening port, default 80. HTTPS listening port, default 443. Restart the service to apply changes.';
+      'พอร์ตรับฟัง HTTP ค่าเริ่มต้น 80. พอร์ตรับฟัง HTTPS ค่าเริ่มต้น 443. รีสตาร์ทบริการเพื่อนำไปใช้';
 
   @override
   String get sslCertificate => 'SSL Certificate';
@@ -1586,78 +1585,451 @@ class AppLocalizationsTh extends AppLocalizations {
   String get usd => 'USD';
 
   @override
-  String get loadingPageSubtitle => 'Intelligent Enterprise AI Workspace';
+  String get loadingPageSubtitle => 'พื้นที่ทำงาน AI องค์กรอัจฉริยะ';
 
   @override
-  String get billingSettings => 'Billing';
+  String get billingSettings => 'การเรียกเก็บเงิน';
 
   @override
-  String get mcpSettings => 'MCP Settings';
+  String get mcpSettings => 'การตั้งค่า MCP';
 
   @override
-  String get currencyTypeLabel => 'Currency Type';
+  String get currencyTypeLabel => 'ประเภทสกุลเงิน';
 
   @override
-  String get inputPriceLabel => 'Input Price';
+  String get inputPriceLabel => 'ราคาอินพุต';
 
   @override
-  String get outputPriceLabel => 'Output Price';
+  String get outputPriceLabel => 'ราคาอาท์พุต';
 
   @override
   String pricePerMillionTokens(Object unit) {
-    return '$unit/M Tokens';
+    return '$unit/ล้านโทเค็น';
   }
 
   @override
   String priceUnitDescription(Object unit) {
-    return 'Price: $unit/Million Tokens. Used for cumulative session cost calculation.';
+    return 'ราคา: $unit/ล้านโทเค็น ใช้สำหรับคำนวณต้นทุนเซสชันสะสม';
   }
 
   @override
-  String get examplePriceHint => 'e.g. 0.14';
+  String get examplePriceHint => 'เช่น 0.14';
 
   @override
   String get mcpBindingDescription =>
-      'After binding MCP services to the model, sessions using this model will automatically inject these MCP tools. Session MCP and model MCP will automatically merge and deduplicate.';
+      'หลังจากผูกบริการ MCP เข้ากับโมเดล เซสชันที่ใช้โมเดลนี้จะฉีดเครื่องมือ MCP เหล่านี้โดยอัตโนมัติ เซสชัน MCP และโมเดล MCP จะถูกรวมและลบรายการซ้ำโดยอัตโนมัติ';
 
   @override
-  String get addMcpServiceButton => 'Add MCP Service';
+  String get addMcpServiceButton => 'เพิ่มบริการ MCP';
 
   @override
-  String get clearAllMcpBindings => 'Clear All MCP Bindings';
+  String get clearAllMcpBindings => 'ลบการผูก MCP ทั้งหมด';
 
   @override
-  String get selectMcpServiceMultiSelect => 'Select MCP Service (Multi-select)';
+  String get selectMcpServiceMultiSelect => 'เลือกบริการ MCP (เลือกหลายรายการ)';
 
   @override
   String get noMcpServiceAddFirst =>
-      'No MCP services, please add in MCP Management first';
+      'ไม่มีบริการ MCP กรุณาเพิ่มในการจัดการ MCP ก่อน';
 
   @override
   String confirmWithCount(Object count) {
-    return 'OK ($count)';
+    return 'ตกลง ($count)';
   }
 
   @override
-  String get temperaturePrecise => 'Precise';
+  String get temperaturePrecise => 'แม่นยำ';
 
   @override
-  String get temperatureConservative => 'Conservative';
+  String get temperatureConservative => 'อนุรักษ์นิยม';
 
   @override
-  String get temperatureNeutral => 'Neutral';
+  String get temperatureNeutral => 'เป็นกลาง';
 
   @override
-  String get temperatureCreative => 'Creative';
+  String get temperatureCreative => 'สร้างสรรค์';
 
   @override
-  String get temperatureRandom => 'Random';
+  String get temperatureRandom => 'สุ่ม';
 
   @override
   String xToolsCount(Object n) {
-    return '$n tools';
+    return '$n เครื่องมือ';
   }
 
   @override
-  String get newConversationDefault => 'New Conversation';
+  String get newConversationDefault => 'การสนทนาใหม่';
+
+  @override
+  String get usageDashboard => 'แดชบอร์ดการใช้งาน';
+
+  @override
+  String get globalUsageDashboard => 'แดชบอร์ดการใช้งานทั่วทั้งระบบ';
+
+  @override
+  String sessionUsageTitle(Object name) {
+    return '$name การใช้งาน';
+  }
+
+  @override
+  String get noSessionData => 'ไม่มีข้อมูลเซสชัน';
+
+  @override
+  String get noUsageData => 'ไม่มีข้อมูลการใช้งาน';
+
+  @override
+  String get overview => 'ภาพรวม';
+
+  @override
+  String get statMessages => 'ข้อความ';
+
+  @override
+  String get totalMessages => 'ข้อความทั้งหมด';
+
+  @override
+  String get inputTokens => 'โทเค็นนำเข้า';
+
+  @override
+  String get outputTokens => 'โทเค็นส่งออก';
+
+  @override
+  String get totalCostLabel => 'ค่าใช้จ่ายทั้งหมด';
+
+  @override
+  String get tokenDistribution => 'การกระจายโทเค็น';
+
+  @override
+  String get modelInfo => 'ข้อมูลโมเดล';
+
+  @override
+  String get quotaLimitSection => 'ขีดจำกัดโควตา';
+
+  @override
+  String get usageCurve => 'เส้นโค้งการใช้งาน';
+
+  @override
+  String get totalSessions => 'เซสชันทั้งหมด';
+
+  @override
+  String get totalTokens => 'โทเค็นทั้งหมด';
+
+  @override
+  String get byModel => 'ตามโมเดล';
+
+  @override
+  String get allSessions => 'ทุกเซสชัน';
+
+  @override
+  String moreSessionsNoData(Object count) {
+    return 'เซสชันอื่นๆ อีก $count รายการไม่มีข้อมูลการใช้งาน';
+  }
+
+  @override
+  String get inputLabel => 'นำเข้า';
+
+  @override
+  String get outputLabel => 'ส่งออก';
+
+  @override
+  String get noQuotaLimit => 'ไม่ได้ตั้งค่าขีดจำกัดโควตา';
+
+  @override
+  String sessionsCountSuffix(Object count) {
+    return '$count เซสชัน';
+  }
+
+  @override
+  String get granMinute => 'นาที';
+
+  @override
+  String get granHour => 'ชั่วโมง';
+
+  @override
+  String get granDay => 'วัน';
+
+  @override
+  String get granMonth => 'เดือน';
+
+  @override
+  String get granYear => 'ปี';
+
+  @override
+  String get selectDate => 'เลือกวันที่';
+
+  @override
+  String get rangeStart => 'เริ่ม';
+
+  @override
+  String get rangeEnd => 'สิ้นสุด';
+
+  @override
+  String get startDateHelp => 'วันที่เริ่ม';
+
+  @override
+  String get endDateHelp => 'วันที่สิ้นสุด';
+
+  @override
+  String get tokenToggle => 'Token';
+
+  @override
+  String get costToggle => 'ค่าใช้จ่าย';
+
+  @override
+  String chartLegendCost(Object symbol) {
+    return 'ค่าใช้จ่าย ($symbol)';
+  }
+
+  @override
+  String get noSessionConfig => 'ไม่มีการตั้งค่าเซสชัน';
+
+  @override
+  String get resetApiKey => 'รีเซ็ตคีย์ API';
+
+  @override
+  String get resetApiKeyConfirm =>
+      'รีเซ็ตคีย์ API ของเซสชันนี้หรือไม่? หลังจากรีเซ็ต คีย์เดิมจะใช้ไม่ได้ทันที และคำขอภายนอกที่ใช้คีย์เดิมจะไม่สามารถเข้าถึงได้';
+
+  @override
+  String get confirmReset => 'ยืนยันการรีเซ็ต';
+
+  @override
+  String get connectorSkillRelation =>
+      'คำอธิบายความสัมพันธ์ระหว่างตัวเชื่อมต่อและทักษะ';
+
+  @override
+  String modelPricing(Object unit) {
+    return 'ราคาโมเดล ($unit/ล้านโทเค็น)';
+  }
+
+  @override
+  String get billingInfoLabel => 'ข้อมูลการเรียกเก็บเงิน';
+
+  @override
+  String get cumulativeInputTokens => 'โทเค็นนำเข้าสะสม';
+
+  @override
+  String get cumulativeOutputTokens => 'โทเค็นส่งออกสะสม';
+
+  @override
+  String get cumulativeCost => 'ค่าใช้จ่ายสะสม';
+
+  @override
+  String get basicInfoLabel => 'ข้อมูลพื้นฐาน';
+
+  @override
+  String get sessionName => 'ชื่อเซสชัน';
+
+  @override
+  String get organization => 'องค์กร';
+
+  @override
+  String get groupLabel => 'กลุ่ม';
+
+  @override
+  String get notSpecified => 'ไม่ระบุ';
+
+  @override
+  String get notGrouped => 'ไม่ได้จัดกลุ่ม';
+
+  @override
+  String get boundModel => 'โมเดลที่ผูกไว้';
+
+  @override
+  String get relatedPrompt => 'พรอมต์ที่เกี่ยวข้อง';
+
+  @override
+  String get messageCountLabel => 'จำนวนข้อความ';
+
+  @override
+  String get serviceConfigLabel => 'การตั้งค่าบริการ';
+
+  @override
+  String get serviceAddress => 'ที่อยู่บริการ';
+
+  @override
+  String get mcpLabel => 'MCP';
+
+  @override
+  String get modelMcp => 'โมเดล MCP';
+
+  @override
+  String get sessionMcp => 'เซสชัน MCP';
+
+  @override
+  String get notBound => 'ไม่ได้ผูก';
+
+  @override
+  String get addMcpHint =>
+      'คุณสามารถเพิ่มบริการ MCP ในการจัดการโมเดลหรือช่องป้อนข้อความแชท';
+
+  @override
+  String get usageQuotaLabel => 'โควตาการใช้งาน';
+
+  @override
+  String get noAuthAccess => 'เข้าถึงโดยไม่ต้องรับรอง';
+
+  @override
+  String get noAuthEnabledDesc => '⚠️ ปิดการรับรองแล้ว ทุกคนสามารถเข้าถึงได้';
+
+  @override
+  String get noAuthDisabledDesc =>
+      'เปิดใช้งาน: เข้าถึงได้โดยไม่ต้องใช้คีย์ API';
+
+  @override
+  String get disableSession => 'ปิดใช้งานเซสชัน';
+
+  @override
+  String get disabledEnabledDesc =>
+      '⚠️ ปิดใช้งานแล้ว การเรียกจะส่งคืนข้อผิดพลาด';
+
+  @override
+  String get disabledDisabledDesc =>
+      'เปิดใช้งาน: เซสชันนี้จะไม่สามารถถูกเรียกได้';
+
+  @override
+  String get systemPromptHint =>
+      'กำหนดบทบาท/พฤติกรรมสำหรับเซสชันนี้ เช่น คุณคือที่ปรึกษากฎหมายมืออาชีพ...';
+
+  @override
+  String get systemPromptDesc =>
+      'จะถูกตั้งเป็นคำสั่งลำดับความสำคัญสูงสุด และถูกแทรกอัตโนมัติสำหรับคำขอของบุคคลที่สาม ปล่อยว่างหากไม่ต้องการแทรก';
+
+  @override
+  String get tokenUsageLimit => 'ขีดจำกัดการใช้งานโทเค็น';
+
+  @override
+  String costBudgetLimit(Object unit) {
+    return 'งบประมาณค่าใช้จ่าย ($unit)';
+  }
+
+  @override
+  String get requestLimit => 'ขีดจำกัดจำนวนคำขอ';
+
+  @override
+  String get noLimit => 'ไม่จำกัด';
+
+  @override
+  String get enableUsageLimit => 'เปิดใช้งานขีดจำกัดการใช้งาน';
+
+  @override
+  String get reachLimitReject => 'คำขอใหม่จะถูกปฏิเสธเมื่อถึงขีดจำกัด';
+
+  @override
+  String get resetPeriod => 'รอบระยะเวลารีเซ็ต';
+
+  @override
+  String get resetPeriodNever => 'ไม่รีเซ็ตอัตโนมัติ';
+
+  @override
+  String get resetPeriodDaily => 'รีเซ็ตทุกวัน';
+
+  @override
+  String get resetPeriodMonthly => 'รีเซ็ตทุกเดือน';
+
+  @override
+  String get quotaExhausted => 'โควตาหมดแล้ว';
+
+  @override
+  String get currentUsageStatus => 'สถานะการใช้งานปัจจุบัน';
+
+  @override
+  String get quotaTokenLabel => 'Token';
+
+  @override
+  String get quotaCostLabel => 'ค่าใช้จ่าย';
+
+  @override
+  String get quotaRequestLabel => 'คำขอ';
+
+  @override
+  String get manualResetUsage => 'รีเซ็ตการใช้งานด้วยตนเอง';
+
+  @override
+  String get manualResetConfirmDesc => 'ยืนยันการรีเซ็ตด้วยตนเอง';
+
+  @override
+  String get manualResetWarning =>
+      'หลังจากรีเซ็ต โทเค็น ค่าใช้จ่าย และจำนวนคำขอในรอบปัจจุบันจะถูกล้าง และเวลาเริ่มรอบจะอัปเดตเป็นเวลาปัจจุบัน';
+
+  @override
+  String get tokenUsage => 'การใช้งานโทเค็น';
+
+  @override
+  String get costUsage => 'การใช้งานค่าใช้จ่าย';
+
+  @override
+  String get resetValue => 'รีเซ็ต';
+
+  @override
+  String get apiKeyReset => 'รีเซ็ตคีย์ API แล้ว';
+
+  @override
+  String get securitySettings => 'ความปลอดภัย';
+
+  @override
+  String get sensitiveInfoMasking => 'การปกปิดข้อมูลที่ละเอียดอ่อน';
+
+  @override
+  String get sensitiveInfoMaskingDesc =>
+      'เมื่อเปิดใช้งาน ข้อมูลที่เกี่ยวข้องในข้อความที่ส่งถึงโมเดลและในบันทึกการตรวจสอบภายในจะถูกแทนที่ด้วย \'*\' เพื่อป้องกันการรั่วไหลของข้อมูลส่วนบุคคลแบบตัวอักษร';
+
+  @override
+  String get maskPhoneTitle => 'ปกปิดเบอร์โทรศัพท์';
+
+  @override
+  String get maskPhoneSubtitle => 'แทนที่เบอร์โทรศัพท์ในข้อความด้วย \'*\'';
+
+  @override
+  String get maskIdCardTitle => 'ปกปิดเลขบัตรประจำตัวประชาชน';
+
+  @override
+  String get maskIdCardSubtitle =>
+      'แทนที่เลขบัตรประจำตัวประชาชนในข้อความด้วย \'*\'';
+
+  @override
+  String get sessionDetails => 'รายละเอียดเซสชัน';
+
+  @override
+  String get modelDetails => 'รายละเอียดโมเดล';
+
+  @override
+  String modelDetailsWithPlatform(String platform) {
+    return 'รายละเอียดโมเดล · $platform';
+  }
+
+  @override
+  String get japanese => 'ภาษาญี่ปุ่น';
+
+  @override
+  String get japaneseDesc => 'ภาษาญี่ปุ่น';
+
+  @override
+  String get korean => 'เกาหลี';
+
+  @override
+  String get koreanDesc => 'เกาหลี';
+
+  @override
+  String get thai => 'ไทย';
+
+  @override
+  String get thaiDesc => 'ไทย';
+
+  @override
+  String get vietnamese => 'เวียดนาม';
+
+  @override
+  String get vietnameseDesc => 'เวียดนาม';
+
+  @override
+  String get french => 'ฝรั่งเศส';
+
+  @override
+  String get frenchDesc => 'ฝรั่งเศส';
+
+  @override
+  String get german => 'เยอรมัน';
+
+  @override
+  String get germanDesc => 'เยอรมัน';
 }

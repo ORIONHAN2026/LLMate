@@ -548,7 +548,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: const Color(0xFF2563EB),
               ),
               const SizedBox(width: 12),
-              Text('使用量仪表盘', style: const TextStyle(fontSize: 12)),
+              Text(l10n.usageDashboard, style: const TextStyle(fontSize: 12)),
             ],
           ),
           onTap: () {
@@ -882,7 +882,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
           ),
           visualDensity: VisualDensity.compact,
-          tooltip: '使用量仪表盘',
+          tooltip: AppLocalizations.of(context)!.usageDashboard,
         ),
         // 会话详情按钮 - 以 Tab 形式查看完整会话配置
         IconButton(
@@ -899,7 +899,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
           ),
           visualDensity: VisualDensity.compact,
-          tooltip: '会话详情',
+          tooltip: AppLocalizations.of(context)!.sessionDetails,
         ),
         Padding(
           padding: const EdgeInsets.only(right: 4),

@@ -52,7 +52,28 @@ class SystemSetting {
     s.useSystemTheme.value = _asBool(json['useSystemTheme']) ?? false;
     s.isDarkMode.value = _asBool(json['isDarkMode']) ?? false;
     final lang = json['appLanguage'] as String? ?? 'zh';
-    s.locale.value = lang == 'en' ? const Locale('en') : const Locale('zh');
+    Locale toLocale(String l) {
+      switch (l) {
+        case 'en':
+          return const Locale('en');
+        case 'ja':
+          return const Locale('ja');
+        case 'th':
+          return const Locale('th');
+        case 'vi':
+          return const Locale('vi');
+        case 'ko':
+          return const Locale('ko');
+        case 'fr':
+          return const Locale('fr');
+        case 'de':
+          return const Locale('de');
+        default:
+          return const Locale('zh');
+      }
+    }
+
+    s.locale.value = toLocale(lang);
 
     // 域名字段：优先读旧版嵌套 domainConfig，其次读新版扁平字段
     final dc = json['domainConfig'];

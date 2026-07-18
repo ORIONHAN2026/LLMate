@@ -30,6 +30,12 @@ class SettingsController extends GetxController {
   static const supportedLocales = [
     Locale('zh'),
     Locale('en'),
+    Locale('ja'),
+    Locale('th'),
+    Locale('vi'),
+    Locale('ko'),
+    Locale('fr'),
+    Locale('de'),
   ];
 
   /// 设置数据库路径：~/.llmate/settings.db
@@ -83,7 +89,18 @@ class SettingsController extends GetxController {
       if (data != null && data.isNotEmpty) {
         legacyJson['useSystemTheme'] = _b(data['useSystemTheme']) ?? false;
         legacyJson['isDarkMode'] = _b(data['isDarkMode']) ?? false;
-        legacyJson['appLanguage'] = (data['appLanguage'] == 'en') ? 'en' : 'zh';
+        final _lang = data['appLanguage']?.toString() ?? 'zh';
+        legacyJson['appLanguage'] = const [
+          'en',
+          'ja',
+          'th',
+          'vi',
+          'ko',
+          'fr',
+          'de',
+        ].contains(_lang)
+            ? _lang
+            : 'zh';
         if (data['domainConfig'] is Map<String, dynamic>) {
           final dc = data['domainConfig'] as Map<String, dynamic>;
           legacyJson['domain'] = _emptyToNull(dc['domain']) ?? '';
@@ -112,8 +129,18 @@ class SettingsController extends GetxController {
         legacyJson['useSystemTheme'] =
             _b(await _getSetting('useSystemTheme')) ?? false;
         legacyJson['isDarkMode'] = _b(await _getSetting('isDarkMode')) ?? false;
-        legacyJson['appLanguage'] =
-            (await _getSetting('appLanguage') == 'en') ? 'en' : 'zh';
+        final _legacyLang = await _getSetting('appLanguage');
+        legacyJson['appLanguage'] = const [
+          'en',
+          'ja',
+          'th',
+          'vi',
+          'ko',
+          'fr',
+          'de',
+        ].contains(_legacyLang)
+            ? _legacyLang
+            : 'zh';
         legacyJson['certPath'] = _emptyToNull(await _getSetting('domainConfig_certPath'));
         legacyJson['keyPath'] = _emptyToNull(await _getSetting('domainConfig_keyPath'));
         legacyJson['httpsEnabled'] =

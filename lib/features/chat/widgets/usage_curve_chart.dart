@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../services/usage_loader.dart';
+import 'package:llmate/l10n/app_localizations.dart';
 
 /// 用量曲线图组件 - 使用 CustomPaint 绘制，无第三方依赖
 class UsageCurveChart extends StatelessWidget {
@@ -25,6 +26,7 @@ class UsageCurveChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     if (data.isEmpty) {
       return Container(
@@ -37,7 +39,7 @@ class UsageCurveChart extends StatelessWidget {
           ),
         ),
         child: Center(
-          child: Text('暂无用量数据',
+          child: Text(l10n.noUsageData,
               style: TextStyle(
                   fontSize: 13,
                   color: theme.colorScheme.onSurface.withOpacity(0.4))),
@@ -45,10 +47,10 @@ class UsageCurveChart extends StatelessWidget {
       );
     }
 
-    return _buildChart(theme, isDark);
+    return _buildChart(theme, isDark, l10n);
   }
 
-  Widget _buildChart(ThemeData theme, bool isDark) {
+  Widget _buildChart(ThemeData theme, bool isDark, AppLocalizations l10n) {
     final maxTokens = showTokens
         ? data.map((p) => p.totalTokens).reduce(max)
         : 0;
@@ -73,7 +75,7 @@ class UsageCurveChart extends StatelessWidget {
                 const SizedBox(width: 8),
                 _legendDot(const Color(0xFF2563EB)),
                 const SizedBox(width: 6),
-                Text('Token',
+                Text(l10n.tokenToggle,
                     style: TextStyle(
                         fontSize: 11,
                         color: theme.colorScheme.onSurface.withOpacity(0.6))),
@@ -86,7 +88,7 @@ class UsageCurveChart extends StatelessWidget {
                 const SizedBox(width: 8),
                 _legendDot(const Color(0xFFDC2626)),
                 const SizedBox(width: 6),
-                Text('费用 ($currencySymbol)',
+                Text(l10n.chartLegendCost(currencySymbol),
                     style: TextStyle(
                         fontSize: 11,
                         color: theme.colorScheme.onSurface.withOpacity(0.6))),

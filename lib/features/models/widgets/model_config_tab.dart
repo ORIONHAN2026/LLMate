@@ -114,7 +114,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               text: loc.mcpSettings,
               icon: const Icon(Icons.grid_view, size: 16),
             ),
-            Tab(text: '安全设置', icon: const Icon(Icons.security, size: 16)),
+            Tab(text: loc.securitySettings, icon: const Icon(Icons.security, size: 16)),
           ],
         ),
         Expanded(
@@ -204,8 +204,8 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   }
 
   // ========== 安全设置 Tab（敏感信息脱敏开关） ==========
-  // 注：本 Tab 文案使用中文硬编码，未接入 gen-l10n，避免改动多语言资源文件。
   Widget _buildSecurityTab() {
+    final loc = AppLocalizations.of(context)!;
     final maskPhone = _currentModel.maskPhone;
     final maskIdCard = _currentModel.maskIdCard;
 
@@ -215,7 +215,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '敏感信息脱敏',
+            loc.sensitiveInfoMasking,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -224,7 +224,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           ),
           const SizedBox(height: 4),
           Text(
-            '开启后，发送给大模型的消息及本地审计日志中的对应信息将被 * 号替换，防止明文隐私泄露。',
+            loc.sensitiveInfoMaskingDesc,
             style: TextStyle(
               fontSize: 11,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -232,15 +232,15 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           ),
           const SizedBox(height: 12),
           _buildSecuritySwitch(
-            title: '手机号脱敏',
-            subtitle: '将消息中的手机号替换为 * 号',
+            title: loc.maskPhoneTitle,
+            subtitle: loc.maskPhoneSubtitle,
             value: maskPhone,
             onChanged: (v) => _updateSecuritySetting(maskPhone: v),
           ),
           const SizedBox(height: 8),
           _buildSecuritySwitch(
-            title: '身份证号脱敏',
-            subtitle: '将消息中的身份证号替换为 * 号',
+            title: loc.maskIdCardTitle,
+            subtitle: loc.maskIdCardSubtitle,
             value: maskIdCard,
             onChanged: (v) => _updateSecuritySetting(maskIdCard: v),
           ),

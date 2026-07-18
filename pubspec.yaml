@@ -44,7 +44,9 @@ dependencies:
   get: ^4.7.2
   path_provider: ^2.1.3
   path: ^1.8.3  # 路径操作库
-  sembast: ^3.7.0  # 嵌入式 NoSQL 数据库（审计日志存储，~/.llmate/audit.db）
+  drift: ^2.25.0  # SQLite 数据库（Drift ORM）
+  drift_flutter: ^0.2.2  # Drift 跨平台数据库打开工具
+  sqlite3_flutter_libs: ^0.5.42  # 各平台预编译的 SQLite 原生库
   shelf: ^1.4.2
   shelf_router: ^1.1.4
   shelf_cors_headers: ^0.1.5
@@ -70,6 +72,8 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.14.4
   msix: ^3.16.8
+  drift_dev: ^2.25.0  # Drift 代码生成
+  build_runner: ^2.4.13  # 代码生成运行器
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

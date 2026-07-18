@@ -1,73 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart' as p;
-import 'package:sembast/sembast_io.dart';
 
 import '../models/model.dart';
-import '../../../data/storage_paths.dart';
+import '../data/database.dart';
 
 class ModelController extends GetxController {
-  /// 模型数据库路径：~/.llmate/models.db
-  static String get _dbPath => p.join(StoragePaths.root, 'models.db');
-
-  /// sembast store 名称（每个 record 的 key 为 modelId）
-  static const String _storeName = 'models';
-  final _store = stringMapStoreFactory.store(_storeName);
-
-  Database? _db;
-
-  /// 懒加载并打开 sembast 数据库（单例）
-  Future<Database> get _database async {
-    if (_db != null) return _db!;
-    await StoragePaths.ensureRoot();
-    _db = await databaseFactoryIo.openDatabase(_dbPath);
-    return _db!;
-  }
+  /// 模型存储使用 Drift / SQLite（单例 [appDatabase]，~/.llmate/llmate.sqlite）
 
   // ========== 模型持久化存储操作 ==========
 
-  /// 加载所有模型数据（从 models.db 读取）
+  /// 加载所有模型数据
   Future<List<ChatModel>> loadModels() async {
     try {
-      final db = await _database;
-      final records = await _store.find(db);
-      return records
-          .map((r) => ChatModel.fromMap(r.value as Map<String, dynamic>))
-          .toList();
+      return await appDatabase.getAllModels();
     } catch (e) {
       debugPrint('加载模型失败: $e');
       return [];
     }
   }
 
-  /// 新增单个模型（按 modelId 写入 models.db）
+  /// 新增单个模型（按 modelId 写入）
   Future<void> addModel(ChatModel model) async {
     if (model.modelId.isEmpty) return;
     try {
-      final db = await _database;
-      await _store.record(model.modelId).put(db, model.toMap());
+      await appDatabase.upsertModel(model);
     } catch (e) {
       debugPrint('新增模型失败: $e');
     }
   }
 
-  /// 更新单个模型（按 modelId 覆盖 models.db 中对应记录）
+  /// 更新单个模型（按 modelId 覆盖对应记录）
   Future<void> updateModel(ChatModel model) async {
     if (model.modelId.isEmpty) return;
     try {
-      final db = await _database;
-      await _store.record(model.modelId).put(db, model.toMap());
+      await appDatabase.upsertModel(model);
     } catch (e) {
       debugPrint('更新模型失败: $e');
     }
   }
 
-  /// 删除单个模型（按 modelId 从 models.db 中移除）
+  /// 删除单个模型（按 modelId 移除）
   Future<void> deleteModel(String modelId) async {
     if (modelId.isEmpty) return;
     try {
-      final db = await _database;
-      await _store.record(modelId).delete(db);
+      await appDatabase.deleteModel(modelId);
     } catch (e) {
       debugPrint('删除模型失败: $e');
     }
@@ -77,10 +53,7 @@ class ModelController extends GetxController {
   Future<ChatModel?> getModel(String modelId) async {
     if (modelId.isEmpty) return null;
     try {
-      final db = await _database;
-      final record = await _store.record(modelId).get(db);
-      if (record == null) return null;
-      return ChatModel.fromMap(record as Map<String, dynamic>);
+      return await appDatabase.getModel(modelId);
     } catch (e) {
       debugPrint('查询模型失败: $e');
       return null;

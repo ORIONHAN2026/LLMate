@@ -2,11 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart' as p;
-import 'package:sembast/sembast_io.dart';
 
 import '../core/http/sensitive_masker.dart';
-import '../data/storage_paths.dart';
+import '../data/database.dart';
 import '../models/audit.dart';
 
 // 供既有调用方沿用：直接 `import 'audit_controller.dart'` 即可访问 [AuditLog]，
@@ -15,15 +13,13 @@ export '../models/audit.dart';
 
 /// 审计控制器
 ///
-/// 集中负责请求/响应审计日志的「读」与「写」，底层使用嵌入式 NoSQL 数据库
-/// [sembast]，数据库文件位于 `~/.llmate/autits.db`，store 名为 `audit_logs`。
+/// 集中负责请求/响应审计日志的「读」与「写」，底层使用 Drift / SQLite 数据库
+/// `~/.llmate/llmate.sqlite` 的 `audit_rows` 表。
 ///
-///   - 写：[saveRequestResponseLog] 将日志写入 `autits.db`，并在内存保留
+///   - 写：[saveRequestResponseLog] 将日志写入 SQLite，并在内存保留
 ///     最近若干条供 UI 展示。落盘前会按风控开关（[SensitiveMaskOptions]）对
 ///     手机号 / 身份证号等敏感信息进行 * 号脱敏。
 ///   - 读：[loadAuditLogs] / [loadAuditById] 从数据库加载审计日志（供审计查看界面）。
-///   - 旧版基于 `~/.llmate/audit/*.json` 的审计文件会在首次打开数据库时
-///     自动迁移进 `autits.db` 并删除旧目录，避免数据丢失。
 ///
 /// 该控制器在 [LocalHttpService] 中被调用：每次大模型请求结束后，由 HTTP 层
 /// 调用 [saveRequestResponseLog] 把本次请求/响应写入审计日志。
@@ -41,23 +37,6 @@ class AuditController extends GetxController {
 
   /// 内存缓存最大保留条数
   static const int _maxCached = 200;
-
-  /// 审计数据库路径：~/.llmate/autits.db
-  static String get _dbPath => p.join(StoragePaths.root, 'autits.db');
-
-  /// sembast store 名称
-  static const String _storeName = 'audit_logs';
-  final _store = stringMapStoreFactory.store(_storeName);
-
-  Database? _db;
-
-  /// 懒加载并打开 sembast 数据库（单例）
-  Future<Database> get _database async {
-    if (_db != null) return _db!;
-    await StoragePaths.ensureRoot();
-    _db = await databaseFactoryIo.openDatabase(_dbPath);
-    return _db!;
-  }
 
   /// 写出前对原始请求体字符串做解析 + 脱敏
   static dynamic _parseAndMaskOrigin(
@@ -102,11 +81,10 @@ class AuditController extends GetxController {
         error: error,
       );
 
-      final db = await _database;
       if (entry.requestId != null && entry.requestId!.isNotEmpty) {
-        await _store.record(entry.requestId!).put(db, entry.toJson());
+        await appDatabase.upsertAudit(entry);
       } else {
-        await _store.add(db, entry.toJson());
+        await appDatabase.insertAudit(entry);
       }
 
       // 更新内存缓存（最新在前）
@@ -130,15 +108,7 @@ class AuditController extends GetxController {
     int limit = _maxCached,
   }) async {
     try {
-      final db = await _database;
-      final finder = Finder(
-        filter:
-            sessionId != null ? Filter.equals('sessionId', sessionId) : null,
-        sortOrders: [SortOrder('timestamp', false)],
-        limit: limit,
-      );
-      final records = await _store.find(db, finder: finder);
-      return records.map((r) => AuditLog.fromJson(r.value)).toList();
+      return await appDatabase.getAudits(sessionId: sessionId, limit: limit);
     } catch (e) {
       debugPrint('⚠️ [Audit] 读取审计日志失败: $e');
       return [];
@@ -148,14 +118,7 @@ class AuditController extends GetxController {
   /// ── 读：按 requestId 读取单条审计日志 ──
   Future<AuditLog?> loadAuditById(String requestId) async {
     try {
-      final db = await _database;
-      final finder = Finder(
-        filter: Filter.equals('requestId', requestId),
-        limit: 1,
-      );
-      final records = await _store.find(db, finder: finder);
-      if (records.isEmpty) return null;
-      return AuditLog.fromJson(records.first.value);
+      return await appDatabase.getAuditById(requestId);
     } catch (e) {
       debugPrint('⚠️ [Audit] 按 requestId 读取失败: $e');
       return null;
@@ -165,8 +128,7 @@ class AuditController extends GetxController {
   /// ── 写：清空所有审计日志（数据库 + 内存）──
   Future<void> clearAuditLogs() async {
     try {
-      final db = await _database;
-      await _store.delete(db);
+      await appDatabase.clearAudits();
       recentLogs.clear();
       debugPrint('🧹 [Audit] 已清空审计日志');
     } catch (e) {
@@ -179,11 +141,10 @@ class AuditController extends GetxController {
   /// 新增单条审计日志（若 requestId 非空则以其为 key upsert，否则追加）
   Future<void> addAudit(AuditLog log) async {
     try {
-      final db = await _database;
       if (log.requestId != null && log.requestId!.isNotEmpty) {
-        await _store.record(log.requestId!).put(db, log.toJson());
+        await appDatabase.upsertAudit(log);
       } else {
-        await _store.add(db, log.toJson());
+        await appDatabase.insertAudit(log);
       }
       recentLogs.insert(0, log);
       if (recentLogs.length > _maxCached) {
@@ -200,12 +161,11 @@ class AuditController extends GetxController {
     return loadAuditById(requestId);
   }
 
-  /// 更新单条审计日志（按 requestId 定位并 put）
+  /// 更新单条审计日志（按 requestId 定位并 upsert）
   Future<void> updateAudit(AuditLog log) async {
     if (log.requestId == null || log.requestId!.isEmpty) return;
     try {
-      final db = await _database;
-      await _store.record(log.requestId!).put(db, log.toJson());
+      await appDatabase.upsertAudit(log);
       final idx = recentLogs.indexWhere((l) => l.requestId == log.requestId);
       if (idx != -1) recentLogs[idx] = log;
     } catch (e) {
@@ -217,8 +177,7 @@ class AuditController extends GetxController {
   Future<void> deleteAudit(String requestId) async {
     if (requestId.isEmpty) return;
     try {
-      final db = await _database;
-      await _store.record(requestId).delete(db);
+      await appDatabase.deleteAudit(requestId);
       recentLogs.removeWhere((l) => l.requestId == requestId);
     } catch (e) {
       debugPrint('⚠️ [Audit] 删除单条审计失败: $e');

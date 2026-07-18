@@ -1,6 +1,6 @@
 /// 单条审计日志条目
 ///
-/// 持久化于 sembast 数据库 `~/.llmate/autits.db` 的 `audit_logs` store 中。
+/// 持久化于 Drift / SQLite 数据库 `~/.llmate/llmate.sqlite` 的 `audit_rows` 表中。
 class AuditLog {
   final String? requestId;
   final DateTime timestamp;

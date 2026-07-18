@@ -1,132 +1,25 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:sembast/sembast_io.dart';
-import '../../../data/storage_paths.dart';
 import 'package:llmate/models/chat/mcp.dart';
+import 'package:llmate/data/database.dart';
 
 /// MCP 存储结构管理器
 ///
-/// 数据持久化于嵌入式 NoSQL 数据库 `~/.llmate/mcps.db`（sembast，`mcps` store，
-/// 每条 record 的 key 为 MCP 名称，value 为合并后的完整配置 `mcp.toJson()`）。
-///
-/// 旧版本使用目录结构 `~/.llmate/mcps/{mcp_name}/server.json` 存储，
-/// 首次打开数据库时会自动将旧目录中的数据迁移进 mcps.db（旧目录保留作备份）。
+/// 数据持久化于 Drift / SQLite 单例数据库 [appDatabase]（~/.llmate/llmate.sqlite，
+/// `mcps` 表，每条记录的主键为 MCP 名称，data 为合并后的完整配置 `mcp.toJson()`）。
 class McpStorageManager {
-  /// MCP 数据库路径：~/.llmate/mcps.db
-  static String get _dbPath => p.join(StoragePaths.root, 'mcps.db');
-
-  /// sembast store 名称（每条 record 的 key 为 MCP 名称）
-  static const String _storeName = 'mcps';
-  static final _store = stringMapStoreFactory.store(_storeName);
-
-  static Database? _db;
-  static bool _migrated = false;
-
-  /// 懒加载并打开 sembast 数据库（单例）
-  static Future<Database> get _database async {
-    if (_db != null) return _db!;
-    await StoragePaths.ensureRoot();
-    _db = await databaseFactoryIo.openDatabase(_dbPath);
-    await _maybeMigrate(_db!);
-    return _db!;
-  }
-
-  /// 一次性将旧版目录 `mcps/{name}/server.json` 迁移进 mcps.db
-  ///
-  /// 仅在数据库中尚不存在同名记录时写入，避免覆盖新数据；旧目录保留作备份。
-  static Future<void> _maybeMigrate(Database db) async {
-    if (_migrated) return;
-    _migrated = true;
-    try {
-      final mcpsDir = Directory(StoragePaths.mcpsDir);
-      if (!await mcpsDir.exists()) return;
-
-      int migrated = 0;
-      await for (final entity in mcpsDir.list()) {
-        if (entity is! Directory) continue;
-        final name = p.basename(entity.path);
-        final data = await _loadMcpFromDir(entity.path, name);
-        if (data == null) continue;
-
-        final existing = await _store.record(name).get(db);
-        if (existing == null) {
-          await _store.record(name).put(db, data.mcp.toJson());
-          migrated++;
-        }
-      }
-      if (migrated > 0) {
-        debugPrint('📦 [MCP] 已迁移 $migrated 个旧 MCP 配置至 mcps.db');
-      }
-    } catch (e) {
-      debugPrint('⚠️ [MCP] 迁移旧 mcps 目录失败: $e');
-    }
-  }
-
-  /// 从旧版目录加载单个 MCP（合并 server.json + config.json）—— 仅供迁移使用
-  static Future<McpData?> _loadMcpFromDir(String dirPath, String name) async {
-    final serverFile = File('$dirPath/server.json');
-    if (!await serverFile.exists()) return null;
-
-    try {
-      var serverJson =
-          jsonDecode(await serverFile.readAsString()) as Map<String, dynamic>;
-
-      final configFile = File('$dirPath/config.json');
-      if (await configFile.exists()) {
-        final configJson =
-            jsonDecode(await configFile.readAsString()) as Map<String, dynamic>;
-        final merged = <String, dynamic>{...serverJson};
-        merged['name'] =
-            serverJson['name'] as String? ?? configJson['name'] as String? ?? name;
-        if (configJson['description'] != null) {
-          merged['description'] ??= configJson['description'];
-        }
-        merged['tools'] = configJson['tools'] ?? [];
-        if (configJson['version'] != null) merged['version'] = configJson['version'];
-        if (configJson['prompt'] != null) merged['prompt'] = configJson['prompt'];
-        if (configJson['lastUpdated'] != null) {
-          merged['lastUpdated'] = configJson['lastUpdated'];
-        }
-        serverJson = merged;
-      }
-
-      final mcp = Mcp.fromJson(name, serverJson);
-      return McpData(name: name, mcp: mcp, directory: dirPath);
-    } catch (e) {
-      debugPrint('⚠️ 加载旧 MCP 失败: $name, $e');
-      return null;
-    }
-  }
-
-  /// 获取所有已安装的 MCP（从 mcps.db 读取）
+  /// 获取所有已安装的 MCP（从 SQLite 读取）
   static Future<List<Mcp>> loadAll() async {
     try {
-      final db = await _database;
-      final records = await _store.find(db);
-      final list = <Mcp>[];
-      for (final rec in records) {
-        try {
-          final value = rec.value;
-          final name = value['name'] as String? ?? rec.key;
-          list.add(Mcp.fromJson(name, value));
-        } catch (e) {
-          debugPrint('⚠️ 解析 MCP 记录失败: ${rec.key}, $e');
-        }
-      }
-      return list;
+      return await appDatabase.getAllMcps();
     } catch (e) {
       debugPrint('⚠️ 加载 MCP 列表失败: $e');
       return [];
     }
   }
 
-  /// 保存 MCP（写入 mcps.db，key 为 mcp.name）
+  /// 保存 MCP（写入 SQLite，主键为 mcp.name）
   static Future<void> save(Mcp mcp) async {
-    final db = await _database;
-    await _store.record(mcp.name).put(db, mcp.toJson());
+    await appDatabase.upsertMcp(mcp);
   }
 
   /// 合并连接配置（serverJson）与元信息（config）
@@ -164,25 +57,20 @@ class McpStorageManager {
   /// 删除 MCP
   static Future<void> delete(String name) async {
     if (name.isEmpty) return;
-    final db = await _database;
-    await _store.record(name).delete(db);
+    await appDatabase.deleteMcp(name);
   }
 
   /// 检查 MCP 是否存在
   static Future<bool> exists(String name) async {
     if (name.isEmpty) return false;
-    final db = await _database;
-    return _store.record(name).exists(db);
+    return await appDatabase.getMcp(name) != null;
   }
 
   /// 按名称加载单个 MCP 数据
   static Future<Mcp?> loadByName(String name) async {
     if (name.isEmpty) return null;
     try {
-      final db = await _database;
-      final value = await _store.record(name).get(db);
-      if (value == null) return null;
-      return Mcp.fromJson(value['name'] as String? ?? name, value);
+      return await appDatabase.getMcp(name);
     } catch (e) {
       debugPrint('⚠️ 加载 MCP 失败: $name, $e');
       return null;
@@ -194,9 +82,8 @@ class McpStorageManager {
 class McpData {
   final String name;
   final Mcp mcp;
-  final String? directory;
 
-  McpData({required this.name, required this.mcp, this.directory});
+  McpData({required this.name, required this.mcp});
 
   /// 获取描述
   String? get description => mcp.description;

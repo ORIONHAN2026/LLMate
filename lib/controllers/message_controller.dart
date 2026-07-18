@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart' as p;
-import 'package:sembast/sembast_io.dart';
 
-import '../models/chat/message.dart';
+import '../data/database.dart';
 import '../data/file_storage.dart';
 import '../data/storage_paths.dart';
+import '../models/chat/message.dart';
 
 /// 消息操作的独立控制器
 ///
@@ -20,76 +19,17 @@ import '../data/storage_paths.dart';
 ///     不再提供批量写入 / 批量替换。需要变更多条消息时，
 ///     由调用方逐条调用单条方法完成。
 ///
-/// 数据存储在 sembast 数据库 `~/.llmate/messages.db`
-/// （store 名 `messages`，每个 record 的 key 为 sessionId，
-/// 其 `messages` 字段为该会话的消息列表）。
+/// 数据统一存储在 Drift / SQLite 数据库 `~/.llmate/llmate.sqlite`
+/// 的 `message_rows` 表（每个会话一行，data 为该会话的消息列表 JSON）。
 class MessageController extends GetxController {
   static MessageController get instance => Get.find<MessageController>();
-
-  /// 消息数据库路径：~/.llmate/messages.db
-  static String get _dbPath => p.join(StoragePaths.root, 'messages.db');
-
-  /// sembast store 名称（每个 record 的 key 为 sessionId）
-  static const String _storeName = 'messages';
-  final _store = stringMapStoreFactory.store(_storeName);
-
-  Database? _db;
-
-  /// 懒加载并打开 sembast 数据库（单例）
-  Future<Database> get _database async {
-    if (_db != null) return _db!;
-    await StoragePaths.ensureRoot();
-    _db = await databaseFactoryIo.openDatabase(_dbPath);
-    return _db!;
-  }
-
-  /// 将消息 Map 解析为 [ChatMessage]，解析失败返回 null
-  static ChatMessage? _parseMessage(Map<String, dynamic> m) {
-    try {
-      return ChatMessage.fromJson(m);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// 读取会话的消息列表（内部辅助）
-  Future<List<Map<String, dynamic>>> _readList(
-    Database db,
-    String sessionId,
-  ) async {
-    final record =
-        await _store.record(sessionId).get(db) as Map<String, dynamic>?;
-    if (record != null && record['messages'] is List) {
-      return (record['messages'] as List).cast<Map<String, dynamic>>().toList();
-    }
-    return [];
-  }
-
-  /// 将单条消息写入会话的消息列表（按 msgId upsert，内部辅助）
-  Future<void> _upsertMessage(Database db, ChatMessage message) async {
-    final sessionId = message.sessionId;
-    if (sessionId == null || message.msgId.isEmpty) return;
-    final list = await _readList(db, sessionId);
-    final idx = list.indexWhere((m) => m['id'] == message.msgId);
-    final json = message.toJson();
-    if (idx != -1) {
-      list[idx] = json;
-    } else {
-      list.add(json);
-    }
-    await _store.record(sessionId).put(db, {
-      'sessionId': sessionId,
-      'messages': list,
-    });
-  }
 
   // ==================== 单条消息：增 / 删 / 改 / 查 ====================
 
   /// 新增单条消息（按 msgId upsert 到对应会话的消息列表）
   Future<void> addMessage(ChatMessage message) async {
     try {
-      final db = await _database;
-      await _upsertMessage(db, message);
+      await appDatabase.upsertMessage(message);
     } catch (e) {
       debugPrint('新增单条消息失败: $e');
     }
@@ -98,8 +38,7 @@ class MessageController extends GetxController {
   /// 更新单条消息（按 msgId upsert 到对应会话的消息列表）
   Future<void> updateMessage(ChatMessage message) async {
     try {
-      final db = await _database;
-      await _upsertMessage(db, message);
+      await appDatabase.upsertMessage(message);
     } catch (e) {
       debugPrint('更新单条消息失败: $e');
     }
@@ -110,13 +49,7 @@ class MessageController extends GetxController {
     final sessionId = message.sessionId;
     if (sessionId == null || message.msgId.isEmpty) return;
     try {
-      final db = await _database;
-      final list = await _readList(db, sessionId);
-      final newList = list.where((m) => m['id'] != message.msgId).toList();
-      await _store.record(sessionId).put(db, {
-        'sessionId': sessionId,
-        'messages': newList,
-      });
+      await appDatabase.deleteMessageById(sessionId, message.msgId);
     } catch (e) {
       debugPrint('删除单条消息 DB 失败: $e');
     }
@@ -126,12 +59,7 @@ class MessageController extends GetxController {
   Future<ChatMessage?> getMessage(String sessionId, String msgId) async {
     if (sessionId.isEmpty || msgId.isEmpty) return null;
     try {
-      final db = await _database;
-      final list = await _readList(db, sessionId);
-      for (final m in list) {
-        if (m['id'] == msgId) return _parseMessage(m);
-      }
-      return null;
+      return await appDatabase.getMessage(sessionId, msgId);
     } catch (e) {
       debugPrint('查询单条消息失败: $e');
       return null;
@@ -140,12 +68,10 @@ class MessageController extends GetxController {
 
   // ==================== 多个消息：仅载入 / 查询 ====================
 
-  /// 加载指定会话的消息列表（从 messages.db 读取）
+  /// 加载指定会话的消息列表（从 SQLite 读取）
   Future<List<ChatMessage>> loadMessages(String sessionId) async {
     try {
-      final db = await _database;
-      final list = await _readList(db, sessionId);
-      return list.map(_parseMessage).whereType<ChatMessage>().toList();
+      return await appDatabase.loadMessages(sessionId);
     } catch (e) {
       debugPrint('加载会话消息失败: $e');
       return [];
@@ -156,11 +82,7 @@ class MessageController extends GetxController {
   Future<void> clearMessages(String sessionId) async {
     if (sessionId.isEmpty) return;
     try {
-      final db = await _database;
-      await _store.record(sessionId).put(db, {
-        'sessionId': sessionId,
-        'messages': <Map<String, dynamic>>[],
-      });
+      await appDatabase.clearMessages(sessionId);
     } catch (e) {
       debugPrint('清空会话消息失败: $e');
     }
@@ -169,8 +91,7 @@ class MessageController extends GetxController {
   /// 删除指定会话的全部消息（并清理会话目录 memory/mcp/business 等，用于删除会话）
   Future<void> deleteMessagesBySession(String sessionId) async {
     try {
-      final db = await _database;
-      await _store.record(sessionId).delete(db);
+      await appDatabase.deleteMessagesBySession(sessionId);
     } catch (e) {
       debugPrint('删除会话消息 DB 失败: $e');
     }

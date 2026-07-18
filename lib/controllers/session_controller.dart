@@ -1,73 +1,24 @@
 import 'package:llmate/models/chat/message.dart';
-import 'package:llmate/models/chat/setting.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart' as p;
-import 'package:sembast/sembast_io.dart';
 
+import '../data/database.dart';
 import '../models/chat/session.dart';
 import '../models/model.dart';
-import '../data/storage_service.dart';
 
 import './model_controller.dart';
 import './mcp_controller.dart';
 import './message_controller.dart';
 
-/// 从会话存储实体中解析 MCP 文件夹名（兼容旧格式 mcpId / mcp Map）
-String? _resolveMcpFolder(Map<String, dynamic> entity) {
-  final dynamic raw = entity['mcp'] ?? entity['mcpId'];
-  if (raw is String) {
-    return raw.startsWith('mcp_') ? raw.substring(4) : raw;
-  } else if (raw is Map<String, dynamic>) {
-    final id = (raw['mcpId'] as String? ?? '');
-    if (id.isEmpty) return null;
-    return id.startsWith('mcp_') ? id.substring(4) : id;
-  }
-  return null;
-}
-
-/// 从会话存储实体中解析 MCP 文件夹名列表（兼容旧格式）
-List<String>? _resolveMcpFolders(Map<String, dynamic> entity) {
-  // 新格式: mcps 列表
-  if (entity['mcps'] is List) {
-    return (entity['mcps'] as List).cast<String>();
-  }
-  // 旧格式: 单个 mcp
-  final single = _resolveMcpFolder(entity);
-  return single != null ? [single] : null;
-}
-
 class SessionController extends GetxController {
   var sessions = <ChatSession>[].obs;
   var currentSession = Rxn<ChatSession>();
 
-  /// 会话数据库路径：~/.llmate/sessions.db
-  static String get _dbPath => p.join(StoragePaths.root, 'sessions.db');
-
-  /// sembast store 名称（每个 record 的 key 为 sessionId）
-  static const String _storeName = 'sessions';
-  final _store = stringMapStoreFactory.store(_storeName);
-
-  Database? _db;
-
-  /// 懒加载并打开 sembast 数据库（单例）
-  Future<Database> get _database async {
-    if (_db != null) return _db!;
-    await StoragePaths.ensureRoot();
-    _db = await databaseFactoryIo.openDatabase(_dbPath);
-    return _db!;
-  }
-
-  /// 将单个会话 upsert 到数据库（key 为 sessionId）
-  Future<void> _upsertSession(Database db, ChatSession session) async {
-    final data = _sessionToMap(session);
-    data['isCurrent'] = currentSession.value?.sessionId == session.sessionId;
-    await _store.record(session.sessionId).put(db, data);
-  }
+  /// 会话存储已迁移至 Drift / SQLite（单例 [appDatabase]，~/.llmate/llmate.sqlite）
 
   /// 用新的完整列表替换内存列表，并逐条 upsert 每个会话到数据库。
   ///
-  /// 与 MessageController 原则一致：多条会话的持久化通过逐条 [_upsertSession]
+  /// 与 MessageController 原则一致：多条会话的持久化通过逐条 upsert
   /// 完成，不再整体替换后删除旧记录。
   Future<void> setSessions(List<ChatSession> newSessions) async {
     sessions.value = newSessions;
@@ -170,13 +121,13 @@ class SessionController extends GetxController {
     return session;
   }
 
-  /// 合并持久化：会话元数据（sessions.db）+ 消息（委托 MessageController）
+  /// 合并持久化：会话元数据（SQLite）+ 消息（委托 MessageController）
   Future<void> _persistSessionAndCurrent(
     ChatSession updatedSession, {
     required bool isCurrent,
   }) async {
     try {
-      // === 1. 持久化所有会话元数据到 sessions.db（逐条 upsert）===
+      // === 1. 持久化所有会话元数据到 SQLite（逐条 upsert）===
       await _persistSessions();
       // 消息由 MessageController 以单条增删改方式落盘，此处不再批量写入。
     } catch (e) {
@@ -293,10 +244,9 @@ class SessionController extends GetxController {
       debugPrint('删除会话失败: $e');
     }
 
-    // 从 sessions.db 删除
+    // 从 SQLite 删除
     try {
-      final db = await _database;
-      await _store.record(sessionId).delete(db);
+      await appDatabase.deleteSessionRow(sessionId);
     } catch (e) {
       debugPrint('删除会话 DB 失败: $e');
     }
@@ -351,26 +301,22 @@ class SessionController extends GetxController {
     await _persistSessions();
   }
 
-  /// 加载所有会话和当前会话（消息懒加载，从 sessions.db 读取）
+  /// 加载所有会话和当前会话（消息懒加载，从 SQLite 读取）
   Future<void> loadAll() async {
     try {
-      final db = await _database;
-      final records = await _store.find(db);
+      List<ChatSession> loaded = await appDatabase.getAllSessions();
 
-      final List<ChatSession> loaded = [];
-      ChatSession? current;
-
-      for (final rec in records) {
-        final entity = rec.value as Map<String, dynamic>;
-        final session = await _mapToSession(entity);
-        loaded.add(session);
-        if (entity['isCurrent'] == true) {
-          current = session;
-        }
+      // 解析 chatModel（按 modelId 动态绑定）
+      for (int i = 0; i < loaded.length; i++) {
+        loaded[i] = await _resolveChatModel(loaded[i]);
       }
 
       loaded.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       sessions.value = loaded;
+
+      final currentId = await appDatabase.getCurrentSessionId();
+      final current =
+          loaded.where((s) => s.sessionId == currentId).firstOrNull;
 
       if (current != null) {
         await setCurrentSession(current);
@@ -385,6 +331,17 @@ class SessionController extends GetxController {
     } catch (e) {
       debugPrint('加载会话失败: $e');
     }
+  }
+
+  /// 按 modelId 动态解析并返回绑定了 chatModel 的会话（解析失败时原样返回）
+  Future<ChatSession> _resolveChatModel(ChatSession s) async {
+    if (s.modelId == null || s.modelId!.isEmpty) return s;
+    try {
+      final modelController = Get.find<ModelController>();
+      final m = await modelController.getModel(s.modelId!);
+      if (m != null) return s.copyWith(chatModel: m);
+    } catch (_) {}
+    return s;
   }
 
   /// 首次启动时创建一个默认会话（含一条欢迎消息），并持久化到 db。
@@ -453,23 +410,23 @@ class SessionController extends GetxController {
   // ==================== 内部持久化方法 ====================
 
   Future<void> _persistSessions() async {
-    // 同步写入 sessions.db（逐条 upsert，不再整体替换）
+    // 同步写入 SQLite（逐条 upsert，不再整体替换）
     try {
-      final db = await _database;
-      for (final session in sessions) {
-        await _upsertSession(db, session);
-      }
+      await appDatabase.persistSessions(
+        sessions,
+        currentId: currentSession.value?.sessionId,
+      );
     } catch (e) {
-      debugPrint('保存会话到 sessions.db 失败: $e');
+      debugPrint('保存会话失败: $e');
     }
   }
 
-  /// 从 sessions.db 读取单条会话元数据
-  Future<Map<String, dynamic>?> _getSessionFromDb(String sid) async {
+  /// 从 SQLite 读取单条会话元数据（并已解析 chatModel）
+  Future<ChatSession?> _getSessionFromDb(String sid) async {
     try {
-      final db = await _database;
-      final rec = await _store.record(sid).get(db);
-      return rec as Map<String, dynamic>?;
+      final s = await appDatabase.getSession(sid);
+      if (s == null) return null;
+      return await _resolveChatModel(s);
     } catch (_) {
       return null;
     }
@@ -484,19 +441,14 @@ class SessionController extends GetxController {
       }
     }
 
-    // 从 sessions.db + messages.db 搜索
+    // 从 SQLite（会话元数据 + 消息表）搜索
     try {
-      final db = await _database;
-      final records = await _store.find(db);
-      for (final rec in records) {
-        final sid =
-            (rec.value as Map<String, dynamic>)['sessionId'] as String? ?? '';
-        final messagesData = await MessageController.instance.loadMessages(sid);
+      final all = await appDatabase.getAllSessions();
+      for (final session in all) {
+        final messagesData =
+            await MessageController.instance.loadMessages(session.sessionId);
         if (messagesData.any((m) => m.msgId == messageId)) {
-          final sessionData = await _getSessionFromDb(sid);
-          if (sessionData != null) {
-            return await _mapToSession(sessionData);
-          }
+          return await _getSessionFromDb(session.sessionId);
         }
       }
     } catch (e) {
@@ -504,108 +456,5 @@ class SessionController extends GetxController {
     }
 
     return null;
-  }
-
-  // ==================== 转换方法 ====================
-
-  /// ChatSession → Map（用于 session.json）
-  Map<String, dynamic> _sessionToMap(ChatSession session) {
-    return {
-      'sessionId': session.sessionId,
-      'name': session.name,
-      'createdAt': session.createdAt.toIso8601String(),
-      'isFavorite': session.isFavorite,
-      'isSending': false, // 运行时状态不持久化
-      'shouldStopResponse': false, // 运行时状态不持久化
-      'scrollPosition': session.scrollPosition,
-      'inputContent': session.inputContent,
-      'modelId': session.modelId,
-      if (session.mcps != null && session.mcps!.isNotEmpty)
-        'mcps': session.mcps,
-      'deepThink': session.deepThink,
-      'connectPrompt': session.connectPrompt,
-      'sessionQuickCommands':
-          session.sessionQuickCommands.map((c) => c.toJson()).toList(),
-      'emoji': session.emoji,
-      'promptTokens': session.promptTokens,
-      'completionTokens': session.completionTokens,
-      'totalTokens': session.totalTokens,
-      'totalCost': session.totalCost,
-      'apiKey': session.apiKey,
-      if (session.group != null && session.group!.isNotEmpty)
-        'group': session.group,
-      'quotaEnabled': session.quotaEnabled,
-      'quotaTokenLimit': session.quotaTokenLimit,
-      'quotaCostLimit': session.quotaCostLimit,
-      'quotaRequestLimit': session.quotaRequestLimit,
-      'quotaResetPeriod': session.quotaResetPeriod,
-      'quotaPeriodStart': session.quotaPeriodStart?.toIso8601String(),
-      'quotaRequestCount': session.quotaRequestCount,
-      'noAuthEnabled': session.noAuthEnabled,
-      'isDisabled': session.isDisabled,
-    };
-  }
-
-  /// Map → ChatSession（从 session.json）
-  Future<ChatSession> _mapToSession(Map<String, dynamic> entity) async {
-    final String? modelId = entity['modelId'] as String?;
-    ChatModel? chatModel;
-    if (modelId != null && modelId.isNotEmpty) {
-      try {
-        final modelController = Get.find<ModelController>();
-        chatModel = await modelController.getModel(modelId);
-      } catch (_) {}
-    }
-
-    // 解析快捷指令
-    List<ChatCommand> commands = [];
-    if (entity['sessionQuickCommands'] is List) {
-      try {
-        commands =
-            (entity['sessionQuickCommands'] as List)
-                .map((c) => ChatCommand.fromJson(c as Map<String, dynamic>))
-                .toList();
-      } catch (_) {}
-    }
-
-    return ChatSession(
-      sessionId: entity['sessionId'] as String? ?? '',
-      name: entity['name'] as String? ?? '新对话',
-      createdAt:
-          entity['createdAt'] != null
-              ? DateTime.tryParse(entity['createdAt'] as String) ??
-                  DateTime.now()
-              : DateTime.now(),
-      messages: [], // 消息懒加载
-      modelId: modelId,
-      mcps: _resolveMcpFolders(entity),
-      chatModel: chatModel,
-      isFavorite: entity['isFavorite'] as bool? ?? false,
-      inputContent: entity['inputContent'] as String? ?? '',
-      isSending: false,
-      shouldStopResponse: false,
-      scrollPosition: (entity['scrollPosition'] as num?)?.toDouble() ?? 0.0,
-      deepThink: entity['deepThink'] as bool? ?? false,
-      connectPrompt: entity['connectPrompt'] as String?,
-      sessionQuickCommands: commands,
-      emoji: entity['emoji'] as String?,
-      apiKey: entity['apiKey'] as String?,
-      group: entity['group'] as String?,
-      quotaEnabled: entity['quotaEnabled'] as bool? ?? false,
-      quotaTokenLimit: entity['quotaTokenLimit'] as int?,
-      quotaCostLimit: (entity['quotaCostLimit'] as num?)?.toDouble(),
-      quotaRequestLimit: entity['quotaRequestLimit'] as int?,
-      quotaResetPeriod: entity['quotaResetPeriod'] as String?,
-      quotaPeriodStart:
-          entity['quotaPeriodStart'] != null
-              ? DateTime.tryParse(entity['quotaPeriodStart'] as String)
-              : null,
-      quotaRequestCount: entity['quotaRequestCount'] as int? ?? 0,
-      promptTokens: entity['promptTokens'] as int? ?? 0,
-      completionTokens: entity['completionTokens'] as int? ?? 0,
-      totalTokens: entity['totalTokens'] as int? ?? 0,
-      noAuthEnabled: entity['noAuthEnabled'] as bool? ?? false,
-      isDisabled: entity['isDisabled'] as bool? ?? false,
-    );
   }
 }

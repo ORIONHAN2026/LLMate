@@ -6,7 +6,7 @@ import '../../../models/chat/message.dart';
 import '../../../models/chat/mcp.dart';
 import '../../../controllers/mcp_controller.dart';
 
-import '../../../data/storage_paths.dart';
+import '../../../services/storage_paths.dart';
 import '../common/system_prompts.dart';
 
 /// 安全函数名 → 原始函数名 映射（用于还原 MCP 工具名中的非法字符）

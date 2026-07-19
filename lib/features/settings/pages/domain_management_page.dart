@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../data/storage_paths.dart';
+import '../../../services/storage_paths.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../controllers/settings_controller.dart';
 import '../../../core/http/local_http_service.dart';

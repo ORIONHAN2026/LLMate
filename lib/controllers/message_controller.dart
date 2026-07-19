@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../data/database.dart';
-import '../data/file_storage.dart';
-import '../data/storage_paths.dart';
 import '../models/chat/message.dart';
 
 /// 消息操作的独立控制器
@@ -88,18 +86,12 @@ class MessageController extends GetxController {
     }
   }
 
-  /// 删除指定会话的全部消息（并清理会话目录 memory/mcp/business 等，用于删除会话）
+  /// 删除指定会话的全部消息（消息数据均存于数据库，无需清理磁盘文件）
   Future<void> deleteMessagesBySession(String sessionId) async {
     try {
       await appDatabase.deleteMessagesBySession(sessionId);
     } catch (e) {
       debugPrint('删除会话消息 DB 失败: $e');
-    }
-    try {
-      // 清理会话目录下的其余文件（memory.md / mcp.json / business.md）
-      await FileStorage.deleteDir(StoragePaths.sessionDir(sessionId));
-    } catch (e) {
-      debugPrint('删除会话目录失败: $e');
     }
   }
 }

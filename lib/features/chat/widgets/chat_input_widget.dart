@@ -12,7 +12,7 @@ import '../../../core/config/feature_toggle_service.dart';
 import '../../../utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../widgets/confirm_delete_dialog.dart';
-import '../../../data/storage_service.dart';
+import '../../../services/storage_service.dart';
 
 /// 聊天输入框组件
 ///

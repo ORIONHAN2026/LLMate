@@ -4,7 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path/path.dart' as p;
 
-import '../data/storage_paths.dart';
+import '../services/storage_paths.dart';
 import '../models/audit.dart';
 import '../models/chat/mcp.dart';
 import '../models/chat/message.dart';

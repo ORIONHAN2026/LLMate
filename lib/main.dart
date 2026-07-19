@@ -14,7 +14,7 @@ import './features/chat/pages/home.dart';
 import './pages/loading_page.dart';
 import './core/http/local_http_service.dart';
 
-import './data/storage_service.dart';
+import './services/storage_service.dart';
 
 // 最小窗口宽度组成: 左侧边栏最小 150 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
 const double kMinLeftSidebarWidth = 150;
@@ -74,8 +74,8 @@ void main() async {
   // 初始化 LocalHttpServiceController（本地服务控制）
   Get.put(LocalHttpServiceController());
 
-  // 初始化 AuditController（审计日志读写）
-  Get.put(AuditController());
+  // 初始化审计控制器（DuckDB 审计存储）
+  await AuditController.instance.ensureInitialized();
 
   // 启动 HTTP 服务（使用配置的 HTTP 端口，默认 80）
   final port = settingsController.httpPort.value;

@@ -15,8 +15,9 @@ import '../../controllers/session_controller.dart';
 import '../../controllers/message_controller.dart';
 import '../../controllers/audit_controller.dart';
 import '../../controllers/usage_controller.dart';
-import '../../data/storage_paths.dart';
+import '../../services/storage_paths.dart';
 import '../../models/chat/session.dart';
+import '../../models/audit_trace.dart';
 import '../../models/chat/message.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/disabled_guard.dart';
@@ -358,6 +359,22 @@ class LocalHttpService {
         // 记录生成开始时间，用于计算耗时
         final generationStartTime = DateTime.now();
 
+        // ── 审计：开启链路追踪，记录本次请求 ──
+        final audit = AuditController.instance;
+        AuditTrace? auditTrace;
+        final auditProvider = session.chatModel?.platform ?? 'unknown';
+        final auditModel = session.chatModel?.model ?? 'unknown';
+        try {
+          auditTrace = await audit.beginTrace(
+            sessionId: session.sessionId,
+            userId: 'local',
+            tenantId: 'local',
+          );
+          audit.prompt(auditTrace, _extractUserPrompt(body));
+        } catch (e) {
+          debugPrint('⚠️ [Audit] 开启链路追踪失败: $e');
+        }
+
         try {
           // ── 工具调用循环状态 ──
           final contentBuffer = StringBuffer(); // 累积所有轮次的 LLM 文本回复
@@ -371,6 +388,11 @@ class LocalHttpService {
           // ── 工具调用循环 ──
           // 每一轮：请求 LLM → 解析响应 → 如果有 MCP 工具调用则执行 → 结果回填 → 继续下一轮
           while (true) {
+            // ── 审计：LLM 请求开始 ──
+            if (auditTrace != null) {
+              audit.llmRequest(auditTrace, auditProvider, auditModel);
+            }
+
             // 单轮流式请求：post LLM API，解析 SSE chunk
             final round = await streamSingleRound(
               session: session,
@@ -385,6 +407,28 @@ class LocalHttpService {
             reasonBuffer.write(round.reasonBuffer);
             promptTokens += round.promptTokens!;
             completionTokens += round.completionTokens!;
+
+            // ── 审计：LLM 响应完成 ──
+            if (auditTrace != null) {
+              var roundCost = 0.0;
+              final m = session.chatModel;
+              final promptPrice = m?.promptPrice;
+              final completionPrice = m?.completionPrice;
+              if (promptPrice != null) {
+                roundCost +=
+                    (round.promptTokens ?? 0) * promptPrice / 1000000.0;
+              }
+              if (completionPrice != null) {
+                roundCost +=
+                    (round.completionTokens ?? 0) * completionPrice / 1000000.0;
+              }
+              audit.llmResponse(
+                auditTrace,
+                round.promptTokens ?? 0,
+                round.completionTokens ?? 0,
+                roundCost,
+              );
+            }
 
             // LLM 返回错误 或 客户端断开 → 退出循环
             if (hasError || cancelStream) break;
@@ -440,6 +484,13 @@ class LocalHttpService {
             // 通知客户端：工具正在执行
             streamController.add(Chunk.fromReason("大模型正在执行MCP服务").toIntList());
 
+            // ── 审计：工具调用开始 ──
+            if (auditTrace != null) {
+              for (final tc in toolCallParams) {
+                audit.toolStart(auditTrace, tc['name']?.toString() ?? 'unknown');
+              }
+            }
+
             // ── 执行 MCP 工具 ──
             final executionResult = await McpController.instance
                 .executeToolCalls(
@@ -488,6 +539,16 @@ class LocalHttpService {
                 });
               }
 
+              // ── 审计：工具调用完成 ──
+              if (auditTrace != null) {
+                final results = executionResult.executionResults;
+                for (var i = 0; i < toolCallParams.length; i++) {
+                  final name = toolCallParams[i]['name']?.toString() ?? 'unknown';
+                  final res = i < results.length ? results[i] : null;
+                  audit.toolFinish(auditTrace, name, res ?? <String, dynamic>{});
+                }
+              }
+
               debugPrint('🔄 [ToolLoop] 第 $toolIteration 轮工具完成，继续请求 LLM');
               // 下一轮循环：带着更新后的 body（含工具调用历史和结果）再次请求 LLM
               // 执行过程中客户端可能断开
@@ -496,6 +557,12 @@ class LocalHttpService {
               break;
             }
             // 工具执行无结果（所有工具都匹配失败等） → 退出循环
+          }
+
+          // ── 审计：响应完成并结束链路 ──
+          if (auditTrace != null) {
+            audit.response(auditTrace, contentBuffer.toString());
+            audit.endTrace(auditTrace);
           }
 
           // ── 流结束：发送 DONE 标记，关闭控制器 ──
@@ -552,18 +619,6 @@ class LocalHttpService {
             'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
           );
 
-          // ── 保存完整请求/响应审计日志 ──
-          AuditController.instance.saveRequestResponseLog(
-            requestId: request.context['requestId'] as String? ?? '',
-            originBodyStr: request.context['originBody'] as String? ?? '',
-            body: body,
-            responseContent: contentBuffer.toString(),
-            sessionId: session.sessionId,
-            modelId: session.chatModel?.modelId ?? 'unknown',
-            maskOptions: riskControlOptionsOf(request),
-            error: null,
-          );
-
           // ── 保存最新一次请求/响应到 log/log.json（覆盖写入）──
           await _saveLatestLog(
             request: request,
@@ -586,17 +641,11 @@ class LocalHttpService {
           // ── 异步 IIFE 内部异常 ──
           debugPrint('❌ 流式代理错误: $e');
 
-          // 即使出错也尝试保存已有的请求/响应审计日志
-          AuditController.instance.saveRequestResponseLog(
-            requestId: request.context['requestId'] as String? ?? '',
-            originBodyStr: request.context['originBody'] as String? ?? '',
-            body: null,
-            responseContent: '',
-            sessionId: session.sessionId,
-            modelId: session.chatModel?.modelId ?? 'unknown',
-            maskOptions: riskControlOptionsOf(request),
-            error: e.toString(),
-          );
+          // 即使出错也记录审计错误并结束链路
+          if (auditTrace != null) {
+            audit.error(auditTrace, e.toString());
+            audit.endTrace(auditTrace);
+          }
 
           // ── 即使出错也保存最新一次请求/响应到 log/log.json（覆盖写入）──
           await _saveLatestLog(
@@ -726,4 +775,25 @@ class LocalHttpService {
       debugPrint('⚠️ [Log] 保存实时日志失败: $e');
     }
   }
+}
+
+/// 从请求体 messages 中提取最近一条 user 消息的文本内容（供审计 prompt 记录）
+String _extractUserPrompt(Map<String, dynamic> body) {
+  final msgs = body['messages'];
+  if (msgs is! List) return '';
+  for (var i = msgs.length - 1; i >= 0; i--) {
+    final m = msgs[i];
+    if (m is Map && m['role'] == 'user') {
+      final c = m['content'];
+      if (c is String) return c;
+      if (c is List) {
+        final sb = StringBuffer();
+        for (final part in c) {
+          if (part is Map && part['type'] == 'text') sb.write(part['text']);
+        }
+        return sb.toString();
+      }
+    }
+  }
+  return '';
 }

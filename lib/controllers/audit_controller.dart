@@ -46,18 +46,16 @@ class AuditController {
   Future<AuditTrace> beginTrace({
     required String sessionId,
     required String userId,
-    required String tenantId,
   }) async {
     final trace = AuditTrace(
       traceId: _uuid.v4(),
       sessionId: sessionId,
       userId: userId,
-      tenantId: tenantId,
     );
     await emit(
       trace,
       AuditEventType.request,
-      {'sessionId': sessionId, 'userId': userId, 'tenantId': tenantId},
+      {'sessionId': sessionId, 'userId': userId},
     );
     return trace;
   }
@@ -143,10 +141,8 @@ class AuditController {
         traceId: trace.traceId,
         spanId: _uuid.v4(),
         parentSpanId: parentSpanId,
-        tenantId: trace.tenantId,
         sessionId: trace.sessionId,
         userId: trace.userId,
-        agentId: '', // 当前业务未区分 agent，留空
         type: type,
         timestamp: DateTime.now(),
         payload: payload,

@@ -24,6 +24,7 @@ import '../../mcp/pages/mcp_management_page.dart';
 import '../../settings/pages/other_settings_page.dart';
 import '../../settings/pages/domain_management_page.dart';
 import '../widgets/usage_dashboard.dart';
+import '../widgets/audit_viewer.dart';
 import '../widgets/session_detail_page.dart';
 import 'package:llmate/widgets/command_palette.dart';
 
@@ -873,6 +874,17 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // 审计查看入口
+        IconButton(
+          onPressed: () => AuditViewer.show(context, session: currentSession),
+          icon: Icon(
+            Icons.gavel_rounded,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+          ),
+          visualDensity: VisualDensity.compact,
+          tooltip: '审计查看',
+        ),
         // 使用量仪表盘按钮
         IconButton(
           onPressed: () => UsageDashboard.show(context, session: currentSession),

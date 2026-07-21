@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Response;
@@ -48,14 +47,14 @@ class LocalHttpServiceController extends GetxController {
     } catch (_) {}
   }
 
-  void toggleService() {
+  Future<void> toggleService() async {
     if (isRunning.value) {
       LocalHttpService.stop();
       isRunning.value = false;
     } else {
       _syncPortFromDomain();
-      LocalHttpService.start(port: port.value);
-      isRunning.value = true;
+      final ok = await LocalHttpService.start(port: port.value);
+      isRunning.value = ok;
     }
   }
 
@@ -67,8 +66,8 @@ class LocalHttpServiceController extends GetxController {
       await Future.delayed(const Duration(milliseconds: 300));
     }
     _syncPortFromDomain();
-    LocalHttpService.start(port: port.value);
-    isRunning.value = true;
+    final ok = await LocalHttpService.start(port: port.value);
+    isRunning.value = ok;
   }
 }
 
@@ -95,20 +94,11 @@ class LocalHttpService {
     return '$scheme://$_bindAddress:$_port';
   }
 
-  /// 用于生成 RequestId 的随机源
-  static final Random _requestIdRandom = Random();
-
-  /// 为每次请求生成唯一 RequestId（用于日志文件命名与链路追踪）
-  static String _generateRequestId() {
-    final ts = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
-    final rnd = _requestIdRandom
-        .nextInt(0xffffff)
-        .toRadixString(16)
-        .padLeft(6, '0');
-    return '$ts-$rnd';
-  }
-
-  static Future<void> start({int port = 80, bool allowExternal = true}) async {
+  /// 启动本地 HTTP/HTTPS 服务。
+  ///
+  /// 返回是否启动成功。端口被占用（`Address already in use`）等错误不会抛出，
+  /// 仅记录日志并返回 `false`，避免拖垮应用启动或热重启。
+  static Future<bool> start({int port = 80, bool allowExternal = true}) async {
     // 先停止旧服务，避免端口被占用
     await _server?.close(force: true);
     _server = null;
@@ -160,10 +150,17 @@ class LocalHttpService {
       _isRunning = true;
       debugPrint('📡 API: POST /{sessionId}/chat/completions');
       debugPrint('📡 API: GET /{sessionId}/models');
+      return true;
+    } on SocketException catch (e) {
+      debugPrint(
+        '❌ HTTP 服务启动失败：端口 $port 已被占用（可能有另一个实例在运行）: $e',
+      );
+      _isRunning = false;
+      return false;
     } catch (e) {
       debugPrint('❌ HTTP 服务启动失败: $e');
       _isRunning = false;
-      rethrow;
+      return false;
     }
   }
 
@@ -232,9 +229,6 @@ class LocalHttpService {
       Request request,
       String sessionId,
     ) async {
-      // 每次请求生成唯一 RequestId，注入 context 供审计/日志与链路追踪使用
-      final requestId = _generateRequestId();
-
       // 读取原始请求体（中间件处理前的原始请求，用于日志保存）
       String originBodyStr = '';
       try {
@@ -246,7 +240,6 @@ class LocalHttpService {
       final requestWithId = request.change(
         context: {
           ...request.context,
-          'requestId': requestId,
           'originBody': originBodyStr,
         },
         body: utf8.encode(originBodyStr),
@@ -368,7 +361,6 @@ class LocalHttpService {
           auditTrace = await audit.beginTrace(
             sessionId: session.sessionId,
             userId: 'local',
-            tenantId: 'local',
           );
           audit.prompt(auditTrace, _extractUserPrompt(body));
         } catch (e) {
@@ -674,7 +666,6 @@ class LocalHttpService {
           'content-type': 'text/event-stream',
           'cache-control': 'no-cache',
           'connection': 'keep-alive',
-          'x-request-id': request.context['requestId'] as String? ?? '',
         },
       );
     } catch (e) {
@@ -692,7 +683,6 @@ class LocalHttpService {
         }),
         headers: {
           'content-type': 'application/json',
-          'x-request-id': request.context['requestId'] as String? ?? '',
         },
       );
     }
@@ -759,7 +749,6 @@ class LocalHttpService {
       }
       final log = <String, dynamic>{
         'timestamp': DateTime.now().toIso8601String(),
-        'requestId': request.context['requestId'] as String? ?? '',
         'sessionId': sessionId,
         'modelId': modelId,
         'method': request.method,

@@ -18,7 +18,7 @@ import '../models/audit_types.dart';
 /// ```sql
 /// audit_events(
 ///   id, trace_id, span_id, parent_span_id,
-///   tenant_id, session_id, user_id, agent_id,
+///   session_id, user_id,
 ///   event_type, timestamp, payload_json
 /// )
 /// ```
@@ -35,30 +35,49 @@ class DuckDBStorage {
   Future<void> _lastOp = Future.value();
 
   /// 打开数据库并建表（幂等）
+  ///
+  /// 对 DuckDB 的文件锁冲突做容错：重试若干次（应对另一进程正在释放锁的
+  /// 短暂窗口），仍失败则降级——仅记录告警、不抛异常，避免拖垮应用启动。
+  /// 审计为可观测能力，不可用时业务照常运行。
   Future<void> initialize() async {
     if (_initialized) return;
     await StoragePaths.ensureRoot();
     final path =
         _explicitPath ?? p.join(StoragePaths.root, 'audit.duckdb');
-    _db = await duckdb.open(path);
-    _conn = await duckdb.connect(_db!);
-    await _conn!.execute('''
-      CREATE TABLE IF NOT EXISTS audit_events (
-        id VARCHAR PRIMARY KEY,
-        trace_id VARCHAR,
-        span_id VARCHAR,
-        parent_span_id VARCHAR,
-        tenant_id VARCHAR,
-        session_id VARCHAR,
-        user_id VARCHAR,
-        agent_id VARCHAR,
-        event_type VARCHAR,
-        timestamp VARCHAR,
-        payload_json VARCHAR
-      )
-    ''');
-    _initialized = true;
-    debugPrint('🗄️ [Audit] DuckDB 已初始化: $path');
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        _db = await duckdb.open(path);
+        _conn = await duckdb.connect(_db!);
+        await _conn!.execute('''
+          CREATE TABLE IF NOT EXISTS audit_events (
+            id VARCHAR PRIMARY KEY,
+            trace_id VARCHAR,
+            span_id VARCHAR,
+            parent_span_id VARCHAR,
+            session_id VARCHAR,
+            user_id VARCHAR,
+            event_type VARCHAR,
+            timestamp VARCHAR,
+            payload_json VARCHAR
+          )
+        ''');
+        _initialized = true;
+        debugPrint('🗄️ [Audit] DuckDB 已初始化: $path');
+        return;
+      } on DuckDBException catch (e) {
+        await _safeClose();
+        if (_isLockError(e) && attempt < maxAttempts) {
+          debugPrint(
+            '⚠️ [Audit] 审计库被占用，重试 ($attempt/$maxAttempts): $e',
+          );
+          await Future.delayed(const Duration(milliseconds: 400));
+          continue;
+        }
+        debugPrint('⚠️ [Audit] 初始化失败，审计功能暂不可用: $e');
+        return;
+      }
+    }
   }
 
   /// 释放连接与数据库资源
@@ -75,18 +94,38 @@ class DuckDBStorage {
     }
   }
 
+  /// 释放已分配的连接 / 数据库资源（忽略异常），用于初始化失败回滚
+  Future<void> _safeClose() async {
+    try {
+      await _conn?.dispose();
+      await _db?.dispose();
+    } catch (_) {
+      // 忽略
+    }
+    _conn = null;
+    _db = null;
+  }
+
+  /// 判断异常是否为 DuckDB 文件锁冲突
+  bool _isLockError(Object e) =>
+      e.toString().toLowerCase().contains('lock');
+
   /// 写入单条审计事件
   Future<void> save(AuditEvent event) => saveBatch([event]);
 
   /// 批量写入审计事件（单条 SQL 完成）
   Future<void> saveBatch(List<AuditEvent> events) async {
     if (events.isEmpty) return;
+    if (!_initialized || _conn == null) {
+      debugPrint('⚠️ [Audit] 存储未就绪，跳过写入');
+      return;
+    }
     await _serialize(() async {
       final sb = StringBuffer();
       sb.write(
         'INSERT OR REPLACE INTO audit_events '
-        '(id, trace_id, span_id, parent_span_id, tenant_id, session_id, '
-        'user_id, agent_id, event_type, timestamp, payload_json) VALUES ',
+        '(id, trace_id, span_id, parent_span_id, session_id, '
+        'user_id, event_type, timestamp, payload_json) VALUES ',
       );
       for (var i = 0; i < events.length; i++) {
         final e = events[i];
@@ -96,10 +135,8 @@ class DuckDBStorage {
           '${_q(e.traceId)}, '
           '${_q(e.spanId)}, '
           '${e.parentSpanId == null ? 'NULL' : _q(e.parentSpanId!)}, '
-          '${_q(e.tenantId)}, '
           '${_q(e.sessionId)}, '
           '${_q(e.userId)}, '
-          '${_q(e.agentId)}, '
           '${_q(e.type.name)}, '
           '${_q(e.timestamp.toIso8601String())}, '
           '${_q(jsonEncode(e.payload))}'
@@ -130,12 +167,6 @@ class DuckDBStorage {
     if (filter.userId != null) {
       conds.add('user_id = ${_q(filter.userId!)}');
     }
-    if (filter.tenantId != null) {
-      conds.add('tenant_id = ${_q(filter.tenantId!)}');
-    }
-    if (filter.agentId != null) {
-      conds.add('agent_id = ${_q(filter.agentId!)}');
-    }
     if (filter.eventTypes != null && filter.eventTypes!.isNotEmpty) {
       final types = filter.eventTypes!.map((e) => _q(e.name)).join(', ');
       conds.add('event_type IN ($types)');
@@ -162,7 +193,9 @@ class DuckDBStorage {
   // ───────────────────────────────────────────────────────────
 
   /// 执行查询并将结果行映射为 [AuditEvent]
-  Future<List<AuditEvent>> _query(String sql) => _serialize(() async {
+  Future<List<AuditEvent>> _query(String sql) {
+    if (!_initialized || _conn == null) return Future.value([]);
+    return _serialize(() async {
         final rs = await _conn!.query(sql);
         final names = rs.columnNames.map((n) => n.toLowerCase()).toList();
         final rows = rs.fetchAll();
@@ -175,6 +208,7 @@ class DuckDBStorage {
           return AuditEvent.fromRow(map);
         }).toList();
       });
+  }
 
   /// 将所有数据库操作串行进队列，保证单连接安全
   Future<T> _serialize<T>(Future<T> Function() task) {

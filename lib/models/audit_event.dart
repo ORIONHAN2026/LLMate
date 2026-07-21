@@ -13,10 +13,8 @@ class AuditEvent {
   final String spanId;
   final String? parentSpanId;
 
-  final String tenantId;
   final String sessionId;
   final String userId;
-  final String agentId;
 
   final AuditEventType type;
   final DateTime timestamp;
@@ -28,10 +26,8 @@ class AuditEvent {
     required this.traceId,
     required this.spanId,
     this.parentSpanId,
-    required this.tenantId,
     required this.sessionId,
     required this.userId,
-    required this.agentId,
     required this.type,
     required this.timestamp,
     required this.payload,
@@ -49,10 +45,8 @@ class AuditEvent {
       traceId: row['trace_id'] as String? ?? '',
       spanId: row['span_id'] as String? ?? '',
       parentSpanId: row['parent_span_id'] as String?,
-      tenantId: (row['tenant_id'] as String?) ?? '',
       sessionId: (row['session_id'] as String?) ?? '',
       userId: (row['user_id'] as String?) ?? '',
-      agentId: (row['agent_id'] as String?) ?? '',
       type: AuditEventTypeX.fromName((row['event_type'] as String?) ?? 'request'),
       timestamp:
           DateTime.tryParse((row['timestamp'] as String?) ?? '') ??
@@ -67,10 +61,8 @@ class AuditEvent {
     'traceId': traceId,
     'spanId': spanId,
     if (parentSpanId != null) 'parentSpanId': parentSpanId,
-    'tenantId': tenantId,
     'sessionId': sessionId,
     'userId': userId,
-    'agentId': agentId,
     'type': type.name,
     'timestamp': timestamp.toIso8601String(),
     'payload': payload,

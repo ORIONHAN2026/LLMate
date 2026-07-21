@@ -36,8 +36,6 @@ class AuditFilter {
   final String? traceId;
   final String? sessionId;
   final String? userId;
-  final String? tenantId;
-  final String? agentId;
   final Set<AuditEventType>? eventTypes;
   final DateTime? start;
   final DateTime? end;
@@ -47,8 +45,6 @@ class AuditFilter {
     this.traceId,
     this.sessionId,
     this.userId,
-    this.tenantId,
-    this.agentId,
     this.eventTypes,
     this.start,
     this.end,

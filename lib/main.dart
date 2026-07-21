@@ -74,8 +74,12 @@ void main() async {
   // 初始化 LocalHttpServiceController（本地服务控制）
   Get.put(LocalHttpServiceController());
 
-  // 初始化审计控制器（DuckDB 审计存储）
-  await AuditController.instance.ensureInitialized();
+  // 初始化审计控制器（DuckDB 审计存储，失败不致命）
+  try {
+    await AuditController.instance.ensureInitialized();
+  } catch (e) {
+    debugPrint('⚠️ [Audit] 初始化失败（审计功能暂不可用）: $e');
+  }
 
   // 启动 HTTP 服务（使用配置的 HTTP 端口，默认 80）
   final port = settingsController.httpPort.value;

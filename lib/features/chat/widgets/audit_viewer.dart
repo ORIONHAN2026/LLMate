@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../controllers/audit_controller.dart';
 import '../../../data/database.dart';
@@ -38,8 +39,6 @@ class _AuditViewerState extends State<AuditViewer> {
   int _limit = 200;
 
   List<_TraceGroup> _groups = [];
-  /// sessionId → 会话名称 缓存，避免重复查库
-  final Map<String, String> _sessionNames = {};
   bool _loading = false;
   String? _error;
 
@@ -49,6 +48,10 @@ class _AuditViewerState extends State<AuditViewer> {
     if (widget.session != null) {
       _sessionCtrl.text = widget.session!.sessionId;
     }
+    // 开始 / 结束日期默认取当日
+    final now = DateTime.now();
+    _startDate = DateTime(now.year, now.month, now.day);
+    _endDate = _startDate;
     _load();
   }
 
@@ -101,8 +104,8 @@ class _AuditViewerState extends State<AuditViewer> {
       final groups = grouped.entries
           .map((e) => _TraceGroup(e.key, e.value))
           .toList();
-      // 预取所有不重复 sessionId 的会话名称
-      await _populateSessionNames(events);
+      // 链路按时间倒序排列（最新链路在前）；事件本身为时间升序，取末位即最新
+      groups.sort((a, b) => b.events.last.timestamp.compareTo(a.events.last.timestamp));
       if (mounted) {
         setState(() {
           _groups = groups;
@@ -115,22 +118,6 @@ class _AuditViewerState extends State<AuditViewer> {
           _error = e.toString();
           _loading = false;
         });
-      }
-    }
-  }
-
-  /// 按 [events] 中不重复的 sessionId，批量查找会话名称缓存在 [_sessionNames]
-  Future<void> _populateSessionNames(List<AuditEvent> events) async {
-    final ids = events.map((e) => e.sessionId).toSet();
-    for (final id in ids) {
-      if (_sessionNames.containsKey(id)) continue;
-      try {
-        final s = await appDatabase.getSession(id);
-        if (s != null) {
-          _sessionNames[id] = s.name;
-        }
-      } catch (_) {
-        // 查不到不阻塞
       }
     }
   }
@@ -296,6 +283,19 @@ class _AuditViewerState extends State<AuditViewer> {
     }
   }
 
+  /// 复制链路 traceId 到剪贴板，并给出轻量提示
+  void _copyTraceId(String traceId) {
+    Clipboard.setData(ClipboardData(text: traceId));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('已复制 traceId: ${_shortId(traceId)}'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
   Widget _buildResultList() {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -327,7 +327,6 @@ class _AuditViewerState extends State<AuditViewer> {
             itemBuilder: (context, i) {
               final g = _groups[i];
               final first = g.events.first;
-              final sessionName = _sessionNames[first.sessionId];
               return Container(
                 decoration: BoxDecoration(
                   color: cs.surfaceContainerHighest.withOpacity(0.25),
@@ -345,18 +344,33 @@ class _AuditViewerState extends State<AuditViewer> {
                     foregroundColor: cs.primary,
                     child: Text('${g.events.length}'),
                   ),
-                  title: Text(
-                    sessionName ?? first.sessionId,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  title: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          g.traceId,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(Icons.copy, size: 18),
+                        tooltip: '复制 traceId',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => _copyTraceId(g.traceId),
+                      ),
+                    ],
                   ),
                   subtitle: Text(
-                    '${_shortId(g.traceId)}  ·  ${g.events.length} 个事件  ·  ${_fmt(first.timestamp)}',
+                    '${g.events.length} 个事件  ·  ${_fmt(first.timestamp)}',
                     style: TextStyle(
                       fontSize: 12,
                       color: cs.onSurface.withOpacity(0.5),

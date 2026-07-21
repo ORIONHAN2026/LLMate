@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:llmate/models/chat/message.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -5,6 +7,7 @@ import 'package:get/get.dart';
 import '../data/database.dart';
 import '../models/chat/session.dart';
 import '../models/model.dart';
+import '../services/storage_paths.dart';
 
 import './model_controller.dart';
 import './mcp_controller.dart';
@@ -299,6 +302,35 @@ class SessionController extends GetxController {
     sessions.clear();
     currentSession.value = null;
     await _persistSessions();
+  }
+
+  /// 重置所有会话：删除数据库中的会话与消息、删除会话目录文件，
+  /// 然后重新加载（首次启动会自动 seed 默认会话）。
+  Future<void> resetAllSessions() async {
+    // 关闭可能正在使用的 MCP 客户端
+    try {
+      McpController.instance.closeAllClients();
+    } catch (_) {}
+
+    // 删除数据库中的会话与消息记录
+    await appDatabase.clearAllSessions();
+
+    // 删除会话目录下的所有文件
+    try {
+      final dir = Directory(StoragePaths.chatsDir);
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    } catch (e) {
+      debugPrint('删除会话目录失败: $e');
+    }
+
+    // 清空内存列表
+    sessions.clear();
+    currentSession.value = null;
+
+    // 重新加载（空列表时会自动 seed 默认会话，保持应用可用）
+    await loadAll();
   }
 
   /// 加载所有会话和当前会话（消息懒加载，从 SQLite 读取）

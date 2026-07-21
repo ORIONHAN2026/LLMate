@@ -7,6 +7,17 @@
   "connectorManagement": "Connector (MCP)",
   "domainManagement": "Service Management",
   "otherSettings": "Other Settings",
+  "resetSystem": "Reset System",
+  "resetAllSessions": "Reset All Sessions",
+  "resetAllModels": "Reset All Models",
+  "resetAllMcp": "Reset All MCP",
+  "resetAll": "Reset All",
+  "resetConfirmMsg": "Are you sure you want to {action}? This action cannot be undone.",
+  "@resetConfirmMsg": {
+    "placeholders": {
+      "action": {}
+    }
+  },
   "languageSettings": "Language",
   "skinSettings": "Skin",
   "followSystem": "Follow System",

@@ -4,6 +4,10 @@ import '../../../l10n/app_localizations.dart';
 import 'package:get/get.dart';
 
 import '../../../controllers/settings_controller.dart';
+import '../../../controllers/session_controller.dart';
+import '../../../controllers/model_controller.dart';
+import '../../../controllers/mcp_controller.dart';
+import '../../../utils/snackbar_utils.dart';
 
 /// 其他设置页面，包含语言设置和皮肤设置
 class OtherSettingsPage extends StatelessWidget {
@@ -33,10 +37,186 @@ class OtherSettingsPage extends StatelessWidget {
             _buildSectionTitle(l10n.skinSettings, colorScheme),
             const SizedBox(height: 8),
             _buildSkinOptions(themeController, colorScheme, l10n),
+            const SizedBox(height: 32),
+            _buildSectionTitle(l10n.resetSystem, colorScheme),
+            const SizedBox(height: 8),
+            _buildResetSection(context, colorScheme, l10n),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildResetSection(
+    BuildContext context,
+    ColorScheme colorScheme,
+    AppLocalizations l10n,
+  ) {
+    final danger = const Color(0xFFEF4444);
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        children: [
+          _buildResetTile(
+            colorScheme,
+            danger: danger,
+            icon: Icons.chat_bubble_outline,
+            title: l10n.resetAllSessions,
+            isFirst: true,
+            isLast: false,
+            onTap: () => _confirmReset(
+              context,
+              colorScheme,
+              l10n,
+              action: l10n.resetAllSessions,
+              onConfirm: () async {
+                await Get.find<SessionController>().resetAllSessions();
+              },
+            ),
+          ),
+          _buildDivider(colorScheme),
+          _buildResetTile(
+            colorScheme,
+            danger: danger,
+            icon: Icons.smart_toy_outlined,
+            title: l10n.resetAllModels,
+            isFirst: false,
+            isLast: false,
+            onTap: () => _confirmReset(
+              context,
+              colorScheme,
+              l10n,
+              action: l10n.resetAllModels,
+              onConfirm: () async {
+                await Get.find<ModelController>().resetAllModels();
+              },
+            ),
+          ),
+          _buildDivider(colorScheme),
+          _buildResetTile(
+            colorScheme,
+            danger: danger,
+            icon: Icons.hub_outlined,
+            title: l10n.resetAllMcp,
+            isFirst: false,
+            isLast: false,
+            onTap: () => _confirmReset(
+              context,
+              colorScheme,
+              l10n,
+              action: l10n.resetAllMcp,
+              onConfirm: () async {
+                await Get.find<McpController>().resetAllMcps();
+              },
+            ),
+          ),
+          _buildDivider(colorScheme),
+          _buildResetTile(
+            colorScheme,
+            danger: danger,
+            icon: Icons.restart_alt,
+            title: l10n.resetAll,
+            isFirst: false,
+            isLast: true,
+            onTap: () => _confirmReset(
+              context,
+              colorScheme,
+              l10n,
+              action: l10n.resetAll,
+              onConfirm: () async {
+                await Get.find<SessionController>().resetAllSessions();
+                await Get.find<ModelController>().resetAllModels();
+                await Get.find<McpController>().resetAllMcps();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResetTile(
+    ColorScheme colorScheme, {
+    required Color danger,
+    required IconData icon,
+    required String title,
+    required bool isFirst,
+    required bool isLast,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.vertical(
+        top: isFirst ? const Radius.circular(12) : Radius.zero,
+        bottom: isLast ? const Radius.circular(12) : Radius.zero,
+      ),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: danger),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: danger,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmReset(
+    BuildContext context,
+    ColorScheme colorScheme,
+    AppLocalizations l10n, {
+    required String action,
+    required Future<void> Function() onConfirm,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.confirmReset),
+        content: Text(l10n.resetConfirmMsg(action)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFEF4444),
+            ),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await onConfirm();
+      SnackBarUtils.showSuccess(context, l10n.xDone(action));
+    } catch (e) {
+      SnackBarUtils.showError(context, l10n.xFailed(action, e.toString()));
+    }
   }
 
   Widget _buildSectionTitle(String title, ColorScheme colorScheme) {

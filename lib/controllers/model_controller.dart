@@ -60,6 +60,11 @@ class ModelController extends GetxController {
     }
   }
 
+  /// 重置所有模型：删除数据库中全部模型配置
+  Future<void> resetAllModels() async {
+    await appDatabase.clearAllModels();
+  }
+
   // ========== 模型图标工具 ==========
 
   /// 根据平台名称、协议、模型名称等信息解析图标路径。

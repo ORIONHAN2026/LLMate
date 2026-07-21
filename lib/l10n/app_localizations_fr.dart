@@ -30,6 +30,26 @@ class AppLocalizationsFr extends AppLocalizations {
   String get otherSettings => 'Autres paramètres';
 
   @override
+  String get resetSystem => 'Réinitialiser le système';
+
+  @override
+  String get resetAllSessions => 'Réinitialiser toutes les sessions';
+
+  @override
+  String get resetAllModels => 'Réinitialiser tous les modèles';
+
+  @override
+  String get resetAllMcp => 'Réinitialiser tous les MCP';
+
+  @override
+  String get resetAll => 'Tout réinitialiser';
+
+  @override
+  String resetConfirmMsg(Object action) {
+    return 'Voulez-vous vraiment $action ? Cette action est irréversible.';
+  }
+
+  @override
   String get languageSettings => 'Langue';
 
   @override

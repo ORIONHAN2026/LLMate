@@ -8,6 +8,7 @@ import '../models/chat/mcp.dart';
 import '../models/model.dart';
 import '../core/llm/openai_provider.dart';
 import '../core/llm/modes/mode_utils.dart' show resolveOriginalToolName;
+import '../data/database.dart';
 import '../features/mcp/storage/mcp_storage_manager.dart';
 import './model_controller.dart';
 
@@ -584,6 +585,14 @@ class McpController extends GetxController {
     for (final name in List<String>.from(_clients.keys)) {
       await closeClient(name);
     }
+  }
+
+  /// 重置所有 MCP：关闭所有连接并删除全部 MCP 配置
+  Future<void> resetAllMcps() async {
+    await closeAllClients();
+    await appDatabase.clearAllMcps();
+    configs.clear();
+    _loaded = false;
   }
 
   // ═══ 会话级管理 ═══

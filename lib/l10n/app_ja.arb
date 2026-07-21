@@ -7,6 +7,17 @@
   "connectorManagement": "コネクタ管理 (MCP)",
   "domainManagement": "サービス管理",
   "otherSettings": "その他の設定",
+  "resetSystem": "システムをリセット",
+  "resetAllSessions": "すべてのセッションをリセット",
+  "resetAllModels": "すべてのモデルをリセット",
+  "resetAllMcp": "すべてのMCPをリセット",
+  "resetAll": "すべてリセット",
+  "resetConfirmMsg": "{action}してもよろしいですか？この操作は取り消せません。",
+  "@resetConfirmMsg": {
+    "placeholders": {
+      "action": {}
+    }
+  },
   "languageSettings": "言語",
   "skinSettings": "テーマ",
   "followSystem": "システムに従う",

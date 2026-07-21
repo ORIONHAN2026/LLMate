@@ -30,6 +30,26 @@ class AppLocalizationsTh extends AppLocalizations {
   String get otherSettings => 'การตั้งค่าอื่นๆ';
 
   @override
+  String get resetSystem => 'รีเซ็ตระบบ';
+
+  @override
+  String get resetAllSessions => 'รีเซ็ตเซสชันทั้งหมด';
+
+  @override
+  String get resetAllModels => 'รีเซ็ตโมเดลทั้งหมด';
+
+  @override
+  String get resetAllMcp => 'รีเซ็ต MCP ทั้งหมด';
+
+  @override
+  String get resetAll => 'รีเซ็ตทั้งหมด';
+
+  @override
+  String resetConfirmMsg(Object action) {
+    return 'แน่ใจหรือไม่ว่าต้องการ$action? การดำเนินการนี้ไม่สามารถย้อนกลับได้';
+  }
+
+  @override
   String get languageSettings => 'การตั้งค่าภาษา';
 
   @override

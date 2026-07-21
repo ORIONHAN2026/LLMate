@@ -30,6 +30,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get otherSettings => 'Other Settings';
 
   @override
+  String get resetSystem => 'Reset System';
+
+  @override
+  String get resetAllSessions => 'Reset All Sessions';
+
+  @override
+  String get resetAllModels => 'Reset All Models';
+
+  @override
+  String get resetAllMcp => 'Reset All MCP';
+
+  @override
+  String get resetAll => 'Reset All';
+
+  @override
+  String resetConfirmMsg(Object action) {
+    return 'Are you sure you want to $action? This action cannot be undone.';
+  }
+
+  @override
   String get languageSettings => 'Language';
 
   @override

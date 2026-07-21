@@ -30,6 +30,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get otherSettings => '기타 설정';
 
   @override
+  String get resetSystem => '시스템 초기화';
+
+  @override
+  String get resetAllSessions => '모든 세션 초기화';
+
+  @override
+  String get resetAllModels => '모든 모델 초기화';
+
+  @override
+  String get resetAllMcp => '모든 MCP 초기화';
+
+  @override
+  String get resetAll => '전체 초기화';
+
+  @override
+  String resetConfirmMsg(Object action) {
+    return '$action하시겠습니까? 이 작업은 취소할 수 없습니다.';
+  }
+
+  @override
   String get languageSettings => '언어';
 
   @override

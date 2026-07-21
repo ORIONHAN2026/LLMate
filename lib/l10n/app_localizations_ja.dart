@@ -30,6 +30,26 @@ class AppLocalizationsJa extends AppLocalizations {
   String get otherSettings => 'その他の設定';
 
   @override
+  String get resetSystem => 'システムをリセット';
+
+  @override
+  String get resetAllSessions => 'すべてのセッションをリセット';
+
+  @override
+  String get resetAllModels => 'すべてのモデルをリセット';
+
+  @override
+  String get resetAllMcp => 'すべてのMCPをリセット';
+
+  @override
+  String get resetAll => 'すべてリセット';
+
+  @override
+  String resetConfirmMsg(Object action) {
+    return '$actionしてもよろしいですか？この操作は取り消せません。';
+  }
+
+  @override
   String get languageSettings => '言語';
 
   @override

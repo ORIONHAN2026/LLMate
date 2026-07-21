@@ -191,6 +191,12 @@ extension SessionDao on AppDatabase {
   Future<void> deleteSessionRow(String sessionId) async {
     await (delete(sessionRows)..where((t) => t.id.equals(sessionId))).go();
   }
+
+  /// 删除全部会话及消息
+  Future<void> clearAllSessions() async {
+    await delete(sessionRows).go();
+    await delete(messageRows).go();
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -330,6 +336,11 @@ extension ModelDao on AppDatabase {
   Future<void> deleteModel(String modelId) async {
     await (delete(modelRows)..where((t) => t.id.equals(modelId))).go();
   }
+
+  /// 删除全部模型
+  Future<void> clearAllModels() async {
+    await delete(modelRows).go();
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -375,6 +386,11 @@ extension McpDao on AppDatabase {
 
   Future<void> deleteMcp(String name) async {
     await (delete(mcpRows)..where((t) => t.name.equals(name))).go();
+  }
+
+  /// 删除全部 MCP
+  Future<void> clearAllMcps() async {
+    await delete(mcpRows).go();
   }
 }
 

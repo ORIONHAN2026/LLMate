@@ -6,6 +6,17 @@
   "modelManagement": "模型管理",
   "connectorManagement": "MCP管理",
   "otherSettings": "其他设置",
+  "resetSystem": "Đặt lại hệ thống",
+  "resetAllSessions": "Đặt lại tất cả phiên",
+  "resetAllModels": "Đặt lại tất cả mô hình",
+  "resetAllMcp": "Đặt lại tất cả MCP",
+  "resetAll": "Đặt lại tất cả",
+  "resetConfirmMsg": "Bạn có chắc chắn muốn {action} không? Hành động này không thể hoàn tác.",
+  "@resetConfirmMsg": {
+    "placeholders": {
+      "action": {}
+    }
+  },
   "languageSettings": "语言设置",
   "skinSettings": "外观设置",
   "followSystem": "跟随系统",

@@ -30,6 +30,26 @@ class AppLocalizationsDe extends AppLocalizations {
   String get otherSettings => 'Weitere Einstellungen';
 
   @override
+  String get resetSystem => 'System zurücksetzen';
+
+  @override
+  String get resetAllSessions => 'Alle Sitzungen zurücksetzen';
+
+  @override
+  String get resetAllModels => 'Alle Modelle zurücksetzen';
+
+  @override
+  String get resetAllMcp => 'Alle MCP zurücksetzen';
+
+  @override
+  String get resetAll => 'Alles zurücksetzen';
+
+  @override
+  String resetConfirmMsg(Object action) {
+    return 'Möchten Sie wirklich $action? Diese Aktion kann nicht rückgängig gemacht werden.';
+  }
+
+  @override
   String get languageSettings => 'Sprache';
 
   @override

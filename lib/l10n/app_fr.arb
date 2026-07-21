@@ -7,6 +7,17 @@
   "connectorManagement": "Connecteur (MCP)",
   "domainManagement": "Gestion des services",
   "otherSettings": "Autres paramètres",
+  "resetSystem": "Réinitialiser le système",
+  "resetAllSessions": "Réinitialiser toutes les sessions",
+  "resetAllModels": "Réinitialiser tous les modèles",
+  "resetAllMcp": "Réinitialiser tous les MCP",
+  "resetAll": "Tout réinitialiser",
+  "resetConfirmMsg": "Voulez-vous vraiment {action} ? Cette action est irréversible.",
+  "@resetConfirmMsg": {
+    "placeholders": {
+      "action": {}
+    }
+  },
   "languageSettings": "Langue",
   "skinSettings": "Thème",
   "followSystem": "Suivre le système",

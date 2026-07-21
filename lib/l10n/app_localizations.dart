@@ -152,6 +152,42 @@ abstract class AppLocalizations {
   /// **'Other Settings'**
   String get otherSettings;
 
+  /// No description provided for @resetSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset System'**
+  String get resetSystem;
+
+  /// No description provided for @resetAllSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset All Sessions'**
+  String get resetAllSessions;
+
+  /// No description provided for @resetAllModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset All Models'**
+  String get resetAllModels;
+
+  /// No description provided for @resetAllMcp.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset All MCP'**
+  String get resetAllMcp;
+
+  /// No description provided for @resetAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset All'**
+  String get resetAll;
+
+  /// No description provided for @resetConfirmMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to {action}? This action cannot be undone.'**
+  String resetConfirmMsg(Object action);
+
   /// No description provided for @languageSettings.
   ///
   /// In en, this message translates to:

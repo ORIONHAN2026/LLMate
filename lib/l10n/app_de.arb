@@ -7,6 +7,17 @@
   "connectorManagement": "Connector (MCP)",
   "domainManagement": "Dienstverwaltung",
   "otherSettings": "Weitere Einstellungen",
+  "resetSystem": "System zurücksetzen",
+  "resetAllSessions": "Alle Sitzungen zurücksetzen",
+  "resetAllModels": "Alle Modelle zurücksetzen",
+  "resetAllMcp": "Alle MCP zurücksetzen",
+  "resetAll": "Alles zurücksetzen",
+  "resetConfirmMsg": "Möchten Sie wirklich {action}? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "@resetConfirmMsg": {
+    "placeholders": {
+      "action": {}
+    }
+  },
   "languageSettings": "Sprache",
   "skinSettings": "Design",
   "followSystem": "System folgen",

@@ -30,6 +30,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get otherSettings => '其他设置';
 
   @override
+  String get resetSystem => '重置系统';
+
+  @override
+  String get resetAllSessions => '重置所有会话';
+
+  @override
+  String get resetAllModels => '重置所有模型';
+
+  @override
+  String get resetAllMcp => '重置所有MCP';
+
+  @override
+  String get resetAll => '全部重置';
+
+  @override
+  String resetConfirmMsg(Object action) {
+    return '确定要$action吗？此操作不可撤销。';
+  }
+
+  @override
   String get languageSettings => '语言设置';
 
   @override

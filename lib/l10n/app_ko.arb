@@ -7,6 +7,17 @@
   "connectorManagement": "커넥터 (MCP)",
   "domainManagement": "서비스 관리",
   "otherSettings": "기타 설정",
+  "resetSystem": "시스템 초기화",
+  "resetAllSessions": "모든 세션 초기화",
+  "resetAllModels": "모든 모델 초기화",
+  "resetAllMcp": "모든 MCP 초기화",
+  "resetAll": "전체 초기화",
+  "resetConfirmMsg": "{action}하시겠습니까? 이 작업은 취소할 수 없습니다.",
+  "@resetConfirmMsg": {
+    "placeholders": {
+      "action": {}
+    }
+  },
   "languageSettings": "언어",
   "skinSettings": "테마",
   "followSystem": "시스템 따르기",

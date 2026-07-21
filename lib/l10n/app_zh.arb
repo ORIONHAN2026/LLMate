@@ -7,6 +7,17 @@
   "connectorManagement": "MCP管理",
   "domainManagement": "服务管理",
   "otherSettings": "其他设置",
+  "resetSystem": "重置系统",
+  "resetAllSessions": "重置所有会话",
+  "resetAllModels": "重置所有模型",
+  "resetAllMcp": "重置所有MCP",
+  "resetAll": "全部重置",
+  "resetConfirmMsg": "确定要{action}吗？此操作不可撤销。",
+  "@resetConfirmMsg": {
+    "placeholders": {
+      "action": {}
+    }
+  },
   "languageSettings": "语言设置",
   "skinSettings": "皮肤设置",
   "followSystem": "跟随系统",

@@ -30,6 +30,26 @@ class AppLocalizationsVi extends AppLocalizations {
   String get otherSettings => '其他设置';
 
   @override
+  String get resetSystem => 'Đặt lại hệ thống';
+
+  @override
+  String get resetAllSessions => 'Đặt lại tất cả phiên';
+
+  @override
+  String get resetAllModels => 'Đặt lại tất cả mô hình';
+
+  @override
+  String get resetAllMcp => 'Đặt lại tất cả MCP';
+
+  @override
+  String get resetAll => 'Đặt lại tất cả';
+
+  @override
+  String resetConfirmMsg(Object action) {
+    return 'Bạn có chắc chắn muốn $action không? Hành động này không thể hoàn tác.';
+  }
+
+  @override
   String get languageSettings => '语言设置';
 
   @override

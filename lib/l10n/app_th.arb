@@ -6,6 +6,17 @@
   "modelManagement": "การจัดการแบบจำลอง",
   "connectorManagement": "การจัดการตัวเชื่อมต่อ (MCP)",
   "otherSettings": "การตั้งค่าอื่นๆ",
+  "resetSystem": "รีเซ็ตระบบ",
+  "resetAllSessions": "รีเซ็ตเซสชันทั้งหมด",
+  "resetAllModels": "รีเซ็ตโมเดลทั้งหมด",
+  "resetAllMcp": "รีเซ็ต MCP ทั้งหมด",
+  "resetAll": "รีเซ็ตทั้งหมด",
+  "resetConfirmMsg": "แน่ใจหรือไม่ว่าต้องการ{action}? การดำเนินการนี้ไม่สามารถย้อนกลับได้",
+  "@resetConfirmMsg": {
+    "placeholders": {
+      "action": {}
+    }
+  },
   "languageSettings": "การตั้งค่าภาษา",
   "skinSettings": "การตั้งค่าสกิน",
   "followSystem": "ทำตามระบบ",

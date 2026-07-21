@@ -14,7 +14,6 @@ class AuditEvent {
   final String? parentSpanId;
 
   final String sessionId;
-  final String userId;
 
   final AuditEventType type;
   final DateTime timestamp;
@@ -27,7 +26,6 @@ class AuditEvent {
     required this.spanId,
     this.parentSpanId,
     required this.sessionId,
-    required this.userId,
     required this.type,
     required this.timestamp,
     required this.payload,
@@ -46,7 +44,6 @@ class AuditEvent {
       spanId: row['span_id'] as String? ?? '',
       parentSpanId: row['parent_span_id'] as String?,
       sessionId: (row['session_id'] as String?) ?? '',
-      userId: (row['user_id'] as String?) ?? '',
       type: AuditEventTypeX.fromName((row['event_type'] as String?) ?? 'request'),
       timestamp:
           DateTime.tryParse((row['timestamp'] as String?) ?? '') ??
@@ -62,7 +59,6 @@ class AuditEvent {
     'spanId': spanId,
     if (parentSpanId != null) 'parentSpanId': parentSpanId,
     'sessionId': sessionId,
-    'userId': userId,
     'type': type.name,
     'timestamp': timestamp.toIso8601String(),
     'payload': payload,

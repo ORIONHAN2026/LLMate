@@ -45,17 +45,15 @@ class AuditController {
   /// 开启一条审计链路
   Future<AuditTrace> beginTrace({
     required String sessionId,
-    required String userId,
   }) async {
     final trace = AuditTrace(
       traceId: _uuid.v4(),
       sessionId: sessionId,
-      userId: userId,
     );
     await emit(
       trace,
       AuditEventType.request,
-      {'sessionId': sessionId, 'userId': userId},
+      {'sessionId': sessionId},
     );
     return trace;
   }
@@ -142,7 +140,6 @@ class AuditController {
         spanId: _uuid.v4(),
         parentSpanId: parentSpanId,
         sessionId: trace.sessionId,
-        userId: trace.userId,
         type: type,
         timestamp: DateTime.now(),
         payload: payload,

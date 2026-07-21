@@ -35,7 +35,6 @@ extension AuditEventTypeX on AuditEventType {
 class AuditFilter {
   final String? traceId;
   final String? sessionId;
-  final String? userId;
   final Set<AuditEventType>? eventTypes;
   final DateTime? start;
   final DateTime? end;
@@ -44,7 +43,6 @@ class AuditFilter {
   const AuditFilter({
     this.traceId,
     this.sessionId,
-    this.userId,
     this.eventTypes,
     this.start,
     this.end,

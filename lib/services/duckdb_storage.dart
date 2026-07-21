@@ -18,7 +18,7 @@ import '../models/audit_types.dart';
 /// ```sql
 /// audit_events(
 ///   id, trace_id, span_id, parent_span_id,
-///   session_id, user_id,
+///   session_id,
 ///   event_type, timestamp, payload_json
 /// )
 /// ```
@@ -56,7 +56,6 @@ class DuckDBStorage {
             span_id VARCHAR,
             parent_span_id VARCHAR,
             session_id VARCHAR,
-            user_id VARCHAR,
             event_type VARCHAR,
             timestamp VARCHAR,
             payload_json VARCHAR
@@ -125,7 +124,7 @@ class DuckDBStorage {
       sb.write(
         'INSERT OR REPLACE INTO audit_events '
         '(id, trace_id, span_id, parent_span_id, session_id, '
-        'user_id, event_type, timestamp, payload_json) VALUES ',
+        'event_type, timestamp, payload_json) VALUES ',
       );
       for (var i = 0; i < events.length; i++) {
         final e = events[i];
@@ -136,7 +135,6 @@ class DuckDBStorage {
           '${_q(e.spanId)}, '
           '${e.parentSpanId == null ? 'NULL' : _q(e.parentSpanId!)}, '
           '${_q(e.sessionId)}, '
-          '${_q(e.userId)}, '
           '${_q(e.type.name)}, '
           '${_q(e.timestamp.toIso8601String())}, '
           '${_q(jsonEncode(e.payload))}'
@@ -163,9 +161,6 @@ class DuckDBStorage {
     }
     if (filter.sessionId != null) {
       conds.add('session_id = ${_q(filter.sessionId!)}');
-    }
-    if (filter.userId != null) {
-      conds.add('user_id = ${_q(filter.userId!)}');
     }
     if (filter.eventTypes != null && filter.eventTypes!.isNotEmpty) {
       final types = filter.eventTypes!.map((e) => _q(e.name)).join(', ');

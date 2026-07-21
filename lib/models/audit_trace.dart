@@ -5,11 +5,9 @@
 class AuditTrace {
   final String traceId;
   final String sessionId;
-  final String userId;
 
   AuditTrace({
     required this.traceId,
     required this.sessionId,
-    required this.userId,
   });
 }

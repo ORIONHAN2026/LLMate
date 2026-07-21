@@ -360,7 +360,6 @@ class LocalHttpService {
         try {
           auditTrace = await audit.beginTrace(
             sessionId: session.sessionId,
-            userId: 'local',
           );
           audit.prompt(auditTrace, _extractUserPrompt(body));
         } catch (e) {

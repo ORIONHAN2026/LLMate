@@ -37,7 +37,7 @@ class _AuditViewerState extends State<AuditViewer> {
   DateTime? _endDate;
   int _limit = 200;
 
-  List<AuditEvent> _events = [];
+  List<_TraceGroup> _groups = [];
   /// sessionId → 会话名称 缓存，避免重复查库
   final Map<String, String> _sessionNames = {};
   bool _loading = false;
@@ -93,11 +93,19 @@ class _AuditViewerState extends State<AuditViewer> {
       await AuditController.instance.ensureInitialized();
       final events =
           await AuditController.instance.storage.search(_buildFilter());
+      // 按 traceId 聚合：一次请求 = 一条链路，列表只展示一条
+      final grouped = <String, List<AuditEvent>>{};
+      for (final e in events) {
+        (grouped[e.traceId] ??= []).add(e);
+      }
+      final groups = grouped.entries
+          .map((e) => _TraceGroup(e.key, e.value))
+          .toList();
       // 预取所有不重复 sessionId 的会话名称
       await _populateSessionNames(events);
       if (mounted) {
         setState(() {
-          _events = events;
+          _groups = groups;
           _loading = false;
         });
       }
@@ -248,7 +256,7 @@ class _AuditViewerState extends State<AuditViewer> {
                   child: const Text('重置'),
                 ),
                 const Spacer(),
-                Text('共 ${_events.length} 条',
+                Text('共 ${_groups.length} 条链路',
                     style: Theme.of(context).textTheme.labelSmall),
               ],
             ),
@@ -300,7 +308,7 @@ class _AuditViewerState extends State<AuditViewer> {
             )),
       );
     }
-    if (_events.isEmpty) {
+    if (_groups.isEmpty) {
       return const Center(child: Text('无审计记录'));
     }
     final cs = Theme.of(context).colorScheme;
@@ -309,15 +317,17 @@ class _AuditViewerState extends State<AuditViewer> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: SectionTitle('审计记录 (${_events.length})'),
+          child: SectionTitle('审计链路 (${_groups.length})'),
         ),
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: _events.length,
+            itemCount: _groups.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, i) {
-              final e = _events[i];
+              final g = _groups[i];
+              final first = g.events.first;
+              final sessionName = _sessionNames[first.sessionId];
               return Container(
                 decoration: BoxDecoration(
                   color: cs.surfaceContainerHighest.withOpacity(0.25),
@@ -329,24 +339,31 @@ class _AuditViewerState extends State<AuditViewer> {
                 child: ListTile(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12),
-                  leading: _typeChip(e.type),
+                  leading: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: cs.primary.withOpacity(0.12),
+                    foregroundColor: cs.primary,
+                    child: Text('${g.events.length}'),
+                  ),
                   title: Text(
-                    e.type.name,
+                    sessionName ?? first.sessionId,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: cs.onSurface,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Text(
-                    '${_fmt(e.timestamp)}  ·  ${_sessionNames[e.sessionId] ?? e.sessionId}',
+                    '${_shortId(g.traceId)}  ·  ${g.events.length} 个事件  ·  ${_fmt(first.timestamp)}',
                     style: TextStyle(
                       fontSize: 12,
                       color: cs.onSurface.withOpacity(0.5),
                     ),
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => AuditReplayPage.show(context, e.traceId),
+                  onTap: () => AuditReplayPage.show(context, g.traceId),
                 ),
               );
             },
@@ -582,4 +599,14 @@ Color _typeColor(AuditEventType type) {
 String _fmt(DateTime d) {
   String p(int n) => n.toString().padLeft(2, '0');
   return '${d.year}-${p(d.month)}-${p(d.day)} ${p(d.hour)}:${p(d.minute)}:${p(d.second)}';
+}
+
+String _shortId(String id) =>
+    id.length > 10 ? '${id.substring(0, 10)}…' : id;
+
+/// 按 traceId 聚合的「一次请求 = 一条链路」分组
+class _TraceGroup {
+  final String traceId;
+  final List<AuditEvent> events;
+  _TraceGroup(this.traceId, this.events);
 }

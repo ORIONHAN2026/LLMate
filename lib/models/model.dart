@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
-import 'chat/mcp.dart';
 import '../../controllers/model_controller.dart';
 
 /// 聊天模型数据结构
@@ -40,12 +39,6 @@ class ChatModel {
   /// 安全设置：开启后，请求/响应中的身份证号将被 * 号脱敏
   final bool maskIdCard;
 
-  /// 模型级 MCP 服务文件夹名列表（~/.llmate/mcps/{name}），null/empty = 未绑定
-  final List<String>? mcps;
-
-  /// 模型级 MCP 服务（运行时解析，不持久化于 model 自身）
-  final List<Mcp>? mcpServers;
-
   const ChatModel({
     required this.modelId,
     required this.name,
@@ -66,8 +59,6 @@ class ChatModel {
     this.replyLanguage,
     this.maskPhone = false,
     this.maskIdCard = false,
-    this.mcps,
-    this.mcpServers,
   });
 
   /// 生成唯一的模型ID
@@ -116,9 +107,6 @@ class ChatModel {
           (cs?['maskPhone'] as bool?) ?? (map['maskPhone'] as bool?) ?? false,
       maskIdCard:
           (cs?['maskIdCard'] as bool?) ?? (map['maskIdCard'] as bool?) ?? false,
-      mcps:
-          (map['mcps'] as List<dynamic>?)?.cast<String>() ??
-          (map['mcp'] is String ? [map['mcp'] as String] : null),
     );
   }
 
@@ -138,7 +126,6 @@ class ChatModel {
       if (promptPrice != null) 'promptPrice': promptPrice,
       if (completionPrice != null) 'completionPrice': completionPrice,
       if (currency != null) 'currency': currency,
-      if (mcps != null && mcps!.isNotEmpty) 'mcps': mcps,
     };
 
     // 对话设置（扁平化字段）
@@ -182,7 +169,6 @@ class ChatModel {
     String? replyLanguage,
     bool maskPhone = false,
     bool maskIdCard = false,
-    List<String>? mcps,
   }) {
     return ChatModel(
       modelId: generateModelId(),
@@ -204,7 +190,6 @@ class ChatModel {
       replyLanguage: replyLanguage,
       maskPhone: maskPhone,
       maskIdCard: maskIdCard,
-      mcps: mcps,
     );
   }
 
@@ -229,9 +214,6 @@ class ChatModel {
     String? replyLanguage,
     bool? maskPhone,
     bool? maskIdCard,
-    List<String>? mcps,
-    List<Mcp>? mcpServers,
-    bool clearMcp = false,
   }) {
     return ChatModel(
       modelId: modelId ?? this.modelId,
@@ -253,8 +235,6 @@ class ChatModel {
       replyLanguage: replyLanguage ?? this.replyLanguage,
       maskPhone: maskPhone ?? this.maskPhone,
       maskIdCard: maskIdCard ?? this.maskIdCard,
-      mcps: clearMcp ? null : (mcps ?? this.mcps),
-      mcpServers: clearMcp ? null : (mcpServers ?? this.mcpServers),
     );
   }
 

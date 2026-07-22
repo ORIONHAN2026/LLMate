@@ -11,8 +11,16 @@ LLMate 支持接入主流大模型供应商，统一管理企业的所有 AI 模
 ### 添加模型供应商
 
 1. 打开 LLMate，点击左侧菜单中的 **模型管理**
+
+   {{< figure src="images/model-config/step1-model-management.png" caption="点击左侧菜单中的「模型管理」入口" >}}
+
 2. 点击 **添加模型** 按钮
+
+   {{< figure src="images/model-config/step2-add-model.png" caption="点击「添加模型」按钮，打开配置表单" >}}
+
 3. 填写以下配置项：
+
+   {{< figure src="images/model-config/step3-fill-config.png" caption="填写模型供应商配置表单（名称、供应商、API 地址、密钥、模型标识等）" >}}
 
 | 配置项 | 说明 | 示例 |
 |--------|------|------|

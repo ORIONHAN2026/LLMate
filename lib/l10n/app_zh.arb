@@ -249,7 +249,7 @@
   "memoryClosed": "已关闭记忆",
   "memoryConfigSet": "记忆配置: {n}轮",
   "attach": "附件",
-  "selectMcpTool": "选连接器",
+  "selectMcpTool": "配置MCP",
   "noMcpTool": "无连接器",
   "viewMcpToolDetail": "查看MCP工具详情",
   "clickToSelectMcpTool": "点击选择MCP工具",

@@ -712,22 +712,6 @@ class SessionConfigSidebar {
         const SizedBox(height: 8),
         _buildConfigItem(
           context,
-          icon: Icons.grid_view,
-          label: l10n.modelMcp,
-          value:
-              session.chatModel?.mcps != null &&
-                      session.chatModel!.mcps!.isNotEmpty
-                  ? session.chatModel!.mcps!.join(', ')
-                  : l10n.notBound,
-          valueColor:
-              session.chatModel?.mcps != null &&
-                      session.chatModel!.mcps!.isNotEmpty
-                  ? Theme.of(context).colorScheme.primary
-                  : null,
-        ),
-        const SizedBox(height: 8),
-        _buildConfigItem(
-          context,
           icon: Icons.layers,
           label: l10n.sessionMcp,
           value:
@@ -739,9 +723,7 @@ class SessionConfigSidebar {
                   ? Theme.of(context).colorScheme.primary
                   : null,
         ),
-        if ((session.chatModel?.mcps == null ||
-                session.chatModel!.mcps!.isEmpty) &&
-            (session.mcps == null || session.mcps!.isEmpty))
+        if (session.mcps == null || session.mcps!.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
@@ -2268,22 +2250,6 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildConfigItem(
                       context,
-                      icon: Icons.grid_view,
-                      label: l10n.modelMcp,
-                      value:
-                          session.chatModel?.mcps != null &&
-                                  session.chatModel!.mcps!.isNotEmpty
-                              ? session.chatModel!.mcps!.join(', ')
-                              : l10n.notBound,
-                      valueColor:
-                          session.chatModel?.mcps != null &&
-                                  session.chatModel!.mcps!.isNotEmpty
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
                       icon: Icons.layers,
                       label: l10n.sessionMcp,
                       value:
@@ -2295,9 +2261,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                               ? Theme.of(context).colorScheme.primary
                               : null,
                     ),
-                    if ((session.chatModel?.mcps == null ||
-                            session.chatModel!.mcps!.isEmpty) &&
-                        (session.mcps == null || session.mcps!.isEmpty))
+                    if (session.mcps == null || session.mcps!.isEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(

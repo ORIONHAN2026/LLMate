@@ -772,7 +772,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get attach => '附件';
 
   @override
-  String get selectMcpTool => '选连接器';
+  String get selectMcpTool => '配置MCP';
 
   @override
   String get noMcpTool => '无连接器';

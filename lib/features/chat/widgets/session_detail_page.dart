@@ -19,9 +19,7 @@ class SessionDetailPage extends StatelessWidget {
 
       if (session == null) {
         return Scaffold(
-          appBar: StandardAppBar(
-            title: '会话详情',
-          ),
+          appBar: StandardAppBar(title: '会话详情'),
           body: Center(
             child: Text(
               '请先选择或创建一个会话',
@@ -58,7 +56,7 @@ class SessionDetailPage extends StatelessWidget {
                   SessionConfigSidebar.buildServiceConfigSection(ctx, session),
         ),
         _DetailTab(
-          label: 'MCP',
+          label: 'MCP配置',
           icon: Icons.grid_view,
           builder: (ctx) => SessionConfigSidebar.buildMcpSection(ctx, session),
         ),
@@ -69,7 +67,7 @@ class SessionDetailPage extends StatelessWidget {
               (ctx) => SessionConfigSidebar.buildQuotaSection(ctx, session),
         ),
         _DetailTab(
-          label: '计费信息',
+          label: '用量查询',
           icon: Icons.monetization_on_outlined,
           builder: (ctx) => SessionConfigSidebar.buildBillingInfo(ctx, session),
         ),

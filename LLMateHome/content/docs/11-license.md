@@ -1,7 +1,7 @@
 ---
 title: 许可协议
 type: docs
-prev: docs/10-security
+prev: docs/MCP设置/12-session-mcp
 next: docs/12-mission
 weight: 18
 ---

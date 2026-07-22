@@ -628,9 +628,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     final hasMcpServices = McpController.instance.hasGlobalMcpServices;
     final sessionMcps = currentSession?.mcps;
-    final modelMcps = currentSession?.chatModel?.mcps;
     final allMcps = <String>{};
-    if (modelMcps != null) allMcps.addAll(modelMcps);
     if (sessionMcps != null) allMcps.addAll(sessionMcps);
     final mcpCount = allMcps.length;
 
@@ -782,7 +780,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     final session = sessionController.currentSession.value;
     final sessionMcpNames = List<String>.from(session?.mcps ?? []);
-    final modelMcpNames = List<String>.from(session?.chatModel?.mcps ?? []);
     final searchController = TextEditingController();
 
     showDialog(
@@ -817,9 +814,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                               false);
                     }).toList();
 
-                // 模型MCP说明
-                final hasModelMcp = modelMcpNames.isNotEmpty;
-
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -829,22 +823,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       title: '选择 MCP 服务',
                       onChanged: () => setDialogState(() {}),
                     ),
-                    if (hasModelMcp)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
-                        ),
-                        child: Text(
-                          '模型 MCP（默认启用，不可更改）：${modelMcpNames.join('、')}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primary.withOpacity(0.7),
-                          ),
-                        ),
-                      ),
                     Flexible(
                       child:
                           filtered.isEmpty
@@ -872,21 +850,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                 itemCount: filtered.length,
                                 itemBuilder: (context, index) {
                                   final service = filtered[index];
-                                  final isModelMcp = modelMcpNames.contains(
+                                  final isSelected = localSelected.contains(
                                     service.name,
                                   );
-                                  final isSessionMcp = localSelected.contains(
-                                    service.name,
-                                  );
-                                  final isSelected = isModelMcp || isSessionMcp;
 
                                   return CheckboxListTile(
                                     dense: true,
                                     value: isSelected,
-                                    onChanged:
-                                        isModelMcp
-                                            ? null // 模型MCP不可更改
-                                            : (checked) {
+                                    onChanged: (checked) {
                                               if (checked == true) {
                                                 if (!localSelected.contains(
                                                   service.name,
@@ -912,33 +883,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                                             ),
                                           ),
                                         ),
-                                        if (isModelMcp) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary
-                                                  .withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              '模型',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                color:
-                                                    Theme.of(
-                                                      context,
-                                                    ).colorScheme.primary,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
                                       ],
                                     ),
                                     subtitle:

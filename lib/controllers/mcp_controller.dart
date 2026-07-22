@@ -599,21 +599,10 @@ class McpController extends GetxController {
 
   List<Mcp> _getEnabledServices(ChatSession s) {
     final services = <Mcp>[];
-    final sessionMcpNames = <String>{};
     // session-level MCPs
     if (s.mcps != null && s.mcps!.isNotEmpty) {
       for (final name in s.mcps!) {
         if (name.isEmpty) continue;
-        sessionMcpNames.add(name);
-        final cfg = getMcp(name);
-        if (cfg != null) services.add(cfg);
-      }
-    }
-    // model-level MCPs (dedup)
-    final modelMcps = s.chatModel?.mcps;
-    if (modelMcps != null && modelMcps.isNotEmpty) {
-      for (final name in modelMcps) {
-        if (name.isEmpty || sessionMcpNames.contains(name)) continue;
         final cfg = getMcp(name);
         if (cfg != null) services.add(cfg);
       }
@@ -695,17 +684,11 @@ class McpController extends GetxController {
     return mcp!.tools!.any((t) => t.name == toolName);
   }
 
-  /// Get all effective MCP names for a session (session MCPs + model MCPs, deduplicated)
+  /// Get all effective MCP names for a session (session-level)
   Iterable<String> _effectiveMcpNames(ChatSession s) sync* {
     if (s.mcps != null) {
       for (final name in s.mcps!) {
         if (name.isNotEmpty) yield name;
-      }
-    }
-    final modelMcps = s.chatModel?.mcps;
-    if (modelMcps != null) {
-      for (final name in modelMcps) {
-        if (name.isNotEmpty && !(s.mcps?.contains(name) == true)) yield name;
       }
     }
   }
@@ -833,7 +816,7 @@ class McpController extends GetxController {
   }
 
   void initForSession(ChatSession s) {
-    // init both session and model MCPs
+    // init session MCPs
     for (final mcpName in _effectiveMcpNames(s)) {
       if (_clients.containsKey(mcpName)) {
         debugPrint('📡 MCP 已存在: $mcpName');
@@ -854,7 +837,7 @@ class McpController extends GetxController {
   }
 
   Future<Mcp?> initForSessionSync(ChatSession s) async {
-    // init all effective MCPs (session + model)
+    // init session MCPs
     Mcp? lastServer;
     for (final mcpName in _effectiveMcpNames(s)) {
       if (_clients.containsKey(mcpName) && _availableTools.containsKey(mcpName)) {

@@ -380,7 +380,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     print('原模型API URL: ${model.apiUrl ?? "null"}');
     print('原模型platform: ${model.platform ?? "null"}');
 
-    // 创建模型副本，只保留基本配置，排除会话、MCP、知识库等设置
+    // 创建模型副本，只保留基本配置
     ChatModel copiedModel = model.copyWith(
       modelId: DateTime.now().millisecondsSinceEpoch.toString(),
       name: newName,

@@ -2,7 +2,7 @@
 title: 工作模式
 type: docs
 prev: docs/03-feature-guide
-next: docs/05-mcp-market
+next: docs/06-changelog
 weight: 11
 ---
 

@@ -383,8 +383,9 @@ class LlmClient {
 
     final allMessages = [...systemMessages, ...history];
 
-    final mcpTools = McpController.instance.getMergedTools(session);
-    final tools = mcpTools.map((t) => t.toOpenAIFunction()).toList();
+    // 管理模式：不向大模型注入会话 MCP 工具（会话工具调用由服务侧统一处理，
+    // 本地管理模式下直接跳过，避免客户端自行执行会话 MCP 工具）。
+    const tools = <Map<String, dynamic>>[];
 
     return _provider.buildRequestData(
       messages: allMessages,

@@ -188,6 +188,21 @@ extension SessionDao on AppDatabase {
     return row?.id;
   }
 
+  /// 读取持久化的当前聊天模式（'management' / 'session'），无记录返回 null
+  Future<String?> getCurrentMode() async {
+    final row = await (select(settingRows)
+          ..where((t) => t.key.equals('currentMode')))
+        .getSingleOrNull();
+    return row?.data;
+  }
+
+  /// 持久化当前聊天模式
+  Future<void> setCurrentMode(String mode) async {
+    await into(settingRows).insertOnConflictUpdate(
+      SettingRowsCompanion.insert(key: 'currentMode', data: mode),
+    );
+  }
+
   Future<void> deleteSessionRow(String sessionId) async {
     await (delete(sessionRows)..where((t) => t.id.equals(sessionId))).go();
   }

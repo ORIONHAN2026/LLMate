@@ -17,6 +17,14 @@ class SessionController extends GetxController {
   var sessions = <ChatSession>[].obs;
   var currentSession = Rxn<ChatSession>();
 
+  /// 全局聊天模式（会话模式 / 管理模式）。
+  /// 侧边栏仅展示与该模式匹配的会话，实现两种模式的会话列表完全独立。
+  var currentMode = SessionMode.session.obs;
+
+  /// 当前全局模式下可见的会话列表（管理模式只看管理会话，会话模式只看会话会话）
+  List<ChatSession> get sessionsForCurrentMode =>
+      sessions.where((s) => s.mode == currentMode.value).toList();
+
   /// 会话存储已迁移至 Drift / SQLite（单例 [appDatabase]，~/.llmate/llmate.sqlite）
 
   /// 用新的完整列表替换内存列表，并逐条 upsert 每个会话到数据库。
@@ -77,6 +85,46 @@ class SessionController extends GetxController {
     sessions.add(session);
     currentSession.value = session;
     await _persistSessionAndCurrent(session, isCurrent: true);
+  }
+
+  /// 切换到指定聊天模式。
+  ///
+  /// 切换后当前会话变为该模式下第一个会话；若该模式尚无会话，则新建一个
+  /// 该模式的会话。两种模式的会话列表与当前会话完全独立。
+  Future<void> switchMode(SessionMode mode) async {
+    if (currentMode.value == mode) return;
+    currentMode.value = mode;
+    try {
+      await appDatabase.setCurrentMode(mode.name);
+    } catch (e) {
+      debugPrint('保存当前模式失败: $e');
+    }
+
+    final matching = sessions.where((s) => s.mode == mode).toList();
+    if (matching.isNotEmpty) {
+      // 取最近创建的会话作为该模式的当前会话
+      final latest = matching.reduce(
+        (a, b) => a.createdAt.isAfter(b.createdAt) ? a : b,
+      );
+      await setCurrentSession(latest);
+    } else {
+      await _createSessionOfMode(mode);
+    }
+  }
+
+  /// 创建一个指定模式的新会话并设为当前会话（内存 + 持久化）。
+  Future<ChatSession> _createSessionOfMode(SessionMode mode) async {
+    final session = ChatSession(
+      sessionId: ChatSession.generateSessionId(),
+      name: '新对话',
+      createdAt: DateTime.now(),
+      messages: [],
+      mode: mode,
+    );
+    sessions.insert(0, session);
+    currentSession.value = session;
+    await _persistSessionAndCurrent(session, isCurrent: true);
+    return session;
   }
 
   /// 更新会话并持久化
@@ -231,12 +279,16 @@ class SessionController extends GetxController {
     sessions.removeAt(index);
 
     if (currentSession.value?.sessionId == sessionToDelete.sessionId) {
-      if (sessions.isEmpty) {
+      // 删除当前会话后，在同模式的剩余会话中选取最近创建的一个作为当前会话，
+      // 避免跨模式选中（保持管理模式 / 会话模式的列表完全独立）。
+      final remaining =
+          sessions.where((s) => s.mode == currentMode.value).toList();
+      if (remaining.isEmpty) {
         currentSession.value = null;
-      } else if (index > 0) {
-        currentSession.value = sessions[index - 1];
       } else {
-        currentSession.value = sessions[0];
+        currentSession.value = remaining.reduce(
+          (a, b) => a.createdAt.isAfter(b.createdAt) ? a : b,
+        );
       }
     }
 
@@ -346,9 +398,19 @@ class SessionController extends GetxController {
       loaded.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       sessions.value = loaded;
 
+      // 恢复持久化的全局聊天模式
+      final modeStr = await appDatabase.getCurrentMode();
+      currentMode.value =
+          modeStr == 'management' ? SessionMode.management : SessionMode.session;
+
       final currentId = await appDatabase.getCurrentSessionId();
-      final current =
+      ChatSession? current =
           loaded.where((s) => s.sessionId == currentId).firstOrNull;
+
+      // 若持久化的当前会话不属于当前模式，则退而取该模式下的第一个会话
+      if (current == null || current.mode != currentMode.value) {
+        current = loaded.where((s) => s.mode == currentMode.value).firstOrNull;
+      }
 
       if (current != null) {
         await setCurrentSession(current);
@@ -356,9 +418,9 @@ class SessionController extends GetxController {
         currentSession.value = null;
       }
 
-      // 首次启动（无任何会话）时，自动创建一个默认会话，确保应用有初始配置
-      if (sessions.isEmpty) {
-        await _seedDefaultSession();
+      // 当前模式下若无任何会话，自动创建一个该模式的默认会话，确保 UI 可用
+      if (!loaded.any((s) => s.mode == currentMode.value)) {
+        await _seedDefaultSession(mode: currentMode.value);
       }
     } catch (e) {
       debugPrint('加载会话失败: $e');
@@ -380,7 +442,7 @@ class SessionController extends GetxController {
   ///
   /// 默认会话会尝试绑定一个可用模型（优先 DeepSeekR1，否则取第一个），
   /// 与首页「新建会话」的模型匹配逻辑保持一致。
-  Future<void> _seedDefaultSession() async {
+  Future<void> _seedDefaultSession({SessionMode mode = SessionMode.session}) async {
     try {
       // 复用首页的模型匹配逻辑：优先 DeepSeekR1，否则第一个可用模型
       ChatModel? selectedModel;
@@ -413,6 +475,7 @@ class SessionController extends GetxController {
         messages: [welcomeMessage.copyWith(sessionId: null)],
         chatModel: selectedModel,
         inputContent: '',
+        mode: mode,
       );
 
       // 回填欢迎消息的 sessionId 并加入会话

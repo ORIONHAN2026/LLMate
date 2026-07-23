@@ -538,10 +538,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 构建聊天模式切换按钮（会话模式 / 管理模式）
   Widget _buildChatModeToggle() {
     return Obx(() {
-      final currentSession = sessionController.currentSession.value;
-      final isManagement = currentSession?.mode == SessionMode.management;
+      // 模式为全局属性：切换全局模式后，侧边栏与当前会话均切换到对应模式列表
+      final isManagement =
+          sessionController.currentMode.value == SessionMode.management;
       final onSurface = Theme.of(context).colorScheme.onSurface;
-      final active = !_isSending && currentSession != null;
+      final active = !_isSending;
       return Tooltip(
         message:
             isManagement
@@ -551,16 +552,11 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           onTap:
               active
                   ? () {
-                    if (currentSession != null) {
-                      sessionController.updateSession(
-                        currentSession.copyWith(
-                          mode:
-                              isManagement
-                                  ? SessionMode.session
-                                  : SessionMode.management,
-                        ),
-                      );
-                    }
+                    sessionController.switchMode(
+                      isManagement
+                          ? SessionMode.session
+                          : SessionMode.management,
+                    );
                   }
                   : null,
           child: Container(

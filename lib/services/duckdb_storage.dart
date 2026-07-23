@@ -183,6 +183,38 @@ class DuckDBStorage {
     return _query(sql);
   }
 
+  /// 按 id 查询单条审计事件
+  Future<AuditEvent?> getEventById(String id) async {
+    final list = await _query(
+      'SELECT * FROM audit_events WHERE id = ${_q(id)}',
+    );
+    return list.isEmpty ? null : list.first;
+  }
+
+  /// 按 id 删除审计事件
+  Future<int> deleteEventById(String id) async {
+    if (!_initialized || _conn == null) return 0;
+    return _serialize(() async {
+      await _conn!.execute('DELETE FROM audit_events WHERE id = ${_q(id)}');
+      return 1;
+    });
+  }
+
+  /// 按 id 更新审计事件的 payload（其余字段保留）
+  Future<int> updateEventPayload(
+    String id,
+    Map<String, dynamic> payload,
+  ) async {
+    if (!_initialized || _conn == null) return 0;
+    return _serialize(() async {
+      await _conn!.execute(
+        'UPDATE audit_events SET payload_json = ${_q(jsonEncode(payload))} '
+        'WHERE id = ${_q(id)}',
+      );
+      return 1;
+    });
+  }
+
   // ───────────────────────────────────────────────────────────
   // 内部工具
   // ───────────────────────────────────────────────────────────

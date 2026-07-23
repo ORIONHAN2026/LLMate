@@ -10,9 +10,9 @@ import './openai_provider.dart';
 import './common/message_builder.dart';
 import './modes/mode_utils.dart';
 import '../http/stream_round.dart' show streamSingleRound;
-import '../../controllers/mcp_controller.dart';
 import '../../models/responses/chunk.dart';
-import '../../models/responses/openai_response.dart' show ToolCall;
+import './management_tools.dart'
+    show managementToolDefinitions, managementToolNames, executeManagementTool;
 
 /// LLM 客户端（聊天窗口侧代理）
 ///
@@ -222,12 +222,14 @@ class LlmClient {
       // streamSingleRound 自身不关闭 controller，故在 round 完成后关闭，使解析流
       // 正常结束。
       unawaited(
-        roundFuture.then((_) {
-          controller.close();
-        }).catchError((_) {
-          // 出错也需关闭 controller，避免解析流挂起；异常交由下方 await 统一抛出
-          controller.close();
-        }),
+        roundFuture
+            .then((_) {
+              controller.close();
+            })
+            .catchError((_) {
+              // 出错也需关闭 controller，避免解析流挂起；异常交由下方 await 统一抛出
+              controller.close();
+            }),
       );
 
       await for (final c in _parseLocalStream(controller.stream)) {
@@ -241,8 +243,44 @@ class LlmClient {
         return;
       }
 
-      // 第三方工具 chunk 直接透传给客户端（客户端自行解析执行）
-      for (final c in round.thirdToolChunks) {
+      // ── 工具调用分类：系统工具（管理模式本地执行） vs 真正的第三方工具 ──
+      // 管理模式未注入 MCP，系统工具会被 [streamSingleRound] 归入 thirdToolChunks，
+      // 此处按名称识别并本地执行；未在系统工具集合内的，视为第三方工具透传客户端。
+      final allToolChunks = [
+        ...round.sessionToolChunks,
+        ...round.thirdToolChunks,
+      ];
+
+      final systemToolCalls = <Map<String, dynamic>>[];
+      final thirdPartyChunks = <Chunk>[];
+
+      for (final chunk in allToolChunks) {
+        final toolCalls =
+            chunk.choices.expand((ch) => ch.delta?.toolCalls ?? []).toList();
+        if (toolCalls.isEmpty) continue;
+        final tc = toolCalls.first;
+        final name = tc.function?.name ?? '';
+        if (managementToolNames.contains(name)) {
+          final argsStr = tc.function?.arguments ?? '{}';
+          Map<String, dynamic> args;
+          try {
+            args = jsonDecode(argsStr) as Map<String, dynamic>;
+          } catch (_) {
+            args = {};
+          }
+          systemToolCalls.add({
+            'name': name,
+            'arguments': args,
+            'id': tc.id,
+            'index': tc.index,
+          });
+        } else {
+          thirdPartyChunks.add(chunk);
+        }
+      }
+
+      // 真正的第三方工具 → 透传给客户端自行执行
+      for (final c in thirdPartyChunks) {
         final toolCalls =
             c.choices.expand((ch) => ch.delta?.toolCalls ?? []).toList();
         if (toolCalls.isNotEmpty) {
@@ -252,66 +290,78 @@ class LlmClient {
         }
       }
 
-      // 无会话工具（MCP）调用 → 正常回复完毕
-      if (round.sessionToolChunks.isEmpty) break;
+      // 系统工具 → 客户端本地执行（审计增删改查 / 用量与额度管理）
+      if (systemToolCalls.isNotEmpty) {
+        toolIteration++;
+        if (toolIteration >= maxToolIterations) {
+          debugPrint('⚠️ [Local] 系统工具调用已达最大轮次 $maxToolIterations');
+          break;
+        }
 
-      toolIteration++;
-      if (toolIteration >= maxToolIterations) {
-        debugPrint('⚠️ [Local] 工具调用已达最大轮次 $maxToolIterations');
-        break;
-      }
+        yield {'tool': 'true'};
+        yield {'toolcall': _mcpExecutingSentinel};
 
-      // 提取工具调用参数并执行本地 MCP 工具
-      final toolCallParams = _extractLocalToolCallParams(
-        round.sessionToolChunks,
-      );
+        final results = await _executeManagementTools(systemToolCalls);
 
-      // 通知客户端：工具正在执行
-      yield {'tool': 'true'};
-      yield {'toolcall': _mcpExecutingSentinel};
-
-      final executionResult = await McpController.instance.executeToolCalls(
-        session: session,
-        toolCalls: toolCallParams,
-        cleanContent: '',
-      );
-
-      if (executionResult == null || executionResult.executionResults.isEmpty) {
-        break;
-      }
-
-      // 回填 assistant(tool_calls) 到对话历史
-      (body['messages'] as List<dynamic>).add({
-        'role': 'assistant',
-        'content': null,
-        'tool_calls':
-            toolCallParams.map((tc) {
-              return {
-                'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
-                'type': 'function',
-                'function': {
-                  'name': tc['name'] ?? '',
-                  'arguments':
-                      tc['arguments'] is String
-                          ? tc['arguments']
-                          : jsonEncode(tc['arguments'] ?? {}),
-                },
-              };
-            }).toList(),
-      });
-
-      // 回填 tool 结果消息
-      for (final r in executionResult.executionResults) {
-        final rawResult = r['result']?.toString() ?? '';
+        // 回填 assistant(tool_calls) 到对话历史
         (body['messages'] as List<dynamic>).add({
-          'role': 'tool',
-          'tool_call_id': r['id'],
-          'content': r['isError'] == true ? '错误: $rawResult' : rawResult,
+          'role': 'assistant',
+          'content': null,
+          'tool_calls':
+              systemToolCalls.map((tc) {
+                return {
+                  'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
+                  'type': 'function',
+                  'function': {
+                    'name': tc['name'] ?? '',
+                    'arguments':
+                        tc['arguments'] is String
+                            ? tc['arguments']
+                            : jsonEncode(tc['arguments'] ?? {}),
+                  },
+                };
+              }).toList(),
         });
+
+        // 回填各系统工具的执行结果（role=tool）
+        for (var i = 0; i < systemToolCalls.length; i++) {
+          final tc = systemToolCalls[i];
+          (body['messages'] as List<dynamic>).add({
+            'role': 'tool',
+            'tool_call_id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
+            'content': results[i],
+          });
+        }
+        continue;
       }
+
+      // 无系统工具（也未触发第三方工具执行）→ 正常回复完毕
+      break;
     }
 
     yield {'done': 'true'};
+  }
+
+  /// 执行一组管理模式系统工具，逐个调用 [executeManagementTool]。
+  ///
+  /// 返回与 [calls] 等长的字符串列表，每一项为该工具结果的 JSON（含 success /
+  /// error 或 data），供回填进对话历史作为 `role=tool` 的 content。
+  Future<List<String>> _executeManagementTools(
+    List<Map<String, dynamic>> calls,
+  ) async {
+    final results = <String>[];
+    for (final call in calls) {
+      final name = (call['name'] as String?) ?? '';
+      final args =
+          (call['arguments'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+      try {
+        results.add(await executeManagementTool(name, args, _session));
+      } catch (e, st) {
+        debugPrint('⚠️ [Local] 系统工具 $name 执行失败: $e\n$st');
+        results.add(jsonEncode({'success': false, 'error': e.toString()}));
+      }
+    }
+    return results;
   }
 
   /// 解析本地 LLM 返回的 SSE 字节流，转译为 LLMChat 消费方期望的 chunk 格式
@@ -383,9 +433,10 @@ class LlmClient {
 
     final allMessages = [...systemMessages, ...history];
 
-    // 管理模式：不向大模型注入会话 MCP 工具（会话工具调用由服务侧统一处理，
-    // 本地管理模式下直接跳过，避免客户端自行执行会话 MCP 工具）。
-    const tools = <Map<String, dynamic>>[];
+    // 管理模式：不注入会话 MCP 工具（会话工具由服务侧统一处理，本地跳过）；
+    // 改为注入「系统工具」——审计内容增删改查 + 用量 / 会话额度管理，
+    // 由客户端本地执行（[executeManagementTool]），不经过本机 HTTP 服务。
+    final tools = managementToolDefinitions;
 
     return _provider.buildRequestData(
       messages: allMessages,
@@ -393,36 +444,6 @@ class LlmClient {
       stream: true,
       tools: tools,
     );
-  }
-
-  /// 从工具调用 chunk 列表中提取工具调用的 name / arguments / id / index
-  List<Map<String, dynamic>> _extractLocalToolCallParams(List<Chunk> chunks) {
-    final params = <Map<String, dynamic>>[];
-    for (final chunk in chunks) {
-      ToolCall? tc;
-      for (final choice in chunk.choices) {
-        final tcs = choice.delta?.toolCalls;
-        if (tcs != null && tcs.isNotEmpty) {
-          tc = tcs.first;
-          break;
-        }
-      }
-      if (tc == null) continue;
-      final argsStr = tc.function?.arguments ?? '{}';
-      Map<String, dynamic> args;
-      try {
-        args = jsonDecode(argsStr) as Map<String, dynamic>;
-      } catch (_) {
-        args = {'raw': argsStr};
-      }
-      params.add({
-        'name': tc.function?.name ?? '',
-        'arguments': args,
-        'id': tc.id,
-        'index': tc.index,
-      });
-    }
-    return params;
   }
 
   /// 将单个 OpenAI SSE data 负载解析为若干 LLMChat chunk

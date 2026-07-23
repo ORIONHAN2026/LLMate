@@ -123,6 +123,46 @@ class AuditController {
       emit(trace, AuditEventType.cost, {'cost': cost, 'currency': currency});
 
   // ══════════════════════════════════════════════════════════
+  // 审计内容增删改查（供管理模式系统工具调用，客户端本地执行）
+  // ══════════════════════════════════════════════════════════
+
+  /// 按过滤器检索审计事件（时间升序）
+  Future<List<AuditEvent>> queryEvents(AuditFilter filter) =>
+      storage.search(filter);
+
+  /// 按 id 查询单条审计事件
+  Future<AuditEvent?> getEvent(String id) => storage.getEventById(id);
+
+  /// 新增一条审计事件（自动生成 id / spanId，可选归属指定 trace）
+  Future<AuditEvent> addEvent({
+    required String sessionId,
+    required AuditEventType type,
+    required Map<String, dynamic> payload,
+    String? traceId,
+    String? parentSpanId,
+  }) async {
+    final event = AuditEvent(
+      id: _uuid.v4(),
+      traceId: traceId ?? _uuid.v4(),
+      spanId: _uuid.v4(),
+      parentSpanId: parentSpanId,
+      sessionId: sessionId,
+      type: type,
+      timestamp: DateTime.now(),
+      payload: payload,
+    );
+    await storage.save(event);
+    return event;
+  }
+
+  /// 按 id 更新审计事件的 payload
+  Future<void> updateEvent(String id, Map<String, dynamic> payload) =>
+      storage.updateEventPayload(id, payload);
+
+  /// 按 id 删除审计事件
+  Future<void> deleteEvent(String id) => storage.deleteEventById(id);
+
+  // ══════════════════════════════════════════════════════════
   // 内部：构造并落盘单条事件
   // ══════════════════════════════════════════════════════════
 

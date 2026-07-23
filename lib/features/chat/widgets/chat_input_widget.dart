@@ -694,34 +694,41 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   /// 构建MCP工具切换按钮
   Widget _buildMcpToolsToggle() {
-    final currentSession = sessionController.currentSession.value;
+    return Obx(() {
+      final currentSession = sessionController.currentSession.value;
 
-    final hasMcpServices = McpController.instance.hasGlobalMcpServices;
-    final sessionMcps = currentSession?.mcps;
-    final allMcps = <String>{};
-    if (sessionMcps != null) allMcps.addAll(sessionMcps);
-    final mcpCount = allMcps.length;
+      // 管理模式：不向大模型注入会话 MCP 工具，隐藏聊天输入框的 MCP 入口
+      if (currentSession?.mode == SessionMode.management) {
+        return const SizedBox.shrink();
+      }
 
-    final displayText =
-        mcpCount > 0
-            ? '$mcpCount 个 MCP'
-            : (hasMcpServices
-                ? AppLocalizations.of(context)!.selectMcpTool
-                : AppLocalizations.of(context)!.noMcpTool);
+      final hasMcpServices = McpController.instance.hasGlobalMcpServices;
+      final sessionMcps = currentSession?.mcps;
+      final allMcps = <String>{};
+      if (sessionMcps != null) allMcps.addAll(sessionMcps);
+      final mcpCount = allMcps.length;
 
-    return Tooltip(
-      message:
+      final displayText =
           mcpCount > 0
-              ? '点击管理 MCP 服务'
+              ? '$mcpCount 个 MCP'
               : (hasMcpServices
-                  ? AppLocalizations.of(context)!.clickToSelectMcpTool
-                  : AppLocalizations.of(context)!.noMcpToolConfigured),
-      child: GestureDetector(
-        onTap: hasMcpServices && !_isSending ? _showMcpServiceSelection : null,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+                  ? AppLocalizations.of(context)!.selectMcpTool
+                  : AppLocalizations.of(context)!.noMcpTool);
+
+      return Tooltip(
+        message:
+            mcpCount > 0
+                ? '点击管理 MCP 服务'
+                : (hasMcpServices
+                    ? AppLocalizations.of(context)!.clickToSelectMcpTool
+                    : AppLocalizations.of(context)!.noMcpToolConfigured),
+        child: GestureDetector(
+          onTap:
+              hasMcpServices && !_isSending ? _showMcpServiceSelection : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.link,
@@ -773,7 +780,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           ),
         ),
       ),
-    );
+      );
+    });
   }
 
   /// 命令面板通用搜索栏

@@ -70,6 +70,21 @@ String randomEmoji() {
   return kSessionEmojis[math.Random().nextInt(kSessionEmojis.length)];
 }
 
+/// 聊天模式
+///
+/// - [session]：会话模式（默认）。消息经本机 HTTP 服务转发，由服务侧统一完成
+///   鉴权 / 配额 / 工具执行 / 审计与用量统计；聊天记录由客户端生成，服务侧仅
+///   保存审计与用量信息，不再生成消息记录。
+/// - [management]：管理模式。消息由客户端本地直连大模型，不经过本机 HTTP 服务，
+///   用量不计入统计（不写审计 / 用量记录），适合本地调试与管理类操作。
+enum SessionMode {
+  /// 会话模式
+  session,
+
+  /// 管理模式
+  management,
+}
+
 // 聊天会话类
 class ChatSession {
   final String sessionId;
@@ -144,6 +159,9 @@ class ChatSession {
   /// 是否禁用该会话：禁用后任何调用（应用内与外部 HTTP 请求）均返回错误
   final bool isDisabled;
 
+  /// 聊天模式（会话模式 / 管理模式），默认会话模式
+  final SessionMode mode;
+
   // === 用量配额设置 ===
 
   /// 是否启用用量限制
@@ -202,6 +220,7 @@ class ChatSession {
     this.quotaRequestCount = 0,
     this.noAuthEnabled = false,
     this.isDisabled = false,
+    this.mode = SessionMode.session,
   }) : modelId = modelId ?? chatModel?.modelId,
        mcps = mcps,
        emoji = emoji ?? randomEmoji(),
@@ -406,6 +425,7 @@ class ChatSession {
     int? quotaRequestCount,
     bool? noAuthEnabled,
     bool? isDisabled,
+    SessionMode? mode,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -478,6 +498,7 @@ class ChatSession {
       quotaRequestCount: quotaRequestCount ?? this.quotaRequestCount,
       noAuthEnabled: noAuthEnabled ?? this.noAuthEnabled,
       isDisabled: isDisabled ?? this.isDisabled,
+      mode: mode ?? this.mode,
     );
   }
 
@@ -582,6 +603,8 @@ class ChatSession {
       quotaRequestCount: json['quotaRequestCount'] as int? ?? 0,
       noAuthEnabled: json['noAuthEnabled'] as bool? ?? false,
       isDisabled: json['isDisabled'] as bool? ?? false,
+      mode:
+          json['mode'] == 'management' ? SessionMode.management : SessionMode.session,
     );
   }
 
@@ -622,6 +645,7 @@ class ChatSession {
       'quotaRequestCount': quotaRequestCount,
       'noAuthEnabled': noAuthEnabled,
       'isDisabled': isDisabled,
+      'mode': mode.name,
     };
   }
 }

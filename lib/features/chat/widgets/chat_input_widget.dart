@@ -455,6 +455,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           const SizedBox(width: 8),
                           _buildMcpToolsToggle(),
                           const SizedBox(width: 8),
+                          _buildChatModeToggle(),
+                          const SizedBox(width: 8),
 
                           _buildCleanHistoryToggle(),
                           // Container(
@@ -531,6 +533,74 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 无文字输入时不显示按钮，但保持高度一致
       return const SizedBox(width: 16, height: 16);
     }
+  }
+
+  /// 构建聊天模式切换按钮（会话模式 / 管理模式）
+  Widget _buildChatModeToggle() {
+    return Obx(() {
+      final currentSession = sessionController.currentSession.value;
+      final isManagement = currentSession?.mode == SessionMode.management;
+      final onSurface = Theme.of(context).colorScheme.onSurface;
+      final active = !_isSending && currentSession != null;
+      return Tooltip(
+        message:
+            isManagement
+                ? '管理模式：本地直连大模型，不计入用量统计'
+                : '会话模式：经本地服务做审计与用量统计',
+        child: GestureDetector(
+          onTap:
+              active
+                  ? () {
+                    if (currentSession != null) {
+                      sessionController.updateSession(
+                        currentSession.copyWith(
+                          mode:
+                              isManagement
+                                  ? SessionMode.session
+                                  : SessionMode.management,
+                        ),
+                      );
+                    }
+                  }
+                  : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isManagement
+                      ? Icons.admin_panel_settings_outlined
+                      : Icons.chat_bubble_outline,
+                  size: 13,
+                  color:
+                      active
+                          ? (isManagement ? onSurface : onSurface.withOpacity(0.6))
+                          : onSurface.withOpacity(0.3),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  isManagement ? '管理模式' : '会话模式',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight:
+                        isManagement ? FontWeight.w700 : FontWeight.w500,
+                    color:
+                        active
+                            ? (isManagement
+                                ? onSurface
+                                : onSurface.withOpacity(0.6))
+                            : onSurface.withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
   }
 
   /// 删除历史记录

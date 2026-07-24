@@ -1,3 +1,5 @@
+import 'package:llmate/models/chat/session.dart';
+
 import '../../features/chat/widgets/message_widgets/content_block.dart';
 
 enum MessageRole { user, bot, tool }
@@ -10,10 +12,16 @@ class ChatMessage {
   List<ContentBlock> contentBlocks; // 按时间顺序排列的内容块（reason/tool/content）
   final DateTime timestamp;
   final String? sessionId;
+
+  /// 消息所属模型ID，与所属会话的 modelId 保持一致，用于区分消息来源模型
+  final String? model;
+
   final bool isError;
 
   // 消息关联字段
   final String? pairedMsgId; // 配对的消息ID（用于关联用户消息和AI回复）
+
+  final String? mode; //session | manager
 
   // 工具调用相关字段
   final String? toolName; // 工具名称（用于tool类型消息）
@@ -36,6 +44,7 @@ class ChatMessage {
     this.contentBlocks = const [], // 内容块列表，默认为空
     required this.timestamp,
     this.sessionId,
+    this.model,
     this.isError = false,
     this.pairedMsgId, // 配对的消息ID（可选）
     this.toolName, // 工具名称（可选）
@@ -47,6 +56,7 @@ class ChatMessage {
     this.promptTokens,
     this.completionTokens,
     this.generationDuration,
+    this.mode,
   });
 
   /// 计算生成速度（token/秒）
@@ -84,6 +94,7 @@ class ChatMessage {
               ? DateTime.tryParse(json['timestamp']) ?? DateTime.now()
               : DateTime.now(),
       sessionId: json['sessionId'],
+      model: json['model'] as String?,
       isError: json['isError'] ?? false,
       pairedMsgId: json['pairedMessageId'],
       toolName: json['toolName'],
@@ -133,6 +144,7 @@ class ChatMessage {
       'reason': reason, // 思考内容
       'timestamp': timestamp.toIso8601String(),
       'sessionId': sessionId,
+      'model': model,
       'isError': isError,
       'pairedMessageId': pairedMsgId,
       'toolName': toolName,
@@ -167,6 +179,7 @@ class ChatMessage {
     List<ContentBlock>? contentBlocks, // 内容块列表
     DateTime? timestamp,
     String? sessionId,
+    String? model,
     bool? isError,
     String? pairedMsgId, // 配对的消息ID
     String? toolName,
@@ -187,6 +200,7 @@ class ChatMessage {
       contentBlocks: contentBlocks ?? this.contentBlocks, // 内容块列表
       timestamp: timestamp ?? this.timestamp,
       sessionId: sessionId ?? this.sessionId,
+      model: model ?? this.model,
       isError: isError ?? this.isError,
       pairedMsgId: pairedMsgId ?? this.pairedMsgId, // 配对的消息ID
       toolName: toolName ?? this.toolName,

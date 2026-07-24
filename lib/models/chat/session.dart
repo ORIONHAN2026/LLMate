@@ -160,7 +160,7 @@ class ChatSession {
   final bool isDisabled;
 
   /// 聊天模式（会话模式 / 管理模式），默认会话模式
-  final SessionMode mode;
+  final String mode;
 
   // === 用量配额设置 ===
 
@@ -220,7 +220,7 @@ class ChatSession {
     this.quotaRequestCount = 0,
     this.noAuthEnabled = false,
     this.isDisabled = false,
-    this.mode = SessionMode.session,
+    this.mode = "session",
   }) : modelId = modelId ?? chatModel?.modelId,
        mcps = mcps,
        emoji = emoji ?? randomEmoji(),
@@ -425,7 +425,7 @@ class ChatSession {
     int? quotaRequestCount,
     bool? noAuthEnabled,
     bool? isDisabled,
-    SessionMode? mode,
+    String? mode, //session|manager
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -603,8 +603,7 @@ class ChatSession {
       quotaRequestCount: json['quotaRequestCount'] as int? ?? 0,
       noAuthEnabled: json['noAuthEnabled'] as bool? ?? false,
       isDisabled: json['isDisabled'] as bool? ?? false,
-      mode:
-          json['mode'] == 'management' ? SessionMode.management : SessionMode.session,
+      mode: json['mode'] == 'management' ? "management" : "session",
     );
   }
 
@@ -645,7 +644,7 @@ class ChatSession {
       'quotaRequestCount': quotaRequestCount,
       'noAuthEnabled': noAuthEnabled,
       'isDisabled': isDisabled,
-      'mode': mode.name,
+      'mode': mode,
     };
   }
 }

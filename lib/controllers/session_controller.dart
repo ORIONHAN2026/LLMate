@@ -42,7 +42,10 @@ class SessionController extends GetxController {
 
     // 懒加载：如果消息为空，从文件加载
     if (s.messages.isEmpty) {
-      final messages = await loadMessages(s.sessionId);
+      final messages = await loadMessages(
+        s.sessionId,
+        s.modelId ?? s.chatModel?.modelId ?? '',
+      );
       if (messages.isNotEmpty) {
         s = s.copyWith(messages: messages);
         updated = true;
@@ -198,7 +201,10 @@ class SessionController extends GetxController {
 
       // 懒加载：确保消息已加载再持久化，防止空列表覆盖磁盘数据
       if (target.messages.isEmpty) {
-        final messages = await loadMessages(target.sessionId);
+        final messages = await loadMessages(
+          target.sessionId,
+          target.modelId ?? target.chatModel?.modelId ?? '',
+        );
         if (messages.isNotEmpty) {
           target = target.copyWith(messages: messages);
           sessions[targetIndex] = target;
@@ -434,9 +440,10 @@ class SessionController extends GetxController {
     }
   }
 
-  /// 为指定会话加载消息（委托给 MessageController）
-  Future<List<ChatMessage>> loadMessages(String sessionId) async {
-    return MessageController.instance.loadMessages(sessionId);
+  /// 为指定会话加载消息（委托给 MessageController）。
+  /// [mode] 为空时加载该会话全部模型的消息；非空时按模型过滤。
+  Future<List<ChatMessage>> loadMessages(String sessionId, [String? mode]) async {
+    return MessageController.instance.loadMessages(sessionId, mode ?? '');
   }
 
   // ==================== 内部持久化方法 ====================
@@ -478,7 +485,7 @@ class SessionController extends GetxController {
       final all = await appDatabase.getAllSessions();
       for (final session in all) {
         final messagesData =
-            await MessageController.instance.loadMessages(session.sessionId);
+            await MessageController.instance.loadMessages(session.sessionId, '');
         if (messagesData.any((m) => m.msgId == messageId)) {
           return await _getSessionFromDb(session.sessionId);
         }

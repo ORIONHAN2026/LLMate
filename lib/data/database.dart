@@ -22,7 +22,8 @@ part 'database.g.dart';
 class SessionRows extends Table {
   TextColumn get id => text()(); // sessionId
   BoolColumn get isCurrent => boolean().withDefault(const Constant(false))();
-  TextColumn get data => text()(); // 完整 ChatSession JSON（不含 messages / chatModel）
+  TextColumn get data =>
+      text()(); // 完整 ChatSession JSON（不含 messages / chatModel）
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -105,12 +106,12 @@ class VendorKeyRows extends Table {
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase()
-      : super(
-          driftDatabase(
-            name: 'llmate',
-            native: DriftNativeOptions(databasePath: _dbPath),
-          ),
-        );
+    : super(
+        driftDatabase(
+          name: 'llmate',
+          native: DriftNativeOptions(databasePath: _dbPath),
+        ),
+      );
 
   /// 数据库文件完整路径：~/.llmate/llmate.sqlite
   static Future<String> _dbPath() async {
@@ -138,7 +139,10 @@ extension SessionDao on AppDatabase {
     return map;
   }
 
-  Future<void> upsertSession(ChatSession session, {bool isCurrent = false}) async {
+  Future<void> upsertSession(
+    ChatSession session, {
+    bool isCurrent = false,
+  }) async {
     await into(sessionRows).insertOnConflictUpdate(
       SessionRowsCompanion.insert(
         id: session.sessionId,
@@ -148,8 +152,10 @@ extension SessionDao on AppDatabase {
     );
   }
 
-  Future<void> persistSessions(List<ChatSession> sessions,
-      {String? currentId}) async {
+  Future<void> persistSessions(
+    List<ChatSession> sessions, {
+    String? currentId,
+  }) async {
     await batch((batch) {
       for (final s in sessions) {
         batch.insert(
@@ -174,17 +180,17 @@ extension SessionDao on AppDatabase {
   }
 
   Future<ChatSession?> getSession(String sessionId) async {
-    final row = await (select(sessionRows)
-          ..where((t) => t.id.equals(sessionId)))
-        .getSingleOrNull();
+    final row =
+        await (select(sessionRows)
+          ..where((t) => t.id.equals(sessionId))).getSingleOrNull();
     if (row == null) return null;
     return ChatSession.fromJson(jsonDecode(row.data) as Map<String, dynamic>);
   }
 
   Future<String?> getCurrentSessionId() async {
-    final row = await (select(sessionRows)
-          ..where((t) => t.isCurrent.equals(true)))
-        .getSingleOrNull();
+    final row =
+        await (select(sessionRows)
+          ..where((t) => t.isCurrent.equals(true))).getSingleOrNull();
     return row?.id;
   }
 
@@ -205,21 +211,21 @@ extension SessionDao on AppDatabase {
 
 extension MessageDao on AppDatabase {
   Future<List<Map<String, dynamic>>> _readList(String sessionId) async {
-    final row = await (select(messageRows)
-          ..where((t) => t.sessionId.equals(sessionId)))
-        .getSingleOrNull();
+    final row =
+        await (select(messageRows)
+          ..where((t) => t.sessionId.equals(sessionId))).getSingleOrNull();
     if (row == null) return [];
     final decoded = jsonDecode(row.data);
     if (decoded is List) return decoded.cast<Map<String, dynamic>>();
     return [];
   }
 
-  Future<void> _writeList(String sessionId, List<Map<String, dynamic>> list) async {
+  Future<void> _writeList(
+    String sessionId,
+    List<Map<String, dynamic>> list,
+  ) async {
     await into(messageRows).insertOnConflictUpdate(
-      MessageRowsCompanion.insert(
-        sessionId: sessionId,
-        data: jsonEncode(list),
-      ),
+      MessageRowsCompanion.insert(sessionId: sessionId, data: jsonEncode(list)),
     );
   }
 
@@ -228,10 +234,7 @@ extension MessageDao on AppDatabase {
     String sessionId,
     List<ChatMessage> messages,
   ) async {
-    await _writeList(
-      sessionId,
-      messages.map((m) => m.toJson()).toList(),
-    );
+    await _writeList(sessionId, messages.map((m) => m.toJson()).toList());
   }
 
   /// 按 msgId upsert 单条消息
@@ -264,15 +267,25 @@ extension MessageDao on AppDatabase {
     return null;
   }
 
-  Future<List<ChatMessage>> loadMessages(String sessionId) async {
+  Future<List<ChatMessage>> loadMessages(String sessionId, String mode) async {
     final list = await _readList(sessionId);
-    return list.map((m) {
-      try {
-        return ChatMessage.fromJson(m);
-      } catch (_) {
-        return null;
-      }
-    }).whereType<ChatMessage>().toList();
+    // 按模型过滤：mode 为空返回全部；非空时匹配该模型，并兼容无 model 的遗留消息
+    final filtered = mode.isEmpty
+        ? list
+        : list.where((m) {
+            final mModel = m['model'];
+            return mModel == null || mModel == mode;
+          }).toList();
+    return filtered
+        .map((m) {
+          try {
+            return ChatMessage.fromJson(m);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<ChatMessage>()
+        .toList();
   }
 
   Future<void> clearMessages(String sessionId) async {
@@ -281,7 +294,8 @@ extension MessageDao on AppDatabase {
   }
 
   Future<void> deleteMessagesBySession(String sessionId) async {
-    await (delete(messageRows)..where((t) => t.sessionId.equals(sessionId))).go();
+    await (delete(messageRows)
+      ..where((t) => t.sessionId.equals(sessionId))).go();
   }
 
   /// 按 msgId 从指定会话的消息列表中移除单条消息
@@ -311,20 +325,25 @@ extension ModelDao on AppDatabase {
 
   Future<List<ChatModel>> getAllModels() async {
     final rows = await select(modelRows).get();
-    return rows.map((r) {
-      try {
-        return ChatModel.fromMap(jsonDecode(r.data) as Map<String, dynamic>);
-      } catch (_) {
-        return null;
-      }
-    }).whereType<ChatModel>().toList();
+    return rows
+        .map((r) {
+          try {
+            return ChatModel.fromMap(
+              jsonDecode(r.data) as Map<String, dynamic>,
+            );
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<ChatModel>()
+        .toList();
   }
 
   Future<ChatModel?> getModel(String modelId) async {
     if (modelId.isEmpty) return null;
-    final row = await (select(modelRows)
-          ..where((t) => t.id.equals(modelId)))
-        .getSingleOrNull();
+    final row =
+        await (select(modelRows)
+          ..where((t) => t.id.equals(modelId))).getSingleOrNull();
     if (row == null) return null;
     try {
       return ChatModel.fromMap(jsonDecode(row.data) as Map<String, dynamic>);
@@ -350,32 +369,32 @@ extension ModelDao on AppDatabase {
 extension McpDao on AppDatabase {
   Future<void> upsertMcp(Mcp mcp) async {
     await into(mcpRows).insertOnConflictUpdate(
-      McpRowsCompanion.insert(
-        name: mcp.name,
-        data: jsonEncode(mcp.toJson()),
-      ),
+      McpRowsCompanion.insert(name: mcp.name, data: jsonEncode(mcp.toJson())),
     );
   }
 
   Future<List<Mcp>> getAllMcps() async {
     final rows = await select(mcpRows).get();
-    return rows.map((r) {
-      try {
-        return Mcp.fromJson(
-          r.name,
-          jsonDecode(r.data) as Map<String, dynamic>,
-        );
-      } catch (_) {
-        return null;
-      }
-    }).whereType<Mcp>().toList();
+    return rows
+        .map((r) {
+          try {
+            return Mcp.fromJson(
+              r.name,
+              jsonDecode(r.data) as Map<String, dynamic>,
+            );
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<Mcp>()
+        .toList();
   }
 
   Future<Mcp?> getMcp(String name) async {
     if (name.isEmpty) return null;
-    final row = await (select(mcpRows)
-          ..where((t) => t.name.equals(name)))
-        .getSingleOrNull();
+    final row =
+        await (select(mcpRows)
+          ..where((t) => t.name.equals(name))).getSingleOrNull();
     if (row == null) return null;
     try {
       return Mcp.fromJson(name, jsonDecode(row.data) as Map<String, dynamic>);
@@ -401,17 +420,14 @@ extension McpDao on AppDatabase {
 extension SettingDao on AppDatabase {
   Future<void> putSettingRaw(String key, Object value) async {
     await into(settingRows).insertOnConflictUpdate(
-      SettingRowsCompanion.insert(
-        key: key,
-        data: jsonEncode(value),
-      ),
+      SettingRowsCompanion.insert(key: key, data: jsonEncode(value)),
     );
   }
 
   Future<Object?> getSettingRaw(String key) async {
-    final row = await (select(settingRows)
-          ..where((t) => t.key.equals(key)))
-        .getSingleOrNull();
+    final row =
+        await (select(settingRows)
+          ..where((t) => t.key.equals(key))).getSingleOrNull();
     if (row == null) return null;
     return jsonDecode(row.data);
   }
@@ -454,20 +470,25 @@ extension AuditDao on AppDatabase {
     query.orderBy([(t) => OrderingTerm.desc(t.timestamp)]);
     if (limit > 0) query.limit(limit);
     final rows = await query.get();
-    return rows.map((r) {
-      try {
-        return AuditLog.fromJson(jsonDecode(r.data) as Map<String, dynamic>);
-      } catch (_) {
-        return null;
-      }
-    }).whereType<AuditLog>().toList();
+    return rows
+        .map((r) {
+          try {
+            return AuditLog.fromJson(
+              jsonDecode(r.data) as Map<String, dynamic>,
+            );
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<AuditLog>()
+        .toList();
   }
 
   Future<AuditLog?> getAuditById(String requestId) async {
     if (requestId.isEmpty) return null;
-    final row = await (select(auditRows)
-          ..where((t) => t.requestId.equals(requestId)))
-        .getSingleOrNull();
+    final row =
+        await (select(auditRows)
+          ..where((t) => t.requestId.equals(requestId))).getSingleOrNull();
     if (row == null) return null;
     try {
       return AuditLog.fromJson(jsonDecode(row.data) as Map<String, dynamic>);
@@ -529,29 +550,37 @@ extension UsageDao on AppDatabase {
     if (sessionId != null) query.where((t) => t.sessionId.equals(sessionId));
     if (modelId != null) query.where((t) => t.model.equals(modelId));
     if (start != null) {
-      query.where((t) => t.timestamp.isBiggerOrEqualValue(
-          start.millisecondsSinceEpoch));
+      query.where(
+        (t) => t.timestamp.isBiggerOrEqualValue(start.millisecondsSinceEpoch),
+      );
     }
     if (end != null) {
       query.where(
-          (t) => t.timestamp.isSmallerOrEqualValue(end.millisecondsSinceEpoch));
+        (t) => t.timestamp.isSmallerOrEqualValue(end.millisecondsSinceEpoch),
+      );
     }
     query.orderBy([(t) => OrderingTerm.asc(t.timestamp)]);
     if (limit != null && limit > 0) query.limit(limit);
     final rows = await query.get();
-    return rows.map((r) {
-      try {
-        return UsageDetail.fromJson(jsonDecode(r.data) as Map<String, dynamic>);
-      } catch (_) {
-        return null;
-      }
-    }).whereType<UsageDetail>().toList();
+    return rows
+        .map((r) {
+          try {
+            return UsageDetail.fromJson(
+              jsonDecode(r.data) as Map<String, dynamic>,
+            );
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<UsageDetail>()
+        .toList();
   }
 
   Future<UsageDetail?> getUsage(UsageDetail detail) async {
-    final row = await (select(usageRows)
-          ..where((t) => t.detailKey.equals(_detailKey(detail))))
-        .getSingleOrNull();
+    final row =
+        await (select(usageRows)..where(
+          (t) => t.detailKey.equals(_detailKey(detail)),
+        )).getSingleOrNull();
     if (row == null) return null;
     try {
       return UsageDetail.fromJson(jsonDecode(row.data) as Map<String, dynamic>);
@@ -561,8 +590,8 @@ extension UsageDao on AppDatabase {
   }
 
   Future<void> deleteUsage(UsageDetail detail) async {
-    await (delete(usageRows)..where((t) => t.detailKey.equals(_detailKey(detail))))
-        .go();
+    await (delete(usageRows)
+      ..where((t) => t.detailKey.equals(_detailKey(detail)))).go();
   }
 
   Future<void> clearUsages() async {
@@ -576,9 +605,9 @@ extension UsageDao on AppDatabase {
 
 extension VendorKeyDao on AppDatabase {
   Future<String?> getVendorKey(String vendorId) async {
-    final row = await (select(vendorKeyRows)
-          ..where((t) => t.vendorId.equals(vendorId)))
-        .getSingleOrNull();
+    final row =
+        await (select(vendorKeyRows)
+          ..where((t) => t.vendorId.equals(vendorId))).getSingleOrNull();
     return row?.apiKey;
   }
 
@@ -593,6 +622,7 @@ extension VendorKeyDao on AppDatabase {
   }
 
   Future<void> deleteVendorKey(String vendorId) async {
-    await (delete(vendorKeyRows)..where((t) => t.vendorId.equals(vendorId))).go();
+    await (delete(vendorKeyRows)
+      ..where((t) => t.vendorId.equals(vendorId))).go();
   }
 }

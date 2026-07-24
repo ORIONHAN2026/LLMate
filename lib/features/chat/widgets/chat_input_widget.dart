@@ -545,10 +545,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final onSurface = Theme.of(context).colorScheme.onSurface;
       final active = !_isSending && currentSession != null;
       return Tooltip(
-        message:
-            isManagement
-                ? '管理模式：本地直连大模型，不计入用量统计'
-                : '会话模式：经本地服务做审计与用量统计',
+        message: isManagement ? '管理模式：本地直连大模型，不计入用量统计' : '会话模式：经本地服务做审计与用量统计',
         child: GestureDetector(
           onTap:
               active
@@ -556,10 +553,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     if (currentSession != null) {
                       sessionController.updateSession(
                         currentSession.copyWith(
-                          mode:
-                              isManagement
-                                  ? SessionMode.session
-                                  : SessionMode.management,
+                          mode: isManagement ? "session" : "management",
                         ),
                       );
                     }
@@ -575,8 +569,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       ? Icons.admin_panel_settings_outlined
                       : Icons.chat_bubble_outline,
                   size: 13,
-                  color:
-                      active ? onSurface : onSurface.withOpacity(0.3),
+                  color: active ? onSurface : onSurface.withOpacity(0.3),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -587,8 +580,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     fontSize: 12,
                     fontWeight:
                         isManagement ? FontWeight.w700 : FontWeight.w500,
-                    color:
-                        active ? onSurface : onSurface.withOpacity(0.3),
+                    color: active ? onSurface : onSurface.withOpacity(0.3),
                   ),
                 ),
               ],
@@ -709,12 +701,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final canView = mcpCount > 0 && !_isSending;
 
       return Tooltip(
-        message:
-            mcpCount > 0
-                ? '当前会话绑定的 MCP（点击查看，可在会话详情中配置）'
-                : '当前会话未配置 MCP',
+        message: mcpCount > 0 ? '当前会话绑定的 MCP（点击查看，可在会话详情中配置）' : '当前会话未配置 MCP',
         child: GestureDetector(
-          onTap: canView ? () => showMcpDetailDialog(context, sessionMcps!) : null,
+          onTap:
+              canView ? () => showMcpDetailDialog(context, sessionMcps!) : null,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             child: Row(
@@ -865,6 +855,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       role: MessageRole.user,
       content: text,
       timestamp: DateTime.now(),
+      mode: updateSession.mode,
       sessionId: updateSession.sessionId,
     );
 
@@ -933,6 +924,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         sessionId: updateSession.sessionId,
         isError: false,
         generationStartTime: startTime, // 记录生成开始时间
+        mode: updateSession.mode,
       );
 
       // 为AI消息创建GlobalKey

@@ -62,7 +62,7 @@ class LlmClient {
     );
 
     // 管理模式：消息本地直连大模型，不经过本机 HTTP 服务，用量不计入统计
-    if (_session.mode == SessionMode.management) {
+    if (_session.mode == SessionMode.management.name) {
       await for (final chunk in _streamLocal(userMessage, messages)) {
         yield chunk;
       }

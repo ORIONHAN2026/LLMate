@@ -541,7 +541,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   Widget _buildChatModeToggle() {
     return Obx(() {
       final currentSession = sessionController.currentSession.value;
-      final isManagement = currentSession?.mode == SessionMode.management;
+      final isManagement = currentSession?.mode == SessionMode.management.name;
       final onSurface = Theme.of(context).colorScheme.onSurface;
       final active = !_isSending && currentSession != null;
       return Tooltip(
@@ -553,7 +553,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     if (currentSession != null) {
                       sessionController.updateSession(
                         currentSession.copyWith(
-                          mode: isManagement ? "session" : "management",
+                          mode:
+                              isManagement
+                                  ? SessionMode.session.name
+                                  : SessionMode.management.name,
                         ),
                       );
                     }
@@ -687,7 +690,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       final currentSession = sessionController.currentSession.value;
 
       // 管理模式：不向大模型注入会话 MCP 工具，隐藏聊天输入框的 MCP 入口
-      if (currentSession?.mode == SessionMode.management) {
+      if (currentSession?.mode == SessionMode.management.name) {
         return const SizedBox.shrink();
       }
 
@@ -855,7 +858,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       role: MessageRole.user,
       content: text,
       timestamp: DateTime.now(),
-      mode: updateSession.mode,
       sessionId: updateSession.sessionId,
     );
 
@@ -924,7 +926,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         sessionId: updateSession.sessionId,
         isError: false,
         generationStartTime: startTime, // 记录生成开始时间
-        mode: updateSession.mode,
       );
 
       // 为AI消息创建GlobalKey

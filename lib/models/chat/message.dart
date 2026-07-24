@@ -21,8 +21,6 @@ class ChatMessage {
   // 消息关联字段
   final String? pairedMsgId; // 配对的消息ID（用于关联用户消息和AI回复）
 
-  final String? mode; //session | manager
-
   // 工具调用相关字段
   final String? toolName; // 工具名称（用于tool类型消息）
   final String? toolCallId; // 工具调用ID（用于tool类型消息，匹配 tool_calls 中的 id）
@@ -56,7 +54,6 @@ class ChatMessage {
     this.promptTokens,
     this.completionTokens,
     this.generationDuration,
-    this.mode,
   });
 
   /// 计算生成速度（token/秒）

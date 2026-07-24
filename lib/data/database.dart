@@ -267,15 +267,10 @@ extension MessageDao on AppDatabase {
     return null;
   }
 
-  Future<List<ChatMessage>> loadMessages(String sessionId, String mode) async {
+  Future<List<ChatMessage>> loadMessages(String sessionId) async {
     final list = await _readList(sessionId);
     // 按模型过滤：mode 为空返回全部；非空时匹配该模型，并兼容无 model 的遗留消息
-    final filtered = mode.isEmpty
-        ? list
-        : list.where((m) {
-            final mModel = m['model'];
-            return mModel == null || mModel == mode;
-          }).toList();
+    final filtered = list.toList();
     return filtered
         .map((m) {
           try {

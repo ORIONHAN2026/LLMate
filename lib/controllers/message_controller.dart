@@ -67,9 +67,9 @@ class MessageController extends GetxController {
   // ==================== 多个消息：仅载入 / 查询 ====================
 
   /// 加载指定会话的消息列表（从 SQLite 读取）
-  Future<List<ChatMessage>> loadMessages(String sessionId, String mode) async {
+  Future<List<ChatMessage>> loadMessages(String sessionId) async {
     try {
-      return await appDatabase.loadMessages(sessionId, mode);
+      return await appDatabase.loadMessages(sessionId);
     } catch (e) {
       debugPrint('加载会话消息失败: $e');
       return [];

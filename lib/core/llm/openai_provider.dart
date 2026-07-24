@@ -57,6 +57,9 @@ class OpenAiProvider {
       data['tool_choice'] = 'auto';
     }
 
+    // 聊天窗口发起的请求默认关闭原生推理（深度思考），避免模型产生 reasoning 内容
+    data['thinking'] = {'type': 'disabled'};
+
     if (extra != null) data.addAll(extra);
     return data;
   }

@@ -148,9 +148,7 @@ class LocalHttpService {
       debugPrint('📡 API: GET /{sessionId}/models');
       return true;
     } on SocketException catch (e) {
-      debugPrint(
-        '❌ HTTP 服务启动失败：端口 $port 已被占用（可能有另一个实例在运行）: $e',
-      );
+      debugPrint('❌ HTTP 服务启动失败：端口 $port 已被占用（可能有另一个实例在运行）: $e');
       _isRunning = false;
       return false;
     } catch (e) {
@@ -234,10 +232,7 @@ class LocalHttpService {
       }
 
       final requestWithId = request.change(
-        context: {
-          ...request.context,
-          'originBody': originBodyStr,
-        },
+        context: {...request.context, 'originBody': originBodyStr},
         body: utf8.encode(originBodyStr),
       );
 
@@ -325,8 +320,7 @@ class LocalHttpService {
       // ──────────────────────────────────────────
 
       // SSE 流控制器：后续异步 IIFE 中逐步写入 chunk，shelf 框架从 stream 读取并发送给客户端
-      final streamController = StreamController<List<int>>();
-
+      final streamController = StreamController<List<int>>(sync: true);
       // 从中间件注入的 context 中提取会话和增强后的请求体
       final session = request.context['session'] as ChatSession;
       final body = request.context['body'] as Map<String, dynamic>;
@@ -352,9 +346,7 @@ class LocalHttpService {
         final auditProvider = session.chatModel?.platform ?? 'unknown';
         final auditModel = session.chatModel?.model ?? 'unknown';
         try {
-          auditTrace = await audit.beginTrace(
-            sessionId: session.sessionId,
-          );
+          auditTrace = await audit.beginTrace(sessionId: session.sessionId);
           audit.prompt(auditTrace, _extractUserPrompt(body));
         } catch (e) {
           debugPrint('⚠️ [Audit] 开启链路追踪失败: $e');
@@ -472,7 +464,10 @@ class LocalHttpService {
             // ── 审计：工具调用开始 ──
             if (auditTrace != null) {
               for (final tc in toolCallParams) {
-                audit.toolStart(auditTrace, tc['name']?.toString() ?? 'unknown');
+                audit.toolStart(
+                  auditTrace,
+                  tc['name']?.toString() ?? 'unknown',
+                );
               }
             }
 
@@ -528,9 +523,14 @@ class LocalHttpService {
               if (auditTrace != null) {
                 final results = executionResult.executionResults;
                 for (var i = 0; i < toolCallParams.length; i++) {
-                  final name = toolCallParams[i]['name']?.toString() ?? 'unknown';
+                  final name =
+                      toolCallParams[i]['name']?.toString() ?? 'unknown';
                   final res = i < results.length ? results[i] : null;
-                  audit.toolFinish(auditTrace, name, res ?? <String, dynamic>{});
+                  audit.toolFinish(
+                    auditTrace,
+                    name,
+                    res ?? <String, dynamic>{},
+                  );
                 }
               }
 
@@ -634,9 +634,7 @@ class LocalHttpService {
             'code': 500,
           },
         }),
-        headers: {
-          'content-type': 'application/json',
-        },
+        headers: {'content-type': 'application/json'},
       );
     }
   }

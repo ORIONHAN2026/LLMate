@@ -233,6 +233,7 @@ class LlmClient {
       );
 
       await for (final c in _parseLocalStream(controller.stream)) {
+        debugPrint("final c in _parseLocalStream(controller.stream)");
         yield c;
       }
 

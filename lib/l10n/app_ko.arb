@@ -263,6 +263,7 @@
   "relationDescSaved": "관계 설명 저장됨",
   "noMcpServiceConfigured": "MCP 서비스가 구성되지 않았습니다",
   "mcpBoundTitle": "연결된 MCP ({count})",
+  "mcpViewDetails": "연결된 MCP의 상세 정보 보기",
   "mcpServiceList": "MCP 서비스 목록 ({n})",
   "mcpServiceTitle": "MCP 서비스",
   "enabledStatus": "사용",

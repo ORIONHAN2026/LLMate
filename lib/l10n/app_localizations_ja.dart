@@ -818,6 +818,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get mcpViewDetails => 'バインド済み MCP の詳細を表示';
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCPサービス一覧 ($n)';
   }

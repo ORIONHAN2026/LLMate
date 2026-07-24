@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../widgets/standard_app_bar.dart';
+import '../../../widgets/confirm_delete_dialog.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -27,6 +28,7 @@ class McpManagementPage extends StatefulWidget {
 class _McpManagementPageState extends State<McpManagementPage> {
   List<Mcp> _services = [];
   bool _isLoading = true;
+  final Set<String> _loadingServices = {};
 
   @override
   void initState() {
@@ -146,6 +148,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
           final service = _services[index];
           return _McpCard(
             service: service,
+            loading: _loadingServices.contains(service.name),
             onTap: () => _showServiceDetail(service),
             onRefresh: () => _refreshService(service),
             onDelete: () => _confirmRemoveService(service),
@@ -303,6 +306,8 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
   /// 刷新服务工具列表
   Future<void> _refreshService(Mcp service) async {
+    if (!mounted) return;
+    setState(() => _loadingServices.add(service.name));
     try {
       final tools = await McpController.instance.refreshServiceTools(service);
 
@@ -334,6 +339,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
     } catch (e) {
       if (mounted) {
         SnackBarUtils.showError(context, '刷新失败: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loadingServices.remove(service.name));
       }
     }
   }
@@ -590,20 +599,12 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
   /// 确认移除服务
   void _confirmRemoveService(Mcp service) {
-    showDialog<bool>(
+    ConfirmDeleteDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('移除 ${service.name}'),
-        content: const Text('确定要移除该 MCP 服务吗？'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('移除'),
-          ),
-        ],
-      ),
+      title: '移除 MCP',
+      itemName: service.name,
+      description: '确定要移除该 MCP 服务',
+      confirmText: '移除',
     ).then((confirmed) async {
       if (confirmed == true) {
         await Get.find<McpController>().removeService(service.name);
@@ -611,7 +612,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
         for (final session in sessionController.sessions) {
           if (session.mcps != null && session.mcps!.contains(service.name)) {
             final newMcps = List<String>.from(session.mcps!)
-                ..remove(service.name);
+              ..remove(service.name);
             await sessionController.updateSession(
               session.copyWith(
                 mcps: newMcps.isNotEmpty ? newMcps : null,
@@ -633,12 +634,14 @@ class _McpManagementPageState extends State<McpManagementPage> {
 /// MCP 卡片组件
 class _McpCard extends StatefulWidget {
   final Mcp service;
+  final bool loading;
   final VoidCallback onTap;
   final VoidCallback onRefresh;
   final VoidCallback onDelete;
 
   const _McpCard({
     required this.service,
+    this.loading = false,
     required this.onTap,
     required this.onRefresh,
     required this.onDelete,
@@ -678,107 +681,114 @@ class _McpCardState extends State<_McpCard> {
             ),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Flexible(
-                          child: Text(
-                            service.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                service.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (isBuiltin) ...[
+                              const SizedBox(width: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: const Text('内置', style: TextStyle(fontSize: 8, color: Colors.blue)),
+                              ),
+                            ],
+                          ],
                         ),
-                        if (isBuiltin) ...[
-                          const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(3),
+                        if (description != null)
+                          Text(
+                            description,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
                             ),
-                            child: const Text('内置', style: TextStyle(fontSize: 8, color: Colors.blue)),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        else
+                          Text(
+                            service.command ?? service.url ?? '',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                              fontFamily: 'monospace',
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
                       ],
                     ),
-                    if (description != null)
-                      Text(
-                        description,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      )
-                    else
-                      Text(
-                        service.command ?? service.url ?? '',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                          fontFamily: 'monospace',
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 4),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    onTap: widget.onRefresh,
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.refresh,
-                        size: 10,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
                   ),
-                  if (!isBuiltin) ...[
-                    const SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: widget.onDelete,
-                      child: Container(
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error.withOpacity(0.08),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.delete,
-                          size: 10,
-                          color: Theme.of(context).colorScheme.error,
+                  const SizedBox(width: 4),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: widget.loading ? null : widget.onRefresh,
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: widget.loading
+                              ? SizedBox(
+                                  width: 10,
+                                  height: 10,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.5,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.refresh,
+                                  size: 10,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: widget.onDelete,
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.delete,
+                            size: 10,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
+            ),
       ),
     );
   }

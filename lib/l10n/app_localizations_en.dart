@@ -827,6 +827,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get mcpViewDetails => 'View details of bound MCP';
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCP Service List ($n)';
   }

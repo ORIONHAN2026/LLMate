@@ -836,6 +836,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get mcpViewDetails => 'Details der gebundenen MCP anzeigen';
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCP-Dienstliste ($n)';
   }

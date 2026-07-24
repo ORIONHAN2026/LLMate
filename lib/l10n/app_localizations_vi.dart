@@ -820,6 +820,9 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get mcpViewDetails => 'Xem chi tiết MCP đã liên kết';
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCP服务列表 ($n)';
   }

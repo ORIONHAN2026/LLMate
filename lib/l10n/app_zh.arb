@@ -263,6 +263,7 @@
   "relationDescSaved": "已保存关系描述",
   "noMcpServiceConfigured": "当前未配置MCP服务",
   "mcpBoundTitle": "已绑定的 MCP ({count})",
+  "mcpViewDetails": "查看已绑定 MCP 的详情",
   "mcpServiceList": "MCP服务列表 ({n})",
   "mcpServiceTitle": "MCP服务",
   "enabledStatus": "已启用",

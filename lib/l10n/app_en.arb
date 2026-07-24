@@ -263,6 +263,7 @@
   "relationDescSaved": "Relation description saved",
   "noMcpServiceConfigured": "No MCP service configured",
   "mcpBoundTitle": "Bound MCP ({count})",
+  "mcpViewDetails": "View details of bound MCP",
   "mcpServiceList": "MCP Service List ({n})",
   "mcpServiceTitle": "MCP Service",
   "enabledStatus": "Enabled",

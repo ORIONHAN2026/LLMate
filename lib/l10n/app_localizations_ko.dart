@@ -818,6 +818,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get mcpViewDetails => '연결된 MCP의 상세 정보 보기';
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCP 서비스 목록 ($n)';
   }

@@ -1658,6 +1658,12 @@ abstract class AppLocalizations {
   /// **'Bound MCP ({count})'**
   String mcpBoundTitle(Object count);
 
+  /// No description provided for @mcpViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View details of bound MCP'**
+  String get mcpViewDetails;
+
   /// No description provided for @mcpServiceList.
   ///
   /// In en, this message translates to:

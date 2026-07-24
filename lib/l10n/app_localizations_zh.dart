@@ -818,6 +818,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get mcpViewDetails => '查看已绑定 MCP 的详情';
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCP服务列表 ($n)';
   }

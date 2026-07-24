@@ -9,6 +9,7 @@ import 'package:llmate/l10n/app_localizations.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../../controllers/settings_controller.dart';
 import '../../../../controllers/mcp_controller.dart';
+import '../../../../widgets/mcp_detail_dialog.dart';
 import '../../../../models/chat/session.dart';
 import '../../../../models/chat/mcp.dart';
 import '../../../../models/model.dart';
@@ -2318,7 +2319,10 @@ class _McpConfigSectionState extends State<_McpConfigSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SessionConfigSidebar._buildSectionTitle(context, l10n.mcpLabel),
+        SessionConfigSidebar._buildSectionTitle(
+          context,
+          l10n.mcpLabel,
+        ),
         const SizedBox(height: 8),
         if (!_loaded)
           const Padding(
@@ -2374,6 +2378,20 @@ class _McpConfigSectionState extends State<_McpConfigSection> {
                       : null,
               controlAffinity: ListTileControlAffinity.leading,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              secondary: Tooltip(
+                message: l10n.mcpViewDetails,
+                child: InkWell(
+                  onTap: () => showMcpDetailDialog(context, [s.name]),
+                  borderRadius: BorderRadius.circular(4),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.visibility_outlined,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
             );
           }),
       ],

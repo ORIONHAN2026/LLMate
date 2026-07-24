@@ -830,6 +830,9 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
+  String get mcpViewDetails => 'ดูรายละเอียด MCP ที่ผูกแล้ว';
+
+  @override
   String mcpServiceList(Object n) {
     return 'รายการบริการ MCP ($n)';
   }

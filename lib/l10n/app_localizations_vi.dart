@@ -815,6 +815,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noMcpServiceConfigured => '当前未配置MCP服务';
 
   @override
+  String mcpBoundTitle(Object count) {
+    return 'MCP đã liên kết ($count)';
+  }
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCP服务列表 ($n)';
   }

@@ -813,6 +813,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noMcpServiceConfigured => '当前未配置MCP服务';
 
   @override
+  String mcpBoundTitle(Object count) {
+    return '已绑定的 MCP ($count)';
+  }
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCP服务列表 ($n)';
   }

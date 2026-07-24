@@ -199,7 +199,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       messages: [],
       chatModel: selectedModelObject, // 存储完整的模型对象，没有可用模型时为null
       inputContent: '', // 发送消息后清空会话的输入内容
-      mode: sessionController.currentMode.value, // 继承当前全局模式
     );
 
     // 先更新会话列表和当前会话，不要在setState中调用

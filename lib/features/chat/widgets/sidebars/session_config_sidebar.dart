@@ -8,7 +8,9 @@ import 'package:get/get.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../../controllers/settings_controller.dart';
+import '../../../../controllers/mcp_controller.dart';
 import '../../../../models/chat/session.dart';
+import '../../../../models/chat/mcp.dart';
 import '../../../../models/model.dart';
 import '../../../../utils/snackbar_utils.dart';
 import '../../../../widgets/confirm_delete_dialog.dart';
@@ -702,42 +704,9 @@ class SessionConfigSidebar {
     );
   }
 
-  /// MCP 分节
+  /// MCP 分节（可勾选绑定 MCP 服务到当前会话）
   static Widget buildMcpSection(BuildContext context, ChatSession session) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle(context, l10n.mcpLabel),
-        const SizedBox(height: 8),
-        _buildConfigItem(
-          context,
-          icon: Icons.layers,
-          label: l10n.sessionMcp,
-          value:
-              session.mcps != null && session.mcps!.isNotEmpty
-                  ? session.mcps!.join(', ')
-                  : l10n.notBound,
-          valueColor:
-              session.mcps != null && session.mcps!.isNotEmpty
-                  ? Theme.of(context).colorScheme.primary
-                  : null,
-        ),
-        if (session.mcps == null || session.mcps!.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              l10n.addMcpHint,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.3),
-              ),
-            ),
-          ),
-      ],
-    );
+    return _McpConfigSection(session: session);
   }
 
   /// 会话设定分节（含会话级系统提示词）
@@ -2243,39 +2212,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
               Container(
                 key: _mcpKey,
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SessionConfigSidebar._buildSectionTitle(context, l10n.mcpLabel),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: Icons.layers,
-                      label: l10n.sessionMcp,
-                      value:
-                          session.mcps != null && session.mcps!.isNotEmpty
-                              ? session.mcps!.join(', ')
-                              : l10n.notBound,
-                      valueColor:
-                          session.mcps != null && session.mcps!.isNotEmpty
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                    ),
-                    if (session.mcps == null || session.mcps!.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          l10n.addMcpHint,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.3),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                child: SessionConfigSidebar.buildMcpSection(context, session),
               ),
 
               const SizedBox(height: 16),
@@ -2309,6 +2246,136 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
 
         // 右侧导航条
         _buildNavBar(context),
+      ],
+    );
+  }
+}
+
+/// MCP 配置区域组件（可勾选绑定 MCP 服务到当前会话）
+/// 列出所有可用 MCP 服务，用户可勾选绑定到当前会话
+class _McpConfigSection extends StatefulWidget {
+  final ChatSession session;
+
+  const _McpConfigSection({required this.session});
+
+  @override
+  State<_McpConfigSection> createState() => _McpConfigSectionState();
+}
+
+class _McpConfigSectionState extends State<_McpConfigSection> {
+  bool _loaded = false;
+  List<Mcp> _services = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final mcpc = Get.find<McpController>();
+    await mcpc.ensureLoaded();
+    if (!mounted) return;
+    setState(() {
+      _services = mcpc.configs.toList();
+      _loaded = true;
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _McpConfigSection old) {
+    super.didUpdateWidget(old);
+    // 切换到不同会话时，重新同步可用 MCP 服务列表
+    if (widget.session.sessionId != old.session.sessionId) {
+      final mcpc = Get.find<McpController>();
+      if (mounted) {
+        setState(() => _services = mcpc.configs.toList());
+      }
+    }
+  }
+
+  void _toggle(String name, bool checked) {
+    final sessionController = Get.find<SessionController>();
+    final current = List<String>.from(widget.session.mcps ?? []);
+    if (checked) {
+      if (!current.contains(name)) current.add(name);
+    } else {
+      current.remove(name);
+    }
+    sessionController.updateSession(
+      widget.session.copyWith(
+        mcps: current.isNotEmpty ? current : null,
+        clearMcp: current.isEmpty,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final selected = widget.session.mcps ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SessionConfigSidebar._buildSectionTitle(context, l10n.mcpLabel),
+        const SizedBox(height: 8),
+        if (!_loaded)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else if (_services.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              l10n.noMcpServiceConfigured,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+            ),
+          )
+        else
+          ..._services.map((s) {
+            final isSel = selected.contains(s.name);
+            return CheckboxListTile(
+              dense: true,
+              value: isSel,
+              onChanged: (v) => _toggle(s.name, v ?? false),
+              title: Text(s.name, style: const TextStyle(fontSize: 13)),
+              subtitle:
+                  s.description?.isNotEmpty == true
+                      ? Text(
+                        s.description!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      )
+                      : null,
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+            );
+          }),
       ],
     );
   }

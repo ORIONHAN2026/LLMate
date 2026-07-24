@@ -1652,6 +1652,12 @@ abstract class AppLocalizations {
   /// **'No MCP service configured'**
   String get noMcpServiceConfigured;
 
+  /// No description provided for @mcpBoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bound MCP ({count})'**
+  String mcpBoundTitle(Object count);
+
   /// No description provided for @mcpServiceList.
   ///
   /// In en, this message translates to:

@@ -264,6 +264,7 @@
   "relationDescCleared": "関連説明をクリアしました",
   "relationDescSaved": "関連説明を保存しました",
   "noMcpServiceConfigured": "MCPサービスが設定されていません",
+  "mcpBoundTitle": "バインド済み MCP ({count})",
   "mcpServiceList": "MCPサービス一覧 ({n})",
   "mcpServiceTitle": "MCPサービス",
   "enabledStatus": "有効",

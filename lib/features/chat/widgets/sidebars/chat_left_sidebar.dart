@@ -406,9 +406,6 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
     List<ChatSession>? chatSessions,
     ChatSession? currentSession,
   }) {
-    final sessionController = Get.find<SessionController>();
-    // 仅展示与当前全局模式匹配的会话，实现会话/管理模式列表完全独立
-    final currentMode = sessionController.currentMode.value;
     final sessions = chatSessions ?? widget.chatSessions;
 
     // 收集收藏会话（在各自分组中仍保留显示，此处用于收藏区重复展示）
@@ -418,9 +415,6 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
 
     for (int i = 0; i < sessions.length; i++) {
       final session = sessions[i];
-
-      // 过滤掉非当前模式的会话（index 仍为完整列表索引，供收藏回调使用）
-      if (session.mode != currentMode) continue;
 
       // 收藏的会话仍保留在其所属分组/未分组中，同时在收藏区重复显示
       if (session.isFavorite) {
@@ -448,26 +442,6 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       children: [
-        // 当前模式下无会话时的空状态提示
-        if (favoriteSessions.isEmpty &&
-            ungroupedSessions.isEmpty &&
-            groups.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 32, left: 8, right: 8),
-            child: Text(
-              currentMode == SessionMode.management
-                  ? '暂无管理模式会话\n点击左上角「新建」开始'
-                  : '暂无会话\n点击左上角「新建」开始',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withOpacity(0.4),
-                height: 1.6,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
         // 收藏分类
         if (favoriteSessions.isNotEmpty) ...[
           _buildCollapsibleGroupHeader(

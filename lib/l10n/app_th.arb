@@ -246,6 +246,7 @@
   "relationDescCleared": "ล้างคำอธิบายความสัมพันธ์แล้ว",
   "relationDescSaved": "คำอธิบายความสัมพันธ์ที่บันทึกไว้",
   "noMcpServiceConfigured": "บริการ MCP ไม่ได้รับการกำหนดค่าในขณะนี้",
+  "mcpBoundTitle": "MCP ที่ผูกแล้ว ({count})",
   "mcpServiceList": "รายการบริการ MCP ({n})",
   "mcpServiceTitle": "บริการเอ็มซีพี",
   "enabledStatus": "เปิดใช้งานแล้ว",

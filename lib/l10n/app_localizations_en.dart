@@ -822,6 +822,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noMcpServiceConfigured => 'No MCP service configured';
 
   @override
+  String mcpBoundTitle(Object count) {
+    return 'Bound MCP ($count)';
+  }
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCP Service List ($n)';
   }

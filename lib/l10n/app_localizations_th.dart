@@ -825,6 +825,11 @@ class AppLocalizationsTh extends AppLocalizations {
       'บริการ MCP ไม่ได้รับการกำหนดค่าในขณะนี้';
 
   @override
+  String mcpBoundTitle(Object count) {
+    return 'MCP ที่ผูกแล้ว ($count)';
+  }
+
+  @override
   String mcpServiceList(Object n) {
     return 'รายการบริการ MCP ($n)';
   }

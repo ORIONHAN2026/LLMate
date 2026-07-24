@@ -813,6 +813,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noMcpServiceConfigured => 'MCPサービスが設定されていません';
 
   @override
+  String mcpBoundTitle(Object count) {
+    return 'バインド済み MCP ($count)';
+  }
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCPサービス一覧 ($n)';
   }

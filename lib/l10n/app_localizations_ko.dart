@@ -813,6 +813,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noMcpServiceConfigured => 'MCP 서비스가 구성되지 않았습니다';
 
   @override
+  String mcpBoundTitle(Object count) {
+    return '연결된 MCP ($count)';
+  }
+
+  @override
   String mcpServiceList(Object n) {
     return 'MCP 서비스 목록 ($n)';
   }

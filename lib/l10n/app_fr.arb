@@ -262,6 +262,7 @@
   "relationDescCleared": "Description de la relation effacée",
   "relationDescSaved": "Description de la relation enregistrée",
   "noMcpServiceConfigured": "Aucun service MCP configuré",
+  "mcpBoundTitle": "MCP liés ({count})",
   "mcpServiceList": "Liste des services MCP ({n})",
   "mcpServiceTitle": "Service MCP",
   "enabledStatus": "Activé",

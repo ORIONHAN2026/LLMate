@@ -262,6 +262,7 @@
   "relationDescCleared": "Beziehungsbeschreibung geleert",
   "relationDescSaved": "Beziehungsbeschreibung gespeichert",
   "noMcpServiceConfigured": "Kein MCP-Dienst konfiguriert",
+  "mcpBoundTitle": "Gebundene MCP ({count})",
   "mcpServiceList": "MCP-Dienstliste ({n})",
   "mcpServiceTitle": "MCP-Dienst",
   "enabledStatus": "Aktiviert",

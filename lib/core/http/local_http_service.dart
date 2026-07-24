@@ -10,19 +10,15 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart' as cors;
 
 import '../../controllers/settings_controller.dart';
-import '../../controllers/session_controller.dart';
-import '../../controllers/message_controller.dart';
 import '../../controllers/audit_controller.dart';
 import '../../controllers/usage_controller.dart';
 import '../../services/storage_paths.dart';
 import '../../models/chat/session.dart';
 import '../../models/audit_trace.dart';
-import '../../models/chat/message.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/disabled_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/model_tool_guard.dart';
-import 'middleware/user_message_guard.dart';
 import 'middleware/risk_control_guard.dart';
 import 'sensitive_masker.dart';
 import 'stream_round.dart' show streamSingleRound;
@@ -246,15 +242,14 @@ class LocalHttpService {
       );
 
       // 构建中间件管道（洋葱模型）：
-      // 请求进入：apiKey → quota → modelTool → audit → userMessage → 业务处理
-      // 响应返回：业务处理（直接更新会话/审计） → userMessage → audit → modelTool → quota → apiKey
+      // 请求进入：apiKey → quota → modelTool → audit → 业务处理
+      // 响应返回：业务处理（直接审计） → audit → modelTool → quota → apiKey
       final pipeline = const Pipeline()
           .addMiddleware(apiKeyGuard) //api判断,装载session
           .addMiddleware(disabledGuard) //禁用状态检查
           .addMiddleware(quotaGuard) //配额判断
           .addMiddleware(modelToolGuard) //模型工具判断，装载body
-          .addMiddleware(riskControlGuard) //风控脱敏：手机号/身份证号等*
-          .addMiddleware(userMessageGuard); //创建用户消息
+          .addMiddleware(riskControlGuard); //风控脱敏：手机号/身份证号等*
 
       return pipeline.addHandler((Request req) {
         return _handleChatCompletion(req);
@@ -314,9 +309,12 @@ class LocalHttpService {
   /// - request.context['session'] 包含有效的 ChatSession
   /// - request.context['body'] 包含已注入 model/tools 的请求体
   ///
-  /// 后置任务（由 sessionGuard 中间件处理）：
-  /// - 更新本地会话（消息 + token 统计 + 计费）
-  /// - 审计回调补全响应内容
+  /// 后置任务（本服务只做审计与统计，不创建/持久化任何消息）：
+  /// - 审计链路追踪（prompt / llmRequest / llmResponse / tool / response / error）
+  /// - 写入用量统计（token / 费用明细，由 UsageController 持久化）
+  /// - 覆盖写入最近一次请求/响应到 log/log.json
+  ///
+  /// 消息的创建与落盘由调用方（聊天窗口或外部客户端）自行负责。
   ///
   /// 支持工具调用循环：LLM 返回 tool_calls → 执行 MCP 工具 → 结果回填 →
   /// 继续调用 LLM，直到无工具调用（最多 20 轮）。
@@ -332,10 +330,6 @@ class LocalHttpService {
       // 从中间件注入的 context 中提取会话和增强后的请求体
       final session = request.context['session'] as ChatSession;
       final body = request.context['body'] as Map<String, dynamic>;
-
-      // 应用内聊天标记：由聊天窗口自身负责消息持久化，服务侧跳过写入以避免重复
-      final isInApp =
-          (request.headers['x-llmate-inapp'] ?? '').toLowerCase() == 'true';
 
       // 客户端断开时取消后端请求
       bool cancelStream = false;
@@ -562,51 +556,11 @@ class LocalHttpService {
 
           debugPrint('🔄 [ToolLoop] 流式请求完成，总内容长度：${contentBuffer.length}');
 
-          // ── 更新本地会话：创建 AI 消息 + token 统计 + 计费 ──
-          // 应用内聊天（X-LLMate-InApp）由聊天窗口自身负责持久化，跳过此处写入避免重复
+          // ── 用量统计：仅记录 token / 费用明细，不创建任何消息 ──
           final totalTokens = promptTokens + completionTokens;
-          if (!isInApp) {
-            final sessionController = Get.find<SessionController>();
-            final userMessage = request.context['userMessage'] as ChatMessage?;
-            final now = DateTime.now();
-
-            // 创建 AI 回复消息
-            final botMsgId = '${now.millisecondsSinceEpoch}_bot';
-            final botMessage = ChatMessage(
-              msgId: botMsgId,
-              role: MessageRole.bot,
-              content: contentBuffer.toString(),
-              reason: reasonBuffer.toString(),
-              timestamp: now,
-              sessionId: session.sessionId,
-              pairedMsgId: userMessage?.msgId,
-              generationStartTime: generationStartTime,
-              generationEndTime: now,
-              promptTokens: promptTokens,
-              completionTokens: completionTokens,
-              totalTokens: totalTokens > 0 ? totalTokens : null,
-              generationDuration: now.difference(generationStartTime),
-            );
-            session.messages.add(userMessage!);
-            session.messages.add(botMessage);
-            // 追加用户消息 + AI 回复到会话
-
-            session.quotaRequestCount++;
-            session.promptTokens += promptTokens;
-            session.completionTokens += completionTokens;
-            session.totalTokens += totalTokens;
-            // 单条消息落盘（替代批量写入）
-            final messageController = MessageController.instance;
-            await messageController.addMessage(userMessage!);
-            await messageController.addMessage(botMessage);
-            // updateSession 内部会调用 _recalculateBilling 自动计算费用
-            sessionController.updateSession(session);
-            // 强制通知所有监听者刷新 UI（确保非当前 session 的变更也能反映到侧边栏等位置）
-            sessionController.update();
-          }
 
           debugPrint(
-            '✅ 会话已更新: ${session.sessionId}, '
+            '✅ 流式完成: ${session.sessionId}, '
             'tokens: prompt=$promptTokens, completion=$completionTokens, total=$totalTokens',
           );
 

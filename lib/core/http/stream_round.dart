@@ -62,6 +62,7 @@ Future<StreamRoundResult> streamSingleRound({
     'Authorization',
     'Bearer ${session.chatModel!.apiKey}',
   );
+  debugPrint('❌ 大模型请求地址: ${session.chatModel!.apiUrl!}\n');
 
   try {
     httpRequest.write(body);

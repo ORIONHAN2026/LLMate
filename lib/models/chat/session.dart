@@ -108,9 +108,6 @@ class ChatSession {
   /// 绑定的 MCP 服务文件夹名列表（~/.llmate/mcps/{name}），null/empty = 未绑定
   final List<String>? mcps;
 
-  /// 深度思考模式（默认关闭）
-  final bool deepThink;
-
   /// 连接器的关联关系描述提示词
   final String? connectPrompt;
 
@@ -201,7 +198,6 @@ class ChatSession {
     this.isSending = false,
     this.shouldStopResponse = false,
     this.scrollPosition = 0.0,
-    this.deepThink = false,
     this.connectPrompt,
     this.systemPrompt,
     this.sessionQuickCommands = const [],
@@ -398,7 +394,6 @@ class ChatSession {
     List<String>? mcps,
     ChatModel? chatModel,
     bool clearChatModel = false,
-    bool? deepThink,
     String? connectPrompt,
     bool clearConnectPrompt = false,
     String? systemPrompt,
@@ -464,7 +459,6 @@ class ChatSession {
       mcps: resolvedMcps,
       modelId: resolvedModelId,
       chatModel: resolvedChatModel,
-      deepThink: deepThink ?? this.deepThink,
       connectPrompt:
           clearConnectPrompt ? null : (connectPrompt ?? this.connectPrompt),
       systemPrompt:
@@ -574,7 +568,6 @@ class ChatSession {
       isSending: json['isSending'] ?? false,
       shouldStopResponse: json['shouldStopResponse'] ?? false,
       scrollPosition: (json['scrollPosition'] as num?)?.toDouble() ?? 0.0,
-      deepThink: json['deepThink'] as bool? ?? false,
       connectPrompt: json['connectPrompt'] as String?,
       systemPrompt: json['systemPrompt'] as String?,
       sessionQuickCommands:
@@ -618,7 +611,6 @@ class ChatSession {
       'isSending': isSending,
       'shouldStopResponse': shouldStopResponse,
       'scrollPosition': scrollPosition,
-      'deepThink': deepThink,
       if (connectPrompt != null) 'connectPrompt': connectPrompt,
       if (systemPrompt != null && systemPrompt!.isNotEmpty)
         'systemPrompt': systemPrompt,

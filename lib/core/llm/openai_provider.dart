@@ -14,19 +14,13 @@ class OpenAiProvider {
   static const int defaultTimeout = 30000;
 
   ChatModel? _model;
-  bool _thinkEnabled = false;
 
   ChatModel? get model => _model;
-  bool get thinkEnabled => _thinkEnabled;
 
   String get providerName => 'OpenAI Compatible';
 
   void configure(ChatModel model) {
     _model = model;
-  }
-
-  void applySessionSettings(ChatSession session) {
-    _thinkEnabled = session.deepThink;
   }
 
   // ── HTTP 客户端 ──
@@ -61,12 +55,6 @@ class OpenAiProvider {
     if (tools != null && tools.isNotEmpty) {
       data['tools'] = tools;
       data['tool_choice'] = 'auto';
-    }
-
-    if (session.deepThink) {
-      data['thinking'] = {'type': 'enabled'};
-    } else {
-      data['thinking'] = {'type': 'disabled'};
     }
 
     if (extra != null) data.addAll(extra);
@@ -243,12 +231,10 @@ class OpenAiProvider {
             yield {'content': content};
           }
 
-          if (_thinkEnabled) {
-            final reasoning =
-                response.choices.firstOrNull?.delta?.reasoningContent;
-            if (reasoning != null && reasoning.isNotEmpty) {
-              yield {'think': reasoning};
-            }
+          final reasoning =
+              response.choices.firstOrNull?.delta?.reasoningContent;
+          if (reasoning != null && reasoning.isNotEmpty) {
+            yield {'think': reasoning};
           }
 
           final toolCalls = response.choices.firstOrNull?.delta?.toolCalls;

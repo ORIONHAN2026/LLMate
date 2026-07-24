@@ -454,8 +454,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         children: [
                           _buildChatModeToggle(),
                           const SizedBox(width: 8),
-                          _buildDeepThinkToggle(),
-                          const SizedBox(width: 8),
                           _buildMcpToolsToggle(),
                           const SizedBox(width: 8),
 
@@ -616,83 +614,12 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     );
   }
 
-  /// 构建深度思考开关按钮
-  Widget _buildDeepThinkToggle() {
-    final currentSession = sessionController.currentSession.value;
-    final isDeepThink = currentSession?.deepThink ?? false;
-
-    return Tooltip(
-      message:
-          isDeepThink
-              ? AppLocalizations.of(context)!.deepThinkEnabled
-              : AppLocalizations.of(context)!.deepThinkDisabled,
-      child: GestureDetector(
-        onTap:
-            _isSending
-                ? null
-                : () {
-                  if (currentSession != null) {
-                    sessionController.updateSession(
-                      currentSession.copyWith(deepThink: !isDeepThink),
-                    );
-                  }
-                },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isDeepThink ? Icons.psychology : Icons.psychology_outlined,
-                size: 13,
-                color:
-                    _isSending
-                        ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
-                        : isDeepThink
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                AppLocalizations.of(context)!.deepThink,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isDeepThink ? FontWeight.w700 : FontWeight.w500,
-                  color:
-                      _isSending
-                          ? Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.3)
-                          : isDeepThink
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   /// 聊天窗口的 MCP 仅为展示查看（实际配置在「会话详情 - MCP配置」tab 中完成）。
   /// 若当前会话未绑定任何 MCP，则显示「无MCP配置」；若已绑定，点击可弹出只读查看面板。
+  /// 管理模式与会话模式均展示该入口，不做区分。
   Widget _buildMcpToolsToggle() {
     return Obx(() {
       final currentSession = sessionController.currentSession.value;
-
-      // 管理模式：不向大模型注入会话 MCP 工具，隐藏聊天输入框的 MCP 入口
-      if (currentSession?.mode == SessionMode.management.name) {
-        return const SizedBox.shrink();
-      }
 
       final sessionMcps = currentSession?.mcps;
       final mcpCount = sessionMcps?.length ?? 0;
@@ -975,7 +902,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 处理流式响应并更新UI（LlmClient 已在内部处理 MCP 工具调用和 follow-up）
       // chunk 格式: {content,think,tool}  三个字段互斥，每次必有一个有值
       await for (final chunkMap in responseStream) {
-        // 检查用户是否要求停止响应，同时获取最新会话状态（含 deepThink）
+        // 获取最新会话状态，检查用户是否要求停止响应
         final latestSession = sessionController.sessions.firstWhere(
           (s) => s.sessionId == updateSession.sessionId,
           orElse: () => updateSession,
@@ -987,8 +914,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         final tool = (chunkMap['tool'] ?? '').toString();
         final toolcall = (chunkMap['toolcall'] ?? '').toString();
 
-        // 深度思考关闭时，过滤掉 think 数据（即使模型原生产生推理内容也不展示）
-        final effectiveThinkChunk = latestSession.deepThink ? thinkChunk : '';
+        // 模型原生产生的推理内容（reasoning）统一展示
+        final effectiveThinkChunk = thinkChunk;
 
         // 处理工具调用状态标记（布尔值）
         if (tool == 'true') {

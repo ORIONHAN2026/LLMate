@@ -7,7 +7,6 @@ import '../../../models/chat/mcp.dart';
 import '../../../controllers/mcp_controller.dart';
 
 import '../../../services/storage_paths.dart';
-import '../common/system_prompts.dart';
 
 /// 安全函数名 → 原始函数名 映射（用于还原 MCP 工具名中的非法字符）
 final Map<String, String> _safeNameToOriginal = {};
@@ -213,7 +212,6 @@ List<Map<String, dynamic>> buildMcpTools(ChatSession? session) {
 List<Map<String, dynamic>> buildBaseSystemMessages({
   ChatModel? model,
   ChatSession? session,
-  bool thinkEnabled = false,
 }) {
   final messages = <Map<String, dynamic>>[];
 
@@ -233,13 +231,6 @@ List<Map<String, dynamic>> buildBaseSystemMessages({
       'name': 'session_system_prompt',
       'content':
           '[SESSION SYSTEM PROMPT] This is a session-level instruction. If it conflicts with the model system prompt, the model system prompt takes precedence.\n\n${session.systemPrompt}',
-    });
-  }
-
-  if (thinkEnabled) {
-    messages.add({
-      'role': 'system',
-      'content': CommonSystemPrompts.deepThink,
     });
   }
 

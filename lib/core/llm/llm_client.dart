@@ -25,10 +25,9 @@ class LlmClient {
 
   LlmClient(ChatSession session)
     : _session = session,
-      _provider = OpenAiProvider() {
-    _provider.configure(session.chatModel!);
-    _provider.applySessionSettings(session);
-  }
+    _provider = OpenAiProvider() {
+      _provider.configure(session.chatModel!);
+    }
 
   ChatModel? get model => _session.chatModel;
 
@@ -210,7 +209,12 @@ class LlmClient {
         return;
       }
 
-      final controller = StreamController<List<int>>();
+      // 与 HTTP 路径一致使用 sync:true，使 stream_round.dart 的 controller.add
+      // 同步透传 chunk，避免事件在控制器内部缓冲一个 microtask 才到达聊天 UI。
+      // 注意：sync 控制器要求监听者(add 前)已订阅，本函数下方 unawaited 启动
+      // roundFuture 后立刻以 await for 订阅 controller.stream，且 _parseLocalStream
+      // 不会回写同一控制器，故安全。
+      final controller = StreamController<List<int>>(sync: true);
       final roundFuture = streamSingleRound(
         session: session,
         body: jsonEncode(body),
@@ -471,7 +475,7 @@ class LlmClient {
           // 服务端正在执行 MCP 工具
           out.add({'tool': 'true'});
           out.add({'toolcall': reasoning});
-        } else if (_session.deepThink) {
+        } else {
           out.add({'think': reasoning});
         }
       }

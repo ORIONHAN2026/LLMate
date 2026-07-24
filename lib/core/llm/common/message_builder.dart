@@ -82,14 +82,6 @@ class MessageBuilder {
       });
     }
 
-    // 6. 深度思考模式：注入推理增强提示词
-    if (session?.deepThink == true) {
-      systemMessages.add({
-        'role': 'system',
-        'content': CommonSystemPrompts.deepThink,
-      });
-    }
-
     return systemMessages;
   }
 }

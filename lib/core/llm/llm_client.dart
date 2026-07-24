@@ -135,6 +135,7 @@ class LlmClient {
 
       String buffer = '';
       await for (final raw in response.transform(utf8.decoder)) {
+        debugPrint('🧠 [LLMChat] 接收到的原始 SSE chunk: $raw');
         if (_cancelled) break;
         buffer += raw;
         final lines = buffer.split('\n');
@@ -233,7 +234,8 @@ class LlmClient {
       );
 
       await for (final c in _parseLocalStream(controller.stream)) {
-        debugPrint("final c in _parseLocalStream(controller.stream)");
+        var raw = controller.stream.transform(utf8.decoder);
+        debugPrint('🧠 [LLMChat] 接收到的原始 SSE chunk: $raw');
         yield c;
       }
 

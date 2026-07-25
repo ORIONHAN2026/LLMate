@@ -874,6 +874,23 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // 设置入口 - 进入会话详情（会话级设置）
+        IconButton(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const SessionDetailPage(),
+              ),
+            );
+          },
+          icon: Icon(
+            Icons.settings,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+          ),
+          visualDensity: VisualDensity.compact,
+          tooltip: '设置',
+        ),
         // 审计查看入口
         IconButton(
           onPressed: () => AuditViewer.show(context, session: currentSession),

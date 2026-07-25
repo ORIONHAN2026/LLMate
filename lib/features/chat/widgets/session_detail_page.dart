@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../controllers/session_controller.dart';
 import 'sidebars/session_config_sidebar.dart';
+import 'usage_dashboard.dart';
+import 'audit_viewer.dart';
 
 /// 会话详情页 — 以 Tab 形式展示原本位于右侧边栏的全部会话配置信息
 class SessionDetailPage extends StatelessWidget {
@@ -69,7 +71,14 @@ class SessionDetailPage extends StatelessWidget {
         _DetailTab(
           label: '用量查询',
           icon: Icons.monetization_on_outlined,
-          builder: (ctx) => SessionConfigSidebar.buildBillingInfo(ctx, session),
+          builder: (ctx) => UsageDashboard(session: session, embedded: true),
+        ),
+        _DetailTab(
+          label: '审计',
+          icon: Icons.gavel_rounded,
+          // 审计内容自带 Expanded，需要填满 Tab 高度，故不包 ScrollView
+          scrollable: false,
+          builder: (ctx) => AuditViewer(session: session, embedded: true),
         ),
       ];
 
@@ -97,12 +106,15 @@ class SessionDetailPage extends StatelessWidget {
           body: TabBarView(
             children:
                 tabs
-                    .map(
-                      (t) => SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
-                        child: t.builder(context),
-                      ),
-                    )
+                    .map((t) {
+                      final content = t.builder(context);
+                      return t.scrollable
+                          ? SingleChildScrollView(
+                            padding: const EdgeInsets.all(16),
+                            child: content,
+                          )
+                          : content;
+                    })
                     .toList(),
           ),
         ),
@@ -116,9 +128,13 @@ class _DetailTab {
   final IconData icon;
   final Widget Function(BuildContext) builder;
 
+  /// 是否用 SingleChildScrollView 包裹（内容自带 Expanded 的 Tab 应设为 false）
+  final bool scrollable;
+
   const _DetailTab({
     required this.label,
     required this.icon,
     required this.builder,
+    this.scrollable = true,
   });
 }

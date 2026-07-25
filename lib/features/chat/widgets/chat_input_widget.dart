@@ -543,14 +543,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     }
   }
 
-  /// 设置入口 - 进入会话详情（会话级设置），位于底部按钮组最前面
+  /// 会话设置入口 - 进入会话详情（会话级设置），位于底部按钮组最前面
   Widget _buildSettingsEntry() {
     return Obx(() {
       final currentSession = sessionController.currentSession.value;
       final active = currentSession != null;
       final onSurface = Theme.of(context).colorScheme.onSurface;
       return Tooltip(
-        message: '设置',
+        message: '会话设置',
         child: GestureDetector(
           onTap:
               active
@@ -574,7 +574,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '设置',
+                  '会话设置',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

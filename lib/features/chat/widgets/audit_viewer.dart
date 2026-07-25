@@ -18,12 +18,15 @@ import '../../../widgets/standard_app_bar.dart';
 class AuditViewer extends StatefulWidget {
   final ChatSession? session;
 
-  const AuditViewer({super.key, this.session});
+  /// 嵌入模式：为 true 时不包裹 Scaffold / AppBar，用于嵌入到会话设置 Tab 中
+  final bool embedded;
+
+  const AuditViewer({super.key, this.session, this.embedded = false});
 
   static void show(BuildContext context, {ChatSession? session}) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => AuditViewer(session: session)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => AuditViewer(session: session)));
   }
 
   @override
@@ -32,11 +35,10 @@ class AuditViewer extends StatefulWidget {
 
 class _AuditViewerState extends State<AuditViewer> {
   final _traceCtrl = TextEditingController();
-  final _sessionCtrl = TextEditingController();
   final Set<AuditEventType> _selectedTypes = {};
   DateTime? _startDate;
   DateTime? _endDate;
-  int _limit = 200;
+  static const int _limit = 50;
 
   List<_TraceGroup> _groups = [];
   bool _loading = false;
@@ -45,39 +47,34 @@ class _AuditViewerState extends State<AuditViewer> {
   @override
   void initState() {
     super.initState();
-    if (widget.session != null) {
-      _sessionCtrl.text = widget.session!.sessionId;
-    }
-    // 开始 / 结束日期默认取当日
+    // 开始 / 结束时间默认取当日 00:00:00 ~ 23:59:59
     final now = DateTime.now();
     _startDate = DateTime(now.year, now.month, now.day);
-    _endDate = _startDate;
+    _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     _load();
   }
 
   @override
   void dispose() {
     _traceCtrl.dispose();
-    _sessionCtrl.dispose();
     super.dispose();
   }
 
   AuditFilter _buildFilter() {
     DateTime? end;
     if (_endDate != null) {
-      end = DateTime(
-        _endDate!.year,
-        _endDate!.month,
-        _endDate!.day,
-        23,
-        59,
-        59,
-        999,
-      );
+      // 若结束时间仍是当日 00:00:00（未选择具体时分秒），则视为当日结束，
+      // 否则使用用户选定的精确时间。
+      final e = _endDate!;
+      if (e.hour == 0 && e.minute == 0 && e.second == 0 && e.microsecond == 0) {
+        end = DateTime(e.year, e.month, e.day, 23, 59, 59, 999);
+      } else {
+        end = e;
+      }
     }
     return AuditFilter(
       traceId: _blank(_traceCtrl.text),
-      sessionId: _blank(_sessionCtrl.text),
+      sessionId: widget.session?.sessionId,
       eventTypes: _selectedTypes.isEmpty ? null : _selectedTypes,
       start: _startDate,
       end: end,
@@ -94,18 +91,20 @@ class _AuditViewerState extends State<AuditViewer> {
     });
     try {
       await AuditController.instance.ensureInitialized();
-      final events =
-          await AuditController.instance.storage.search(_buildFilter());
+      final events = await AuditController.instance.storage.search(
+        _buildFilter(),
+      );
       // 按 traceId 聚合：一次请求 = 一条链路，列表只展示一条
       final grouped = <String, List<AuditEvent>>{};
       for (final e in events) {
         (grouped[e.traceId] ??= []).add(e);
       }
-      final groups = grouped.entries
-          .map((e) => _TraceGroup(e.key, e.value))
-          .toList();
+      final groups =
+          grouped.entries.map((e) => _TraceGroup(e.key, e.value)).toList();
       // 链路按时间倒序排列（最新链路在前）；事件本身为时间升序，取末位即最新
-      groups.sort((a, b) => b.events.last.timestamp.compareTo(a.events.last.timestamp));
+      groups.sort(
+        (a, b) => b.events.last.timestamp.compareTo(a.events.last.timestamp),
+      );
       if (mounted) {
         setState(() {
           _groups = groups;
@@ -124,7 +123,6 @@ class _AuditViewerState extends State<AuditViewer> {
 
   void _reset() {
     _traceCtrl.clear();
-    _sessionCtrl.clear();
     setState(() {
       _selectedTypes.clear();
       _startDate = null;
@@ -136,125 +134,148 @@ class _AuditViewerState extends State<AuditViewer> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final content = Column(
+      children: [_buildSearchPanel(), Expanded(child: _buildResultList())],
+    );
+    if (widget.embedded) return content;
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: const StandardAppBar(title: '审计查看', showBottomDivider: true),
-      body: Column(
-        children: [
-          _buildSearchPanel(),
-          const Divider(height: 1),
-          Expanded(child: _buildResultList()),
-        ],
-      ),
+      body: content,
     );
   }
 
   Widget _buildSearchPanel() {
     final cs = Theme.of(context).colorScheme;
     return Card(
-      margin: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(1),
       color: cs.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: const Color(0xFFE5E7EB)),
+        side: BorderSide.none,
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(child: _field(_traceCtrl, '链路 ID (traceId)')),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _field(_sessionCtrl, '会话 ID (sessionId)'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    value: _limit,
-                    decoration: _inputDecoration('返回上限'),
-                    items: const [50, 100, 200, 500]
-                        .map((n) => DropdownMenuItem(
-                              value: n,
-                              child: Text('$n 条'),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() => _limit = v ?? 200),
+                SizedBox(
+                  width: 400,
+                  child: SizedBox(
+                    height: 40,
+                    child: TextField(
+                      controller: _traceCtrl,
+                      onSubmitted: (_) => _load(),
+                      style: TextStyle(fontSize: 13),
+                      decoration: _inputDecoration('链路 ID (traceId)'),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                const SizedBox.shrink(),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const SectionTitle('事件类型'),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: AuditEventType.values.map((t) {
-                final selected = _selectedTypes.contains(t);
-                return FilterChip(
-                  label: Text(t.name),
-                  selected: selected,
-                  visualDensity: VisualDensity.compact,
-                  onSelected: (v) => setState(() {
-                    if (v) {
-                      _selectedTypes.add(t);
-                    } else {
-                      _selectedTypes.remove(t);
-                    }
-                  }),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _pickDate(true),
-                    child: Text(_startDate == null
-                        ? '开始日期'
-                        : '起: ${_fmt(_startDate!)}'),
+                Expanded(child: _dateButton(true)),
+                const SizedBox(width: 8),
+                Expanded(child: _dateButton(false)),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 40,
+                  child: ElevatedButton.icon(
+                    onPressed: _load,
+                    icon: const Icon(Icons.search, size: 16),
+                    label: const Text('搜索', style: const TextStyle(fontSize: 11)),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _pickDate(false),
-                    child: Text(_endDate == null
-                        ? '结束日期'
-                        : '止: ${_fmt(_endDate!)}'),
+                SizedBox(
+                  height: 40,
+                  child: TextButton(
+                    onPressed: _reset,
+                    child: const Text('重置'),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                ElevatedButton.icon(
-                  onPressed: _load,
-                  icon: const Icon(Icons.search, size: 16),
-                  label: const Text('搜索'),
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: Text(
+                    '事件类型',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: _reset,
-                  child: const Text('重置'),
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children:
+                        AuditEventType.values.map((t) {
+                          final selected = _selectedTypes.contains(t);
+                          return FilterChip(
+                            label: Text(t.name),
+                            selected: selected,
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            labelStyle: const TextStyle(fontSize: 11),
+                            labelPadding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 2,
+                            ),
+                            onSelected:
+                                (v) => setState(() {
+                                  if (v) {
+                                    _selectedTypes.add(t);
+                                  } else {
+                                    _selectedTypes.remove(t);
+                                  }
+                                }),
+                          );
+                        }).toList(),
+                  ),
                 ),
-                const Spacer(),
-                Text('共 ${_groups.length} 条链路',
-                    style: Theme.of(context).textTheme.labelSmall),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// 日期选择按钮（开始 / 结束）
+  Widget _dateButton(bool isStart) {
+    final d = isStart ? _startDate : _endDate;
+    return SizedBox(
+      height: 40,
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          minimumSize: const Size(0, 40),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        onPressed: () => _pickDateTime(isStart),
+        child: Text(
+          d == null
+              ? (isStart ? '开始日期' : '结束日期')
+              : (isStart ? '起: ' : '止: ') + _fmtShort(d),
+          style: const TextStyle(fontSize: 13),
         ),
       ),
     );
@@ -278,52 +299,107 @@ class _AuditViewerState extends State<AuditViewer> {
         borderRadius: BorderRadius.circular(6),
         borderSide: const BorderSide(color: Color(0xFF1F2937)),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
     );
   }
 
-  /// 带标题的搜索输入框，风格与「添加模型」弹窗一致
-  Widget _field(TextEditingController c, String label) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: cs.onSurface,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: c,
-          onSubmitted: (_) => _load(),
-          style: TextStyle(fontSize: 13, color: cs.onSurface),
-          decoration: _inputDecoration(label),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _pickDate(bool isStart) async {
+  /// 先选日期，再选精确到秒的时间
+  Future<void> _pickDateTime(bool isStart) async {
     final initial = isStart ? _startDate : _endDate;
-    final d = await showDatePicker(
+    final date = await showDatePicker(
       context: context,
       initialDate: initial ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (d != null) {
-      setState(() {
-        if (isStart) {
-          _startDate = d;
-        } else {
-          _endDate = d;
-        }
-      });
-    }
+    if (date == null || !mounted) return;
+    final time = await _pickTime(initial ?? DateTime.now());
+    if (time == null || !mounted) return;
+    setState(() {
+      final dt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.$1,
+        time.$2,
+        time.$3,
+      );
+      if (isStart) {
+        _startDate = dt;
+      } else {
+        _endDate = dt;
+      }
+    });
+  }
+
+  /// 自定义「时:分:秒」选择弹窗，返回 (时, 分, 秒)
+  Future<(int, int, int)?> _pickTime(DateTime initial) async {
+    int h = initial.hour;
+    int m = initial.minute;
+    int s = initial.second;
+    return showDialog<(int, int, int)>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          title: const Text('选择时间'),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _timeColumn('时', 24, h, setSt, (v) => h = v),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text(':'),
+              ),
+              _timeColumn('分', 60, m, setSt, (v) => m = v),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text(':'),
+              ),
+              _timeColumn('秒', 60, s, setSt, (v) => s = v),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, (h, m, s)),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _timeColumn(
+    String label,
+    int max,
+    int value,
+    void Function(void Function()) setSt,
+    void Function(int) onChanged,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12)),
+        DropdownButton<int>(
+          value: value,
+          items: [
+            for (int i = 0; i < max; i++)
+              DropdownMenuItem(
+                value: i,
+                child: Text(i.toString().padLeft(2, '0')),
+              ),
+          ],
+          onChanged: (v) {
+            onChanged(v!);
+            setSt(() {});
+          },
+        ),
+      ],
+    );
   }
 
   /// 复制链路 traceId 到剪贴板，并给出轻量提示
@@ -345,10 +421,10 @@ class _AuditViewerState extends State<AuditViewer> {
     }
     if (_error != null) {
       return Center(
-        child: Text('加载失败: $_error',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.error,
-            )),
+        child: Text(
+          '加载失败: $_error',
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
       );
     }
     if (_groups.isEmpty) {
@@ -379,8 +455,7 @@ class _AuditViewerState extends State<AuditViewer> {
                   ),
                 ),
                 child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                   leading: CircleAvatar(
                     radius: 16,
                     backgroundColor: cs.primary.withOpacity(0.12),
@@ -442,9 +517,7 @@ class AuditReplayPage extends StatelessWidget {
 
   static void show(BuildContext context, String traceId) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AuditReplayPage(traceId: traceId),
-      ),
+      MaterialPageRoute(builder: (_) => AuditReplayPage(traceId: traceId)),
     );
   }
 
@@ -454,12 +527,12 @@ class AuditReplayPage extends StatelessWidget {
       appBar: const StandardAppBar(title: '审计回放', showBottomDivider: true),
       body: FutureBuilder<(List<AuditEvent>, String?)>(
         future: () async {
-          final events =
-              await AuditController.instance.storage.loadTrace(traceId);
+          final events = await AuditController.instance.storage.loadTrace(
+            traceId,
+          );
           String? sessionName;
           if (events.isNotEmpty) {
-            final s =
-                await appDatabase.getSession(events.first.sessionId);
+            final s = await appDatabase.getSession(events.first.sessionId);
             sessionName = s?.name;
           }
           return (events, sessionName);
@@ -470,10 +543,10 @@ class AuditReplayPage extends StatelessWidget {
           }
           if (snap.hasError) {
             return Center(
-              child: Text('加载失败: ${snap.error}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                  )),
+              child: Text(
+                '加载失败: ${snap.error}',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             );
           }
           final (events, sessionName) = snap.data ?? (<AuditEvent>[], null);
@@ -490,8 +563,8 @@ class AuditReplayPage extends StatelessWidget {
               SectionTitle('事件时间轴 (${events.length})'),
               const SizedBox(height: 4),
               ...events.asMap().entries.map(
-                    (e) => _buildEventTile(e.value, e.key, theme),
-                  ),
+                (e) => _buildEventTile(e.value, e.key, theme),
+              ),
             ],
           );
         },
@@ -511,9 +584,7 @@ class AuditReplayPage extends StatelessWidget {
           decoration: BoxDecoration(
             color: cs.surfaceContainerHighest.withOpacity(0.4),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: theme.dividerColor.withOpacity(0.3),
-            ),
+            border: Border.all(color: theme.dividerColor.withOpacity(0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -549,9 +620,7 @@ class AuditReplayPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest.withOpacity(0.25),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: theme.dividerColor.withOpacity(0.3),
-        ),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.3)),
       ),
       child: Theme(
         data: theme.copyWith(dividerColor: Colors.transparent),
@@ -570,10 +639,7 @@ class AuditReplayPage extends StatelessWidget {
               Expanded(
                 child: Text(
                   _fmt(e.timestamp),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: cs.onSurface,
-                  ),
+                  style: TextStyle(fontSize: 13, color: cs.onSurface),
                 ),
               ),
             ],
@@ -592,10 +658,7 @@ class AuditReplayPage extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: SelectableText(
                   json,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
                 ),
               ),
             ),
@@ -617,10 +680,7 @@ Widget _typeChip(AuditEventType type) {
       borderRadius: BorderRadius.circular(4),
       border: Border.all(color: color.withOpacity(0.5)),
     ),
-    child: Text(
-      type.name,
-      style: TextStyle(fontSize: 11, color: color),
-    ),
+    child: Text(type.name, style: TextStyle(fontSize: 11, color: color)),
   );
 }
 
@@ -658,8 +718,13 @@ String _fmt(DateTime d) {
   return '${d.year}-${p(d.month)}-${p(d.day)} ${p(d.hour)}:${p(d.minute)}:${p(d.second)}';
 }
 
-String _shortId(String id) =>
-    id.length > 10 ? '${id.substring(0, 10)}…' : id;
+/// 精简显示：MM-DD HH:MM:SS，用于搜索面板的日期按钮
+String _fmtShort(DateTime d) {
+  String p(int n) => n.toString().padLeft(2, '0');
+  return '${p(d.month)}-${p(d.day)} ${p(d.hour)}:${p(d.minute)}:${p(d.second)}';
+}
+
+String _shortId(String id) => id.length > 10 ? '${id.substring(0, 10)}…' : id;
 
 /// 按 traceId 聚合的「一次请求 = 一条链路」分组
 class _TraceGroup {

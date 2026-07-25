@@ -16,7 +16,15 @@ class UsageDashboard extends StatefulWidget {
   final ChatSession? session;
   final bool global;
 
-  const UsageDashboard({super.key, this.session, this.global = false});
+  /// 嵌入模式：为 true 时不包裹 Scaffold / AppBar，用于嵌入到会话设置 Tab 中
+  final bool embedded;
+
+  const UsageDashboard({
+    super.key,
+    this.session,
+    this.global = false,
+    this.embedded = false,
+  });
 
   static void show(
     BuildContext context, {
@@ -135,182 +143,174 @@ class _UsageDashboardState extends State<UsageDashboard> {
     final l10n = AppLocalizations.of(context)!;
 
     if (session == null) {
-      return Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: _buildAppBar(l10n.usageDashboard),
-        body: Center(
-          child: Text(
-            l10n.noSessionData,
-            style: TextStyle(
-              fontSize: 15,
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
-            ),
+      final empty = Center(
+        child: Text(
+          l10n.noSessionData,
+          style: TextStyle(
+            fontSize: 15,
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
           ),
         ),
       );
+      if (widget.embedded) return empty;
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: _buildAppBar(l10n.usageDashboard),
+        body: empty,
+      );
     }
 
+    final body = _buildSessionBody(
+      theme,
+      isDark,
+      sessionController,
+      session,
+      l10n,
+    );
+    if (widget.embedded) return body;
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _buildAppBar(l10n.sessionUsageTitle(session.name)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ===== 概览 (依赖 Obx 响应式数据) =====
-            Obx(() {
-              final sessions = sessionController.sessions;
-              final currentSession =
-                  sessions.cast<ChatSession?>().firstWhere(
+      body: SingleChildScrollView(padding: const EdgeInsets.all(24), child: body),
+    );
+  }
+
+  /// 单会话用量内容（不含 Scaffold），供独立页面与嵌入 Tab 复用
+  Widget _buildSessionBody(
+    ThemeData theme,
+    bool isDark,
+    SessionController sessionController,
+    ChatSession session,
+    AppLocalizations l10n,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ===== 概览 (依赖 Obx 响应式数据) =====
+        Obx(() {
+          final sessions = sessionController.sessions;
+          final currentSession =
+              sessions.cast<ChatSession?>().firstWhere(
                     (s) => s?.sessionId == session.sessionId,
                     orElse: () => null,
                   ) ??
                   session;
 
-              final promptTokens = currentSession.promptTokens;
-              final completionTokens = currentSession.completionTokens;
-              final totalTokens = promptTokens + completionTokens;
-              final totalCost = currentSession.totalCost;
-              final messageCount = currentSession.messages.length;
-              final modelName = currentSession.chatModel?.name ?? 'Unknown';
-              final quotaEnabled = currentSession.quotaEnabled;
-              final tokenLimit = currentSession.quotaTokenLimit;
-              final costLimit = currentSession.quotaCostLimit;
+          final promptTokens = currentSession.promptTokens;
+          final completionTokens = currentSession.completionTokens;
+          final totalTokens = promptTokens + completionTokens;
+          final totalCost = currentSession.totalCost;
+          final quotaEnabled = currentSession.quotaEnabled;
+          final tokenLimit = currentSession.quotaTokenLimit;
+          final costLimit = currentSession.quotaCostLimit;
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle(theme, l10n.overview),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
                 children: [
-                  _buildSectionTitle(theme, l10n.overview),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _buildStatCard(
-                        theme,
-                        isDark: isDark,
-                        title: l10n.statMessages,
-                        value: '$messageCount',
-                        icon: Icons.message_outlined,
-                        accentColor: const Color(0xFF7C3AED),
-                      ),
-                      _buildStatCard(
-                        theme,
-                        isDark: isDark,
-                        title: l10n.inputTokens,
-                        value: _formatTokenCount(promptTokens),
-                        icon: Icons.arrow_upward,
-                        accentColor: const Color(0xFF9CA3AF),
-                      ),
-                      _buildStatCard(
-                        theme,
-                        isDark: isDark,
-                        title: l10n.outputTokens,
-                        value: _formatTokenCount(completionTokens),
-                        icon: Icons.arrow_downward,
-                        accentColor: const Color(0xFF059669),
-                      ),
-                      _buildStatCard(
-                        theme,
-                        isDark: isDark,
-                        title: l10n.totalCostLabel,
-                        value:
-                            '${_getCurrencySymbol(currentSession.chatModel)}${totalCost.toStringAsFixed(4)}',
-                        icon: Icons.attach_money,
-                        accentColor: const Color(0xFFDC2626),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle(theme, l10n.tokenDistribution),
-                  const SizedBox(height: 12),
-                  _buildTokenDistributionCard(
+                  _buildStatCard(
                     theme,
-                    isDark,
-                    promptTokens,
-                    completionTokens,
-                    l10n,
+                    isDark: isDark,
+                    title: l10n.inputTokens,
+                    value: _formatTokenCount(promptTokens),
+                    accentColor: const Color(0xFF9CA3AF),
                   ),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle(theme, l10n.modelInfo),
-                  const SizedBox(height: 12),
-                  _buildSessionModelInfoCard(
+                  _buildStatCard(
                     theme,
-                    isDark,
-                    currentSession.chatModel,
-                    modelName,
-                    promptTokens,
-                    completionTokens,
-                    totalCost,
-                    l10n,
+                    isDark: isDark,
+                    title: l10n.outputTokens,
+                    value: _formatTokenCount(completionTokens),
+                    accentColor: const Color(0xFF059669),
                   ),
-                  if (quotaEnabled) ...[
-                    const SizedBox(height: 24),
-                    _buildSectionTitle(theme, l10n.quotaLimitSection),
-                    const SizedBox(height: 12),
-                    _buildQuotaCard(
-                      theme,
-                      isDark,
-                      totalTokens,
-                      totalCost,
-                      tokenLimit,
-                      costLimit,
-                      currentSession.chatModel,
-                      l10n,
-                    ),
-                  ],
+                  _buildStatCard(
+                    theme,
+                    isDark: isDark,
+                    title: l10n.totalCostLabel,
+                    value:
+                        '${_getCurrencySymbol(currentSession.chatModel)}${totalCost.toStringAsFixed(4)}',
+                    accentColor: const Color(0xFFDC2626),
+                  ),
                 ],
-              );
-            }),
+              ),
+              const SizedBox(height: 24),
+              _buildSectionTitle(theme, l10n.tokenDistribution),
+              const SizedBox(height: 12),
+              _buildTokenDistributionCard(
+                theme,
+                isDark,
+                promptTokens,
+                completionTokens,
+                l10n,
+              ),
+              if (quotaEnabled) ...[
+                const SizedBox(height: 24),
+                _buildSectionTitle(theme, l10n.quotaLimitSection),
+                const SizedBox(height: 12),
+                _buildQuotaCard(
+                  theme,
+                  isDark,
+                  totalTokens,
+                  totalCost,
+                  tokenLimit,
+                  costLimit,
+                  currentSession.chatModel,
+                  l10n,
+                ),
+              ],
+            ],
+          );
+        }),
 
-            // ===== 用量曲线 (独立于 Obx，依赖 _chartData state) =====
-            const SizedBox(height: 24),
-            _buildSectionTitle(theme, l10n.usageCurve),
-            const SizedBox(height: 12),
-            _buildGranularitySelector(theme, isDark, l10n),
-            const SizedBox(height: 12),
-            _buildDateRangeSelector(theme, isDark, l10n),
-            const SizedBox(height: 12),
-            _buildChartToggle(theme, l10n),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 220,
-              child:
-                  _chartLoading
-                      ? Center(
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: theme.colorScheme.onSurface.withOpacity(0.4),
-                          ),
-                        ),
-                      )
-                      : ValueListenableBuilder<bool>(
-                        valueListenable: _showTokens,
-                        builder:
-                            (_, showToken, _1) => ValueListenableBuilder<bool>(
-                              valueListenable: _showCost,
-                              builder:
-                                  (_, showCost, _2) => UsageCurveChart(
-                                    data: _chartData,
-                                    showTokens: showToken,
-                                    showCost: showCost,
-                                    currencySymbol: _getCurrencySymbol(
-                                      session.chatModel,
-                                    ),
-                                    granularity: _granularity,
-                                  ),
-                            ),
+        // ===== 用量曲线 (独立于 Obx，依赖 _chartData state) =====
+        const SizedBox(height: 24),
+        _buildSectionTitle(theme, l10n.usageCurve),
+        const SizedBox(height: 12),
+        _buildGranularitySelector(theme, isDark, l10n),
+        const SizedBox(height: 12),
+        _buildDateRangeSelector(theme, isDark, l10n),
+        const SizedBox(height: 12),
+        _buildChartToggle(theme, l10n),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 220,
+          child:
+              _chartLoading
+                  ? Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.colorScheme.onSurface.withOpacity(0.4),
                       ),
-            ),
-
-            const SizedBox(height: 80),
-          ],
+                    ),
+                  )
+                  : ValueListenableBuilder<bool>(
+                    valueListenable: _showTokens,
+                    builder:
+                        (_, showToken, _1) => ValueListenableBuilder<bool>(
+                          valueListenable: _showCost,
+                          builder:
+                              (_, showCost, _2) => UsageCurveChart(
+                                data: _chartData,
+                                showTokens: showToken,
+                                showCost: showCost,
+                                currencySymbol: _getCurrencySymbol(
+                                  session.chatModel,
+                                ),
+                                granularity: _granularity,
+                              ),
+                        ),
+                  ),
         ),
-      ),
+
+        const SizedBox(height: 80),
+      ],
     );
   }
 
@@ -362,11 +362,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
           0,
           (s, session) => s + session.totalCost,
         );
-        final totalMessages = sessions.fold<int>(
-          0,
-          (s, session) => s + session.messages.length,
-        );
-
         // 按模型分组
         final modelStats = <String, _ModelUsage>{};
         for (final session in sessions) {
@@ -410,23 +405,13 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     isDark: isDark,
                     title: l10n.totalSessions,
                     value: '${sessions.length}',
-                    icon: Icons.chat_bubble_outline,
                     accentColor: const Color(0xFF9CA3AF),
-                  ),
-                  _buildStatCard(
-                    theme,
-                    isDark: isDark,
-                    title: l10n.totalMessages,
-                    value: '$totalMessages',
-                    icon: Icons.message_outlined,
-                    accentColor: const Color(0xFF7C3AED),
                   ),
                   _buildStatCard(
                     theme,
                     isDark: isDark,
                     title: l10n.totalTokens,
                     value: _formatTokenCount(totalPrompt + totalCompletion),
-                    icon: Icons.token_outlined,
                     accentColor: const Color(0xFF059669),
                   ),
                   _buildStatCard(
@@ -434,7 +419,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     isDark: isDark,
                     title: l10n.totalCostLabel,
                     value: '\$${totalCost.toStringAsFixed(4)}',
-                    icon: Icons.attach_money,
                     accentColor: const Color(0xFFDC2626),
                   ),
                 ],
@@ -520,7 +504,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
     required bool isDark,
     required String title,
     required String value,
-    required IconData icon,
     required Color accentColor,
     double? progress,
     String? progressSuffix,
@@ -540,15 +523,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 16, color: accentColor),
-            ),
-            const SizedBox(height: 12),
             Text(
               value,
               style: TextStyle(
@@ -700,142 +674,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
       width: 10,
       height: 10,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-
-  Widget _buildSessionModelInfoCard(
-    ThemeData theme,
-    bool isDark,
-    ChatModel? chatModel,
-    String modelName,
-    int promptTokens,
-    int completionTokens,
-    double totalCost,
-    AppLocalizations l10n,
-  ) {
-    final total = promptTokens + completionTokens;
-    final promptRatio = total > 0 ? promptTokens / total : 0.0;
-    final completionRatio = total > 0 ? completionTokens / total : 0.0;
-    final accentBlue = const Color(0xFF9CA3AF);
-    final accentPurple = const Color(0xFF7C3AED);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF23242A) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE5E7EB),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child:
-                    chatModel?.buildIconWidget(false) ??
-                    Icon(
-                      Icons.smart_toy_outlined,
-                      size: 20,
-                      color: theme.colorScheme.onSurface.withOpacity(0.5),
-                    ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  modelName,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-              ),
-              Text(
-                '${_formatTokenCount(total)} · ${_getCurrencySymbol(chatModel)}${totalCost.toStringAsFixed(4)}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF9CA3AF),
-                ),
-              ),
-            ],
-          ),
-          if (total > 0) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _legendDot(accentBlue),
-                const SizedBox(width: 4),
-                Text(
-                  '${l10n.inputLabel} ${_formatTokenCount(promptTokens)}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: theme.colorScheme.onSurface.withOpacity(0.55),
-                  ),
-                ),
-                const Spacer(),
-                _legendDot(accentPurple),
-                const SizedBox(width: 4),
-                Text(
-                  '${l10n.outputLabel} ${_formatTokenCount(completionTokens)}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: theme.colorScheme.onSurface.withOpacity(0.55),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: SizedBox(
-                height: 6,
-                child: Row(
-                  children: [
-                    if (promptRatio > 0)
-                      Expanded(
-                        flex: (promptRatio * 1000).round().clamp(1, 1000),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: accentBlue,
-                            borderRadius:
-                                promptRatio >= 1
-                                    ? BorderRadius.circular(3)
-                                    : const BorderRadius.only(
-                                      topLeft: Radius.circular(3),
-                                      bottomLeft: Radius.circular(3),
-                                    ),
-                          ),
-                        ),
-                      ),
-                    if (completionRatio > 0)
-                      Expanded(
-                        flex: (completionRatio * 1000).round().clamp(1, 1000),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: accentPurple,
-                            borderRadius:
-                                completionRatio >= 1
-                                    ? BorderRadius.circular(3)
-                                    : const BorderRadius.only(
-                                      topRight: Radius.circular(3),
-                                      bottomRight: Radius.circular(3),
-                                    ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
     );
   }
 

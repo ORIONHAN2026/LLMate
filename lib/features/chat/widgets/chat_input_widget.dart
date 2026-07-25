@@ -14,6 +14,9 @@ import '../../../l10n/app_localizations.dart';
 import '../../../widgets/mcp_detail_dialog.dart';
 import '../../../widgets/confirm_delete_dialog.dart';
 import '../../../services/storage_service.dart';
+import 'session_detail_page.dart';
+import 'audit_viewer.dart';
+import 'usage_dashboard.dart';
 
 /// 聊天输入框组件
 ///
@@ -452,7 +455,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          _buildSettingsEntry(),
+                          const SizedBox(width: 8),
                           _buildChatModeToggle(),
+                          const SizedBox(width: 8),
+                          _buildAuditEntry(),
+                          const SizedBox(width: 8),
+                          _buildUsageEntry(),
                           const SizedBox(width: 8),
                           _buildMcpToolsToggle(),
                           const SizedBox(width: 8),
@@ -532,6 +541,142 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // 无文字输入时不显示按钮，但保持高度一致
       return const SizedBox(width: 16, height: 16);
     }
+  }
+
+  /// 设置入口 - 进入会话详情（会话级设置），位于底部按钮组最前面
+  Widget _buildSettingsEntry() {
+    return Obx(() {
+      final currentSession = sessionController.currentSession.value;
+      final active = currentSession != null;
+      final onSurface = Theme.of(context).colorScheme.onSurface;
+      return Tooltip(
+        message: '设置',
+        child: GestureDetector(
+          onTap:
+              active
+                  ? () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SessionDetailPage(),
+                      ),
+                    );
+                  }
+                  : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.settings_outlined,
+                  size: 13,
+                  color: active ? onSurface : onSurface.withOpacity(0.3),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '设置',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: active ? onSurface : onSurface.withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  /// 审计查看入口 - 位于底部按钮组
+  Widget _buildAuditEntry() {
+    return Obx(() {
+      final currentSession = sessionController.currentSession.value;
+      final active = currentSession != null;
+      final onSurface = Theme.of(context).colorScheme.onSurface;
+      return Tooltip(
+        message: '审计查看',
+        child: GestureDetector(
+          onTap:
+              active
+                  ? () {
+                    AuditViewer.show(context, session: currentSession);
+                  }
+                  : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.gavel_rounded,
+                  size: 13,
+                  color: active ? onSurface : onSurface.withOpacity(0.3),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '审计',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: active ? onSurface : onSurface.withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  /// 使用量仪表盘入口 - 位于底部按钮组
+  Widget _buildUsageEntry() {
+    return Obx(() {
+      final currentSession = sessionController.currentSession.value;
+      final active = currentSession != null;
+      final onSurface = Theme.of(context).colorScheme.onSurface;
+      return Tooltip(
+        message: '使用量',
+        child: GestureDetector(
+          onTap:
+              active
+                  ? () {
+                    UsageDashboard.show(context, session: currentSession);
+                  }
+                  : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.bar_chart_rounded,
+                  size: 13,
+                  color: active ? onSurface : onSurface.withOpacity(0.3),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '用量',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: active ? onSurface : onSurface.withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
   }
 
   /// 构建聊天模式切换按钮（会话模式 / 管理模式）

@@ -147,7 +147,7 @@ class _SettingsPageState extends State<SettingsPage> {
           decoration: BoxDecoration(
             color:
                 isSelected
-                    ? colorScheme.primary.withValues(alpha: 0.1)
+                    ? colorScheme.onSurface.withValues(alpha: 0.1)
                     : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
@@ -158,7 +158,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 size: 16,
                 color:
                     isSelected
-                        ? colorScheme.primary
+                        ? colorScheme.onSurface
                         : colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               const SizedBox(width: 10),
@@ -169,7 +169,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   color:
                       isSelected
-                          ? colorScheme.primary
+                          ? colorScheme.onSurface
                           : colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
@@ -386,7 +386,7 @@ class _GeneralSettingsTab extends StatelessWidget {
               Icon(
                 Icons.check_circle,
                 size: 22,
-                color: colorScheme.primary,
+                color: colorScheme.onSurface,
               ),
           ],
         ),
@@ -504,7 +504,7 @@ class _GeneralSettingsTab extends StatelessWidget {
               Icon(
                 Icons.check_circle,
                 size: 22,
-                color: colorScheme.primary,
+                color: colorScheme.onSurface,
               ),
           ],
         ),

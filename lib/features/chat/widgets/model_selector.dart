@@ -147,7 +147,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                                           isSelected
                                               ? Theme.of(
                                                 context,
-                                              ).colorScheme.primary
+                                              ).colorScheme.onSurface
                                               : Theme.of(
                                                 context,
                                               ).colorScheme.onSurface,
@@ -191,7 +191,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                                             color:
                                                 Theme.of(
                                                   context,
-                                                ).colorScheme.primary,
+                                                ).colorScheme.onSurface,
                                           )
                                           : null,
                                   onTap: () {
@@ -307,7 +307,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                                       : FontWeight.normal,
                               color:
                                   isSelected
-                                      ? Theme.of(context).colorScheme.primary
+                                      ? Theme.of(context).colorScheme.onSurface
                                       : Theme.of(context).colorScheme.onSurface,
                             ),
                           ),

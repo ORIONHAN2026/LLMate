@@ -119,8 +119,8 @@ class MyApp extends StatelessWidget {
             ],
               theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                primary: const Color(0xFF2563EB),
-                seedColor: const Color(0xFF2563EB), // 蓝色主色调
+                primary: const Color(0xFF1F2937),
+                seedColor: const Color(0xFF1F2937), // 深色主色调（与添加模型按钮一致）
                 brightness: Brightness.light,
               ).copyWith(
                 surface: Colors.white,
@@ -150,7 +150,7 @@ class MyApp extends StatelessWidget {
               ),
               cardColor: Colors.white,
               dividerColor: const Color(0xFFE5E7EB),
-              primaryColor: const Color(0xFF2563EB),
+              primaryColor: const Color(0xFF1F2937),
               textTheme: const TextTheme(
                 headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
                 headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -175,19 +175,19 @@ class MyApp extends StatelessWidget {
               ),
               filledButtonTheme: FilledButtonThemeData(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB), // 填充按钮蓝色
+                  backgroundColor: const Color(0xFF1F2937), // 填充按钮深色（与添加模型按钮一致）
                   foregroundColor: Colors.white, // 文字颜色
                 ),
               ),
               outlinedButtonTheme: OutlinedButtonThemeData(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB), // 边框按钮蓝色
-                  side: const BorderSide(color: Color(0xFF2563EB)),
+                  foregroundColor: const Color(0xFF9CA3AF), // 边框按钮中性灰（与暗色模式一致）
+                  side: const BorderSide(color: Color(0xFF9CA3AF)),
                 ),
               ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB), // 文本按钮蓝色
+                  foregroundColor: const Color(0xFF9CA3AF), // 文本按钮中性灰（与暗色模式一致）
                 ),
               ),
 
@@ -200,14 +200,14 @@ class MyApp extends StatelessWidget {
             ),
             darkTheme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
-                primary: const Color(0xFF2563EB),
-                seedColor: const Color(0xFF2563EB),
+                primary: const Color(0xFF1F2937),
+                seedColor: const Color(0xFF1F2937), // 深色主色调（与添加模型按钮一致）
                 brightness: Brightness.dark,
               ),
               useMaterial3: true,
               scaffoldBackgroundColor: const Color(0xFF1A1B23),
               canvasColor: const Color(0xFF1A1B23),
-              primaryColor: const Color(0xFF2563EB),
+              primaryColor: const Color(0xFF1F2937),
               textTheme: const TextTheme(
                 headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
                 headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -245,19 +245,19 @@ class MyApp extends StatelessWidget {
               ),
               filledButtonTheme: FilledButtonThemeData(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: const Color(0xFF1F2937),
                   foregroundColor: Colors.white,
                 ),
               ),
               outlinedButtonTheme: OutlinedButtonThemeData(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
-                  side: const BorderSide(color: Color(0xFF2563EB)),
+                  foregroundColor: const Color(0xFF9CA3AF), // 深色模式下保证可读的中性灰（与按钮同色系）
+                  side: const BorderSide(color: Color(0xFF9CA3AF)),
                 ),
               ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
+                  foregroundColor: const Color(0xFF9CA3AF), // 深色模式下保证可读的中性灰（与按钮同色系）
                 ),
               ),
               cardColor: const Color(0xFF23242A),

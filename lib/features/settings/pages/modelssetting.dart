@@ -235,7 +235,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  // shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  // shadowColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
                 ),
               ),
             ),
@@ -258,13 +258,13 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       decoration: BoxDecoration(
         color:
             isSelected
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.1)
                 : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border:
             isSelected
                 ? Border.all(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                   width: 1,
                 )
                 : null,
@@ -571,7 +571,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
             Icons.horizontal_rule,
             color:
                 isSelected
-                    ? Theme.of(context).colorScheme.primary
+                    ? Theme.of(context).colorScheme.onSurface
                     : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             size: 9,
           );
@@ -583,7 +583,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         Icons.laptop,
         color:
             isSelected
-                ? Theme.of(context).colorScheme.primary
+                ? Theme.of(context).colorScheme.onSurface
                 : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
         size: 9,
       );

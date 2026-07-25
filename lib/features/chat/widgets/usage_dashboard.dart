@@ -201,7 +201,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                         title: l10n.inputTokens,
                         value: _formatTokenCount(promptTokens),
                         icon: Icons.arrow_upward,
-                        accentColor: const Color(0xFF2563EB),
+                        accentColor: const Color(0xFF9CA3AF),
                       ),
                       _buildStatCard(
                         theme,
@@ -411,7 +411,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     title: l10n.totalSessions,
                     value: '${sessions.length}',
                     icon: Icons.chat_bubble_outline,
-                    accentColor: const Color(0xFF2563EB),
+                    accentColor: const Color(0xFF9CA3AF),
                   ),
                   _buildStatCard(
                     theme,
@@ -609,7 +609,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     final total = totalPrompt + totalCompletion;
     final promptRatio = total > 0 ? totalPrompt / total : 0.0;
     final completionRatio = total > 0 ? totalCompletion / total : 0.0;
-    final accentBlue = const Color(0xFF2563EB);
+    final accentBlue = const Color(0xFF9CA3AF);
     final accentPurple = const Color(0xFF7C3AED);
 
     return Container(
@@ -716,7 +716,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     final total = promptTokens + completionTokens;
     final promptRatio = total > 0 ? promptTokens / total : 0.0;
     final completionRatio = total > 0 ? completionTokens / total : 0.0;
-    final accentBlue = const Color(0xFF2563EB);
+    final accentBlue = const Color(0xFF9CA3AF);
     final accentPurple = const Color(0xFF7C3AED);
 
     return Container(
@@ -760,7 +760,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF2563EB),
+                  color: Color(0xFF9CA3AF),
                 ),
               ),
             ],
@@ -884,7 +884,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2563EB),
+                    color: Color(0xFF9CA3AF),
                   ),
                 ),
               ],
@@ -903,7 +903,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 valueColor: AlwaysStoppedAnimation<Color>(
                   totalTokens > tokenLimit
                       ? const Color(0xFFDC2626)
-                      : const Color(0xFF2563EB),
+                      : const Color(0xFF9CA3AF),
                 ),
               ),
             ),
@@ -933,7 +933,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2563EB),
+                    color: Color(0xFF9CA3AF),
                   ),
                 ),
               ],
@@ -952,7 +952,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 valueColor: AlwaysStoppedAnimation<Color>(
                   totalCost > costLimit
                       ? const Color(0xFFDC2626)
-                      : const Color(0xFF2563EB),
+                      : const Color(0xFF9CA3AF),
                 ),
               ),
             ),
@@ -982,7 +982,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     final promptRatio = modelTotal > 0 ? usage.promptTokens / modelTotal : 0.0;
     final completionRatio =
         modelTotal > 0 ? usage.completionTokens / modelTotal : 0.0;
-    final accentBlue = const Color(0xFF2563EB);
+    final accentBlue = const Color(0xFF9CA3AF);
     final accentPurple = const Color(0xFF7C3AED);
 
     return Container(
@@ -1025,7 +1025,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF2563EB),
+                  color: Color(0xFF9CA3AF),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1158,7 +1158,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     final total = session.promptTokens + session.completionTokens;
     final promptRatio = total > 0 ? session.promptTokens / total : 0.0;
     final completionRatio = total > 0 ? session.completionTokens / total : 0.0;
-    final accentBlue = const Color(0xFF2563EB);
+    final accentBlue = const Color(0xFF9CA3AF);
     final accentPurple = const Color(0xFF7C3AED);
 
     return Container(
@@ -1189,7 +1189,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF2563EB),
+                  color: Color(0xFF9CA3AF),
                 ),
               ),
             ],
@@ -1313,7 +1313,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 decoration: BoxDecoration(
                   color:
                       selected
-                          ? const Color(0xFF2563EB)
+                          ? const Color(0xFF9CA3AF)
                           : (isDark
                               ? const Color(0xFF2D2F3A)
                               : const Color(0xFFF3F4F6)),
@@ -1550,7 +1550,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     _toggleChip(
                       theme: theme,
                       label: l10n.tokenToggle,
-                      color: const Color(0xFF2563EB),
+                      color: const Color(0xFF9CA3AF),
                       selected: showToken,
                       onTap: () => _showTokens.value = !_showTokens.value,
                     ),

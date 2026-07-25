@@ -80,6 +80,12 @@ class SessionDetailPage extends StatelessWidget {
             title: session.name,
             bottom: TabBar(
               isScrollable: true,
+              labelColor: theme.colorScheme.onSurface,
+              unselectedLabelColor: theme.colorScheme.onSurface.withValues(
+                alpha: 0.55,
+              ),
+              indicatorColor: theme.colorScheme.onSurface,
+              indicatorWeight: 3,
               tabs:
                   tabs
                       .map(

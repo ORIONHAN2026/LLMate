@@ -73,7 +73,7 @@ class UsageCurveChart extends StatelessWidget {
             Row(
               children: [
                 const SizedBox(width: 8),
-                _legendDot(const Color(0xFF2563EB)),
+                _legendDot(const Color(0xFF9CA3AF)),
                 const SizedBox(width: 6),
                 Text(l10n.tokenToggle,
                     style: TextStyle(
@@ -184,7 +184,7 @@ class _ChartPainter extends CustomPainter {
         chartTop: chartTop,
         chartHeight: chartHeight,
         maxValue: maxTokens.toDouble(),
-        color: const Color(0xFF2563EB),
+        color: const Color(0xFF9CA3AF),
       );
     }
 

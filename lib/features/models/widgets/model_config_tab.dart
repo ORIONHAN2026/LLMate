@@ -73,6 +73,12 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         TabBar(
           controller: _tabController,
           isScrollable: true,
+          labelColor: Theme.of(context).colorScheme.onSurface,
+          unselectedLabelColor: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.55),
+          indicatorColor: Theme.of(context).colorScheme.onSurface,
+          indicatorWeight: 3,
           tabs: [
             Tab(
               text: loc.basicInfo,
@@ -344,7 +350,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                   _isHoveringModelName
                                       ? Theme.of(
                                         context,
-                                      ).colorScheme.primary.withOpacity(0.3)
+                                      ).colorScheme.onSurface.withOpacity(0.3)
                                       : Colors.transparent,
                               width: 1,
                             ),
@@ -352,7 +358,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                 _isHoveringModelName
                                     ? Theme.of(
                                       context,
-                                    ).colorScheme.primary.withOpacity(0.05)
+                                    ).colorScheme.onSurface.withOpacity(0.05)
                                     : Colors.transparent,
                           ),
                           child: Row(
@@ -388,7 +394,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                       _isHoveringModelName
                                           ? Theme.of(
                                             context,
-                                          ).colorScheme.primary.withOpacity(0.7)
+                                          ).colorScheme.onSurface.withOpacity(0.7)
                                           : Theme.of(context)
                                               .colorScheme
                                               .onSurface
@@ -467,7 +473,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -475,12 +481,12 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         const SizedBox(height: 6),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: Theme.of(context).colorScheme.primary,
+            activeTrackColor: Theme.of(context).colorScheme.onSurface,
             inactiveTrackColor: Theme.of(context).dividerColor,
-            thumbColor: Theme.of(context).colorScheme.primary,
+            thumbColor: Theme.of(context).colorScheme.onSurface,
             overlayColor: Theme.of(
               context,
-            ).colorScheme.primary.withOpacity(0.1),
+            ).colorScheme.onSurface.withOpacity(0.1),
             trackHeight: 3,
           ),
           child: Slider(
@@ -582,7 +588,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             contentPadding: const EdgeInsets.all(10),
@@ -675,13 +681,13 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         decoration: BoxDecoration(
           color:
               isSelected
-                  ? Theme.of(context).colorScheme.primary
+                  ? Theme.of(context).colorScheme.onSurface
                   : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color:
                 isSelected
-                    ? Theme.of(context).colorScheme.primary
+                    ? Theme.of(context).colorScheme.onSurface
                     : Theme.of(context).dividerColor,
             width: 1.5,
           ),
@@ -696,7 +702,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                 fontWeight: FontWeight.w600,
                 color:
                     isSelected
-                        ? Colors.white
+                        ? Theme.of(context).colorScheme.surface
                         : Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -707,7 +713,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                 fontSize: 12,
                 color:
                     isSelected
-                        ? Colors.white
+                        ? Theme.of(context).colorScheme.surface
                         : Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.8),
@@ -765,7 +771,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             contentPadding: const EdgeInsets.all(10),
@@ -827,7 +833,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             contentPadding: const EdgeInsets.all(10),

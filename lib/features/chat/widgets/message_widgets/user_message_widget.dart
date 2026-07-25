@@ -259,7 +259,7 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 hintText: l10n.messageHint,

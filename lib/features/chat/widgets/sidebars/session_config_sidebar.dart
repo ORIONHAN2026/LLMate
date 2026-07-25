@@ -191,7 +191,7 @@ class SessionConfigSidebar {
               size: 14,
               color: Theme.of(
                 context,
-              ).colorScheme.primary.withValues(alpha: 0.7),
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -212,11 +212,11 @@ class SessionConfigSidebar {
                     value,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   ),
                 ],
               ),
@@ -270,7 +270,7 @@ class SessionConfigSidebar {
                 Icon(
                   Icons.refresh,
                   size: 14,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -350,7 +350,7 @@ class SessionConfigSidebar {
         ).colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -364,7 +364,7 @@ class SessionConfigSidebar {
                 size: 12,
                 color: Theme.of(
                   context,
-                ).colorScheme.primary.withValues(alpha: 0.7),
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 6),
               Text(
@@ -373,7 +373,7 @@ class SessionConfigSidebar {
                   fontSize: 12,
                   color: Theme.of(
                     context,
-                  ).colorScheme.primary.withValues(alpha: 0.7),
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -560,7 +560,7 @@ class SessionConfigSidebar {
           icon: Icons.arrow_circle_down,
           label: l10n.cumulativeInputTokens,
           value: _formatTokenCount(session.promptTokens),
-          valueColor: theme.colorScheme.primary,
+          valueColor: theme.colorScheme.onSurface,
         ),
         const SizedBox(height: 8),
         _buildConfigItem(
@@ -568,7 +568,7 @@ class SessionConfigSidebar {
           icon: Icons.arrow_circle_up,
           label: l10n.cumulativeOutputTokens,
           value: _formatTokenCount(session.completionTokens),
-          valueColor: theme.colorScheme.primary,
+          valueColor: theme.colorScheme.onSurface,
         ),
         const SizedBox(height: 8),
         _buildConfigItem(
@@ -649,7 +649,7 @@ class SessionConfigSidebar {
                   : l10n.notSet,
           valueColor:
               session.chatModel != null
-                  ? Theme.of(context).colorScheme.primary
+                  ? Theme.of(context).colorScheme.onSurface
                   : null,
         ),
         if (session.connectPrompt != null &&
@@ -1156,7 +1156,7 @@ class _SessionSettingsSectionState extends State<_SessionSettingsSection> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: theme.colorScheme.primary),
+              borderSide: BorderSide(color: theme.colorScheme.onSurface),
             ),
             contentPadding: const EdgeInsets.all(10),
           ),
@@ -1371,7 +1371,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
       decoration: BoxDecoration(
         color:
             _session.quotaEnabled
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
+                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)
                 : Theme.of(
                   context,
                 ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
@@ -1381,7 +1381,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                 ? Border.all(
                   color: Theme.of(
                     context,
-                  ).colorScheme.primary.withValues(alpha: 0.3),
+                  ).colorScheme.onSurface.withValues(alpha: 0.3),
                   width: 1,
                 )
                 : null,
@@ -1393,7 +1393,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             size: 16,
             color:
                 _session.quotaEnabled
-                    ? Theme.of(context).colorScheme.primary
+                    ? Theme.of(context).colorScheme.onSurface
                     : Theme.of(
                       context,
                     ).colorScheme.onSurface.withValues(alpha: 0.4),
@@ -1410,7 +1410,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                     fontWeight: FontWeight.w500,
                     color:
                         _session.quotaEnabled
-                            ? Theme.of(context).colorScheme.primary
+                            ? Theme.of(context).colorScheme.onSurface
                             : Theme.of(
                               context,
                             ).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1432,7 +1432,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             scale: 0.75,
             child: CupertinoSwitch(
               value: _session.quotaEnabled,
-              activeTrackColor: Theme.of(context).colorScheme.primary,
+              activeTrackColor: Theme.of(context).colorScheme.onSurface,
               onChanged: (val) {
                 final updated = _session.copyWith(quotaEnabled: val);
                 if (val && _session.quotaPeriodStart == null) {
@@ -1849,7 +1849,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             ? Theme.of(context).colorScheme.error
             : progress >= 0.7
             ? Colors.orange
-            : Theme.of(context).colorScheme.primary;
+            : Theme.of(context).colorScheme.onSurface;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2043,11 +2043,17 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       width: double.infinity,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
+                        color:
+                            isActive
+                                ? Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.1)
+                                : Colors.transparent,
                         border: Border(
                           left: BorderSide(
                             color:
                                 isActive
-                                    ? Theme.of(context).colorScheme.primary
+                                    ? Theme.of(context).colorScheme.onSurface
                                     : Colors.transparent,
                             width: 2.5,
                           ),
@@ -2065,7 +2071,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                                   isActive ? FontWeight.w700 : FontWeight.w400,
                               color:
                                   isActive
-                                      ? Theme.of(context).colorScheme.primary
+                                      ? Theme.of(context).colorScheme.onSurface
                                       : Theme.of(context).colorScheme.onSurface
                                           .withValues(alpha: 0.55),
                             ),
@@ -2143,7 +2149,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                               : l10n.notSet,
                       valueColor:
                           session.chatModel != null
-                              ? Theme.of(context).colorScheme.primary
+                              ? Theme.of(context).colorScheme.onSurface
                               : null,
                     ),
                     // 关联提示词
@@ -2360,6 +2366,8 @@ class _McpConfigSectionState extends State<_McpConfigSection> {
             return CheckboxListTile(
               dense: true,
               value: isSel,
+              activeColor: Theme.of(context).colorScheme.onSurface,
+              checkColor: Theme.of(context).colorScheme.surface,
               onChanged: (v) => _toggle(s.name, v ?? false),
               title: Text(s.name, style: const TextStyle(fontSize: 13)),
               subtitle:

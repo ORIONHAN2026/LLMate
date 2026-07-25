@@ -86,7 +86,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
             Icon(
               Icons.check_circle,
               size: 64,
-              color: Theme.of(context).colorScheme.primary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             const SizedBox(height: 16),
             Text(

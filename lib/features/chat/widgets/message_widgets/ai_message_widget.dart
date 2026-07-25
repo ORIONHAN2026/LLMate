@@ -1193,7 +1193,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 hintText: l10n.messageHint,
@@ -1698,12 +1698,12 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.08),
+                    ).colorScheme.onSurface.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.2),
+                      ).colorScheme.onSurface.withOpacity(0.2),
                       width: 0.5,
                     ),
                   ),
@@ -1713,14 +1713,14 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                       Icon(
                         _iconForExtension(fileName),
                         size: 12,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         fileName,
                         style: TextStyle(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.w500,
                         ),
                       ),

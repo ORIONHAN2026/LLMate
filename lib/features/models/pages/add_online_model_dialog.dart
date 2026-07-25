@@ -195,7 +195,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             fontSize: 11, // 从12减少到11
             color:
                 isActive
-                    ? Theme.of(context).colorScheme.primary
+                    ? Theme.of(context).colorScheme.onSurface
                     : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
           ),
@@ -282,12 +282,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         isSelected
                             ? Theme.of(
                               context,
-                            ).colorScheme.primary.withOpacity(0.1)
+                            ).colorScheme.onSurface.withOpacity(0.1)
                             : Theme.of(context).colorScheme.surface,
                     border: Border.all(
                       color:
                           isSelected
-                              ? Theme.of(context).colorScheme.primary
+                              ? Theme.of(context).colorScheme.onSurface
                               : Theme.of(context).dividerColor,
                       width: isSelected ? 2 : 1,
                     ),
@@ -312,7 +312,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                 fontWeight: FontWeight.w500,
                                 color:
                                     isSelected
-                                        ? Theme.of(context).colorScheme.primary
+                                        ? Theme.of(context).colorScheme.onSurface
                                         : Theme.of(context)
                                             .colorScheme
                                             .onSurface
@@ -376,12 +376,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         decoration: BoxDecoration(
           color:
               isSelected
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.1)
                   : Theme.of(context).colorScheme.surface,
           border: Border.all(
             color:
                 isSelected
-                    ? Theme.of(context).colorScheme.primary
+                    ? Theme.of(context).colorScheme.onSurface
                     : Theme.of(context).dividerColor,
             width: isSelected ? 2 : 1,
           ),
@@ -398,7 +398,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   size: 18,
                   color:
                       isSelected
-                          ? Theme.of(context).colorScheme.primary
+                          ? Theme.of(context).colorScheme.onSurface
                           : Theme.of(
                             context,
                           ).colorScheme.onSurface.withOpacity(0.6),
@@ -412,7 +412,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       fontWeight: FontWeight.w500,
                       color:
                           isSelected
-                              ? Theme.of(context).colorScheme.primary
+                              ? Theme.of(context).colorScheme.onSurface
                               : Theme.of(
                                 context,
                               ).colorScheme.onSurface.withOpacity(0.8),
@@ -660,12 +660,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                           !_isCustomModel
                               ? Theme.of(
                                 context,
-                              ).colorScheme.primary.withOpacity(0.1)
+                              ).colorScheme.onSurface.withOpacity(0.1)
                               : Theme.of(context).colorScheme.surface,
                       border: Border.all(
                         color:
                             !_isCustomModel
-                                ? Theme.of(context).colorScheme.primary
+                                ? Theme.of(context).colorScheme.onSurface
                                 : Theme.of(context).dividerColor,
                         width: 1,
                       ),
@@ -678,7 +678,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         fontSize: 12,
                         color:
                             !_isCustomModel
-                                ? Theme.of(context).colorScheme.primary
+                                ? Theme.of(context).colorScheme.onSurface
                                 : Theme.of(
                                   context,
                                 ).colorScheme.onSurface.withOpacity(0.6),
@@ -711,12 +711,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                           _isCustomModel
                               ? Theme.of(
                                 context,
-                              ).colorScheme.primary.withOpacity(0.1)
+                              ).colorScheme.onSurface.withOpacity(0.1)
                               : Theme.of(context).colorScheme.surface,
                       border: Border.all(
                         color:
                             _isCustomModel
-                                ? Theme.of(context).colorScheme.primary
+                                ? Theme.of(context).colorScheme.onSurface
                                 : Theme.of(context).dividerColor,
                         width: 1,
                       ),
@@ -729,7 +729,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         fontSize: 12,
                         color:
                             _isCustomModel
-                                ? Theme.of(context).colorScheme.primary
+                                ? Theme.of(context).colorScheme.onSurface
                                 : Theme.of(
                                   context,
                                 ).colorScheme.onSurface.withOpacity(0.6),
@@ -778,7 +778,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                 isSelected
                                     ? Theme.of(
                                       context,
-                                    ).colorScheme.primary.withOpacity(0.08)
+                                    ).colorScheme.onSurface.withOpacity(0.08)
                                     : null,
                             border: Border(
                               bottom: BorderSide(
@@ -801,7 +801,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                         isSelected
                                             ? Theme.of(
                                               context,
-                                            ).colorScheme.primary
+                                            ).colorScheme.onSurface
                                             : Theme.of(context)
                                                 .colorScheme
                                                 .outline
@@ -844,7 +844,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                             isSelected
                                                 ? Theme.of(
                                                   context,
-                                                ).colorScheme.primary
+                                                ).colorScheme.onSurface
                                                 : Theme.of(context)
                                                     .colorScheme
                                                     .onSurface
@@ -1448,7 +1448,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
   // 构建模型能力标签（带勾选标记）
   Widget _buildCapabilityTags(Map<String, dynamic> model, bool isSelected) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final primaryColor = Theme.of(context).colorScheme.onSurface;
     final dimColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.35);
     final tagColor =
         isSelected

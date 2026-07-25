@@ -382,7 +382,7 @@ class OtherSettingsPage extends StatelessWidget {
               Icon(
                 Icons.check_circle,
                 size: 22,
-                color: colorScheme.primary,
+                color: colorScheme.onSurface,
               ),
           ],
         ),
@@ -500,7 +500,7 @@ class OtherSettingsPage extends StatelessWidget {
               Icon(
                 Icons.check_circle,
                 size: 22,
-                color: colorScheme.primary,
+                color: colorScheme.onSurface,
               ),
           ],
         ),

@@ -185,14 +185,14 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               icon: Icon(
                 Icons.refresh,
                 size: 16,
-                color: colorScheme.primary,
+                color: colorScheme.onSurface,
               ),
               label: Text(
                 l10n.restart,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: colorScheme.primary,
+                  color: colorScheme.onSurface,
                 ),
               ),
               style: TextButton.styleFrom(
@@ -286,7 +286,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: colorScheme.primary, width: 1),
+                borderSide: BorderSide(color: colorScheme.onSurface, width: 1),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
@@ -357,7 +357,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: colorScheme.primary, width: 1),
+                borderSide: BorderSide(color: colorScheme.onSurface, width: 1),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
@@ -403,7 +403,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: colorScheme.primary, width: 1),
+                borderSide: BorderSide(color: colorScheme.onSurface, width: 1),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
@@ -514,7 +514,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
                     style: TextStyle(
                       fontSize: 12,
                       color: selected
-                          ? colorScheme.primary
+                          ? colorScheme.onSurface
                           : colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
@@ -525,7 +525,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               Icon(
                 Icons.check_circle,
                 size: 22,
-                color: colorScheme.primary,
+                color: colorScheme.onSurface,
               ),
             if (onClear != null)
               IconButton(
@@ -616,10 +616,10 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
   Widget _buildInfoSection(ColorScheme colorScheme, AppLocalizations l10n) {
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.primary.withValues(alpha: 0.06),
+        color: colorScheme.onSurface.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.15),
+          color: colorScheme.onSurface.withValues(alpha: 0.15),
         ),
       ),
       padding: const EdgeInsets.all(16),
@@ -629,7 +629,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
           Icon(
             Icons.info,
             size: 18,
-            color: colorScheme.primary,
+            color: colorScheme.onSurface,
           ),
           const SizedBox(width: 12),
           Expanded(

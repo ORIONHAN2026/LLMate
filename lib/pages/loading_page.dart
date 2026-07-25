@@ -42,7 +42,7 @@ class LoadingPage extends StatelessWidget {
               child: CircularProgressIndicator(
                 strokeWidth: 3,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  const Color(0xFF2563EB),
+                  const Color(0xFF9CA3AF),
                 ),
               ),
             ),

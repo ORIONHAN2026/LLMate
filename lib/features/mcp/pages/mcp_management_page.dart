@@ -386,7 +386,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
-                              Icon(Icons.widgets, size: 20, color: Theme.of(ctx).colorScheme.primary),
+                              Icon(Icons.widgets, size: 20, color: Theme.of(ctx).colorScheme.onSurface),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Column(
@@ -438,17 +438,17 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: Theme.of(ctx).colorScheme.primary.withOpacity(0.08),
+                                            color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.08),
                                             borderRadius: BorderRadius.circular(4),
                                             border: Border.all(
-                                              color: Theme.of(ctx).colorScheme.primary.withOpacity(0.15),
+                                              color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.15),
                                             ),
                                           ),
                                           child: Text(
                                             label,
                                             style: TextStyle(
                                               fontSize: 11,
-                                              color: Theme.of(ctx).colorScheme.primary,
+                                              color: Theme.of(ctx).colorScheme.onSurface,
                                               fontWeight: FontWeight.w500,
                                             ),
                                             maxLines: 1,
@@ -671,12 +671,12 @@ class _McpCardState extends State<_McpCard> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
             color: _isHovered
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.06)
+                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.06)
                 : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: _isHovered
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.35)
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.35)
                   : Theme.of(context).dividerColor.withOpacity(0.5),
             ),
           ),
@@ -748,7 +748,7 @@ class _McpCardState extends State<_McpCard> {
                           width: 22,
                           height: 22,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
                             shape: BoxShape.circle,
                           ),
                           child: widget.loading
@@ -757,13 +757,13 @@ class _McpCardState extends State<_McpCard> {
                                   height: 10,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 1.5,
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 )
                               : Icon(
                                   Icons.refresh,
                                   size: 10,
-                                  color: Theme.of(context).colorScheme.primary,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                         ),
                       ),

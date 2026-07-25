@@ -195,7 +195,7 @@ class _CommandPaletteState extends State<CommandPalette> {
                       itemBuilder: (context, index) {
                         final action = _filteredActions[index];
                         final isSelected = index == _selectedIndex;
-                        const accentColor = Color(0xFF2563EB);
+                        const accentColor = Color(0xFF9CA3AF);
                         return InkWell(
                           onTap: () {
                             Navigator.of(context).pop();

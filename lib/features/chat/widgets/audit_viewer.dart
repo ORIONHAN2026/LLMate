@@ -135,7 +135,9 @@ class _AuditViewerState extends State<AuditViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: cs.surface,
       appBar: const StandardAppBar(title: '审计查看', showBottomDivider: true),
       body: Column(
         children: [
@@ -148,10 +150,18 @@ class _AuditViewerState extends State<AuditViewer> {
   }
 
   Widget _buildSearchPanel() {
+    final cs = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.all(12),
+      color: cs.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: const Color(0xFFE5E7EB)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
@@ -169,10 +179,7 @@ class _AuditViewerState extends State<AuditViewer> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     value: _limit,
-                    decoration: const InputDecoration(
-                      labelText: '返回上限',
-                      isDense: true,
-                    ),
+                    decoration: _inputDecoration('返回上限'),
                     items: const [50, 100, 200, 500]
                         .map((n) => DropdownMenuItem(
                               value: n,
@@ -253,14 +260,50 @@ class _AuditViewerState extends State<AuditViewer> {
     );
   }
 
-  Widget _field(TextEditingController c, String label) {
-    return TextField(
-      controller: c,
-      decoration: InputDecoration(
-        labelText: label,
-        isDense: true,
+  /// 统一的输入框装饰：对齐「添加模型」弹窗风格
+  /// （圆角 6、浅灰边框、深色聚焦、紧凑内边距）
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
       ),
-      onSubmitted: (_) => _load(),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: const BorderSide(color: Color(0xFF1F2937)),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    );
+  }
+
+  /// 带标题的搜索输入框，风格与「添加模型」弹窗一致
+  Widget _field(TextEditingController c, String label) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: cs.onSurface,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: c,
+          onSubmitted: (_) => _load(),
+          style: TextStyle(fontSize: 13, color: cs.onSurface),
+          decoration: _inputDecoration(label),
+        ),
+      ],
     );
   }
 

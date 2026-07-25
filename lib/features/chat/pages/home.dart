@@ -24,8 +24,6 @@ import '../../mcp/pages/mcp_management_page.dart';
 import '../../settings/pages/other_settings_page.dart';
 import '../../settings/pages/domain_management_page.dart';
 import '../widgets/usage_dashboard.dart';
-import '../widgets/audit_viewer.dart';
-import '../widgets/session_detail_page.dart';
 import 'package:llmate/widgets/command_palette.dart';
 
 class CodeChatHomePage extends StatefulWidget {
@@ -546,7 +544,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.bar_chart_rounded,
                 size: 16,
-                color: const Color(0xFF2563EB),
+                color: const Color(0xFF9CA3AF),
               ),
               const SizedBox(width: 12),
               Text(l10n.usageDashboard, style: const TextStyle(fontSize: 12)),
@@ -874,62 +872,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 设置入口 - 进入会话详情（会话级设置）
-        IconButton(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const SessionDetailPage(),
-              ),
-            );
-          },
-          icon: Icon(
-            Icons.settings,
-            size: 14,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-          ),
-          visualDensity: VisualDensity.compact,
-          tooltip: '设置',
-        ),
-        // 审计查看入口
-        IconButton(
-          onPressed: () => AuditViewer.show(context, session: currentSession),
-          icon: Icon(
-            Icons.gavel_rounded,
-            size: 14,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-          ),
-          visualDensity: VisualDensity.compact,
-          tooltip: '审计查看',
-        ),
-        // 使用量仪表盘按钮
-        IconButton(
-          onPressed: () => UsageDashboard.show(context, session: currentSession),
-          icon: Icon(
-            Icons.bar_chart_rounded,
-            size: 14,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-          ),
-          visualDensity: VisualDensity.compact,
-          tooltip: AppLocalizations.of(context)!.usageDashboard,
-        ),
-        // 会话详情按钮 - 以 Tab 形式查看完整会话配置
-        IconButton(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const SessionDetailPage(),
-              ),
-            );
-          },
-          icon: Icon(
-            Icons.info_outline,
-            size: 14,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-          ),
-          visualDensity: VisualDensity.compact,
-          tooltip: AppLocalizations.of(context)!.sessionDetails,
-        ),
         Padding(
           padding: const EdgeInsets.only(right: 4),
           child: IconButton(

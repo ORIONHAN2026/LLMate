@@ -629,5 +629,23 @@
   "french": "フランス語",
   "frenchDesc": "フランス語",
   "german": "ドイツ語",
-  "germanDesc": "ドイツ語"
+  "germanDesc": "ドイツ語",
+  "sessionSettings": "セッション設定",
+  "auditView": "監査を表示",
+  "audit": "監査",
+  "usageOverview": "使用量",
+  "usage": "使用量",
+  "sessionMode": "セッションモード",
+  "managementMode": "管理モード",
+  "sessionModeDesc": "セッションモード：ローカルサービス経由で監査と利用統計を行う",
+  "managementModeDesc": "管理モード：モデルに直接接続、利用量にカウントされない",
+  "mcpNotConfigured": "MCP未設定",
+  "mcpConfigured": "{count} MCP",
+  "mcpViewTip": "このセッションに紐付くMCP（クリックで表示；セッション詳細で設定可）",
+  "mcpNoneTip": "このセッションにはMCPが設定されていません",
+  "@mcpConfigured": {
+    "placeholders": {
+      "count": {}
+    }
+  }
 }

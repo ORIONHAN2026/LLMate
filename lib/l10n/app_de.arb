@@ -629,5 +629,23 @@
   "french": "Français",
   "frenchDesc": "French",
   "german": "Deutsch",
-  "germanDesc": "German"
+  "germanDesc": "German",
+  "sessionSettings": "Sitzungseinstellungen",
+  "auditView": "Audit ansehen",
+  "audit": "Audit",
+  "usageOverview": "Nutzung",
+  "usage": "Nutzung",
+  "sessionMode": "Sitzungsmodus",
+  "managementMode": "Verwaltungsmodus",
+  "sessionModeDesc": "Sitzungsmodus: über lokalen Dienst für Audit und Nutzungsstatistik",
+  "managementModeDesc": "Verwaltungsmodus: direkte Modellanbindung, nicht in Nutzung gezählt",
+  "mcpNotConfigured": "Kein MCP konfiguriert",
+  "mcpConfigured": "{count} MCP",
+  "mcpViewTip": "MCP dieser Sitzung (zum Ansehen klicken; in Sitzungsdetails konfigurierbar)",
+  "mcpNoneTip": "Für diese Sitzung ist kein MCP konfiguriert",
+  "@mcpConfigured": {
+    "placeholders": {
+      "count": {}
+    }
+  }
 }

@@ -2060,4 +2060,48 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get germanDesc => 'เยอรมัน';
+
+  @override
+  String get sessionSettings => 'การตั้งค่าการสนทนา';
+
+  @override
+  String get auditView => 'ดูการตรวจสอบ';
+
+  @override
+  String get audit => 'การตรวจสอบ';
+
+  @override
+  String get usageOverview => 'การใช้งาน';
+
+  @override
+  String get usage => 'การใช้งาน';
+
+  @override
+  String get sessionMode => 'โหมดการสนทนา';
+
+  @override
+  String get managementMode => 'โหมดการจัดการ';
+
+  @override
+  String get sessionModeDesc =>
+      'โหมดการสนทนา: ผ่านบริการภายในเพื่อตรวจสอบและสถิติการใช้งาน';
+
+  @override
+  String get managementModeDesc =>
+      'โหมดการจัดการ: เชื่อมต่อโมเดลโดยตรง ไม่ถูกนับในการใช้งาน';
+
+  @override
+  String get mcpNotConfigured => 'ไม่ได้กำหนดค่า MCP';
+
+  @override
+  String mcpConfigured(Object count) {
+    return '$count MCP';
+  }
+
+  @override
+  String get mcpViewTip =>
+      'MCP ที่ผูกกับเซสชันนี้ (คลิกเพื่อดู; ตั้งค่าได้ในรายละเอียดเซสชัน)';
+
+  @override
+  String get mcpNoneTip => 'เซสชันนี้ยังไม่ได้กำหนดค่า MCP';
 }

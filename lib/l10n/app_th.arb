@@ -629,5 +629,23 @@
   "french": "ฝรั่งเศส",
   "frenchDesc": "ฝรั่งเศส",
   "german": "เยอรมัน",
-  "germanDesc": "เยอรมัน"
+  "germanDesc": "เยอรมัน",
+  "sessionSettings": "การตั้งค่าการสนทนา",
+  "auditView": "ดูการตรวจสอบ",
+  "audit": "การตรวจสอบ",
+  "usageOverview": "การใช้งาน",
+  "usage": "การใช้งาน",
+  "sessionMode": "โหมดการสนทนา",
+  "managementMode": "โหมดการจัดการ",
+  "sessionModeDesc": "โหมดการสนทนา: ผ่านบริการภายในเพื่อตรวจสอบและสถิติการใช้งาน",
+  "managementModeDesc": "โหมดการจัดการ: เชื่อมต่อโมเดลโดยตรง ไม่ถูกนับในการใช้งาน",
+  "mcpNotConfigured": "ไม่ได้กำหนดค่า MCP",
+  "mcpConfigured": "{count} MCP",
+  "mcpViewTip": "MCP ที่ผูกกับเซสชันนี้ (คลิกเพื่อดู; ตั้งค่าได้ในรายละเอียดเซสชัน)",
+  "mcpNoneTip": "เซสชันนี้ยังไม่ได้กำหนดค่า MCP",
+  "@mcpConfigured": {
+    "placeholders": {
+      "count": {}
+    }
+  }
 }

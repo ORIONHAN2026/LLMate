@@ -2085,4 +2085,48 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get germanDesc => 'German';
+
+  @override
+  String get sessionSettings => 'Sitzungseinstellungen';
+
+  @override
+  String get auditView => 'Audit ansehen';
+
+  @override
+  String get audit => 'Audit';
+
+  @override
+  String get usageOverview => 'Nutzung';
+
+  @override
+  String get usage => 'Nutzung';
+
+  @override
+  String get sessionMode => 'Sitzungsmodus';
+
+  @override
+  String get managementMode => 'Verwaltungsmodus';
+
+  @override
+  String get sessionModeDesc =>
+      'Sitzungsmodus: über lokalen Dienst für Audit und Nutzungsstatistik';
+
+  @override
+  String get managementModeDesc =>
+      'Verwaltungsmodus: direkte Modellanbindung, nicht in Nutzung gezählt';
+
+  @override
+  String get mcpNotConfigured => 'Kein MCP konfiguriert';
+
+  @override
+  String mcpConfigured(Object count) {
+    return '$count MCP';
+  }
+
+  @override
+  String get mcpViewTip =>
+      'MCP dieser Sitzung (zum Ansehen klicken; in Sitzungsdetails konfigurierbar)';
+
+  @override
+  String get mcpNoneTip => 'Für diese Sitzung ist kein MCP konfiguriert';
 }

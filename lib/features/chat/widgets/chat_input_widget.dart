@@ -545,12 +545,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   /// 会话设置入口 - 进入会话详情（会话级设置），位于底部按钮组最前面
   Widget _buildSettingsEntry() {
+    final l10n = AppLocalizations.of(context)!;
     return Obx(() {
       final currentSession = sessionController.currentSession.value;
       final active = currentSession != null;
       final onSurface = Theme.of(context).colorScheme.onSurface;
       return Tooltip(
-        message: '会话设置',
+        message: l10n.sessionSettings,
         child: GestureDetector(
           onTap:
               active
@@ -574,7 +575,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '会话设置',
+                  l10n.sessionSettings,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -593,12 +594,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   /// 审计查看入口 - 位于底部按钮组
   Widget _buildAuditEntry() {
+    final l10n = AppLocalizations.of(context)!;
     return Obx(() {
       final currentSession = sessionController.currentSession.value;
       final active = currentSession != null;
       final onSurface = Theme.of(context).colorScheme.onSurface;
       return Tooltip(
-        message: '审计查看',
+        message: l10n.auditView,
         child: GestureDetector(
           onTap:
               active
@@ -618,7 +620,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '审计',
+                  l10n.audit,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -637,12 +639,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
   /// 使用量仪表盘入口 - 位于底部按钮组
   Widget _buildUsageEntry() {
+    final l10n = AppLocalizations.of(context)!;
     return Obx(() {
       final currentSession = sessionController.currentSession.value;
       final active = currentSession != null;
       final onSurface = Theme.of(context).colorScheme.onSurface;
       return Tooltip(
-        message: '使用量',
+        message: l10n.usageOverview,
         child: GestureDetector(
           onTap:
               active
@@ -662,7 +665,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '用量',
+                  l10n.usage,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -682,13 +685,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 构建聊天模式切换按钮（会话模式 / 管理模式）
   /// 模式是每个会话各自的设置：点击切换「当前会话」的模式。
   Widget _buildChatModeToggle() {
+    final l10n = AppLocalizations.of(context)!;
     return Obx(() {
       final currentSession = sessionController.currentSession.value;
       final isManagement = currentSession?.mode == SessionMode.management.name;
       final onSurface = Theme.of(context).colorScheme.onSurface;
       final active = !_isSending && currentSession != null;
       return Tooltip(
-        message: isManagement ? '管理模式：本地直连大模型，不计入用量统计' : '会话模式：经本地服务做审计与用量统计',
+        message: isManagement ? l10n.managementModeDesc : l10n.sessionModeDesc,
         child: GestureDetector(
           onTap:
               active
@@ -719,7 +723,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  isManagement ? '管理模式' : '会话模式',
+                  isManagement ? l10n.managementMode : l10n.sessionMode,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -763,20 +767,22 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   /// 若当前会话未绑定任何 MCP，则显示「无MCP配置」；若已绑定，点击可弹出只读查看面板。
   /// 管理模式与会话模式均展示该入口，不做区分。
   Widget _buildMcpToolsToggle() {
+    final l10n = AppLocalizations.of(context)!;
     return Obx(() {
       final currentSession = sessionController.currentSession.value;
 
       final sessionMcps = currentSession?.mcps;
       final mcpCount = sessionMcps?.length ?? 0;
 
-      final displayText = mcpCount > 0 ? '$mcpCount 个 MCP' : '无MCP配置';
+      final displayText =
+          mcpCount > 0 ? l10n.mcpConfigured(mcpCount) : l10n.mcpNotConfigured;
 
       final onSurface = Theme.of(context).colorScheme.onSurface;
 
       final canView = mcpCount > 0 && !_isSending;
 
       return Tooltip(
-        message: mcpCount > 0 ? '当前会话绑定的 MCP（点击查看，可在会话详情中配置）' : '当前会话未配置 MCP',
+        message: mcpCount > 0 ? l10n.mcpViewTip : l10n.mcpNoneTip,
         child: GestureDetector(
           onTap:
               canView ? () => showMcpDetailDialog(context, sessionMcps!) : null,

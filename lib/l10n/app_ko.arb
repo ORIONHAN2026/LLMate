@@ -629,5 +629,23 @@
   "french": "Français",
   "frenchDesc": "French",
   "german": "Deutsch",
-  "germanDesc": "German"
+  "germanDesc": "German",
+  "sessionSettings": "세션 설정",
+  "auditView": "감사 보기",
+  "audit": "감사",
+  "usageOverview": "사용량",
+  "usage": "사용량",
+  "sessionMode": "세션 모드",
+  "managementMode": "관리 모드",
+  "sessionModeDesc": "세션 모드: 로컬 서비스를 통해 감사 및 사용량 통계 수행",
+  "managementModeDesc": "관리 모드: 모델에 직접 연결, 사용량에 포함되지 않음",
+  "mcpNotConfigured": "MCP 미설정",
+  "mcpConfigured": "{count} MCP",
+  "mcpViewTip": "이 세션에 연결된 MCP(클릭하여 보기; 세션 세부정보에서 설정 가능)",
+  "mcpNoneTip": "이 세션에는 MCP가 설정되어 있지 않습니다",
+  "@mcpConfigured": {
+    "placeholders": {
+      "count": {}
+    }
+  }
 }

@@ -2021,4 +2021,45 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get germanDesc => 'German';
+
+  @override
+  String get sessionSettings => '세션 설정';
+
+  @override
+  String get auditView => '감사 보기';
+
+  @override
+  String get audit => '감사';
+
+  @override
+  String get usageOverview => '사용량';
+
+  @override
+  String get usage => '사용량';
+
+  @override
+  String get sessionMode => '세션 모드';
+
+  @override
+  String get managementMode => '관리 모드';
+
+  @override
+  String get sessionModeDesc => '세션 모드: 로컬 서비스를 통해 감사 및 사용량 통계 수행';
+
+  @override
+  String get managementModeDesc => '관리 모드: 모델에 직접 연결, 사용량에 포함되지 않음';
+
+  @override
+  String get mcpNotConfigured => 'MCP 미설정';
+
+  @override
+  String mcpConfigured(Object count) {
+    return '$count MCP';
+  }
+
+  @override
+  String get mcpViewTip => '이 세션에 연결된 MCP(클릭하여 보기; 세션 세부정보에서 설정 가능)';
+
+  @override
+  String get mcpNoneTip => '이 세션에는 MCP가 설정되어 있지 않습니다';
 }

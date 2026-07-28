@@ -2015,4 +2015,45 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get germanDesc => '德语';
+
+  @override
+  String get sessionSettings => '会话设置';
+
+  @override
+  String get auditView => '审计查看';
+
+  @override
+  String get audit => '审计';
+
+  @override
+  String get usageOverview => '使用量';
+
+  @override
+  String get usage => '用量';
+
+  @override
+  String get sessionMode => '会话模式';
+
+  @override
+  String get managementMode => '管理模式';
+
+  @override
+  String get sessionModeDesc => '会话模式：经本地服务做审计与用量统计';
+
+  @override
+  String get managementModeDesc => '管理模式：本地直连大模型，不计入用量统计';
+
+  @override
+  String get mcpNotConfigured => '无MCP配置';
+
+  @override
+  String mcpConfigured(Object count) {
+    return '$count 个 MCP';
+  }
+
+  @override
+  String get mcpViewTip => '当前会话绑定的 MCP（点击查看，可在会话详情中配置）';
+
+  @override
+  String get mcpNoneTip => '当前会话未配置 MCP';
 }

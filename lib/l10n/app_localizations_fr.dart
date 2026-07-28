@@ -2087,4 +2087,48 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get germanDesc => 'German';
+
+  @override
+  String get sessionSettings => 'Paramètres de session';
+
+  @override
+  String get auditView => 'Voir l\'audit';
+
+  @override
+  String get audit => 'Audit';
+
+  @override
+  String get usageOverview => 'Utilisation';
+
+  @override
+  String get usage => 'Utilisation';
+
+  @override
+  String get sessionMode => 'Mode session';
+
+  @override
+  String get managementMode => 'Mode gestion';
+
+  @override
+  String get sessionModeDesc =>
+      'Mode session : via le service local pour l\'audit et les statistiques d\'utilisation';
+
+  @override
+  String get managementModeDesc =>
+      'Mode gestion : connexion directe au modèle, non comptabilisée dans l\'utilisation';
+
+  @override
+  String get mcpNotConfigured => 'Aucun MCP configuré';
+
+  @override
+  String mcpConfigured(Object count) {
+    return '$count MCP';
+  }
+
+  @override
+  String get mcpViewTip =>
+      'MCP lié à cette session (cliquer pour voir ; configurable dans les détails)';
+
+  @override
+  String get mcpNoneTip => 'Aucun MCP configuré pour cette session';
 }

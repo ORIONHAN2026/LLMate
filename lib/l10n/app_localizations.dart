@@ -3859,6 +3859,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'German'**
   String get germanDesc;
+
+  /// No description provided for @sessionSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Settings'**
+  String get sessionSettings;
+
+  /// No description provided for @auditView.
+  ///
+  /// In en, this message translates to:
+  /// **'Audit View'**
+  String get auditView;
+
+  /// No description provided for @audit.
+  ///
+  /// In en, this message translates to:
+  /// **'Audit'**
+  String get audit;
+
+  /// No description provided for @usageOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage'**
+  String get usageOverview;
+
+  /// No description provided for @usage.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage'**
+  String get usage;
+
+  /// No description provided for @sessionMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Mode'**
+  String get sessionMode;
+
+  /// No description provided for @managementMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Management Mode'**
+  String get managementMode;
+
+  /// No description provided for @sessionModeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Mode: routed through local service for auditing and usage stats'**
+  String get sessionModeDesc;
+
+  /// No description provided for @managementModeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Management Mode: direct model access, not counted in usage'**
+  String get managementModeDesc;
+
+  /// No description provided for @mcpNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'No MCP configured'**
+  String get mcpNotConfigured;
+
+  /// No description provided for @mcpConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} MCP'**
+  String mcpConfigured(Object count);
+
+  /// No description provided for @mcpViewTip.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP bound to this session (click to view; configure in session details)'**
+  String get mcpViewTip;
+
+  /// No description provided for @mcpNoneTip.
+  ///
+  /// In en, this message translates to:
+  /// **'No MCP configured for this session'**
+  String get mcpNoneTip;
 }
 
 class _AppLocalizationsDelegate

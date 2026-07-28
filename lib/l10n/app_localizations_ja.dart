@@ -2022,4 +2022,45 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get germanDesc => 'ドイツ語';
+
+  @override
+  String get sessionSettings => 'セッション設定';
+
+  @override
+  String get auditView => '監査を表示';
+
+  @override
+  String get audit => '監査';
+
+  @override
+  String get usageOverview => '使用量';
+
+  @override
+  String get usage => '使用量';
+
+  @override
+  String get sessionMode => 'セッションモード';
+
+  @override
+  String get managementMode => '管理モード';
+
+  @override
+  String get sessionModeDesc => 'セッションモード：ローカルサービス経由で監査と利用統計を行う';
+
+  @override
+  String get managementModeDesc => '管理モード：モデルに直接接続、利用量にカウントされない';
+
+  @override
+  String get mcpNotConfigured => 'MCP未設定';
+
+  @override
+  String mcpConfigured(Object count) {
+    return '$count MCP';
+  }
+
+  @override
+  String get mcpViewTip => 'このセッションに紐付くMCP（クリックで表示；セッション詳細で設定可）';
+
+  @override
+  String get mcpNoneTip => 'このセッションにはMCPが設定されていません';
 }

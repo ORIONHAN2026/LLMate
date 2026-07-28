@@ -2043,4 +2043,48 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get germanDesc => 'Đức';
+
+  @override
+  String get sessionSettings => 'Cài đặt phiên';
+
+  @override
+  String get auditView => 'Xem kiểm toán';
+
+  @override
+  String get audit => 'Kiểm toán';
+
+  @override
+  String get usageOverview => 'Mức sử dụng';
+
+  @override
+  String get usage => 'Mức sử dụng';
+
+  @override
+  String get sessionMode => 'Chế độ phiên';
+
+  @override
+  String get managementMode => 'Chế độ quản lý';
+
+  @override
+  String get sessionModeDesc =>
+      'Chế độ phiên: qua dịch vụ cục bộ để kiểm toán và thống kê sử dụng';
+
+  @override
+  String get managementModeDesc =>
+      'Chế độ quản lý: kết nối trực tiếp mô hình, không tính vào lượt sử dụng';
+
+  @override
+  String get mcpNotConfigured => 'Chưa cấu hình MCP';
+
+  @override
+  String mcpConfigured(Object count) {
+    return '$count MCP';
+  }
+
+  @override
+  String get mcpViewTip =>
+      'MCP được liên kết với phiên này (nhấp để xem; cấu hình trong chi tiết phiên)';
+
+  @override
+  String get mcpNoneTip => 'Phiên này chưa cấu hình MCP';
 }

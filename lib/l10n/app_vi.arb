@@ -629,5 +629,23 @@
   "french": "Pháp",
   "frenchDesc": "Pháp",
   "german": "Đức",
-  "germanDesc": "Đức"
+  "germanDesc": "Đức",
+  "sessionSettings": "Cài đặt phiên",
+  "auditView": "Xem kiểm toán",
+  "audit": "Kiểm toán",
+  "usageOverview": "Mức sử dụng",
+  "usage": "Mức sử dụng",
+  "sessionMode": "Chế độ phiên",
+  "managementMode": "Chế độ quản lý",
+  "sessionModeDesc": "Chế độ phiên: qua dịch vụ cục bộ để kiểm toán và thống kê sử dụng",
+  "managementModeDesc": "Chế độ quản lý: kết nối trực tiếp mô hình, không tính vào lượt sử dụng",
+  "mcpNotConfigured": "Chưa cấu hình MCP",
+  "mcpConfigured": "{count} MCP",
+  "mcpViewTip": "MCP được liên kết với phiên này (nhấp để xem; cấu hình trong chi tiết phiên)",
+  "mcpNoneTip": "Phiên này chưa cấu hình MCP",
+  "@mcpConfigured": {
+    "placeholders": {
+      "count": {}
+    }
+  }
 }

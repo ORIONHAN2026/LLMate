@@ -1476,17 +1476,6 @@ class $UsageRowsTable extends UsageRows
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
-  static const VerificationMeta _detailKeyMeta = const VerificationMeta(
-    'detailKey',
-  );
-  @override
-  late final GeneratedColumn<String> detailKey = GeneratedColumn<String>(
-    'detail_key',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
   static const VerificationMeta _sessionIdMeta = const VerificationMeta(
     'sessionId',
   );
@@ -1498,10 +1487,54 @@ class $UsageRowsTable extends UsageRows
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  static const VerificationMeta _modelIdMeta = const VerificationMeta(
+    'modelId',
+  );
   @override
-  late final GeneratedColumn<String> model = GeneratedColumn<String>(
-    'model',
+  late final GeneratedColumn<String> modelId = GeneratedColumn<String>(
+    'model_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _promptTokensMeta = const VerificationMeta(
+    'promptTokens',
+  );
+  @override
+  late final GeneratedColumn<int> promptTokens = GeneratedColumn<int>(
+    'prompt_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _completionTokensMeta = const VerificationMeta(
+    'completionTokens',
+  );
+  @override
+  late final GeneratedColumn<int> completionTokens = GeneratedColumn<int>(
+    'completion_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _costMeta = const VerificationMeta('cost');
+  @override
+  late final GeneratedColumn<double> cost = GeneratedColumn<double>(
+    'cost',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _currencyMeta = const VerificationMeta(
+    'currency',
+  );
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+    'currency',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -1518,23 +1551,16 @@ class $UsageRowsTable extends UsageRows
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _dataMeta = const VerificationMeta('data');
-  @override
-  late final GeneratedColumn<String> data = GeneratedColumn<String>(
-    'data',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    detailKey,
     sessionId,
-    model,
+    modelId,
+    promptTokens,
+    completionTokens,
+    cost,
+    currency,
     timestamp,
-    data,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1551,24 +1577,46 @@ class $UsageRowsTable extends UsageRows
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
-    if (data.containsKey('detail_key')) {
-      context.handle(
-        _detailKeyMeta,
-        detailKey.isAcceptableOrUnknown(data['detail_key']!, _detailKeyMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_detailKeyMeta);
-    }
     if (data.containsKey('session_id')) {
       context.handle(
         _sessionIdMeta,
         sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
       );
     }
-    if (data.containsKey('model')) {
+    if (data.containsKey('model_id')) {
       context.handle(
-        _modelMeta,
-        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+        _modelIdMeta,
+        modelId.isAcceptableOrUnknown(data['model_id']!, _modelIdMeta),
+      );
+    }
+    if (data.containsKey('prompt_tokens')) {
+      context.handle(
+        _promptTokensMeta,
+        promptTokens.isAcceptableOrUnknown(
+          data['prompt_tokens']!,
+          _promptTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('completion_tokens')) {
+      context.handle(
+        _completionTokensMeta,
+        completionTokens.isAcceptableOrUnknown(
+          data['completion_tokens']!,
+          _completionTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cost')) {
+      context.handle(
+        _costMeta,
+        cost.isAcceptableOrUnknown(data['cost']!, _costMeta),
+      );
+    }
+    if (data.containsKey('currency')) {
+      context.handle(
+        _currencyMeta,
+        currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta),
       );
     }
     if (data.containsKey('timestamp')) {
@@ -1578,14 +1626,6 @@ class $UsageRowsTable extends UsageRows
       );
     } else if (isInserting) {
       context.missing(_timestampMeta);
-    }
-    if (data.containsKey('data')) {
-      context.handle(
-        _dataMeta,
-        this.data.isAcceptableOrUnknown(data['data']!, _dataMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_dataMeta);
     }
     return context;
   }
@@ -1601,28 +1641,34 @@ class $UsageRowsTable extends UsageRows
             DriftSqlType.int,
             data['${effectivePrefix}id'],
           )!,
-      detailKey:
-          attachedDatabase.typeMapping.read(
-            DriftSqlType.string,
-            data['${effectivePrefix}detail_key'],
-          )!,
       sessionId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}session_id'],
       ),
-      model: attachedDatabase.typeMapping.read(
+      modelId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}model'],
+        data['${effectivePrefix}model_id'],
+      ),
+      promptTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prompt_tokens'],
+      ),
+      completionTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}completion_tokens'],
+      ),
+      cost: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cost'],
+      ),
+      currency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency'],
       ),
       timestamp:
           attachedDatabase.typeMapping.read(
             DriftSqlType.int,
             data['${effectivePrefix}timestamp'],
-          )!,
-      data:
-          attachedDatabase.typeMapping.read(
-            DriftSqlType.string,
-            data['${effectivePrefix}data'],
           )!,
     );
   }
@@ -1635,47 +1681,74 @@ class $UsageRowsTable extends UsageRows
 
 class UsageRow extends DataClass implements Insertable<UsageRow> {
   final int id;
-  final String detailKey;
   final String? sessionId;
-  final String? model;
+  final String? modelId;
+  final int? promptTokens;
+  final int? completionTokens;
+  final double? cost;
+  final String? currency;
   final int timestamp;
-  final String data;
   const UsageRow({
     required this.id,
-    required this.detailKey,
     this.sessionId,
-    this.model,
+    this.modelId,
+    this.promptTokens,
+    this.completionTokens,
+    this.cost,
+    this.currency,
     required this.timestamp,
-    required this.data,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['detail_key'] = Variable<String>(detailKey);
     if (!nullToAbsent || sessionId != null) {
       map['session_id'] = Variable<String>(sessionId);
     }
-    if (!nullToAbsent || model != null) {
-      map['model'] = Variable<String>(model);
+    if (!nullToAbsent || modelId != null) {
+      map['model_id'] = Variable<String>(modelId);
+    }
+    if (!nullToAbsent || promptTokens != null) {
+      map['prompt_tokens'] = Variable<int>(promptTokens);
+    }
+    if (!nullToAbsent || completionTokens != null) {
+      map['completion_tokens'] = Variable<int>(completionTokens);
+    }
+    if (!nullToAbsent || cost != null) {
+      map['cost'] = Variable<double>(cost);
+    }
+    if (!nullToAbsent || currency != null) {
+      map['currency'] = Variable<String>(currency);
     }
     map['timestamp'] = Variable<int>(timestamp);
-    map['data'] = Variable<String>(data);
     return map;
   }
 
   UsageRowsCompanion toCompanion(bool nullToAbsent) {
     return UsageRowsCompanion(
       id: Value(id),
-      detailKey: Value(detailKey),
       sessionId:
           sessionId == null && nullToAbsent
               ? const Value.absent()
               : Value(sessionId),
-      model:
-          model == null && nullToAbsent ? const Value.absent() : Value(model),
+      modelId:
+          modelId == null && nullToAbsent
+              ? const Value.absent()
+              : Value(modelId),
+      promptTokens:
+          promptTokens == null && nullToAbsent
+              ? const Value.absent()
+              : Value(promptTokens),
+      completionTokens:
+          completionTokens == null && nullToAbsent
+              ? const Value.absent()
+              : Value(completionTokens),
+      cost: cost == null && nullToAbsent ? const Value.absent() : Value(cost),
+      currency:
+          currency == null && nullToAbsent
+              ? const Value.absent()
+              : Value(currency),
       timestamp: Value(timestamp),
-      data: Value(data),
     );
   }
 
@@ -1686,11 +1759,13 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return UsageRow(
       id: serializer.fromJson<int>(json['id']),
-      detailKey: serializer.fromJson<String>(json['detailKey']),
       sessionId: serializer.fromJson<String?>(json['sessionId']),
-      model: serializer.fromJson<String?>(json['model']),
+      modelId: serializer.fromJson<String?>(json['modelId']),
+      promptTokens: serializer.fromJson<int?>(json['promptTokens']),
+      completionTokens: serializer.fromJson<int?>(json['completionTokens']),
+      cost: serializer.fromJson<double?>(json['cost']),
+      currency: serializer.fromJson<String?>(json['currency']),
       timestamp: serializer.fromJson<int>(json['timestamp']),
-      data: serializer.fromJson<String>(json['data']),
     );
   }
   @override
@@ -1698,37 +1773,54 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'detailKey': serializer.toJson<String>(detailKey),
       'sessionId': serializer.toJson<String?>(sessionId),
-      'model': serializer.toJson<String?>(model),
+      'modelId': serializer.toJson<String?>(modelId),
+      'promptTokens': serializer.toJson<int?>(promptTokens),
+      'completionTokens': serializer.toJson<int?>(completionTokens),
+      'cost': serializer.toJson<double?>(cost),
+      'currency': serializer.toJson<String?>(currency),
       'timestamp': serializer.toJson<int>(timestamp),
-      'data': serializer.toJson<String>(data),
     };
   }
 
   UsageRow copyWith({
     int? id,
-    String? detailKey,
     Value<String?> sessionId = const Value.absent(),
-    Value<String?> model = const Value.absent(),
+    Value<String?> modelId = const Value.absent(),
+    Value<int?> promptTokens = const Value.absent(),
+    Value<int?> completionTokens = const Value.absent(),
+    Value<double?> cost = const Value.absent(),
+    Value<String?> currency = const Value.absent(),
     int? timestamp,
-    String? data,
   }) => UsageRow(
     id: id ?? this.id,
-    detailKey: detailKey ?? this.detailKey,
     sessionId: sessionId.present ? sessionId.value : this.sessionId,
-    model: model.present ? model.value : this.model,
+    modelId: modelId.present ? modelId.value : this.modelId,
+    promptTokens: promptTokens.present ? promptTokens.value : this.promptTokens,
+    completionTokens:
+        completionTokens.present
+            ? completionTokens.value
+            : this.completionTokens,
+    cost: cost.present ? cost.value : this.cost,
+    currency: currency.present ? currency.value : this.currency,
     timestamp: timestamp ?? this.timestamp,
-    data: data ?? this.data,
   );
   UsageRow copyWithCompanion(UsageRowsCompanion data) {
     return UsageRow(
       id: data.id.present ? data.id.value : this.id,
-      detailKey: data.detailKey.present ? data.detailKey.value : this.detailKey,
       sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
-      model: data.model.present ? data.model.value : this.model,
+      modelId: data.modelId.present ? data.modelId.value : this.modelId,
+      promptTokens:
+          data.promptTokens.present
+              ? data.promptTokens.value
+              : this.promptTokens,
+      completionTokens:
+          data.completionTokens.present
+              ? data.completionTokens.value
+              : this.completionTokens,
+      cost: data.cost.present ? data.cost.value : this.cost,
+      currency: data.currency.present ? data.currency.value : this.currency,
       timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
-      data: data.data.present ? data.data.value : this.data,
     );
   }
 
@@ -1736,88 +1828,112 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
   String toString() {
     return (StringBuffer('UsageRow(')
           ..write('id: $id, ')
-          ..write('detailKey: $detailKey, ')
           ..write('sessionId: $sessionId, ')
-          ..write('model: $model, ')
-          ..write('timestamp: $timestamp, ')
-          ..write('data: $data')
+          ..write('modelId: $modelId, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('cost: $cost, ')
+          ..write('currency: $currency, ')
+          ..write('timestamp: $timestamp')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, detailKey, sessionId, model, timestamp, data);
+  int get hashCode => Object.hash(
+    id,
+    sessionId,
+    modelId,
+    promptTokens,
+    completionTokens,
+    cost,
+    currency,
+    timestamp,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is UsageRow &&
           other.id == this.id &&
-          other.detailKey == this.detailKey &&
           other.sessionId == this.sessionId &&
-          other.model == this.model &&
-          other.timestamp == this.timestamp &&
-          other.data == this.data);
+          other.modelId == this.modelId &&
+          other.promptTokens == this.promptTokens &&
+          other.completionTokens == this.completionTokens &&
+          other.cost == this.cost &&
+          other.currency == this.currency &&
+          other.timestamp == this.timestamp);
 }
 
 class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
   final Value<int> id;
-  final Value<String> detailKey;
   final Value<String?> sessionId;
-  final Value<String?> model;
+  final Value<String?> modelId;
+  final Value<int?> promptTokens;
+  final Value<int?> completionTokens;
+  final Value<double?> cost;
+  final Value<String?> currency;
   final Value<int> timestamp;
-  final Value<String> data;
   const UsageRowsCompanion({
     this.id = const Value.absent(),
-    this.detailKey = const Value.absent(),
     this.sessionId = const Value.absent(),
-    this.model = const Value.absent(),
+    this.modelId = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.cost = const Value.absent(),
+    this.currency = const Value.absent(),
     this.timestamp = const Value.absent(),
-    this.data = const Value.absent(),
   });
   UsageRowsCompanion.insert({
     this.id = const Value.absent(),
-    required String detailKey,
     this.sessionId = const Value.absent(),
-    this.model = const Value.absent(),
+    this.modelId = const Value.absent(),
+    this.promptTokens = const Value.absent(),
+    this.completionTokens = const Value.absent(),
+    this.cost = const Value.absent(),
+    this.currency = const Value.absent(),
     required int timestamp,
-    required String data,
-  }) : detailKey = Value(detailKey),
-       timestamp = Value(timestamp),
-       data = Value(data);
+  }) : timestamp = Value(timestamp);
   static Insertable<UsageRow> custom({
     Expression<int>? id,
-    Expression<String>? detailKey,
     Expression<String>? sessionId,
-    Expression<String>? model,
+    Expression<String>? modelId,
+    Expression<int>? promptTokens,
+    Expression<int>? completionTokens,
+    Expression<double>? cost,
+    Expression<String>? currency,
     Expression<int>? timestamp,
-    Expression<String>? data,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (detailKey != null) 'detail_key': detailKey,
       if (sessionId != null) 'session_id': sessionId,
-      if (model != null) 'model': model,
+      if (modelId != null) 'model_id': modelId,
+      if (promptTokens != null) 'prompt_tokens': promptTokens,
+      if (completionTokens != null) 'completion_tokens': completionTokens,
+      if (cost != null) 'cost': cost,
+      if (currency != null) 'currency': currency,
       if (timestamp != null) 'timestamp': timestamp,
-      if (data != null) 'data': data,
     });
   }
 
   UsageRowsCompanion copyWith({
     Value<int>? id,
-    Value<String>? detailKey,
     Value<String?>? sessionId,
-    Value<String?>? model,
+    Value<String?>? modelId,
+    Value<int?>? promptTokens,
+    Value<int?>? completionTokens,
+    Value<double?>? cost,
+    Value<String?>? currency,
     Value<int>? timestamp,
-    Value<String>? data,
   }) {
     return UsageRowsCompanion(
       id: id ?? this.id,
-      detailKey: detailKey ?? this.detailKey,
       sessionId: sessionId ?? this.sessionId,
-      model: model ?? this.model,
+      modelId: modelId ?? this.modelId,
+      promptTokens: promptTokens ?? this.promptTokens,
+      completionTokens: completionTokens ?? this.completionTokens,
+      cost: cost ?? this.cost,
+      currency: currency ?? this.currency,
       timestamp: timestamp ?? this.timestamp,
-      data: data ?? this.data,
     );
   }
 
@@ -1827,20 +1943,26 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
-    if (detailKey.present) {
-      map['detail_key'] = Variable<String>(detailKey.value);
-    }
     if (sessionId.present) {
       map['session_id'] = Variable<String>(sessionId.value);
     }
-    if (model.present) {
-      map['model'] = Variable<String>(model.value);
+    if (modelId.present) {
+      map['model_id'] = Variable<String>(modelId.value);
+    }
+    if (promptTokens.present) {
+      map['prompt_tokens'] = Variable<int>(promptTokens.value);
+    }
+    if (completionTokens.present) {
+      map['completion_tokens'] = Variable<int>(completionTokens.value);
+    }
+    if (cost.present) {
+      map['cost'] = Variable<double>(cost.value);
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
     }
     if (timestamp.present) {
       map['timestamp'] = Variable<int>(timestamp.value);
-    }
-    if (data.present) {
-      map['data'] = Variable<String>(data.value);
     }
     return map;
   }
@@ -1849,11 +1971,13 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
   String toString() {
     return (StringBuffer('UsageRowsCompanion(')
           ..write('id: $id, ')
-          ..write('detailKey: $detailKey, ')
           ..write('sessionId: $sessionId, ')
-          ..write('model: $model, ')
-          ..write('timestamp: $timestamp, ')
-          ..write('data: $data')
+          ..write('modelId: $modelId, ')
+          ..write('promptTokens: $promptTokens, ')
+          ..write('completionTokens: $completionTokens, ')
+          ..write('cost: $cost, ')
+          ..write('currency: $currency, ')
+          ..write('timestamp: $timestamp')
           ..write(')'))
         .toString();
   }
@@ -3095,20 +3219,24 @@ typedef $$AuditRowsTableProcessedTableManager =
 typedef $$UsageRowsTableCreateCompanionBuilder =
     UsageRowsCompanion Function({
       Value<int> id,
-      required String detailKey,
       Value<String?> sessionId,
-      Value<String?> model,
+      Value<String?> modelId,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<double?> cost,
+      Value<String?> currency,
       required int timestamp,
-      required String data,
     });
 typedef $$UsageRowsTableUpdateCompanionBuilder =
     UsageRowsCompanion Function({
       Value<int> id,
-      Value<String> detailKey,
       Value<String?> sessionId,
-      Value<String?> model,
+      Value<String?> modelId,
+      Value<int?> promptTokens,
+      Value<int?> completionTokens,
+      Value<double?> cost,
+      Value<String?> currency,
       Value<int> timestamp,
-      Value<String> data,
     });
 
 class $$UsageRowsTableFilterComposer
@@ -3125,28 +3253,38 @@ class $$UsageRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get detailKey => $composableBuilder(
-    column: $table.detailKey,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get sessionId => $composableBuilder(
     column: $table.sessionId,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get model => $composableBuilder(
-    column: $table.model,
+  ColumnFilters<String> get modelId => $composableBuilder(
+    column: $table.modelId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cost => $composableBuilder(
+    column: $table.cost,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currency => $composableBuilder(
+    column: $table.currency,
     builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<int> get timestamp => $composableBuilder(
     column: $table.timestamp,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get data => $composableBuilder(
-    column: $table.data,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3165,28 +3303,38 @@ class $$UsageRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get detailKey => $composableBuilder(
-    column: $table.detailKey,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get sessionId => $composableBuilder(
     column: $table.sessionId,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get model => $composableBuilder(
-    column: $table.model,
+  ColumnOrderings<String> get modelId => $composableBuilder(
+    column: $table.modelId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cost => $composableBuilder(
+    column: $table.cost,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currency => $composableBuilder(
+    column: $table.currency,
     builder: (column) => ColumnOrderings(column),
   );
 
   ColumnOrderings<int> get timestamp => $composableBuilder(
     column: $table.timestamp,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get data => $composableBuilder(
-    column: $table.data,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -3203,20 +3351,30 @@ class $$UsageRowsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get detailKey =>
-      $composableBuilder(column: $table.detailKey, builder: (column) => column);
-
   GeneratedColumn<String> get sessionId =>
       $composableBuilder(column: $table.sessionId, builder: (column) => column);
 
-  GeneratedColumn<String> get model =>
-      $composableBuilder(column: $table.model, builder: (column) => column);
+  GeneratedColumn<String> get modelId =>
+      $composableBuilder(column: $table.modelId, builder: (column) => column);
+
+  GeneratedColumn<int> get promptTokens => $composableBuilder(
+    column: $table.promptTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get completionTokens => $composableBuilder(
+    column: $table.completionTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get cost =>
+      $composableBuilder(column: $table.cost, builder: (column) => column);
+
+  GeneratedColumn<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => column);
 
   GeneratedColumn<int> get timestamp =>
       $composableBuilder(column: $table.timestamp, builder: (column) => column);
-
-  GeneratedColumn<String> get data =>
-      $composableBuilder(column: $table.data, builder: (column) => column);
 }
 
 class $$UsageRowsTableTableManager
@@ -3248,34 +3406,42 @@ class $$UsageRowsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<String> detailKey = const Value.absent(),
                 Value<String?> sessionId = const Value.absent(),
-                Value<String?> model = const Value.absent(),
+                Value<String?> modelId = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<double?> cost = const Value.absent(),
+                Value<String?> currency = const Value.absent(),
                 Value<int> timestamp = const Value.absent(),
-                Value<String> data = const Value.absent(),
               }) => UsageRowsCompanion(
                 id: id,
-                detailKey: detailKey,
                 sessionId: sessionId,
-                model: model,
+                modelId: modelId,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                cost: cost,
+                currency: currency,
                 timestamp: timestamp,
-                data: data,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required String detailKey,
                 Value<String?> sessionId = const Value.absent(),
-                Value<String?> model = const Value.absent(),
+                Value<String?> modelId = const Value.absent(),
+                Value<int?> promptTokens = const Value.absent(),
+                Value<int?> completionTokens = const Value.absent(),
+                Value<double?> cost = const Value.absent(),
+                Value<String?> currency = const Value.absent(),
                 required int timestamp,
-                required String data,
               }) => UsageRowsCompanion.insert(
                 id: id,
-                detailKey: detailKey,
                 sessionId: sessionId,
-                model: model,
+                modelId: modelId,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                cost: cost,
+                currency: currency,
                 timestamp: timestamp,
-                data: data,
               ),
           withReferenceMapper:
               (p0) =>

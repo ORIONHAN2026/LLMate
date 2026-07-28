@@ -343,19 +343,16 @@ Future<String> executeManagementTool(
       // ───────────── 用量 ─────────────
       case 'usage_query':
         final sessionId = _strOrNull(args['sessionId']);
-        final modelId = _strOrNull(args['modelId']);
         final start = _parseTime(args['start']);
         final end = _parseTime(args['end']);
         final limit = _intOrNull(args['limit']) ?? 50;
         final stats = await UsageController.instance.getStats(
           sessionId: sessionId,
-          modelId: modelId,
           start: start,
           end: end,
         );
         final details = await UsageController.instance.loadDetails(
           sessionId: sessionId,
-          modelId: modelId,
           start: start,
           end: end,
           limit: limit,

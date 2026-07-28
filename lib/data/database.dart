@@ -72,11 +72,13 @@ class AuditRows extends Table {
 /// 用量明细表
 class UsageRows extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get detailKey => text()(); // 去重键 timestamp_model_cost
   TextColumn get sessionId => text().nullable()();
-  TextColumn get model => text().nullable()();
+  TextColumn get modelId => text().nullable()();
+  IntColumn get promptTokens => integer().nullable()();
+  IntColumn get completionTokens => integer().nullable()();
+  RealColumn get cost => real().nullable()();
+  TextColumn get currency => text().nullable()();
   IntColumn get timestamp => integer()(); // 毫秒时间戳
-  TextColumn get data => text()(); // 完整 UsageDetail JSON
 }
 
 /// 供应商密钥表
@@ -120,7 +122,32 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 4;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (migrator, from, to) async {
+          if (from < 2) {
+            await migrator.addColumn(usageRows, usageRows.promptTokens);
+            await migrator.addColumn(usageRows, usageRows.completionTokens);
+            await migrator.addColumn(usageRows, usageRows.cost);
+            await migrator.addColumn(usageRows, usageRows.currency);
+            await customStatement('ALTER TABLE usage_rows DROP COLUMN data');
+          }
+          if (from < 3) {
+            await migrator.addColumn(usageRows, usageRows.modelId);
+            await customStatement(
+              'UPDATE usage_rows SET model_id = model WHERE model IS NOT NULL',
+            );
+            await customStatement('ALTER TABLE usage_rows DROP COLUMN model');
+          }
+          if (from < 4) {
+            await customStatement(
+              'ALTER TABLE usage_rows DROP COLUMN detail_key',
+            );
+          }
+        },
+      );
 }
 
 /// 全局单例
@@ -507,43 +534,42 @@ extension AuditDao on AppDatabase {
 // ══════════════════════════════════════════════════════════
 
 extension UsageDao on AppDatabase {
-  static String _detailKey(UsageDetail d) =>
-      '${d.timestamp.toIso8601String()}_${d.model}_${d.cost.toStringAsFixed(6)}';
-
-  Future<void> insertUsage(String sessionId, UsageDetail detail) async {
+  Future<void> insertUsage(UsageDetail detail) async {
     await into(usageRows).insert(
       UsageRowsCompanion.insert(
-        detailKey: _detailKey(detail),
-        sessionId: Value(sessionId),
-        model: Value(detail.model),
+        sessionId: Value(detail.sessionId),
+        modelId: Value(detail.modelId),
+        promptTokens: Value(detail.promptTokens),
+        completionTokens: Value(detail.completionTokens),
+        cost: Value(detail.cost),
+        currency: Value(detail.currency),
         timestamp: detail.timestamp.millisecondsSinceEpoch,
-        data: jsonEncode(detail.toJson()),
       ),
     );
   }
 
-  Future<void> upsertUsage(String sessionId, UsageDetail detail) async {
-    await into(usageRows).insertOnConflictUpdate(
+  Future<void> upsertUsage(UsageDetail detail) async {
+    await into(usageRows).insert(
       UsageRowsCompanion.insert(
-        detailKey: _detailKey(detail),
-        sessionId: Value(sessionId),
-        model: Value(detail.model),
+        sessionId: Value(detail.sessionId),
+        modelId: Value(detail.modelId),
+        promptTokens: Value(detail.promptTokens),
+        completionTokens: Value(detail.completionTokens),
+        cost: Value(detail.cost),
+        currency: Value(detail.currency),
         timestamp: detail.timestamp.millisecondsSinceEpoch,
-        data: jsonEncode(detail.toJson()),
       ),
     );
   }
 
   Future<List<UsageDetail>> getUsages({
     String? sessionId,
-    String? modelId,
     DateTime? start,
     DateTime? end,
     int? limit,
   }) async {
     final query = select(usageRows);
     if (sessionId != null) query.where((t) => t.sessionId.equals(sessionId));
-    if (modelId != null) query.where((t) => t.model.equals(modelId));
     if (start != null) {
       query.where(
         (t) => t.timestamp.isBiggerOrEqualValue(start.millisecondsSinceEpoch),
@@ -558,35 +584,18 @@ extension UsageDao on AppDatabase {
     if (limit != null && limit > 0) query.limit(limit);
     final rows = await query.get();
     return rows
-        .map((r) {
-          try {
-            return UsageDetail.fromJson(
-              jsonDecode(r.data) as Map<String, dynamic>,
-            );
-          } catch (_) {
-            return null;
-          }
-        })
-        .whereType<UsageDetail>()
+        .map(
+          (r) => UsageDetail(
+            sessionId: r.sessionId ?? '',
+            timestamp: DateTime.fromMillisecondsSinceEpoch(r.timestamp),
+            promptTokens: r.promptTokens ?? 0,
+            completionTokens: r.completionTokens ?? 0,
+            cost: r.cost ?? 0.0,
+            modelId: r.modelId ?? '',
+            currency: r.currency ?? 'USD',
+          ),
+        )
         .toList();
-  }
-
-  Future<UsageDetail?> getUsage(UsageDetail detail) async {
-    final row =
-        await (select(usageRows)..where(
-          (t) => t.detailKey.equals(_detailKey(detail)),
-        )).getSingleOrNull();
-    if (row == null) return null;
-    try {
-      return UsageDetail.fromJson(jsonDecode(row.data) as Map<String, dynamic>);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> deleteUsage(UsageDetail detail) async {
-    await (delete(usageRows)
-      ..where((t) => t.detailKey.equals(_detailKey(detail)))).go();
   }
 
   Future<void> clearUsages() async {

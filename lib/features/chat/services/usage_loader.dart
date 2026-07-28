@@ -30,14 +30,12 @@ class UsageLoader {
   /// [start] / [end]: 可选的时间范围过滤（含端点）。为 null 表示不限制该侧。
   static Future<List<UsageChartPoint>> load({
     required String sessionId,
-    required String modelId,
     required String granularity,
     DateTime? start,
     DateTime? end,
   }) async {
     final details = await UsageController.instance.loadDetails(
       sessionId: sessionId,
-      modelId: modelId,
       start: start,
       end: end,
     );

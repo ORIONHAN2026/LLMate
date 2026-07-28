@@ -567,7 +567,7 @@ class SessionConfigSidebar {
           context,
           icon: Icons.arrow_circle_up,
           label: l10n.cumulativeOutputTokens,
-          value: _formatTokenCount(session.completionTokens),
+          value: '${_formatTokenCount(session.completionTokens)} Token',
           valueColor: theme.colorScheme.onSurface,
         ),
         const SizedBox(height: 8),
@@ -919,8 +919,6 @@ class SessionConfigSidebar {
         buildBasicInfoSection(context, session, showMessageCount: false),
         const SizedBox(height: 16),
         buildServiceConfigSection(context, session),
-        const SizedBox(height: 16),
-        buildBillingInfo(context, session, showPriceCard: false),
       ],
     );
   }

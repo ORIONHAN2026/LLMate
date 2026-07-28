@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import '../../../../controllers/session_controller.dart';
+import '../../../../controllers/usage_controller.dart';
 import '../../../models/model.dart';
 import '../../../models/chat/session.dart';
+import '../../../models/chat/usage.dart';
 import '../services/usage_loader.dart';
 import 'usage_curve_chart.dart';
 
@@ -48,6 +50,12 @@ class _UsageDashboardState extends State<UsageDashboard> {
   final _showCost = ValueNotifier<bool>(true);
   List<UsageChartPoint> _chartData = [];
   bool _chartLoading = false;
+  UsageStats? _stats;
+
+  // 全局视图：真实用量（usage_rows）聚合，加载完成前回退到会话缓存求和
+  UsageStats? _globalStats;
+  final Map<String, _ModelUsage> _globalModelStats = {};
+  final Map<String, UsageStats> _globalSessionStats = {};
 
   /// 时间区间（按粒度解释）：
   /// - 分/小时：仅取某一天，start=当天 00:00，end=当天 23:59:59.999
@@ -58,7 +66,9 @@ class _UsageDashboardState extends State<UsageDashboard> {
   @override
   void initState() {
     super.initState();
-    if (!widget.global && widget.session != null) {
+    if (widget.global) {
+      _loadGlobalData();
+    } else if (widget.session != null) {
       _loadChartData();
     }
   }
@@ -75,8 +85,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
     if (session == null) return;
 
     setState(() => _chartLoading = true);
-
-    final modelId = session.chatModel?.modelId ?? 'unknown';
 
     // 分/小时维度未选日期时，默认取「当天」（与默认粒度 hour 对应）
     DateTime? start = _rangeStart;
@@ -97,14 +105,20 @@ class _UsageDashboardState extends State<UsageDashboard> {
     try {
       final data = await UsageLoader.load(
         sessionId: session.sessionId,
-        modelId: modelId,
         granularity: _granularity,
+        start: start,
+        end: end,
+      );
+      // 概览数字直接取自 usage_rows 真实累计用量，与曲线同源（同一时间区间）
+      final stats = await UsageController.instance.getStats(
+        sessionId: session.sessionId,
         start: start,
         end: end,
       );
       if (mounted) {
         setState(() {
           _chartData = data;
+          _stats = stats;
           _chartLoading = false;
         });
       }
@@ -112,6 +126,52 @@ class _UsageDashboardState extends State<UsageDashboard> {
       if (mounted) {
         setState(() => _chartLoading = false);
       }
+    }
+  }
+
+  /// 加载全局视图的真实用量（usage_rows）：一次性拉取全部明细并按模型 / 会话聚合
+  Future<void> _loadGlobalData() async {
+    final sessionController = Get.find<SessionController>();
+    final sessions = sessionController.sessions;
+
+    try {
+      // 全部明细（按 sessionId 查询，不按 modelId 过滤）
+      final all = await UsageController.instance.loadDetails();
+
+      final global = UsageStats.empty();
+      final modelStats = <String, _ModelUsage>{};
+      final sessionStats = <String, UsageStats>{};
+      final modelMap = <String, ChatModel>{};
+      for (final s in sessions) {
+        final m = s.chatModel;
+        if (m != null) modelMap[m.modelId] = m;
+      }
+
+      for (final d in all) {
+        global.add(d);
+        final ms = modelStats.putIfAbsent(d.modelId, () => _ModelUsage());
+        ms.chatModel ??= modelMap[d.modelId];
+        ms.promptTokens += d.promptTokens;
+        ms.completionTokens += d.completionTokens;
+        ms.totalCost += d.cost;
+        sessionStats
+            .putIfAbsent(d.sessionId, () => UsageStats.empty())
+            .add(d);
+      }
+
+      if (mounted) {
+        setState(() {
+          _globalStats = global;
+          _globalModelStats
+            ..clear()
+            ..addAll(modelStats);
+          _globalSessionStats
+            ..clear()
+            ..addAll(sessionStats);
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() {});
     }
   }
 
@@ -196,10 +256,12 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   ) ??
                   session;
 
-          final promptTokens = currentSession.promptTokens;
-          final completionTokens = currentSession.completionTokens;
+          // 概览数字优先使用 usage_rows 真实累计用量，加载完成前回退到会话缓存值
+          final promptTokens = _stats?.promptTokens ?? currentSession.promptTokens;
+          final completionTokens =
+              _stats?.completionTokens ?? currentSession.completionTokens;
           final totalTokens = promptTokens + completionTokens;
-          final totalCost = currentSession.totalCost;
+          final totalCost = _stats?.totalCost ?? currentSession.totalCost;
           final quotaEnabled = currentSession.quotaEnabled;
           final tokenLimit = currentSession.quotaTokenLimit;
           final costLimit = currentSession.quotaCostLimit;
@@ -350,43 +412,65 @@ class _UsageDashboardState extends State<UsageDashboard> {
           );
         }
 
-        final totalPrompt = sessions.fold<int>(
-          0,
-          (s, session) => s + session.promptTokens,
-        );
-        final totalCompletion = sessions.fold<int>(
-          0,
-          (s, session) => s + session.completionTokens,
-        );
-        final totalCost = sessions.fold<double>(
-          0,
-          (s, session) => s + session.totalCost,
-        );
-        // 按模型分组
-        final modelStats = <String, _ModelUsage>{};
-        for (final session in sessions) {
-          final modelName = session.chatModel?.name ?? 'Unknown';
-          modelStats.putIfAbsent(modelName, () => _ModelUsage());
-          final stat = modelStats[modelName]!;
-          stat.chatModel ??= session.chatModel;
-          stat.sessionCount++;
-          stat.promptTokens += session.promptTokens;
-          stat.completionTokens += session.completionTokens;
-          stat.totalCost += session.totalCost;
+        // 首次加载真实用量时显示 loading
+        if (_globalStats == null) {
+          return Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: theme.colorScheme.onSurface.withOpacity(0.4),
+              ),
+            ),
+          );
         }
 
+        // 概览数字优先使用 usage_rows 真实累计用量，加载完成前回退到会话缓存求和
+        final stats = _globalStats;
+        final totalPrompt =
+            stats?.promptTokens ??
+            sessions.fold<int>(0, (s, session) => s + session.promptTokens);
+        final totalCompletion =
+            stats?.completionTokens ??
+            sessions.fold<int>(0, (s, session) => s + session.completionTokens);
+        final totalCost =
+            stats?.totalCost ??
+            sessions.fold<double>(0, (s, session) => s + session.totalCost);
+
+        // 按模型分组：真实用量（modelId 聚合），加载完成前回退到会话缓存分组
+        final modelStats =
+            stats == null
+                ? _fallbackModelStats(sessions)
+                : _globalModelStats;
+
+        // 各会话真实用量排序（回退到会话缓存 token）
         final sortedWithTokens =
             sessions
-                .where((s) => s.promptTokens + s.completionTokens > 0)
+                .where(
+                  (s) =>
+                      (_globalSessionStats[s.sessionId]?.totalTokens ??
+                          s.promptTokens + s.completionTokens) >
+                      0,
+                )
                 .toList()
               ..sort(
-                (a, b) => (b.promptTokens + b.completionTokens).compareTo(
-                  a.promptTokens + a.completionTokens,
-                ),
+                (a, b) =>
+                    (_globalSessionStats[b.sessionId]?.totalTokens ??
+                            b.promptTokens + b.completionTokens)
+                        .compareTo(
+                          _globalSessionStats[a.sessionId]?.totalTokens ??
+                              a.promptTokens + a.completionTokens,
+                        ),
               );
         final emptyCount =
             sessions
-                .where((s) => s.promptTokens + s.completionTokens == 0)
+                .where(
+                  (s) =>
+                      (_globalSessionStats[s.sessionId]?.totalTokens ??
+                          s.promptTokens + s.completionTokens) ==
+                      0,
+                )
                 .length;
 
         return SingleChildScrollView(
@@ -480,6 +564,21 @@ class _UsageDashboardState extends State<UsageDashboard> {
         );
       }),
     );
+  }
+
+  /// 加载真实用量前的回退：用会话缓存累加按模型分组
+  Map<String, _ModelUsage> _fallbackModelStats(List<ChatSession> sessions) {
+    final map = <String, _ModelUsage>{};
+    for (final session in sessions) {
+      final modelName = session.chatModel?.name ?? 'Unknown';
+      final stat = map.putIfAbsent(modelName, () => _ModelUsage());
+      stat.chatModel ??= session.chatModel;
+      stat.sessionCount++;
+      stat.promptTokens += session.promptTokens;
+      stat.completionTokens += session.completionTokens;
+      stat.totalCost += session.totalCost;
+    }
+    return map;
   }
 
   // ==================== 共用组件 ====================
@@ -850,7 +949,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  name,
+                  usage.chatModel?.name ?? name,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -993,9 +1092,13 @@ class _UsageDashboardState extends State<UsageDashboard> {
     ChatSession session,
     AppLocalizations l10n,
   ) {
-    final total = session.promptTokens + session.completionTokens;
-    final promptRatio = total > 0 ? session.promptTokens / total : 0.0;
-    final completionRatio = total > 0 ? session.completionTokens / total : 0.0;
+    final st = _globalSessionStats[session.sessionId];
+    final promptTokens = st?.promptTokens ?? session.promptTokens;
+    final completionTokens = st?.completionTokens ?? session.completionTokens;
+    final totalCost = st?.totalCost ?? session.totalCost;
+    final total = promptTokens + completionTokens;
+    final promptRatio = total > 0 ? promptTokens / total : 0.0;
+    final completionRatio = total > 0 ? completionTokens / total : 0.0;
     final accentBlue = const Color(0xFF9CA3AF);
     final accentPurple = const Color(0xFF7C3AED);
 
@@ -1023,7 +1126,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 ),
               ),
               Text(
-                '${_formatTokenCount(total)} · ${_getCurrencySymbol(session.chatModel)}${session.totalCost.toStringAsFixed(4)}',
+                '${_formatTokenCount(total)} · ${_getCurrencySymbol(session.chatModel)}${totalCost.toStringAsFixed(4)}',
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -1039,7 +1142,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 _legendDot(accentBlue),
                 const SizedBox(width: 4),
                 Text(
-                  '${l10n.inputLabel} ${_formatTokenCount(session.promptTokens)}',
+                  '${l10n.inputLabel} ${_formatTokenCount(promptTokens)}',
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurface.withOpacity(0.55),
@@ -1049,7 +1152,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 _legendDot(accentPurple),
                 const SizedBox(width: 4),
                 Text(
-                  '${l10n.outputLabel} ${_formatTokenCount(session.completionTokens)}',
+                  '${l10n.outputLabel} ${_formatTokenCount(completionTokens)}',
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurface.withOpacity(0.55),

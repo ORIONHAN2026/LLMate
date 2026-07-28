@@ -1,41 +1,45 @@
 /// 单次请求的用量明细
 class UsageDetail {
+  final String sessionId;
   final DateTime timestamp;
   final int promptTokens;
   final int completionTokens;
   final double cost;
-  final String model;
+  final String modelId;
   final String currency;
 
   int get totalTokens => promptTokens + completionTokens;
 
   const UsageDetail({
+    required this.sessionId,
     required this.timestamp,
     required this.promptTokens,
     required this.completionTokens,
     required this.cost,
-    required this.model,
+    required this.modelId,
     this.currency = 'USD',
   });
 
   factory UsageDetail.fromJson(Map<String, dynamic> json) {
     return UsageDetail(
+      sessionId: json['sessionId'] as String? ?? '',
       timestamp: DateTime.parse(json['timestamp'] as String),
       promptTokens: json['promptTokens'] as int,
       completionTokens: json['completionTokens'] as int,
       cost: (json['cost'] as num).toDouble(),
-      model: json['model'] as String,
+      modelId: json['modelId'] as String,
       currency: json['currency'] as String,
     );
   }
 
   Map<String, dynamic> toJson() => {
+    'sessionId': sessionId,
     'timestamp': timestamp.toIso8601String(),
     'promptTokens': promptTokens,
     'completionTokens': completionTokens,
     'totalTokens': totalTokens,
     'cost': cost,
-    'model': model,
+    'modelId': modelId,
     'currency': currency,
   };
 }

@@ -1492,6 +1492,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get domainSettings => '域名设置';
 
   @override
+  String get accessAddress => '访问地址';
+
+  @override
+  String get localAddress => '内网地址';
+
+  @override
+  String get externalAddress => '外网地址';
+
+  @override
+  String get detecting => '检测中…';
+
+  @override
+  String get addressDesc => '内网地址可在同一局域网内访问；外网地址需要端口映射/公网可达后方可访问。';
+
+  @override
+  String get copyAddress => '复制';
+
+  @override
+  String get serviceNotRunningHint => '启动服务后可检测地址';
+
+  @override
+  String get domainAddress => '域名地址';
+
+  @override
   String get serviceStatus => '本地服务';
 
   @override
@@ -1514,9 +1538,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get httpsStatus => 'HTTPS 状态';
-
-  @override
-  String get domainAddress => '域名地址';
 
   @override
   String get domainHint => '例如: api.example.com';

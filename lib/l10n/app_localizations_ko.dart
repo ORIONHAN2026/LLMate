@@ -1496,6 +1496,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get domainSettings => '도메인 설정';
 
   @override
+  String get accessAddress => '접속 주소';
+
+  @override
+  String get localAddress => '내부(LAN) 주소';
+
+  @override
+  String get externalAddress => '외부(공인) 주소';
+
+  @override
+  String get detecting => '감지 중...';
+
+  @override
+  String get addressDesc =>
+      '내부 주소는 동일 LAN 내에서 접근 가능합니다. 외부 주소는 포트 포워딩/공개 네트워크 접근이 필요합니다.';
+
+  @override
+  String get copyAddress => '복사';
+
+  @override
+  String get serviceNotRunningHint => '주소를 감지하려면 서비스를 시작하세요';
+
+  @override
+  String get domainAddress => '도메인 주소';
+
+  @override
   String get serviceStatus => '로컬 서비스';
 
   @override
@@ -1518,9 +1543,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get httpsStatus => 'HTTPS 상태';
-
-  @override
-  String get domainAddress => '도메인 주소';
 
   @override
   String get domainHint => '예: api.example.com';

@@ -9,6 +9,7 @@ import 'package:llmate/l10n/app_localizations.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../../controllers/settings_controller.dart';
 import '../../../../controllers/mcp_controller.dart';
+import '../../../../core/http/local_http_service.dart';
 import '../../../../widgets/mcp_detail_dialog.dart';
 import '../../../../models/chat/session.dart';
 import '../../../../models/chat/mcp.dart';
@@ -418,50 +419,6 @@ class SessionConfigSidebar {
   /// 供同文件其他类使用的格式化方法
   static String sFormatTokenCount(int count) => _formatTokenCount(count);
 
-  /// 智能构建服务地址（有域名用域名，无域名用本地）
-  static String _buildSmartServiceUrl(String sessionId) {
-    try {
-      final domainController = Get.find<SettingsController>();
-      if (domainController.isConfigured) {
-        return _buildServiceUrl(sessionId);
-      }
-    } catch (_) {}
-    return _buildLocalUrl(sessionId, '127.0.0.1');
-  }
-
-  /// 构建服务地址（根据域名配置动态拼接）
-  static String _buildServiceUrl(String sessionId) {
-    try {
-      final domainController = Get.find<SettingsController>();
-      if (domainController.isConfigured) {
-        final scheme = domainController.httpsEnabled.value ? 'https' : 'http';
-        final port =
-            domainController.httpsEnabled.value
-                ? domainController.httpsPort.value
-                : domainController.httpPort.value;
-        // 默认端口不显示
-        final host =
-            '$scheme://${domainController.domain.value}${(scheme == 'http' && port != 80) || (scheme == 'https' && port != 443) ? ':$port' : ''}';
-        return '$host/$sessionId';
-      }
-    } catch (_) {
-      // DomainController 未初始化，使用默认地址
-    }
-    return 'http://127.0.0.1/$sessionId';
-  }
-
-  /// 构建本地地址
-  static String _buildLocalUrl(String sessionId, String host) {
-    int port = 80;
-    try {
-      final domainController = Get.find<SettingsController>();
-      port = domainController.httpPort.value;
-    } catch (_) {}
-    // 默认端口不显示
-    final portPart = port != 80 ? ':$port' : '';
-    return 'http://$host$portPart/$sessionId';
-  }
-
   /// 获取货币符号
   static String _getCurrencySymbol(ChatModel? model) {
     return model?.currency == 'CNY' ? '¥' : '\$';
@@ -683,12 +640,7 @@ class SessionConfigSidebar {
       children: [
         _buildSectionTitle(context, l10n.serviceConfigLabel),
         const SizedBox(height: 8),
-        _buildCopyableConfigItem(
-          context,
-          icon: Icons.link,
-          label: l10n.serviceAddress,
-          value: _buildSmartServiceUrl(session.sessionId),
-        ),
+        _SessionServiceAddresses(session: session),
         const SizedBox(height: 8),
         _buildCopyableConfigItem(
           context,
@@ -2183,14 +2135,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                   children: [
                     SessionConfigSidebar._buildSectionTitle(context, l10n.serviceConfigLabel),
                     const SizedBox(height: 8),
-                    SessionConfigSidebar._buildCopyableConfigItem(
-                      context,
-                      icon: Icons.link,
-                      label: l10n.serviceAddress,
-                      value: SessionConfigSidebar._buildSmartServiceUrl(
-                        session.sessionId,
-                      ),
-                    ),
+                    _SessionServiceAddresses(session: session),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildCopyableConfigItem(
                       context,
@@ -2402,5 +2347,87 @@ class _McpConfigSectionState extends State<_McpConfigSection> {
           }),
       ],
     );
+  }
+}
+
+/// 会话服务地址：根据系统设置提供三种可复制地址（本地/外网/域名）
+class _SessionServiceAddresses extends StatefulWidget {
+  const _SessionServiceAddresses({required this.session});
+
+  final ChatSession session;
+
+  @override
+  State<_SessionServiceAddresses> createState() =>
+      _SessionServiceAddressesState();
+}
+
+class _SessionServiceAddressesState extends State<_SessionServiceAddresses> {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = Get.find<SettingsController>();
+    final sessionId = widget.session.sessionId;
+    final port = settings.httpPort.value;
+    final running = LocalHttpService.isRunning;
+
+    return Obx(() {
+      // 内网 / 外网 IP 直接取自系统服务配置（由服务管理页检测并保存）
+      final localIp = settings.systemSetting.lanIp.value;
+      final externalIp = settings.systemSetting.publicIp.value;
+
+      final localUrl =
+          localIp == null || localIp.isEmpty
+              ? null
+              : 'http://$localIp:$port/$sessionId';
+      final externalUrl =
+          externalIp == null || externalIp.isEmpty
+              ? null
+              : 'http://$externalIp:$port/$sessionId';
+      final domainUrl =
+          settings.isConfigured ? _withSession(settings.systemSetting.baseUrl) : null;
+
+      Widget row(IconData icon, String label, String? value) {
+        if (value == null || value.isEmpty) {
+          final hint = running
+              ? l10n.serviceNotRunningHint
+              : l10n.serviceNotRunningHint;
+          return SessionConfigSidebar._buildCopyableConfigItem(
+            context,
+            icon: icon,
+            label: label,
+            value: hint,
+          );
+        }
+        return SessionConfigSidebar._buildCopyableConfigItem(
+          context,
+          icon: icon,
+          label: label,
+          value: value,
+        );
+      }
+
+      final children = <Widget>[
+        row(Icons.router, l10n.localAddress, localUrl),
+        const SizedBox(height: 8),
+        row(Icons.public, l10n.externalAddress, externalUrl),
+      ];
+      // 仅当系统服务配置中设置了域名时才显示域名地址
+      if (domainUrl != null && domainUrl.isNotEmpty) {
+        children
+          ..add(const SizedBox(height: 8))
+          ..add(row(Icons.language, l10n.domainAddress, domainUrl));
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      );
+    });
+  }
+
+  String _withSession(String base) {
+    final sessionId = widget.session.sessionId;
+    if (base.isEmpty) return base;
+    return base.endsWith('/') ? '$base$sessionId' : '$base/$sessionId';
   }
 }

@@ -2864,6 +2864,54 @@ abstract class AppLocalizations {
   /// **'Domain Settings'**
   String get domainSettings;
 
+  /// No description provided for @accessAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Access Address'**
+  String get accessAddress;
+
+  /// No description provided for @localAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Local (LAN) Address'**
+  String get localAddress;
+
+  /// No description provided for @externalAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'External (Public) Address'**
+  String get externalAddress;
+
+  /// No description provided for @detecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Detecting...'**
+  String get detecting;
+
+  /// No description provided for @addressDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The local address can be accessed within the same LAN. The external address requires port forwarding / public network access.'**
+  String get addressDesc;
+
+  /// No description provided for @copyAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copyAddress;
+
+  /// No description provided for @serviceNotRunningHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the service to detect the address'**
+  String get serviceNotRunningHint;
+
+  /// No description provided for @domainAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Domain Address'**
+  String get domainAddress;
+
   /// No description provided for @serviceStatus.
   ///
   /// In en, this message translates to:
@@ -2911,12 +2959,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'HTTPS Status'**
   String get httpsStatus;
-
-  /// No description provided for @domainAddress.
-  ///
-  /// In en, this message translates to:
-  /// **'Domain Address'**
-  String get domainAddress;
 
   /// No description provided for @domainHint.
   ///

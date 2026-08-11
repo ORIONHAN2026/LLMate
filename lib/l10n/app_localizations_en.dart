@@ -1525,6 +1525,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get domainSettings => 'Domain Settings';
 
   @override
+  String get accessAddress => 'Access Address';
+
+  @override
+  String get localAddress => 'Local (LAN) Address';
+
+  @override
+  String get externalAddress => 'External (Public) Address';
+
+  @override
+  String get detecting => 'Detecting...';
+
+  @override
+  String get addressDesc =>
+      'The local address can be accessed within the same LAN. The external address requires port forwarding / public network access.';
+
+  @override
+  String get copyAddress => 'Copy';
+
+  @override
+  String get serviceNotRunningHint => 'Start the service to detect the address';
+
+  @override
+  String get domainAddress => 'Domain Address';
+
+  @override
   String get serviceStatus => 'Local Service';
 
   @override
@@ -1547,9 +1572,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get httpsStatus => 'HTTPS Status';
-
-  @override
-  String get domainAddress => 'Domain Address';
 
   @override
   String get domainHint => 'e.g. api.example.com';

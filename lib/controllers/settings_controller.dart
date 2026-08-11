@@ -158,6 +158,13 @@ class SettingsController extends GetxController {
     debugPrint('✅ 域名配置已保存: ${systemSetting.baseUrl}');
   }
 
+  /// 保存检测到的本机内网 / 外网 IP 到系统配置（持久化）
+  Future<void> saveAddresses({String? lanIp, String? publicIp}) async {
+    systemSetting.lanIp.value = lanIp;
+    systemSetting.publicIp.value = publicIp;
+    await _saveSystemSetting();
+  }
+
   /// 清除域名配置（重置为默认值，仍保留单条记录）
   Future<void> clearConfig() async {
     systemSetting.domain.value = '';

@@ -1547,6 +1547,32 @@ class AppLocalizationsDe extends AppLocalizations {
   String get domainSettings => 'Domain-Einstellungen';
 
   @override
+  String get accessAddress => 'Zugriffsadresse';
+
+  @override
+  String get localAddress => 'Lokale (LAN-)Adresse';
+
+  @override
+  String get externalAddress => 'Externe (öffentliche) Adresse';
+
+  @override
+  String get detecting => 'Wird erkannt...';
+
+  @override
+  String get addressDesc =>
+      'Die lokale Adresse ist im selben LAN erreichbar. Die externe Adresse erfordert Portweiterleitung / öffentlichen Zugang.';
+
+  @override
+  String get copyAddress => 'Kopieren';
+
+  @override
+  String get serviceNotRunningHint =>
+      'Starten Sie den Dienst, um die Adresse zu erkennen';
+
+  @override
+  String get domainAddress => 'Domain-Adresse';
+
+  @override
   String get serviceStatus => 'Lokaler Dienst';
 
   @override
@@ -1569,9 +1595,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get httpsStatus => 'HTTPS-Status';
-
-  @override
-  String get domainAddress => 'Domain-Adresse';
 
   @override
   String get domainHint => 'z. B. api.example.com';

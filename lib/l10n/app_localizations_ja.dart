@@ -1496,6 +1496,31 @@ class AppLocalizationsJa extends AppLocalizations {
   String get domainSettings => 'ドメイン設定';
 
   @override
+  String get accessAddress => 'アクセスアドレス';
+
+  @override
+  String get localAddress => '内網アドレス';
+
+  @override
+  String get externalAddress => '外網アドレス';
+
+  @override
+  String get detecting => '検出中...';
+
+  @override
+  String get addressDesc =>
+      '内網アドレスは同一LAN内からアクセス可能です。外網アドレスはポート転送／公開ネットワーク到達が必要です。';
+
+  @override
+  String get copyAddress => 'コピー';
+
+  @override
+  String get serviceNotRunningHint => 'サービスを開始するとアドレスを検出します';
+
+  @override
+  String get domainAddress => 'ドメインアドレス';
+
+  @override
   String get serviceStatus => 'ローカルサービス';
 
   @override
@@ -1518,9 +1543,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get httpsStatus => 'HTTPSステータス';
-
-  @override
-  String get domainAddress => 'ドメインアドレス';
 
   @override
   String get domainHint => '例：api.example.com';

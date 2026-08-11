@@ -42,6 +42,12 @@ class SystemSetting {
   /// HTTPS 端口（默认 443）
   final httpsPort = 443.obs;
 
+  /// 本机内网（局域网）IP
+  final lanIp = RxnString();
+
+  /// 本机外网（公网）IP
+  final publicIp = RxnString();
+
   SystemSetting();
 
   /// 从聚合 JSON 构造（字段缺省时使用默认值）
@@ -84,6 +90,8 @@ class SystemSetting {
     s.httpsEnabled.value = _asBool(src['httpsEnabled']) ?? false;
     s.httpPort.value = (src['httpPort'] as num?)?.toInt() ?? 80;
     s.httpsPort.value = (src['httpsPort'] as num?)?.toInt() ?? 443;
+    s.lanIp.value = src['lanIp'] as String?;
+    s.publicIp.value = src['publicIp'] as String?;
     return s;
   }
 
@@ -98,6 +106,8 @@ class SystemSetting {
         'httpsEnabled': httpsEnabled.value,
         'httpPort': httpPort.value,
         'httpsPort': httpsPort.value,
+        if (lanIp.value != null) 'lanIp': lanIp.value,
+        if (publicIp.value != null) 'publicIp': publicIp.value,
       };
 
   /// 当前主题模式
@@ -131,6 +141,8 @@ class SystemSetting {
     httpsEnabled.value = other.httpsEnabled.value;
     httpPort.value = other.httpPort.value;
     httpsPort.value = other.httpsPort.value;
+    lanIp.value = other.lanIp.value;
+    publicIp.value = other.publicIp.value;
   }
 
   /// 将可能为 bool / String 的值统一解析为 bool

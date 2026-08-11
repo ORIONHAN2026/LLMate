@@ -3,12 +3,14 @@ import '../../../widgets/standard_app_bar.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../services/storage_paths.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../controllers/settings_controller.dart';
+import '../../../controllers/address_detector_controller.dart';
 import '../../../core/http/local_http_service.dart';
 
 /// 域名管理页面
@@ -31,6 +33,8 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
   String? _keyPath;
   bool _isStarting = false;
 
+  late final AddressDetectorController _addressController;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +46,14 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
         TextEditingController(text: _controller.httpsPort.value.toString());
     _certPath = _controller.certPath.value;
     _keyPath = _controller.keyPath.value;
+
+    _addressController = Get.put(AddressDetectorController());
+    // 若服务已运行，则首帧绘制后自动检测地址，避免 build 期间触发 Rx 通知
+    if (LocalHttpService.isRunning) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _addressController.detect();
+      });
+    }
   }
 
   @override
@@ -49,6 +61,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
     _domainController.dispose();
     _httpPortController.dispose();
     _httpsPortController.dispose();
+    Get.delete<AddressDetectorController>();
     super.dispose();
   }
 
@@ -71,6 +84,13 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
             _buildSectionTitle(l10n.serviceStatus, colorScheme),
             const SizedBox(height: 8),
             _buildServiceStatus(colorScheme, l10n),
+
+            const SizedBox(height: 32),
+
+            // 访问地址区域（内网 / 外网自动检测）
+            _buildSectionTitle(l10n.accessAddress, colorScheme),
+            const SizedBox(height: 8),
+            _buildAccessAddressSection(colorScheme, l10n),
 
             const SizedBox(height: 32),
 
@@ -207,6 +227,188 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
     );
   }
 
+  Widget _buildAccessAddressSection(
+    ColorScheme colorScheme,
+    AppLocalizations l10n,
+  ) {
+    final running = LocalHttpService.isRunning;
+
+    return Obx(() {
+      final detector = _addressController;
+      return Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 内网地址
+            _buildAddressRow(
+              colorScheme,
+              l10n,
+              icon: Icons.router,
+              label: l10n.localAddress,
+              address: detector.localAddress.value,
+              loading: detector.isDetecting.value && detector.localAddress.value == null,
+              running: running,
+            ),
+            const SizedBox(height: 14),
+            // 外网地址
+            _buildAddressRow(
+              colorScheme,
+              l10n,
+              icon: Icons.public,
+              label: l10n.externalAddress,
+              address: detector.externalAddress.value,
+              loading: detector.isDetecting.value && detector.externalAddress.value == null,
+              running: running,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    running
+                        ? l10n.addressDesc
+                        : l10n.serviceNotRunningHint,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+                if (running)
+                  TextButton.icon(
+                    onPressed: detector.isDetecting.value
+                        ? null
+                        : () => detector.detect(force: true),
+                    icon: detector.isDetecting.value
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.refresh,
+                            size: 16,
+                            color: colorScheme.onSurface,
+                          ),
+                    label: Text(
+                      l10n.detecting,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildAddressRow(
+    ColorScheme colorScheme,
+    AppLocalizations l10n, {
+    required IconData icon,
+    required String label,
+    required String? address,
+    required bool loading,
+    required bool running,
+  }) {
+    final hasAddress = address != null && address.isNotEmpty;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          size: 18,
+          color: colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+              const SizedBox(height: 2),
+              if (loading)
+                Text(
+                  l10n.detecting,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                )
+              else if (hasAddress)
+                SelectableText(
+                  address,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: colorScheme.onSurface,
+                  ),
+                )
+              else
+                Text(
+                  running ? l10n.detecting : l10n.serviceNotRunningHint,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (hasAddress)
+          IconButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: address));
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l10n.copied),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+            icon: Icon(
+              Icons.copy,
+              size: 18,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+            tooltip: l10n.copyAddress,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+      ],
+    );
+  }
+
   Future<void> _restartService() async {
     try {
       setState(() {
@@ -214,6 +416,8 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
       });
       final controller = Get.find<LocalHttpServiceController>();
       await controller.restart();
+      // 重启后重新检测地址
+      _addressController.detect(force: true);
       setState(() {
         _isStarting = false;
       });

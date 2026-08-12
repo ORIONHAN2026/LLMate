@@ -6,8 +6,7 @@ import 'package:dart_duckdb/dart_duckdb.dart';
 import 'package:path/path.dart' as p;
 
 import '../services/storage_paths.dart';
-import '../models/audit_event.dart';
-import '../models/audit_types.dart';
+import '../models/audit.dart';
 
 /// DuckDB 审计存储
 ///

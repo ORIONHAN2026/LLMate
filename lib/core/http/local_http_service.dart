@@ -14,7 +14,7 @@ import '../../controllers/audit_controller.dart';
 import '../../controllers/usage_controller.dart';
 import '../../services/storage_paths.dart';
 import '../../models/chat/session.dart';
-import '../../models/audit_trace.dart';
+import '../../models/audit.dart';
 import 'middleware/api_key_guard.dart';
 import 'middleware/disabled_guard.dart';
 import 'middleware/quota_guard.dart';

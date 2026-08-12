@@ -1,9 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
-import '../models/audit_event.dart';
-import '../models/audit_trace.dart';
-import '../models/audit_types.dart';
+import '../models/audit.dart';
 import '../services/duckdb_storage.dart';
 import '../services/replay_service.dart';
 

@@ -8,7 +8,4 @@ export 'chat/usage.dart';
 export './responses/openai_response.dart';
 export './responses/chunk.dart';
 export './system_setting.dart';
-export 'audit.dart'; // 旧版审计日志（SQLite/Drift），保留以兼容既有表与 DAO
-export 'audit_event.dart';
-export 'audit_trace.dart';
-export 'audit_types.dart';
+export 'audit.dart'; // 旧版审计日志（SQLite/Drift）+ 审计事件/链路/类型，合并于此

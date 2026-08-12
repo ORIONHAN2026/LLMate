@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import '../../controllers/audit_controller.dart';
 import '../../controllers/session_controller.dart';
 import '../../controllers/usage_controller.dart';
-import '../../models/audit_types.dart';
+import '../../models/audit.dart';
 import '../../models/chat/session.dart';
 
 /// 管理模式下的「系统工具」定义（OpenAI function-calling 格式）。

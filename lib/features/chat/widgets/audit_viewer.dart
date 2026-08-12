@@ -5,8 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../controllers/audit_controller.dart';
 import '../../../data/database.dart';
-import '../../../models/audit_event.dart';
-import '../../../models/audit_types.dart';
+import '../../../models/audit.dart';
 import '../../../models/chat/session.dart';
 import '../../../widgets/section_title.dart';
 import '../../../widgets/standard_app_bar.dart';

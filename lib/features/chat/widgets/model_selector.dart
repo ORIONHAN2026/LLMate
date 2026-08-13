@@ -112,7 +112,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                                   fontSize: 16,
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                             )
@@ -164,7 +164,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                                           color: Theme.of(context)
                                               .colorScheme
                                               .onSurface
-                                              .withOpacity(0.6),
+                                              .withValues(alpha: 0.6),
                                         ),
                                       ),
                                       if (model.systemPrompt != null &&
@@ -176,7 +176,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
-                                                .withOpacity(0.5),
+                                                .withValues(alpha: 0.5),
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -266,7 +266,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                       fontSize: 12,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -318,7 +318,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                               fontSize: 10,
                               color: Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.6),
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
 
@@ -330,7 +330,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                                   fontSize: 10,
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               )
                               : const SizedBox(),
@@ -416,7 +416,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                                         : Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.6),
+                                            .withValues(alpha: 0.6),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -427,7 +427,7 @@ class _ModelSelectorState extends State<ModelSelector> {
                             size: 12,
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.7),
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ],
                       ),
@@ -441,10 +441,10 @@ class _ModelSelectorState extends State<ModelSelector> {
                                 _hasValidModel()
                                     ? Theme.of(
                                       context,
-                                    ).colorScheme.onSurface.withOpacity(0.7)
+                                    ).colorScheme.onSurface.withValues(alpha: 0.7)
                                     : Theme.of(
                                       context,
-                                    ).colorScheme.onSurface.withOpacity(0.5),
+                                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,

@@ -11,7 +11,6 @@ import '../../../controllers/model_controller.dart';
 import '../../utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:llmate/features/mcp/widgets/mcp_detail_dialog.dart';
-import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 import 'session_detail_page.dart';
 import 'audit_viewer.dart';
 import 'usage_dashboard.dart';
@@ -93,6 +92,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       sessionController.currentSession.value?.isSending ?? false;
 
   // ── 方法 ──
+  @override
   void initState() {
     super.initState();
 
@@ -383,7 +383,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         decoration: BoxDecoration(
           color: Theme.of(
             context,
-          ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Theme.of(context).dividerColor, width: 1),
         ),
@@ -392,13 +392,14 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // 输入框（附件显示在输入框下方）
-            RawKeyboardListener(
+            KeyboardListener(
               focusNode: FocusNode(),
-              onKey: (RawKeyEvent event) {
-                if (event is RawKeyDownEvent) {
+              onKeyEvent: (KeyEvent event) {
+                if (event is KeyDownEvent) {
                   final isEnterPressed =
                       event.logicalKey == LogicalKeyboardKey.enter;
-                  final isShiftPressed = event.isShiftPressed;
+                  final isShiftPressed =
+                      HardwareKeyboard.instance.isShiftPressed;
 
                   if (isEnterPressed && !isShiftPressed && !_isSending) {
                     // 普通回车发送消息
@@ -421,7 +422,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   hintStyle: TextStyle(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.5),
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
                     fontSize: 14,
                   ),
                   border: InputBorder.none,
@@ -564,7 +565,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 Icon(
                   Icons.settings_outlined,
                   size: 13,
-                  color: active ? onSurface : onSurface.withOpacity(0.3),
+                  color: active ? onSurface : onSurface.withValues(alpha: 0.3),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -574,7 +575,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: active ? onSurface : onSurface.withOpacity(0.3),
+                    color: active ? onSurface : onSurface.withValues(alpha: 0.3),
                   ),
                 ),
               ],
@@ -609,7 +610,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 Icon(
                   Icons.gavel_rounded,
                   size: 13,
-                  color: active ? onSurface : onSurface.withOpacity(0.3),
+                  color: active ? onSurface : onSurface.withValues(alpha: 0.3),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -619,7 +620,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: active ? onSurface : onSurface.withOpacity(0.3),
+                    color: active ? onSurface : onSurface.withValues(alpha: 0.3),
                   ),
                 ),
               ],
@@ -654,7 +655,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 Icon(
                   Icons.bar_chart_rounded,
                   size: 13,
-                  color: active ? onSurface : onSurface.withOpacity(0.3),
+                  color: active ? onSurface : onSurface.withValues(alpha: 0.3),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -664,7 +665,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: active ? onSurface : onSurface.withOpacity(0.3),
+                    color: active ? onSurface : onSurface.withValues(alpha: 0.3),
                   ),
                 ),
               ],
@@ -689,8 +690,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             size: 13,
             color:
                 _isSending
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3)
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ),
@@ -730,10 +731,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   size: 13,
                   color:
                       _isSending
-                          ? onSurface.withOpacity(0.3)
+                          ? onSurface.withValues(alpha: 0.3)
                           : mcpCount > 0
                           ? onSurface
-                          : onSurface.withOpacity(0.6),
+                          : onSurface.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 4),
                 ConstrainedBox(
@@ -748,10 +749,10 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                           mcpCount > 0 ? FontWeight.w700 : FontWeight.w500,
                       color:
                           _isSending
-                              ? onSurface.withOpacity(0.3)
+                              ? onSurface.withValues(alpha: 0.3)
                               : mcpCount > 0
                               ? onSurface
-                              : onSurface.withOpacity(0.6),
+                              : onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ),
@@ -761,63 +762,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
         ),
       );
     });
-  }
-
-  /// 命令面板通用搜索栏
-  Widget _buildCommandPaletteSearchBar({
-    required TextEditingController controller,
-    required String title,
-    required VoidCallback onChanged,
-    bool autofocus = true,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.search,
-            size: 16,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              autofocus: autofocus,
-              onChanged: (_) => onChanged(),
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.typeCommandOrSearch,
-                hintStyle: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.4),
-                ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   bool _sendingInProgress = false; // 本地防重入锁
@@ -891,6 +835,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
 
     // 等待下一帧确保UI更新完成
     await Future.delayed(const Duration(milliseconds: 50));
+
+    if (!mounted) return;
 
     // UI操作
     _inputController.clear();
@@ -982,7 +928,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       // }
 
       // 直接调用 LLMClient（本地聊天不走 HTTP）
-      final responseStream = client.LLMChat(userMessage);
+      final responseStream = client.llmChat(userMessage);
 
       // 处理流式响应并更新UI（LlmClient 已在内部处理 MCP 工具调用和 follow-up）
       // chunk 格式: {content,think,tool}  三个字段互斥，每次必有一个有值
@@ -1284,7 +1230,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                 style: TextStyle(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                   fontSize: 14,
                 ),
               ),

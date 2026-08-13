@@ -102,7 +102,9 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
               loc.modelDeletedSuccessfully(_currentModel.name),
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 24),
@@ -110,7 +112,9 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
               loc.selectOtherModelFromList,
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -233,6 +237,7 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
     );
 
     if (shouldDelete == true) {
+      if (!mounted) return;
       // 设置删除状态
       setState(() {
         _isModelDeleted = true;

@@ -30,19 +30,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get otherSettings => '其他设置';
 
   @override
-  String get resetSystem => '重置系统';
+  String get resetSystem => '删除数据';
 
   @override
-  String get resetAllSessions => '重置所有会话';
+  String get resetAllSessions => '删除所有会话';
 
   @override
-  String get resetAllModels => '重置所有模型';
+  String get resetAllModels => '删除所有模型';
 
   @override
-  String get resetAllMcp => '重置所有MCP';
+  String get resetAllMcp => '删除所有MCP';
 
   @override
-  String get resetAll => '全部重置';
+  String get resetAll => '全部删除';
 
   @override
   String resetConfirmMsg(Object action) {
@@ -1802,7 +1802,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '确定要重置该会话的 API 密钥吗？重置后旧密钥将立即失效，使用旧密钥的外部请求将无法访问。';
 
   @override
-  String get confirmReset => '确认重置';
+  String get confirmReset => '确认删除';
 
   @override
   String get connectorSkillRelation => '连接器和技能的关联描述';

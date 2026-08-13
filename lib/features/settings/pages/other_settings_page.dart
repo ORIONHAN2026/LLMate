@@ -216,8 +216,10 @@ class OtherSettingsPage extends StatelessWidget {
     if (confirmed != true) return;
     try {
       await onConfirm();
+      if (!context.mounted) return;
       SnackBarUtils.showSuccess(context, l10n.xDone(action));
     } catch (e) {
+      if (!context.mounted) return;
       SnackBarUtils.showError(context, l10n.xFailed(action, e.toString()));
     }
   }

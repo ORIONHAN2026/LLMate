@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../../../models/model.dart';
 import '../../../models/chat/session.dart';
 import '../../../models/chat/message.dart';
-import '../../../models/chat/mcp.dart';
 import '../../../controllers/mcp_controller.dart';
 
 import '../../services/storage_paths.dart';
@@ -170,15 +169,6 @@ String? _toOpenAIRole(MessageRole role) {
 /// 构建包含附件信息的用户消息内容
 dynamic buildUserContent(ChatMessage userMessage) {
   return userMessage.content;
-}
-
-String _formatFileSize(int bytes) {
-  if (bytes < 1024) return '${bytes}B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
-  if (bytes < 1024 * 1024 * 1024) {
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
-  }
-  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
 }
 
 /// 构建 MCP 服务工具列表（合并 session MCP + model MCP，去重）

@@ -192,7 +192,7 @@ class ChatSession {
     required this.createdAt,
     required this.messages,
     String? modelId,
-    List<String>? mcps,
+    this.mcps,
     this.chatModel,
     this.isFavorite = false,
     this.inputContent = '',
@@ -219,7 +219,6 @@ class ChatSession {
     this.isDisabled = false,
     this.mode = "management",
   }) : modelId = modelId ?? chatModel?.modelId,
-       mcps = mcps,
        emoji = emoji ?? randomEmoji(),
        apiKey = apiKey ?? generateSessionApiKey();
 
@@ -275,7 +274,7 @@ class ChatSession {
       return QuotaCheckResult(
         exceeded: true,
         reason: 'Token 用量已达上限',
-        detail: '已使用 $effectiveTokens Token，上限 ${quotaTokenLimit} Token',
+        detail: '已使用 $effectiveTokens Token，上限 $quotaTokenLimit Token',
       );
     }
 

@@ -248,8 +248,8 @@ class SseClientTransport implements ClientTransport {
     required String serverUrl,
     Map<String, String>? headers,
   }) async {
-    print('[MCP-SSE] 🔗 创建 SSE 传输: $serverUrl');
-    print('[MCP-SSE]    Headers: $headers');
+    _logger.info('[MCP-SSE] 🔗 创建 SSE 传输: $serverUrl');
+    _logger.info('[MCP-SSE]    Headers: $headers');
     
     final transport = SseClientTransport._internal(
       serverUrl: serverUrl,
@@ -264,8 +264,8 @@ class SseClientTransport implements ClientTransport {
               ? '$serverUrl&session_id=$sessionId'
               : '$serverUrl?session_id=$sessionId';
 
-      print('[MCP-SSE] 📡 连接 SSE URL: $sseUrlWithSession');
-      print('[MCP-SSE]    Session ID: $sessionId');
+      _logger.info('[MCP-SSE] 📡 连接 SSE URL: $sseUrlWithSession');
+      _logger.info('[MCP-SSE]    Session ID: $sessionId');
 
       // Set up event handlers
       final endpointCompleter = Completer<String>();
@@ -279,22 +279,22 @@ class SseClientTransport implements ClientTransport {
               data.containsKey('jsonrpc') &&
               data.containsKey('id') &&
               !transport._messageController.isClosed) {
-            print('[MCP-SSE] 📥 转发 JSON-RPC 响应: $data');
+            _logger.info('[MCP-SSE] 📥 转发 JSON-RPC 响应: $data');
             transport._messageController.add(data);
           } else if (!transport._messageController.isClosed) {
-            print('[MCP-SSE] 📥 SSE 消息: $data');
+            _logger.info('[MCP-SSE] 📥 SSE 消息: $data');
             transport._messageController.add(data);
           }
         },
         onError: (e) {
-          print('[MCP-SSE] ❌ SSE 错误: $e');
+          _logger.info('[MCP-SSE] ❌ SSE 错误: $e');
           if (!endpointCompleter.isCompleted) {
             endpointCompleter.completeError(e);
           }
           transport._handleError(e);
         },
         onEndpoint: (endpoint) {
-          print('[MCP-SSE] 📥 收到 endpoint: $endpoint');
+          _logger.info('[MCP-SSE] 📥 收到 endpoint: $endpoint');
           if (!endpointCompleter.isCompleted && endpoint != null) {
             endpointCompleter.complete(endpoint);
           }
@@ -302,12 +302,12 @@ class SseClientTransport implements ClientTransport {
       );
 
       // Wait for endpoint
-      print('[MCP-SSE] ⏳ 等待 endpoint (10s 超时)...');
+      _logger.info('[MCP-SSE] ⏳ 等待 endpoint (10s 超时)...');
       final endpointPath = await endpointCompleter.future.timeout(
         Duration(seconds: 10),
         onTimeout: () => throw McpError('Timed out waiting for endpoint'),
       );
-      print('[MCP-SSE] ✅ 获取到 endpoint: $endpointPath');
+      _logger.info('[MCP-SSE] ✅ 获取到 endpoint: $endpointPath');
 
       // Set up message endpoint following MCP standard
       transport._messageEndpoint =
@@ -317,11 +317,11 @@ class SseClientTransport implements ClientTransport {
                 Uri.parse(serverUrl),
                 endpointPath,
               );
-      print('[MCP-SSE] 📨 消息端点: ${transport._messageEndpoint}');
+      _logger.info('[MCP-SSE] 📨 消息端点: ${transport._messageEndpoint}');
 
       return transport;
     } catch (e) {
-      print('[MCP-SSE] ❌ SSE 连接失败: $e');
+      _logger.info('[MCP-SSE] ❌ SSE 连接失败: $e');
       transport.close();
       throw McpError('Failed to establish SSE connection: $e');
     }
@@ -391,7 +391,7 @@ class SseClientTransport implements ClientTransport {
   @override
   void send(dynamic message) async {
     if (_isClosed) {
-      print('[MCP-SSE] ⚠️ 尝试在已关闭的 transport 上发送消息');
+      _logger.info('[MCP-SSE] ⚠️ 尝试在已关闭的 transport 上发送消息');
       return;
     }
 
@@ -411,11 +411,11 @@ class SseClientTransport implements ClientTransport {
         final jsonMessage = jsonEncode(message);
         if (attempt > 0) {
           final delay = Duration(seconds: 1 << (attempt - 1)); // 1s, 2s, 4s
-          print('[MCP-SSE] 🔄 重试 $attempt/$maxRetries (${delay.inSeconds}s 后)...');
+          _logger.info('[MCP-SSE] 🔄 重试 $attempt/$maxRetries (${delay.inSeconds}s 后)...');
           await Future.delayed(delay);
         }
-        print('[MCP-SSE] 📤 POST $_messageEndpoint (attempt ${attempt + 1})');
-        print('[MCP-SSE]    Body: $jsonMessage');
+        _logger.info('[MCP-SSE] 📤 POST $_messageEndpoint (attempt ${attempt + 1})');
+        _logger.info('[MCP-SSE]    Body: $jsonMessage');
 
         final url = Uri.parse(_messageEndpoint!);
         final client = HttpClient();
@@ -436,14 +436,14 @@ class SseClientTransport implements ClientTransport {
         // Check for successful delivery (200 OK or 202 Accepted)
         if (response.statusCode == 200 || response.statusCode == 202) {
           final responseBody = await response.transform(utf8.decoder).join();
-          print('[MCP-SSE] ✅ POST 响应 ${response.statusCode}: $responseBody');
+          _logger.info('[MCP-SSE] ✅ POST 响应 ${response.statusCode}: $responseBody');
 
           // Some MCP servers return JSON-RPC responses in the POST body directly
           // instead of via the SSE stream. Forward it to the message controller.
           try {
             final parsed = jsonDecode(responseBody);
             if (parsed is Map && parsed.containsKey('jsonrpc') && parsed.containsKey('id')) {
-              print('[MCP-SSE] 📥 从 POST 响应中提取到 JSON-RPC 响应，转发到 controller');
+              _logger.info('[MCP-SSE] 📥 从 POST 响应中提取到 JSON-RPC 响应，转发到 controller');
               _messageController.add(parsed);
             }
           } catch (_) {
@@ -457,7 +457,7 @@ class SseClientTransport implements ClientTransport {
           final responseBody = await response.transform(utf8.decoder).join();
           client.close();
           final errMsg = '${response.statusCode}: $responseBody';
-          print('[MCP-SSE] ❌ POST 错误响应 $errMsg');
+          _logger.info('[MCP-SSE] ❌ POST 错误响应 $errMsg');
 
           if (retryableStatusCodes.contains(response.statusCode) &&
               attempt < maxRetries) {
@@ -468,7 +468,7 @@ class SseClientTransport implements ClientTransport {
         }
       } catch (e) {
         final errMsg = e is McpError ? e.message : e.toString();
-        print('[MCP-SSE] ❌ 发送异常: $errMsg');
+        _logger.info('[MCP-SSE] ❌ 发送异常: $errMsg');
         if (attempt < maxRetries) {
           continue; // 网络异常，重试
         }

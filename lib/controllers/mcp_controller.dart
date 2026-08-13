@@ -114,8 +114,9 @@ class McpController extends GetxController {
     final merged = <String, dynamic>{...serverJson};
     if (existing != null) {
       merged['name'] = existing.name;
-      if (existing.description != null)
+      if (existing.description != null) {
         merged['description'] = existing.description!;
+      }
       if (existing.tools != null) {
         merged['tools'] = existing.tools!.map((t) => t.toJson()).toList();
       }
@@ -194,8 +195,9 @@ class McpController extends GetxController {
       }
     }
     final cmd = config.command;
-    if (cmd == null || cmd.isEmpty)
+    if (cmd == null || cmd.isEmpty) {
       throw Exception('Stdio MCP 配置缺少 command: ${config.name}');
+    }
     debugPrint('🔗 使用 stdio 传输: $cmd ${config.args?.join(' ') ?? ''}');
     return StdioClientTransport.create(
       command: cmd,
@@ -753,8 +755,9 @@ class McpController extends GetxController {
               final ev = propInfo['enum'] as List<dynamic>? ?? [];
               if (ev.isNotEmpty) buf.writeln('  可选值: ${ev.join(', ')}');
             }
-            if (propInfo.containsKey('default'))
+            if (propInfo.containsKey('default')) {
               buf.writeln('  默认值: ${propInfo['default']}');
+            }
             buf.writeln();
           }
         }
@@ -900,8 +903,9 @@ class McpController extends GetxController {
               final ev = propInfo['enum'] as List<dynamic>? ?? [];
               if (ev.isNotEmpty) buf.writeln('  可选值: ${ev.join(', ')}');
             }
-            if (propInfo.containsKey('default'))
+            if (propInfo.containsKey('default')) {
               buf.writeln('  默认值: ${propInfo['default']}');
+            }
             buf.writeln();
           }
         }
@@ -1143,7 +1147,9 @@ class McpController extends GetxController {
 
 extension IterableExtension<T> on Iterable<T> {
   T? get firstOrNull {
-    for (final e in this) return e;
+    for (final e in this) {
+      return e;
+    }
     return null;
   }
 }

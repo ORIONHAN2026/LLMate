@@ -163,8 +163,9 @@ class _AuditCompleter {
         <String, dynamic>{};
 
     if (rawRequest != null) auditEntry['rawRequest'] = rawRequest;
-    if (organizedRequest != null)
+    if (organizedRequest != null) {
       auditEntry['organizedRequest'] = organizedRequest;
+    }
 
     if (rawResponse != null) {
       responseMap['rawResponse'] = rawResponse;
@@ -221,18 +222,23 @@ Map<String, dynamic> _buildRawRequest(
   }
 
   // 复制其他参数
-  if (parsedBody?['max_tokens'] != null)
+  if (parsedBody?['max_tokens'] != null) {
     result['max_tokens'] = parsedBody!['max_tokens'];
-  if (parsedBody?['temperature'] != null)
+  }
+  if (parsedBody?['temperature'] != null) {
     result['temperature'] = parsedBody!['temperature'];
+  }
   if (parsedBody?['top_p'] != null) result['top_p'] = parsedBody!['top_p'];
-  if (parsedBody?['frequency_penalty'] != null)
+  if (parsedBody?['frequency_penalty'] != null) {
     result['frequency_penalty'] = parsedBody!['frequency_penalty'];
-  if (parsedBody?['presence_penalty'] != null)
+  }
+  if (parsedBody?['presence_penalty'] != null) {
     result['presence_penalty'] = parsedBody!['presence_penalty'];
+  }
   if (parsedBody?['stop'] != null) result['stop'] = parsedBody!['stop'];
-  if (parsedBody?['thinking'] != null)
+  if (parsedBody?['thinking'] != null) {
     result['thinking'] = parsedBody!['thinking'];
+  }
 
   return result;
 }
@@ -292,12 +298,14 @@ void _writeAuditLog(Map<String, dynamic> entry) {
       final resp = entry['response'] as Map<String, dynamic>?;
       if (resp != null) {
         if (resp['content'] != null) responseMap['content'] = resp['content'];
-        if (resp['rawResponse'] != null)
+        if (resp['rawResponse'] != null) {
           responseMap['rawResponse'] = resp['rawResponse'];
+        }
         if (resp['usage'] != null) responseMap['usage'] = resp['usage'];
         if (resp['error'] != null) responseMap['error'] = resp['error'];
-        if (resp['statusCode'] != null)
+        if (resp['statusCode'] != null) {
           responseMap['statusCode'] = resp['statusCode'];
+        }
         if (resp['cost'] != null) responseMap['cost'] = resp['cost'];
         responseMap['durationMs'] = resp['durationMs'] ?? 0;
       }

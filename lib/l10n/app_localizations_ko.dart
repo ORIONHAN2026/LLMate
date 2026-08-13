@@ -30,19 +30,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get otherSettings => '기타 설정';
 
   @override
-  String get resetSystem => '시스템 초기화';
+  String get resetSystem => '데이터 삭제';
 
   @override
-  String get resetAllSessions => '모든 세션 초기화';
+  String get resetAllSessions => '모든 세션 삭제';
 
   @override
-  String get resetAllModels => '모든 모델 초기화';
+  String get resetAllModels => '모든 모델 삭제';
 
   @override
-  String get resetAllMcp => '모든 MCP 초기화';
+  String get resetAllMcp => '모든 MCP 삭제';
 
   @override
-  String get resetAll => '전체 초기화';
+  String get resetAll => '전체 삭제';
 
   @override
   String resetConfirmMsg(Object action) {
@@ -1809,7 +1809,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '이 세션의 API 키를 재설정하시겠습니까? 재설정 후 이전 키는 즉시 무효화되며 이전 키를 사용하는 외부 요청은 접근할 수 없습니다.';
 
   @override
-  String get confirmReset => '재설정 확인';
+  String get confirmReset => '삭제 확인';
 
   @override
   String get connectorSkillRelation => '커넥터와 스킬 관계 설명';

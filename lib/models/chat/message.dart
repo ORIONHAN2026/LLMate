@@ -1,5 +1,3 @@
-import 'package:llmate/models/chat/session.dart';
-
 import '../../features/chat/widgets/message_widgets/content_block.dart';
 
 enum MessageRole { user, bot, tool }

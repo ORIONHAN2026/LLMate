@@ -382,8 +382,8 @@ class LocalHttpService {
 
             contentBuffer.write(round.contentBuffer);
             reasonBuffer.write(round.reasonBuffer);
-            promptTokens += round.promptTokens!;
-            completionTokens += round.completionTokens!;
+            promptTokens += round.promptTokens ?? 0;
+            completionTokens += round.completionTokens ?? 0;
 
             // ── 审计：LLM 响应完成 ──
             if (auditTrace != null) {
@@ -605,7 +605,20 @@ class LocalHttpService {
             error: e.toString(),
           );
 
-          streamController.addError(e);
+          // 按 OpenAI 标准错误格式返回给调用方并正常结束响应，而不是抛异常断连
+          streamController.add(
+            utf8.encode(
+              'data: ${jsonEncode({
+                'error': {
+                  'message': e.toString(),
+                  'type': 'api_error',
+                  'param': null,
+                  'code': 500,
+                },
+              })}\n\n',
+            ),
+          );
+          streamController.add(utf8.encode('data: [DONE]\n\n'));
           await streamController.close();
         }
       }(); // ← 立即执行，不 await

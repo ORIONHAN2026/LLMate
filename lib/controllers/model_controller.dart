@@ -179,7 +179,7 @@ class ModelController extends GetxController {
 
     return Container(
       decoration: BoxDecoration(
-        color: isSelected ? Colors.white.withOpacity(0.2) : Colors.grey[100],
+        color: isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.grey[100],
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(

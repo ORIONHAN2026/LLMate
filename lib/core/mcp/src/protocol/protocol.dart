@@ -100,38 +100,3 @@ class McpProtocol {
     return null;
   }
 }
-
-/// Protocol capabilities
-class ProtocolCapabilities {
-  final bool experimental;
-  final bool tools;
-  final bool resources;
-  final bool prompts;
-  final bool logging;
-
-  const ProtocolCapabilities({
-    this.experimental = false,
-    this.tools = true,
-    this.resources = true,
-    this.prompts = true,
-    this.logging = true,
-  });
-
-  Map<String, dynamic> toJson() => {
-    if (experimental) 'experimental': experimental,
-    if (tools) 'tools': tools,
-    if (resources) 'resources': resources,
-    if (prompts) 'prompts': prompts,
-    if (logging) 'logging': logging,
-  };
-
-  factory ProtocolCapabilities.fromJson(Map<String, dynamic> json) {
-    return ProtocolCapabilities(
-      experimental: json['experimental'] ?? false,
-      tools: json['tools'] ?? true,
-      resources: json['resources'] ?? true,
-      prompts: json['prompts'] ?? true,
-      logging: json['logging'] ?? true,
-    );
-  }
-}

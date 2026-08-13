@@ -155,31 +155,31 @@ abstract class AppLocalizations {
   /// No description provided for @resetSystem.
   ///
   /// In en, this message translates to:
-  /// **'Reset System'**
+  /// **'Delete Data'**
   String get resetSystem;
 
   /// No description provided for @resetAllSessions.
   ///
   /// In en, this message translates to:
-  /// **'Reset All Sessions'**
+  /// **'Delete All Sessions'**
   String get resetAllSessions;
 
   /// No description provided for @resetAllModels.
   ///
   /// In en, this message translates to:
-  /// **'Reset All Models'**
+  /// **'Delete All Models'**
   String get resetAllModels;
 
   /// No description provided for @resetAllMcp.
   ///
   /// In en, this message translates to:
-  /// **'Reset All MCP'**
+  /// **'Delete All MCP'**
   String get resetAllMcp;
 
   /// No description provided for @resetAll.
   ///
   /// In en, this message translates to:
-  /// **'Reset All'**
+  /// **'Delete All'**
   String get resetAll;
 
   /// No description provided for @resetConfirmMsg.
@@ -3449,7 +3449,7 @@ abstract class AppLocalizations {
   /// No description provided for @confirmReset.
   ///
   /// In en, this message translates to:
-  /// **'Confirm Reset'**
+  /// **'Confirm Delete'**
   String get confirmReset;
 
   /// No description provided for @connectorSkillRelation.

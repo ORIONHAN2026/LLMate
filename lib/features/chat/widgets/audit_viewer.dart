@@ -184,7 +184,7 @@ class _AuditViewerState extends State<AuditViewer> {
                   child: ElevatedButton.icon(
                     onPressed: _load,
                     icon: const Icon(Icons.search, size: 16),
-                    label: const Text('搜索', style: const TextStyle(fontSize: 11)),
+                    label: const Text('搜索', style: TextStyle(fontSize: 11)),
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
@@ -441,23 +441,23 @@ class _AuditViewerState extends State<AuditViewer> {
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: _groups.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, i) {
               final g = _groups[i];
               final first = g.events.first;
               return Container(
                 decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withOpacity(0.25),
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Theme.of(context).dividerColor.withOpacity(0.3),
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
                   ),
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                   leading: CircleAvatar(
                     radius: 16,
-                    backgroundColor: cs.primary.withOpacity(0.12),
+                    backgroundColor: cs.primary.withValues(alpha: 0.12),
                     foregroundColor: cs.primary,
                     child: Text('${g.events.length}'),
                   ),
@@ -490,7 +490,7 @@ class _AuditViewerState extends State<AuditViewer> {
                     '${g.events.length} 个事件  ·  ${_fmt(first.timestamp)}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: cs.onSurface.withOpacity(0.5),
+                      color: cs.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                   trailing: const Icon(Icons.chevron_right),
@@ -581,9 +581,9 @@ class AuditReplayPage extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest.withOpacity(0.4),
+            color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: theme.dividerColor.withOpacity(0.3)),
+            border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -601,7 +601,7 @@ class AuditReplayPage extends StatelessWidget {
                 '会话: ${sessionName ?? e.sessionId}',
                 style: TextStyle(
                   fontSize: 12,
-                  color: cs.onSurface.withOpacity(0.5),
+                  color: cs.onSurface.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -617,9 +617,9 @@ class AuditReplayPage extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withOpacity(0.25),
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.3)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
       ),
       child: Theme(
         data: theme.copyWith(dividerColor: Colors.transparent),
@@ -627,7 +627,7 @@ class AuditReplayPage extends StatelessWidget {
           tilePadding: const EdgeInsets.symmetric(horizontal: 12),
           leading: CircleAvatar(
             radius: 14,
-            backgroundColor: cs.primary.withOpacity(0.12),
+            backgroundColor: cs.primary.withValues(alpha: 0.12),
             foregroundColor: cs.primary,
             child: Text('${index + 1}'),
           ),
@@ -647,7 +647,7 @@ class AuditReplayPage extends StatelessWidget {
             'span: ${e.spanId}',
             style: TextStyle(
               fontSize: 11,
-              color: cs.onSurface.withOpacity(0.6),
+              color: cs.onSurface.withValues(alpha: 0.6),
             ),
           ),
           children: [
@@ -675,9 +675,9 @@ Widget _typeChip(AuditEventType type) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.15),
+      color: color.withValues(alpha: 0.15),
       borderRadius: BorderRadius.circular(4),
-      border: Border.all(color: color.withOpacity(0.5)),
+      border: Border.all(color: color.withValues(alpha: 0.5)),
     ),
     child: Text(type.name, style: TextStyle(fontSize: 11, color: color)),
   );

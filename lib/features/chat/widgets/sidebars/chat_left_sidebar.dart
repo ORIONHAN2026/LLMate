@@ -46,7 +46,7 @@ class _SessionItemState extends State<_SessionItem> {
                 ? (Theme.of(context).brightness == Brightness.dark
                     ? Theme.of(
                       context,
-                    ).colorScheme.surfaceContainerHighest.withOpacity(0.3)
+                    ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
                     : const Color(0xFFE5E7EB))
                 : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
@@ -57,7 +57,7 @@ class _SessionItemState extends State<_SessionItem> {
                       Theme.of(context).brightness == Brightness.dark
                           ? Theme.of(
                             context,
-                          ).colorScheme.outline.withOpacity(0.2)
+                          ).colorScheme.outline.withValues(alpha: 0.2)
                           : const Color(0xFFD1D5DB),
                   width: 1,
                 )
@@ -95,7 +95,7 @@ class _SessionItemState extends State<_SessionItem> {
                                         : Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.8),
+                                            .withValues(alpha: 0.8),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -107,9 +107,14 @@ class _SessionItemState extends State<_SessionItem> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        widget.session.chatModel?.name ??
-                            widget.session.chatModel?.model ??
-                            '未绑定模型',
+                        () {
+                          final modelName =
+                              widget.session.chatModel?.name ??
+                              widget.session.chatModel?.model;
+                          return modelName != null
+                              ? '模型-$modelName'
+                              : '未绑定模型';
+                        }(),
                         style: TextStyle(
                           fontSize: 11,
                           color: Theme.of(
@@ -148,7 +153,7 @@ class _SessionItemState extends State<_SessionItem> {
                                 ? Colors.amber[600]
                                 : Theme.of(
                                   context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
+                                ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                       padding: EdgeInsets.zero,
                       tooltip:
@@ -180,7 +185,7 @@ class _SessionItemState extends State<_SessionItem> {
                         size: 12,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                       padding: EdgeInsets.zero,
                       tooltip: AppLocalizations.of(context)!.deleteConversation,
@@ -322,7 +327,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                             size: 14,
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                           tooltip: AppLocalizations.of(context)!.fullscreen,
                           padding: const EdgeInsets.all(4),
@@ -340,7 +345,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                           size: 16,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         tooltip: AppLocalizations.of(context)!.newSession,
                         padding: const EdgeInsets.all(4),
@@ -358,7 +363,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
                           size: 16,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         tooltip: AppLocalizations.of(context)!.collapseSidebar,
                         padding: const EdgeInsets.all(4),
@@ -553,7 +558,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 letterSpacing: 0.5,
               ),
             ),
@@ -563,7 +568,7 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
               child: Icon(
                 Icons.keyboard_arrow_down,
                 size: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],

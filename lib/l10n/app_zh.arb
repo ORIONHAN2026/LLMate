@@ -7,11 +7,11 @@
   "connectorManagement": "MCP管理",
   "domainManagement": "服务管理",
   "otherSettings": "其他设置",
-  "resetSystem": "重置系统",
-  "resetAllSessions": "重置所有会话",
-  "resetAllModels": "重置所有模型",
-  "resetAllMcp": "重置所有MCP",
-  "resetAll": "全部重置",
+  "resetSystem": "删除数据",
+  "resetAllSessions": "删除所有会话",
+  "resetAllModels": "删除所有模型",
+  "resetAllMcp": "删除所有MCP",
+  "resetAll": "全部删除",
   "resetConfirmMsg": "确定要{action}吗？此操作不可撤销。",
   "@resetConfirmMsg": {
     "placeholders": {
@@ -603,7 +603,7 @@
   "noSessionConfig": "暂无会话配置",
   "resetApiKey": "重置 API 密钥",
   "resetApiKeyConfirm": "确定要重置该会话的 API 密钥吗？重置后旧密钥将立即失效，使用旧密钥的外部请求将无法访问。",
-  "confirmReset": "确认重置",
+  "confirmReset": "确认删除",
   "connectorSkillRelation": "连接器和技能的关联描述",
   "@modelPricing": {
     "placeholders": {

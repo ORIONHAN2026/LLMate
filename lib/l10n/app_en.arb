@@ -7,11 +7,11 @@
   "connectorManagement": "Connector (MCP)",
   "domainManagement": "Service Management",
   "otherSettings": "Other Settings",
-  "resetSystem": "Reset System",
-  "resetAllSessions": "Reset All Sessions",
-  "resetAllModels": "Reset All Models",
-  "resetAllMcp": "Reset All MCP",
-  "resetAll": "Reset All",
+  "resetSystem": "Delete Data",
+  "resetAllSessions": "Delete All Sessions",
+  "resetAllModels": "Delete All Models",
+  "resetAllMcp": "Delete All MCP",
+  "resetAll": "Delete All",
   "resetConfirmMsg": "Are you sure you want to {action}? This action cannot be undone.",
   "@resetConfirmMsg": {
     "placeholders": {
@@ -603,7 +603,7 @@
   "noSessionConfig": "No session configuration",
   "resetApiKey": "Reset API Key",
   "resetApiKeyConfirm": "Reset this session's API key? After resetting, the old key will be invalid immediately and external requests using the old key will be unable to access.",
-  "confirmReset": "Confirm Reset",
+  "confirmReset": "Confirm Delete",
   "connectorSkillRelation": "Connector and skill relation description",
   "@modelPricing": {
     "placeholders": {

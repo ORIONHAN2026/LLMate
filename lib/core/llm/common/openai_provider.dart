@@ -307,17 +307,21 @@ class OpenAiProvider {
     final es = error.toString();
     if (es.contains(
       'Dio can\'t establish a new connection after it was closed',
-    ))
+    )) {
       return '连接错误，请重试发送消息';
+    }
     if (es.contains('CONNECT_TIMEOUT')) return '网络连接超时，请检查网络设置';
     if (es.contains('RECEIVE_TIMEOUT')) return 'API 响应超时，请稍后重试';
-    if (es.contains('CONNECTION_ERROR') || es.contains('Connection refused'))
+    if (es.contains('CONNECTION_ERROR') || es.contains('Connection refused')) {
       return '网络连接被拒绝，请检查网络连接和API地址';
+    }
     if (es.contains('Network is unreachable')) return '网络不可达，请检查网络连接';
-    if (es.contains('SocketException') || es.contains('HandshakeException'))
+    if (es.contains('SocketException') || es.contains('HandshakeException')) {
       return '网络连接失败，请检查网络设置和证书配置';
-    if (es.contains('FormatException') || es.contains('Invalid JSON'))
+    }
+    if (es.contains('FormatException') || es.contains('Invalid JSON')) {
       return 'API 响应格式错误，请检查API配置';
+    }
     return 'API 错误：$es';
   }
 

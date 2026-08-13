@@ -15,7 +15,7 @@ import 'common/stream_http_service.dart';
 /// 管理模式：管理工具 schema 由客户端注入、服务端视作第三方透传回来，
 /// 由客户端本地执行并回填，继续多轮请求。
 class LlmClient {
-  ChatSession _session;
+  final ChatSession _session;
   final OpenAiProvider _provider;
   bool _cancelled = false;
 
@@ -42,7 +42,7 @@ class LlmClient {
   /// 始终经由本机会话 HTTP 服务转发，复用服务侧中间件
   /// （鉴权 / 配额 / 模型工具注入 / 审计 / 用量统计）。
   /// 会话模式的工具执行由服务端完成；管理模式的工具由客户端本地执行。
-  Stream<Map<String, dynamic>> LLMChat(ChatMessage userMessage) async* {
+  Stream<Map<String, dynamic>> llmChat(ChatMessage userMessage) async* {
     _cancelled = false;
 
     if (kDebugMode) {

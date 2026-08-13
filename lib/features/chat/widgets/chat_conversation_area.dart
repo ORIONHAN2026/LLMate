@@ -35,8 +35,10 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
     try {
       // 确保当前帧完成绘制
       await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
       await _generateMessageImage(context, message);
     } catch (e) {
+      if (!mounted) return;
       SnackBarUtils.showError(
         context,
         AppLocalizations.of(context)!.screenshotTypeFailed('消息', e.toString()),
@@ -48,8 +50,10 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
     try {
       // 确保当前帧完成绘制
       await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
       await _generateRoundImage(context, message);
     } catch (e) {
+      if (!mounted) return;
       SnackBarUtils.showError(
         context,
         AppLocalizations.of(
@@ -63,9 +67,11 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
     try {
       // 确保当前帧完成绘制
       await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
       await _generateConversationImage(context);
     } catch (e) {
-      print(
+      if (!mounted) return;
+      debugPrint(
         AppLocalizations.of(
           context,
         )!.screenshotTypeFailed('整个对话', e.toString()),
@@ -86,7 +92,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
     ChatMessage message,
   ) async {
     try {
-      print('开始优化的单条消息截图');
+      debugPrint('开始优化的单条消息截图');
 
       // 创建一个临时的渲染上下文，包含单条消息
       final GlobalKey containerKey = GlobalKey();
@@ -149,6 +155,8 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
             containerKey.currentContext?.findRenderObject()
                 as RenderRepaintBoundary?;
 
+        if (!context.mounted) return;
+
         if (boundary == null) {
           SnackBarUtils.showError(
             context,
@@ -167,6 +175,8 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         final image = await boundary.toImage(pixelRatio: 2.0);
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
+        if (!context.mounted) return;
+
         if (byteData == null) {
           SnackBarUtils.showError(
             context,
@@ -177,18 +187,20 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         await _copyImageToClipboard(pngBytes);
+        if (!context.mounted) return;
         SnackBarUtils.showSuccess(
           context,
           AppLocalizations.of(context)!.messageScreenshotCopied,
         );
 
-        print('成功完成优化的单条消息截图');
+        debugPrint('成功完成优化的单条消息截图');
       } finally {
         // 确保移除overlay
         overlayEntry?.remove();
       }
     } catch (e) {
-      print('优化的单条消息截图失败: $e');
+      debugPrint('优化的单条消息截图失败: $e');
+      if (!context.mounted) return;
       SnackBarUtils.showError(
         context,
         AppLocalizations.of(context)!.screenshotTypeFailed('消息', e.toString()),
@@ -238,7 +250,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         return;
       }
 
-      print('开始优化的回合截图，消息数: ${roundMessages.length}');
+      debugPrint('开始优化的回合截图，消息数: ${roundMessages.length}');
 
       // 创建一个临时的渲染上下文，包含回合消息
       final GlobalKey containerKey = GlobalKey();
@@ -312,6 +324,8 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
             containerKey.currentContext?.findRenderObject()
                 as RenderRepaintBoundary?;
 
+        if (!context.mounted) return;
+
         if (boundary == null) {
           SnackBarUtils.showError(
             context,
@@ -330,6 +344,8 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         final image = await boundary.toImage(pixelRatio: 2.0);
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
+        if (!context.mounted) return;
+
         if (byteData == null) {
           SnackBarUtils.showError(
             context,
@@ -340,18 +356,20 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         await _copyImageToClipboard(pngBytes);
+        if (!context.mounted) return;
         SnackBarUtils.showSuccess(
           context,
           AppLocalizations.of(context)!.currentRoundScreenshotCopied,
         );
 
-        print('成功完成优化的回合截图');
+        debugPrint('成功完成优化的回合截图');
       } finally {
         // 确保移除overlay
         overlayEntry?.remove();
       }
     } catch (e) {
-      print('优化的回合截图失败: $e');
+      debugPrint('优化的回合截图失败: $e');
+      if (!context.mounted) return;
       SnackBarUtils.showError(
         context,
         AppLocalizations.of(
@@ -375,6 +393,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       // 使用优化的渲染方式，避免滚动
       await _generateConversationImageOptimized(context);
     } catch (e) {
+      if (!context.mounted) return;
       SnackBarUtils.showError(
         context,
         AppLocalizations.of(
@@ -387,7 +406,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
   // 优化的对话截图方法 - 避免滚动
   Future<void> _generateConversationImageOptimized(BuildContext context) async {
     try {
-      print('开始优化的对话截图，总消息数: ${widget.chatSession.messages.length}');
+      debugPrint('开始优化的对话截图，总消息数: ${widget.chatSession.messages.length}');
 
       // 创建一个临时的渲染上下文，包含所有消息
       final GlobalKey containerKey = GlobalKey();
@@ -461,6 +480,8 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
             containerKey.currentContext?.findRenderObject()
                 as RenderRepaintBoundary?;
 
+        if (!context.mounted) return;
+
         if (boundary == null) {
           SnackBarUtils.showError(
             context,
@@ -479,6 +500,8 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         final image = await boundary.toImage(pixelRatio: 2.0);
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
+        if (!context.mounted) return;
+
         if (byteData == null) {
           SnackBarUtils.showError(
             context,
@@ -489,18 +512,19 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         await _copyImageToClipboard(pngBytes);
+        if (!context.mounted) return;
         SnackBarUtils.showSuccess(
           context,
           AppLocalizations.of(context)!.fullConversationScreenshotCopied,
         );
 
-        print('成功完成优化的对话截图');
+        debugPrint('成功完成优化的对话截图');
       } finally {
         // 确保移除overlay
         overlayEntry?.remove();
       }
     } catch (e) {
-      print('优化的对话截图失败: $e');
+      debugPrint('优化的对话截图失败: $e');
       // 如果优化方案失败，回退到原有方案
       await _generateConversationImageFallback(context);
     }
@@ -509,10 +533,12 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
   // 回退方案：使用真实widget截图
   Future<void> _generateConversationImageFallback(BuildContext context) async {
     try {
-      print('使用回退方案进行对话截图');
+      debugPrint('使用回退方案进行对话截图');
 
       // 强制滚动以确保所有消息都被渲染（快速版本）
       await _ensureAllMessagesRenderedQuick();
+
+      if (!context.mounted) return;
 
       await _generateMultiMessageImageFromKeys(
         context,
@@ -520,6 +546,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         '整个对话',
       );
     } catch (e) {
+      if (!context.mounted) return;
       SnackBarUtils.showError(
         context,
         AppLocalizations.of(
@@ -549,7 +576,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       try {
         widget.scrollController.jumpTo(originalOffset);
       } catch (e) {
-        print('恢复滚动位置失败: $e');
+        debugPrint('恢复滚动位置失败: $e');
       }
     }
   }
@@ -561,7 +588,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
     String screenshotType,
   ) async {
     try {
-      print('开始截图，总消息数: ${messages.length}');
+      debugPrint('开始截图，总消息数: ${messages.length}');
 
       // 首先滚动到顶部，确保所有消息都被渲染
       if (widget.scrollController.hasClients) {
@@ -597,14 +624,15 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         }
       }
 
-      print('成功找到渲染边界数: ${boundaries.length}');
-      print('缺失的消息数: ${missingMessages.length}');
+      debugPrint('成功找到渲染边界数: ${boundaries.length}');
+      debugPrint('缺失的消息数: ${missingMessages.length}');
 
       if (missingMessages.isNotEmpty) {
-        print('缺失的消息ID: $missingMessages');
+        debugPrint('缺失的消息ID: $missingMessages');
       }
 
       if (boundaries.isEmpty) {
+        if (!context.mounted) return;
         SnackBarUtils.showError(
           context,
           AppLocalizations.of(context)!.cannotFindRenderObject,
@@ -614,6 +642,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
       // 如果缺失了一些消息，给用户提示
       if (boundaries.length < messages.length) {
+        if (!context.mounted) return;
         SnackBarUtils.showWarning(
           context,
           AppLocalizations.of(
@@ -634,6 +663,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
         // 再次检查是否需要绘制
         if (boundary.debugNeedsPaint) {
+          if (!context.mounted) return;
           SnackBarUtils.showError(
             context,
             AppLocalizations.of(context)!.renderObjectStillDrawing,
@@ -643,6 +673,8 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
         final image = await boundary.toImage(pixelRatio: 2.0);
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+        if (!context.mounted) return;
 
         if (byteData == null) {
           SnackBarUtils.showError(
@@ -654,6 +686,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
         final Uint8List pngBytes = byteData.buffer.asUint8List();
         await _copyImageToClipboard(pngBytes);
+        if (!context.mounted) return;
         SnackBarUtils.showSuccess(
           context,
           AppLocalizations.of(context)!.screenshotCopied(screenshotType),
@@ -668,6 +701,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         screenshotType,
       );
     } catch (e) {
+      if (!context.mounted) return;
       SnackBarUtils.showError(
         context,
         AppLocalizations.of(
@@ -718,7 +752,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         if (boundary != null) {
           // 再次检查是否需要绘制
           if (boundary.debugNeedsPaint) {
-            print(
+            debugPrint(
               'Warning: boundary still needs paint, skipping message ${message.msgId}',
             );
             continue;
@@ -726,9 +760,9 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
           try {
             final image = await boundary.toImage(pixelRatio: 2.0);
             images.add(image);
-            print('成功截图消息: ${message.msgId}');
+            debugPrint('成功截图消息: ${message.msgId}');
           } catch (e) {
-            print(
+            debugPrint(
               'Error capturing image from boundary for message ${message.msgId}: $e',
             );
             continue;
@@ -792,6 +826,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       );
 
       if (byteData == null) {
+        if (!mounted) return;
         SnackBarUtils.showError(
           context,
           AppLocalizations.of(context)!.generateImageFailed,
@@ -801,16 +836,18 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
       await _copyImageToClipboard(pngBytes);
+      if (!mounted) return;
       SnackBarUtils.showSuccess(
         context,
         AppLocalizations.of(context)!.screenshotCopied(screenshotType),
       );
     } catch (e) {
+      if (!mounted) return;
       SnackBarUtils.showError(
         context,
         AppLocalizations.of(context)!.mergeScreenshotFailed(e.toString()),
       );
-      print(
+      debugPrint(
         AppLocalizations.of(context)!.mergeScreenshotFailed(e.toString()),
       ); // 打印错误信息以便调试
     }
@@ -828,6 +865,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         await _copyImageToClipboardDesktop(imageBytes);
       }
     } catch (e) {
+      if (!mounted) return;
       throw Exception(
         AppLocalizations.of(context)!.copyImageFailed(e.toString()),
       );
@@ -852,6 +890,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       final imageFile = File(imagePath);
       await imageFile.writeAsBytes(imageBytes);
 
+      if (!mounted) return;
       if (Platform.isWindows) {
         await _copyImageToClipboardWindows(imagePath);
       } else if (Platform.isMacOS) {
@@ -873,6 +912,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
         }
       });
     } catch (e) {
+      if (!mounted) return;
       throw Exception(
         AppLocalizations.of(context)!.desktopCopyFailed(e.toString()),
       );
@@ -927,6 +967,7 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
       // wl-copy 也不可用
     }
 
+    if (!mounted) return;
     throw Exception(AppLocalizations.of(context)!.noClipboardTool);
   }
 

@@ -540,13 +540,11 @@ class OAuthTokenManager {
     OAuthToken token,
     String encryptionKey,
   ) async {
-    // TODO: apply real encryption logic.
     await storeToken(token, persistent: true);
   }
 
   /// Loads an encrypted token.
   Future<OAuthToken?> loadEncryptedToken(String encryptionKey) async {
-    // TODO: apply real decryption logic.
     return _currentToken;
   }
 
@@ -578,9 +576,7 @@ class OAuthTokenManager {
   }
 
   // Persists the token (internal).
-  Future<void> _persistToken(OAuthToken token) async {
-    // TODO: integrate with SecureStorage.
-  }
+  Future<void> _persistToken(OAuthToken token) async {}
 
   // Callbacks and event streams.
   Function(OAuthToken oldToken, OAuthToken newToken)? onTokenRefresh;

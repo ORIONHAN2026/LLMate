@@ -324,7 +324,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                         size: 15,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       tooltip: AppLocalizations.of(context)!.newSession,
                       padding: EdgeInsets.zero,
@@ -344,7 +344,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                         size: 15,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                       tooltip: AppLocalizations.of(context)!.collapseSidebar,
                       padding: EdgeInsets.zero,
@@ -377,7 +377,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             AppLocalizations.of(context)!.selectOrCreateSession,
             style: TextStyle(
               fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ),
@@ -571,7 +571,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.mail_outline,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(l10n.feedback, style: const TextStyle(fontSize: 12)),
@@ -585,7 +585,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.auto_awesome,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(l10n.modelManagement, style: const TextStyle(fontSize: 12)),
@@ -612,7 +612,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.link,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(
@@ -641,7 +641,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.language,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(l10n.domainManagement, style: const TextStyle(fontSize: 12)),
@@ -667,7 +667,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.tune,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(l10n.otherSettings, style: const TextStyle(fontSize: 12)),
@@ -850,7 +850,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                     _isResizeHandleHovered
                         ? Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.3)
+                        ).colorScheme.onSurface.withValues(alpha: 0.3)
                         : Theme.of(context).dividerColor,
                 width: 1,
               ),
@@ -1118,7 +1118,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                       size: 14,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     visualDensity: VisualDensity.compact,
                     tooltip: AppLocalizations.of(context)!.expandSidebar,

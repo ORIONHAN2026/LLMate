@@ -102,14 +102,14 @@ class Client {
       throw McpError('Client is already connecting to a transport');
     }
 
-    print('[MCP-Client] 🔗 connect() 开始...');
+    _logger.info('[MCP-Client] 🔗 connect() 开始...');
     _connecting = true;
     _transport = transport;
     _transport!.onMessage.listen(
       _handleMessage,
       onError: (error) {
         // 兜底处理 transport stream 级别的错误，防止成为未处理异常
-        print('[MCP-Client] ⚠️ Transport stream error: $error');
+        _logger.info('[MCP-Client] ⚠️ Transport stream error: $error');
         _errorStreamController.add(McpError('Transport stream error: $error'));
       },
     );
@@ -135,20 +135,22 @@ class Client {
       try {
         await _processMessage(message);
       } catch (e) {
-        print('[MCP-Client] 处理消息时出错: $e');
+        _logger.info('[MCP-Client] 处理消息时出错: $e');
         _errorStreamController.add(McpError('Error processing message: $e'));
       }
     });
 
     // Initialize the connection
     try {
-      print('[MCP-Client] 📤 开始 initialize()...');
+      _logger.info('[MCP-Client] 📤 开始 initialize()...');
       await initialize();
       _connecting = false;
 
       // Emit connection event after successful initialization
       if (_initialized && _serverInfo != null && _serverCapabilities != null) {
-        print('[MCP-Client] ✅ 连接成功! 服务端: ${_serverInfo!['name']} v${_serverInfo!['version']}');
+        _logger.info(
+          '[MCP-Client] ✅ 连接成功! 服务端: ${_serverInfo!['name']} v${_serverInfo!['version']}',
+        );
         _connectStreamController.add(
           ServerInfo(
             name: _serverInfo!['name'] as String? ?? 'Unknown',
@@ -160,7 +162,7 @@ class Client {
       }
     } catch (e) {
       _connecting = false;
-      print('[MCP-Client] ❌ 连接失败: $e');
+      _logger.info('[MCP-Client] ❌ 连接失败: $e');
       _errorStreamController.add(McpError('Initialization error: $e'));
       disconnect();
       rethrow;
@@ -281,11 +283,11 @@ class Client {
       'clientInfo': {'name': name, 'version': version},
       'capabilities': capabilities.toJson(),
     };
-    print('[MCP-Client] 📤 initialize 请求参数: ${jsonEncode(params)}');
+    _logger.info('[MCP-Client] 📤 initialize 请求参数: ${jsonEncode(params)}');
 
     final response = await _sendRequest('initialize', params);
 
-    print('[MCP-Client] 📥 initialize 响应: ${jsonEncode(response)}');
+    _logger.info('[MCP-Client] 📥 initialize 响应: ${jsonEncode(response)}');
 
     if (response == null) {
       throw McpError('Failed to initialize: No response from server');
@@ -306,11 +308,11 @@ class Client {
     );
 
     // Send initialized notification
-    print('[MCP-Client] 📤 发送 initialized 通知...');
+    _logger.info('[MCP-Client] 📤 发送 initialized 通知...');
     _sendNotification('notifications/initialized', {});
 
     _initialized = true;
-    print('[MCP-Client] ✅ 初始化完成');
+    _logger.info('[MCP-Client] ✅ 初始化完成');
   }
 
   /// Validate protocol version compatibility
@@ -832,13 +834,13 @@ class Client {
   /// Handle incoming messages from the transport
   void _handleMessage(dynamic rawMessage) {
     try {
-      print('[MCP-Client] 📥 收到原始消息: $rawMessage');
+      _logger.info('[MCP-Client] 📥 收到原始消息: $rawMessage');
       final message = JsonRpcMessage.fromJson(
         rawMessage is String ? jsonDecode(rawMessage) : rawMessage,
       );
       _messageController.add(message);
     } catch (e) {
-      print('[MCP-Client] 解析消息出错: $e, 原始数据: $rawMessage');
+      _logger.info('[MCP-Client] 解析消息出错: $e, 原始数据: $rawMessage');
       _errorStreamController.add(McpError('Error parsing message: $e'));
     }
   }
@@ -918,15 +920,15 @@ class Client {
       'params': safeParams,
     };
 
-    print('[MCP-Client] 📤 _sendRequest [id=$id] $method');
-    print('[MCP-Client] 📤 请求体: ${jsonEncode(request)}');
+    _logger.info('[MCP-Client] 📤 _sendRequest [id=$id] $method');
+    _logger.info('[MCP-Client] 📤 请求体: ${jsonEncode(request)}');
 
     try {
       _transport!.send(request);
-      print('[MCP-Client] 📤 请求已发送到 transport [id=$id]');
+      _logger.info('[MCP-Client] 📤 请求已发送到 transport [id=$id]');
     } catch (e) {
       _requestCompleters.remove(id);
-      print('[MCP-Client] ❌ 发送失败 [id=$id]: $e');
+      _logger.info('[MCP-Client] ❌ 发送失败 [id=$id]: $e');
       final error = McpError('Failed to send request: $e');
       _errorStreamController.add(error);
       throw error;
@@ -938,24 +940,17 @@ class Client {
         const Duration(seconds: 120),
         onTimeout: () {
           _requestCompleters.remove(id);
-          print('[MCP-Client] ⏰ 请求超时 [id=$id]: $method (120s)');
+          _logger.info('[MCP-Client] ⏰ 请求超时 [id=$id]: $method (120s)');
           final error = McpError('Request timed out: $method');
           _errorStreamController.add(error);
           throw error;
         },
       );
-      print('[MCP-Client] 📥 收到响应 [id=$id] $method: ${jsonEncode(result)}');
+      _logger.info('[MCP-Client] 📥 收到响应 [id=$id] $method: ${jsonEncode(result)}');
       return result;
     } catch (e) {
       if (e is! McpError) {
-        print('[MCP-Client] ❌ 请求失败 [id=$id] $method: $e');
-        final error = McpError('Request failed: $e');
-        _errorStreamController.add(error);
-        throw error;
-      }
-      rethrow;
-    } catch (e) {
-      if (e is! McpError) {
+        _logger.info('[MCP-Client] ❌ 请求失败 [id=$id] $method: $e');
         final error = McpError('Request failed: $e');
         _errorStreamController.add(error);
         throw error;

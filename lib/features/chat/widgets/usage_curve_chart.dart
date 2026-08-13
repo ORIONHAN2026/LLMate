@@ -42,7 +42,7 @@ class UsageCurveChart extends StatelessWidget {
           child: Text(l10n.noUsageData,
               style: TextStyle(
                   fontSize: 13,
-                  color: theme.colorScheme.onSurface.withOpacity(0.4))),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4))),
         ),
       );
     }
@@ -78,7 +78,7 @@ class UsageCurveChart extends StatelessWidget {
                 Text(l10n.tokenToggle,
                     style: TextStyle(
                         fontSize: 11,
-                        color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
               ],
             ),
           if (showCost && maxCost > 0) ...[
@@ -91,7 +91,7 @@ class UsageCurveChart extends StatelessWidget {
                 Text(l10n.chartLegendCost(currencySymbol),
                     style: TextStyle(
                         fontSize: 11,
-                        color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
               ],
             ),
           ],
@@ -310,8 +310,8 @@ class _ChartPainter extends CustomPainter {
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       colors: [
-        color.withOpacity(0.3),
-        color.withOpacity(0.02),
+        color.withValues(alpha: 0.3),
+        color.withValues(alpha: 0.02),
       ],
     );
 

@@ -126,7 +126,7 @@ class _CommandPaletteState extends State<CommandPalette> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
+                  color: Colors.black.withValues(alpha: 0.25),
                   blurRadius: 32,
                   offset: const Offset(0, 12),
                 ),
@@ -147,11 +147,11 @@ class _CommandPaletteState extends State<CommandPalette> {
                     decoration: InputDecoration(
                       hintText: 'Search commands...',
                       hintStyle: TextStyle(
-                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                       prefixIcon: Icon(
                         Icons.search,
-                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                         size: 20,
                       ),
                       filled: true,
@@ -184,7 +184,7 @@ class _CommandPaletteState extends State<CommandPalette> {
                         'No commands found',
                         style: TextStyle(
                           color:
-                              theme.colorScheme.onSurface.withOpacity(0.4),
+                              theme.colorScheme.onSurface.withValues(alpha: 0.4),
                         ),
                       ),
                     )
@@ -212,7 +212,7 @@ class _CommandPaletteState extends State<CommandPalette> {
                             ),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? accentColor.withOpacity(0.1)
+                                  ? accentColor.withValues(alpha: 0.1)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -224,7 +224,7 @@ class _CommandPaletteState extends State<CommandPalette> {
                                   color: isSelected
                                       ? accentColor
                                       : theme.colorScheme.onSurface
-                                          .withOpacity(0.6),
+                                          .withValues(alpha: 0.6),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -250,7 +250,7 @@ class _CommandPaletteState extends State<CommandPalette> {
                                             fontSize: 12,
                                             color: theme
                                                 .colorScheme.onSurface
-                                                .withOpacity(0.5),
+                                                .withValues(alpha: 0.5),
                                           ),
                                         ),
                                     ],
@@ -264,7 +264,7 @@ class _CommandPaletteState extends State<CommandPalette> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: isSelected
-                                          ? accentColor.withOpacity(0.1)
+                                          ? accentColor.withValues(alpha: 0.1)
                                           : (isDark
                                               ? const Color(0xFF1A1B23)
                                               : const Color(0xFFF3F4F6)),
@@ -275,7 +275,7 @@ class _CommandPaletteState extends State<CommandPalette> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: theme.colorScheme.onSurface
-                                            .withOpacity(0.6),
+                                            .withValues(alpha: 0.6),
                                       ),
                                     ),
                                   ),

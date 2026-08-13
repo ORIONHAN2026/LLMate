@@ -157,7 +157,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             _buildPriceUnitDesc(),
             style: TextStyle(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -195,7 +195,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 4),
@@ -203,7 +203,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             loc.sensitiveInfoMaskingDesc,
             style: TextStyle(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 12),
@@ -235,10 +235,10 @@ class _ModelConfigTabState extends State<ModelConfigTab>
       decoration: BoxDecoration(
         color: Theme.of(
           context,
-        ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.3),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
         ),
       ),
       child: SwitchListTile(
@@ -248,7 +248,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           subtitle,
           style: TextStyle(
             fontSize: 11,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         value: value,
@@ -280,7 +280,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               '$label:',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -290,7 +290,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               value,
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -311,7 +311,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               '${AppLocalizations.of(context)!.nameLabel}:',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -353,7 +353,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                   _isHoveringModelName
                                       ? Theme.of(
                                         context,
-                                      ).colorScheme.onSurface.withOpacity(0.3)
+                                      ).colorScheme.onSurface.withValues(alpha: 0.3)
                                       : Colors.transparent,
                               width: 1,
                             ),
@@ -361,7 +361,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                 _isHoveringModelName
                                     ? Theme.of(
                                       context,
-                                    ).colorScheme.onSurface.withOpacity(0.05)
+                                    ).colorScheme.onSurface.withValues(alpha: 0.05)
                                     : Colors.transparent,
                           ),
                           child: Row(
@@ -380,11 +380,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                             ? Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
-                                                .withOpacity(0.8)
+                                                .withValues(alpha: 0.8)
                                             : Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
-                                                .withOpacity(0.5),
+                                                .withValues(alpha: 0.5),
                                   ),
                                 ),
                               ),
@@ -398,11 +398,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                           ? Theme.of(context)
                                               .colorScheme
                                               .onSurface
-                                              .withOpacity(0.7)
+                                              .withValues(alpha: 0.7)
                                           : Theme.of(context)
                                               .colorScheme
                                               .onSurface
-                                              .withOpacity(0.4),
+                                              .withValues(alpha: 0.4),
                                 ),
                               ),
                             ],
@@ -469,7 +469,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             Text(
@@ -490,7 +490,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             thumbColor: Theme.of(context).colorScheme.onSurface,
             overlayColor: Theme.of(
               context,
-            ).colorScheme.onSurface.withOpacity(0.1),
+            ).colorScheme.onSurface.withValues(alpha: 0.1),
             trackHeight: 3,
           ),
           child: Slider(
@@ -517,7 +517,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                   fontSize: 10,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.5),
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -527,7 +527,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                   fontSize: 10,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.5),
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -537,7 +537,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                   fontSize: 10,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.5),
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -549,7 +549,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           AppLocalizations.of(context)!.temperatureDescription,
           style: TextStyle(
             fontSize: 11,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -575,7 +575,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 6),
@@ -613,7 +613,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           AppLocalizations.of(context)!.roleSettingDescription,
           style: TextStyle(
             fontSize: 11,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -637,7 +637,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 6),
@@ -720,7 +720,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                         ? Theme.of(context).colorScheme.surface
                         : Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.8),
+                        ).colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -747,14 +747,14 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             Text(
               _buildCurrencyUnitText(),
               style: TextStyle(
                 fontSize: 10,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -809,14 +809,14 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             Text(
               _buildCurrencyUnitText(),
               style: TextStyle(
                 fontSize: 10,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],

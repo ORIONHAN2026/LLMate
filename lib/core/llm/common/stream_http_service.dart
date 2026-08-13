@@ -197,6 +197,24 @@ Future<_HttpRoundResult> _postRound(
           if (dataStr == '[DONE]') {
             return _HttpRoundResult(chunks: chunks, toolCalls: toolCalls);
           }
+          // 检测服务端返回的标准 OpenAI 错误对象，转成 content chunk 并正常结束
+          if (dataStr.startsWith('{')) {
+            try {
+              final json = jsonDecode(dataStr) as Map<String, dynamic>;
+              final err = json['error'];
+              if (err != null) {
+                final msg = err is Map
+                    ? (err['message']?.toString() ?? err.toString())
+                    : err.toString();
+                chunks.add({'content': '错误: $msg'});
+                return _HttpRoundResult(
+                  chunks: chunks,
+                  toolCalls: toolCalls,
+                  error: true,
+                );
+              }
+            } catch (_) {}
+          }
           for (final c in parseOpenAiChunk(dataStr)) {
             final toolcall = c['toolcall'];
             // 真实工具调用（JSON 数组）→ 收集，交外层本地执行；

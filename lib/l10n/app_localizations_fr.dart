@@ -30,19 +30,19 @@ class AppLocalizationsFr extends AppLocalizations {
   String get otherSettings => 'Autres paramètres';
 
   @override
-  String get resetSystem => 'Réinitialiser le système';
+  String get resetSystem => 'Supprimer les données';
 
   @override
-  String get resetAllSessions => 'Réinitialiser toutes les sessions';
+  String get resetAllSessions => 'Supprimer toutes les sessions';
 
   @override
-  String get resetAllModels => 'Réinitialiser tous les modèles';
+  String get resetAllModels => 'Supprimer tous les modèles';
 
   @override
-  String get resetAllMcp => 'Réinitialiser tous les MCP';
+  String get resetAllMcp => 'Supprimer tous les MCP';
 
   @override
-  String get resetAll => 'Tout réinitialiser';
+  String get resetAll => 'Tout supprimer';
 
   @override
   String resetConfirmMsg(Object action) {
@@ -1866,7 +1866,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Voulez-vous réinitialiser la clé API de cette session ? Après réinitialisation, l\'ancienne clé sera immédiatement invalidée et les requêtes externes utilisant l\'ancienne clé ne pourront plus accéder.';
 
   @override
-  String get confirmReset => 'Confirmer la réinitialisation';
+  String get confirmReset => 'Confirmer la suppression';
 
   @override
   String get connectorSkillRelation =>

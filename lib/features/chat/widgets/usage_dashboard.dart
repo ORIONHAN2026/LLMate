@@ -154,9 +154,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
         ms.promptTokens += d.promptTokens;
         ms.completionTokens += d.completionTokens;
         ms.totalCost += d.cost;
-        sessionStats
-            .putIfAbsent(d.sessionId, () => UsageStats.empty())
-            .add(d);
+        sessionStats.putIfAbsent(d.sessionId, () => UsageStats.empty()).add(d);
       }
 
       if (mounted) {
@@ -208,7 +206,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
           l10n.noSessionData,
           style: TextStyle(
             fontSize: 15,
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       );
@@ -231,7 +229,10 @@ class _UsageDashboardState extends State<UsageDashboard> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: _buildAppBar(l10n.sessionUsageTitle(session.name)),
-      body: SingleChildScrollView(padding: const EdgeInsets.all(24), child: body),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: body,
+      ),
     );
   }
 
@@ -251,13 +252,14 @@ class _UsageDashboardState extends State<UsageDashboard> {
           final sessions = sessionController.sessions;
           final currentSession =
               sessions.cast<ChatSession?>().firstWhere(
-                    (s) => s?.sessionId == session.sessionId,
-                    orElse: () => null,
-                  ) ??
-                  session;
+                (s) => s?.sessionId == session.sessionId,
+                orElse: () => null,
+              ) ??
+              session;
 
           // 概览数字优先使用 usage_rows 真实累计用量，加载完成前回退到会话缓存值
-          final promptTokens = _stats?.promptTokens ?? currentSession.promptTokens;
+          final promptTokens =
+              _stats?.promptTokens ?? currentSession.promptTokens;
           final completionTokens =
               _stats?.completionTokens ?? currentSession.completionTokens;
           final totalTokens = promptTokens + completionTokens;
@@ -348,17 +350,19 @@ class _UsageDashboardState extends State<UsageDashboard> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                     ),
                   )
                   : ValueListenableBuilder<bool>(
                     valueListenable: _showTokens,
                     builder:
-                        (_, showToken, _1) => ValueListenableBuilder<bool>(
+                        (_, showToken, _) => ValueListenableBuilder<bool>(
                           valueListenable: _showCost,
                           builder:
-                              (_, showCost, _2) => UsageCurveChart(
+                              (_, showCost, _) => UsageCurveChart(
                                 data: _chartData,
                                 showTokens: showToken,
                                 showCost: showCost,
@@ -397,14 +401,14 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 Icon(
                   Icons.bar_chart_rounded,
                   size: 48,
-                  color: theme.colorScheme.onSurface.withOpacity(0.2),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   l10n.noUsageData,
                   style: TextStyle(
                     fontSize: 15,
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -420,7 +424,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: theme.colorScheme.onSurface.withOpacity(0.4),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ),
           );
@@ -440,9 +444,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
 
         // 按模型分组：真实用量（modelId 聚合），加载完成前回退到会话缓存分组
         final modelStats =
-            stats == null
-                ? _fallbackModelStats(sessions)
-                : _globalModelStats;
+            stats == null ? _fallbackModelStats(sessions) : _globalModelStats;
 
         // 各会话真实用量排序（回退到会话缓存 token）
         final sortedWithTokens =
@@ -455,13 +457,12 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 )
                 .toList()
               ..sort(
-                (a, b) =>
-                    (_globalSessionStats[b.sessionId]?.totalTokens ??
-                            b.promptTokens + b.completionTokens)
-                        .compareTo(
-                          _globalSessionStats[a.sessionId]?.totalTokens ??
-                              a.promptTokens + a.completionTokens,
-                        ),
+                (a, b) => (_globalSessionStats[b.sessionId]?.totalTokens ??
+                        b.promptTokens + b.completionTokens)
+                    .compareTo(
+                      _globalSessionStats[a.sessionId]?.totalTokens ??
+                          a.promptTokens + a.completionTokens,
+                    ),
               );
         final emptyCount =
             sessions
@@ -543,7 +544,12 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     .map(
                       (session) => Padding(
                         padding: const EdgeInsets.only(bottom: 8),
-                        child: _buildSessionUsageRow(theme, isDark, session, l10n),
+                        child: _buildSessionUsageRow(
+                          theme,
+                          isDark,
+                          session,
+                          l10n,
+                        ),
                       ),
                     ),
                 if (emptyCount > 0)
@@ -553,7 +559,9 @@ class _UsageDashboardState extends State<UsageDashboard> {
                       l10n.moreSessionsNoData(emptyCount),
                       style: TextStyle(
                         fontSize: 12,
-                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                     ),
                   ),
@@ -593,7 +601,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
       style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: theme.colorScheme.onSurface.withOpacity(0.7),
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
       ),
     );
   }
@@ -635,7 +643,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               title,
               style: TextStyle(
                 fontSize: 12,
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
             if (progress != null) ...[
@@ -647,7 +655,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     progressSuffix,
                     style: TextStyle(
                       fontSize: 10,
-                      color: theme.colorScheme.onSurface.withOpacity(0.4),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                   ),
                 ),
@@ -804,7 +812,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 Icon(
                   Icons.token_outlined,
                   size: 16,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -853,7 +861,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 Icon(
                   Icons.attach_money,
                   size: 16,
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -900,7 +908,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               l10n.noQuotaLimit,
               style: TextStyle(
                 fontSize: 13,
-                color: theme.colorScheme.onSurface.withOpacity(0.4),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ),
         ],
@@ -943,7 +951,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     Icon(
                       Icons.smart_toy_outlined,
                       size: 16,
-                      color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
               ),
               const SizedBox(width: 8),
@@ -970,7 +978,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 l10n.sessionsCountSuffix(usage.sessionCount),
                 style: TextStyle(
                   fontSize: 11,
-                  color: theme.colorScheme.onSurface.withOpacity(0.4),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
               ),
             ],
@@ -985,7 +993,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   '${l10n.inputLabel} ${_formatTokenCount(usage.promptTokens)}',
                   style: TextStyle(
                     fontSize: 11,
-                    color: theme.colorScheme.onSurface.withOpacity(0.55),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                   ),
                 ),
                 const Spacer(),
@@ -995,7 +1003,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   '${l10n.outputLabel} ${_formatTokenCount(usage.completionTokens)}',
                   style: TextStyle(
                     fontSize: 11,
-                    color: theme.colorScheme.onSurface.withOpacity(0.55),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                   ),
                 ),
               ],
@@ -1071,14 +1079,14 @@ class _UsageDashboardState extends State<UsageDashboard> {
           Icon(
             Icons.hourglass_empty_rounded,
             size: 24,
-            color: theme.colorScheme.onSurface.withOpacity(0.3),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 8),
           Text(
             l10n.noUsageData,
             style: TextStyle(
               fontSize: 13,
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -1145,7 +1153,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   '${l10n.inputLabel} ${_formatTokenCount(promptTokens)}',
                   style: TextStyle(
                     fontSize: 11,
-                    color: theme.colorScheme.onSurface.withOpacity(0.55),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                   ),
                 ),
                 const Spacer(),
@@ -1155,7 +1163,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   '${l10n.outputLabel} ${_formatTokenCount(completionTokens)}',
                   style: TextStyle(
                     fontSize: 11,
-                    color: theme.colorScheme.onSurface.withOpacity(0.55),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                   ),
                 ),
               ],
@@ -1268,7 +1276,9 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     color:
                         selected
                             ? Colors.white
-                            : theme.colorScheme.onSurface.withOpacity(0.6),
+                            : theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
                   ),
                 ),
               ),
@@ -1298,7 +1308,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
           Icon(
             Icons.calendar_today_outlined,
             size: 14,
-            color: theme.colorScheme.onSurface.withOpacity(0.45),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
           ),
           const SizedBox(width: 6),
           _dateChip(
@@ -1317,14 +1327,15 @@ class _UsageDashboardState extends State<UsageDashboard> {
         Icon(
           Icons.date_range_outlined,
           size: 14,
-          color: theme.colorScheme.onSurface.withOpacity(0.45),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
         ),
         const SizedBox(width: 6),
         _dateChip(
           theme: theme,
           bg: chipBg,
           borderColor: borderColor,
-          label: _rangeStart == null ? l10n.rangeStart : _fmtByGran(_rangeStart!),
+          label:
+              _rangeStart == null ? l10n.rangeStart : _fmtByGran(_rangeStart!),
           onTap: () => _pickRange(isStart: true),
         ),
         Padding(
@@ -1333,7 +1344,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
             '—',
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.onSurface.withOpacity(0.4),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ),
@@ -1358,7 +1369,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               child: Icon(
                 Icons.close,
                 size: 16,
-                color: theme.colorScheme.onSurface.withOpacity(0.4),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ),
           ),
@@ -1387,7 +1398,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurface.withOpacity(0.8),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
       ),
@@ -1483,10 +1494,10 @@ class _UsageDashboardState extends State<UsageDashboard> {
     return ValueListenableBuilder<bool>(
       valueListenable: _showTokens,
       builder:
-          (_, showToken, _1) => ValueListenableBuilder<bool>(
+          (_, showToken, _) => ValueListenableBuilder<bool>(
             valueListenable: _showCost,
             builder:
-                (_, showCost, _2) => Row(
+                (_, showCost, _) => Row(
                   children: [
                     _toggleChip(
                       theme: theme,
@@ -1528,7 +1539,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               color: selected ? color : Colors.transparent,
               borderRadius: BorderRadius.circular(3),
               border: Border.all(
-                color: selected ? color : color.withOpacity(0.4),
+                color: selected ? color : color.withValues(alpha: 0.4),
                 width: 1.5,
               ),
             ),
@@ -1542,7 +1553,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],

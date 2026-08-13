@@ -53,7 +53,7 @@ class ModelSettingDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).shadowColor.withOpacity(0.1),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -235,7 +235,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  // shadowColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                  // shadowColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                 ),
               ),
             ),
@@ -258,7 +258,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       decoration: BoxDecoration(
         color:
             isSelected
-                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.1)
+                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)
                 : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border:
@@ -266,7 +266,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                 ? Border.all(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.3),
+                  ).colorScheme.onSurface.withValues(alpha: 0.3),
                   width: 1,
                 )
                 : null,
@@ -356,7 +356,9 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
               Icon(
                 Icons.copy,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(
@@ -376,11 +378,11 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     String newName = _generateCopyName(model.name);
 
     // 调试：打印原模型的API密钥
-    print('=== 复制模型调试信息 ===');
-    print('原模型名称: ${model.name}');
-    print('原模型API密钥: ${model.apiKey ?? "null"}');
-    print('原模型API URL: ${model.apiUrl ?? "null"}');
-    print('原模型platform: ${model.platform ?? "null"}');
+    debugPrint('=== 复制模型调试信息 ===');
+    debugPrint('原模型名称: ${model.name}');
+    debugPrint('原模型API密钥: ${model.apiKey ?? "null"}');
+    debugPrint('原模型API URL: ${model.apiUrl ?? "null"}');
+    debugPrint('原模型platform: ${model.platform ?? "null"}');
 
     // 创建模型副本，只保留基本配置
     ChatModel copiedModel = model.copyWith(
@@ -391,11 +393,11 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     );
 
     // 调试：打印复制后的模型信息
-    print('复制后模型名称: ${copiedModel.name}');
-    print('复制后模型API密钥: ${copiedModel.apiKey ?? "null"}');
-    print('复制后模型API URL: ${copiedModel.apiUrl ?? "null"}');
-    print('复制后模型platform: ${copiedModel.platform ?? "null"}');
-    print('========================');
+    debugPrint('复制后模型名称: ${copiedModel.name}');
+    debugPrint('复制后模型API密钥: ${copiedModel.apiKey ?? "null"}');
+    debugPrint('复制后模型API URL: ${copiedModel.apiUrl ?? "null"}');
+    debugPrint('复制后模型platform: ${copiedModel.platform ?? "null"}');
+    debugPrint('========================');
 
     // 添加到模型列表并保存
     setState(() {
@@ -404,6 +406,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     await modelController.addModel(copiedModel);
 
     // 显示成功提示
+    if (!mounted) return;
     SnackBarUtils.showSuccess(
       context,
       AppLocalizations.of(context)!.modelCopied(newName),
@@ -452,14 +455,18 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
           Icon(
             Icons.smart_toy_outlined,
             size: 48,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.4),
           ),
           const SizedBox(height: 16),
           Text(
             AppLocalizations.of(context)!.noModels,
             style: TextStyle(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -468,7 +475,9 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
             AppLocalizations.of(context)!.clickAddModelHint,
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -574,7 +583,9 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
             color:
                 isSelected
                     ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    : Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
             size: 9,
           );
         },
@@ -586,7 +597,9 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         color:
             isSelected
                 ? Theme.of(context).colorScheme.onSurface
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                : Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
         size: 9,
       );
     }

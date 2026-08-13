@@ -30,19 +30,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get otherSettings => 'Other Settings';
 
   @override
-  String get resetSystem => 'Reset System';
+  String get resetSystem => 'Delete Data';
 
   @override
-  String get resetAllSessions => 'Reset All Sessions';
+  String get resetAllSessions => 'Delete All Sessions';
 
   @override
-  String get resetAllModels => 'Reset All Models';
+  String get resetAllModels => 'Delete All Models';
 
   @override
-  String get resetAllMcp => 'Reset All MCP';
+  String get resetAllMcp => 'Delete All MCP';
 
   @override
-  String get resetAll => 'Reset All';
+  String get resetAll => 'Delete All';
 
   @override
   String resetConfirmMsg(Object action) {
@@ -1840,7 +1840,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Reset this session\'s API key? After resetting, the old key will be invalid immediately and external requests using the old key will be unable to access.';
 
   @override
-  String get confirmReset => 'Confirm Reset';
+  String get confirmReset => 'Confirm Delete';
 
   @override
   String get connectorSkillRelation =>

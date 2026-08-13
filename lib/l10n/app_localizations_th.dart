@@ -30,19 +30,19 @@ class AppLocalizationsTh extends AppLocalizations {
   String get otherSettings => 'การตั้งค่าอื่นๆ';
 
   @override
-  String get resetSystem => 'รีเซ็ตระบบ';
+  String get resetSystem => 'ลบข้อมูล';
 
   @override
-  String get resetAllSessions => 'รีเซ็ตเซสชันทั้งหมด';
+  String get resetAllSessions => 'ลบเซสชันทั้งหมด';
 
   @override
-  String get resetAllModels => 'รีเซ็ตโมเดลทั้งหมด';
+  String get resetAllModels => 'ลบโมเดลทั้งหมด';
 
   @override
-  String get resetAllMcp => 'รีเซ็ต MCP ทั้งหมด';
+  String get resetAllMcp => 'ลบ MCP ทั้งหมด';
 
   @override
-  String get resetAll => 'รีเซ็ตทั้งหมด';
+  String get resetAll => 'ลบทั้งหมด';
 
   @override
   String resetConfirmMsg(Object action) {
@@ -1840,7 +1840,7 @@ class AppLocalizationsTh extends AppLocalizations {
       'รีเซ็ตคีย์ API ของเซสชันนี้หรือไม่? หลังจากรีเซ็ต คีย์เดิมจะใช้ไม่ได้ทันที และคำขอภายนอกที่ใช้คีย์เดิมจะไม่สามารถเข้าถึงได้';
 
   @override
-  String get confirmReset => 'ยืนยันการรีเซ็ต';
+  String get confirmReset => 'ยืนยันการลบ';
 
   @override
   String get connectorSkillRelation =>

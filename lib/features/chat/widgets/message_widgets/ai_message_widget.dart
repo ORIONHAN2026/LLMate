@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:llmate/controllers/session_controller.dart';
@@ -211,7 +210,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                           size: 20,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                   ),
                   const SizedBox(width: 12),
@@ -241,7 +240,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.6)
+                                            .withValues(alpha: 0.6)
                                             .withValues(
                                               alpha: _breathingAnimation.value,
                                             ),
@@ -261,7 +260,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.6)
+                                            .withValues(alpha: 0.6)
                                             .withValues(
                                               alpha:
                                                   _breathingAnimation.value *
@@ -282,7 +281,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.6)
+                                            .withValues(alpha: 0.6)
                                             .withValues(
                                               alpha:
                                                   _breathingAnimation.value *
@@ -380,9 +379,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                   _formatTime(widget.message.timestamp),
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.5),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.5),
                                   ),
                                 ),
                               ],
@@ -929,7 +929,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
       // 使用 LLM Hub 创建客户端
       client = LlmClient(currentSession);
-      final responseStream = client.LLMChat(userMessage);
+      final responseStream = client.llmChat(userMessage);
 
       await for (final chunkMap in responseStream) {
         // 检查是否被停止 - 通过查找会话列表中的会话状态
@@ -1199,7 +1199,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                 hintStyle: TextStyle(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.5),
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
                   fontSize: 14,
                 ),
                 contentPadding: const EdgeInsets.all(16),
@@ -1213,7 +1213,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               style: TextButton.styleFrom(
                 foregroundColor: Theme.of(
                   context,
-                ).colorScheme.onSurface.withOpacity(0.6),
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 12,
@@ -1279,6 +1279,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       final l10n = AppLocalizations.of(context)!;
       // 根据消息ID查找包含该消息的会话
       final session = await _findSessionContainingMessageAsync(message.msgId);
+      if (!context.mounted) return;
       if (session == null) {
         SnackBarUtils.showError(context, l10n.sessionNotFoundForMessage);
         return;
@@ -1310,12 +1311,15 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           await messageController.addMessage(m);
         }
 
+        if (!context.mounted) return;
+
         // 通知父组件更新
         widget.onUpdate?.call();
 
         SnackBarUtils.showSuccess(context, l10n.newChatCreatedFromHere);
       }
     } catch (e) {
+      if (!context.mounted) return;
       SnackBarUtils.showError(
         context,
         AppLocalizations.of(context)!.createNewChatFailed,
@@ -1350,16 +1354,16 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         fontFamily: 'monospace',
         backgroundColor: Theme.of(
           context,
-        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         color: Theme.of(context).colorScheme.onSurface,
       ),
       codeblockDecoration: BoxDecoration(
         color: Theme.of(
           context,
-        ).colorScheme.surfaceContainerHighest.withOpacity(0.2),
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -1369,7 +1373,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
         fontStyle: FontStyle.italic,
         color: Theme.of(
           context,
-        ).colorScheme.onSurface.withOpacity(0.6), // 更淡的颜色
+        ).colorScheme.onSurface.withValues(alpha: 0.6), // 更淡的颜色
       ),
       blockquoteDecoration: BoxDecoration(
         border: Border(left: BorderSide(color: Colors.grey[400]!, width: 4)),
@@ -1395,7 +1399,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       em: TextStyle(
         fontSize: 11,
         fontStyle: FontStyle.italic,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
       ),
       horizontalRuleDecoration: BoxDecoration(
         border: Border(top: BorderSide(color: Colors.grey[300]!, width: 1)),
@@ -1554,10 +1558,10 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
       decoration: BoxDecoration(
         color: Theme.of(
           context,
-        ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -1570,7 +1574,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
               Icon(
                 Icons.psychology_outlined,
                 size: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.4),
               ),
               const SizedBox(width: 4),
               Text(
@@ -1579,7 +1585,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                   fontSize: 10,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.4),
+                  ).colorScheme.onSurface.withValues(alpha: 0.4),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -1590,7 +1596,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             text,
             style: TextStyle(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
               fontStyle: FontStyle.italic,
               height: 1.4,
             ),
@@ -1697,12 +1705,12 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.08),
+                    ).colorScheme.onSurface.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.2),
+                      ).colorScheme.onSurface.withValues(alpha: 0.2),
                       width: 0.5,
                     ),
                   ),
@@ -1792,7 +1800,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
           child: Icon(
             icon,
             size: 14,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ),
@@ -1961,6 +1971,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         Navigator.pop(context);
                         try {
                           await sessionController.deleteMessage(widget.message);
+                          if (!context.mounted) return;
                           // 通知父组件更新
                           widget.onUpdate?.call();
                           SnackBarUtils.showSuccess(
@@ -1968,6 +1979,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                             l10n.messageDeleted,
                           );
                         } catch (e) {
+                          if (!context.mounted) return;
                           SnackBarUtils.showError(
                             context,
                             l10n.xFailed(l10n.deleteMessage, e.toString()),
@@ -2112,7 +2124,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                         fontSize: 12,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.7),
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                 ],
@@ -2203,7 +2215,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             Icon(
               icon,
               size: 14,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -2213,7 +2227,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                   fontSize: 13,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ),

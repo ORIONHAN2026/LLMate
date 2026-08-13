@@ -68,21 +68,22 @@ Future<StreamRoundResult> streamSingleRound({
     httpRequest.write(body);
     final response = await httpRequest.close();
 
-    // LLM API 返回错误
+    // LLM API 返回错误（HTTP 4xx/5xx）：按 OpenAI 标准错误格式透传给调用方，
+    // 不抛异常，由调用方正常结束响应。
     if (response.statusCode >= 400) {
       final errorBody = await response.transform(utf8.decoder).join();
       debugPrint('❌ LLM 返回错误: ${response.statusCode}\n$errorBody');
-      controller.add(
-        utf8.encode(
-          jsonEncode({
-            'error': {
-              'message': 'LLM API error: ${response.statusCode} - $errorBody',
-              'code': response.statusCode,
-            },
-          }),
-        ),
+      _writeOpenAiError(
+        controller,
+        message: _extractUpstreamError(errorBody),
+        type: _statusErrorType(response.statusCode),
+        code: response.statusCode,
       );
-      return StreamRoundResult(error: true);
+      return StreamRoundResult(
+        error: true,
+        promptTokens: 0,
+        completionTokens: 0,
+      );
     }
 
     // 按 index 累积 tool_calls 增量（SSE 流中同一个 tool_call 的 arguments 可能分多个 chunk 到达）
@@ -223,6 +224,35 @@ Future<StreamRoundResult> streamSingleRound({
       promptTokens: promptTokens,
       completionTokens: completionTokens,
     );
+  } on SocketException catch (e) {
+    // 网络连接异常：按 OpenAI 标准错误格式返回，不向外抛
+    debugPrint('❌ LLM 网络错误: ${e.message}');
+    _writeOpenAiError(
+      controller,
+      message: 'Network error: ${e.message}',
+      type: 'api_error',
+      code: 502,
+    );
+    return StreamRoundResult(error: true, promptTokens: 0, completionTokens: 0);
+  } on TimeoutException catch (e) {
+    debugPrint('❌ LLM 请求超时: ${e.message}');
+    _writeOpenAiError(
+      controller,
+      message: 'Request timeout: ${e.message}',
+      type: 'api_error',
+      code: 504,
+    );
+    return StreamRoundResult(error: true, promptTokens: 0, completionTokens: 0);
+  } catch (e) {
+    // 其它异常（HttpException / 解析异常等）：统一转为标准错误返回
+    debugPrint('❌ LLM 请求异常: $e');
+    _writeOpenAiError(
+      controller,
+      message: 'LLM request failed: $e',
+      type: 'api_error',
+      code: 500,
+    );
+    return StreamRoundResult(error: true, promptTokens: 0, completionTokens: 0);
   } finally {
     client.close();
   }
@@ -271,4 +301,69 @@ Future<StreamRoundResult> streamSingleRound({
   }
 
   return (session: sessionChunks, thirdParty: thirdToolChunks);
+}
+
+/// 将标准 OpenAI 错误对象以 SSE data 行写入 [controller]
+///
+/// 格式遵循 OpenAI 规范：
+/// `data: {"error":{"message":...,"type":...,"param":...,"code":...}}`
+void _writeOpenAiError(
+  StreamController<List<int>> controller, {
+  required String message,
+  required String type,
+  dynamic param,
+  required dynamic code,
+}) {
+  controller.add(
+    utf8.encode(
+      'data: ${jsonEncode({
+        'error': {
+          'message': message,
+          'type': type,
+          'param': param,
+          'code': code,
+        },
+      })}\n\n',
+    ),
+  );
+}
+
+/// 从上游错误响应体中提取标准 OpenAI error.message
+///
+/// 优先解析 `{"error":{"message":...}}` 或 `{"message":...}`，
+/// 无法解析时回退为原始 body（截断后）。
+String _extractUpstreamError(String errorBody) {
+  try {
+    final decoded = jsonDecode(errorBody);
+    if (decoded is Map<String, dynamic>) {
+      final err = decoded['error'];
+      if (err is Map && err['message'] != null) {
+        return err['message'].toString();
+      }
+      if (decoded['message'] != null) {
+        return decoded['message'].toString();
+      }
+    }
+  } catch (_) {}
+  final trimmed = errorBody.trim();
+  return trimmed.isEmpty ? 'LLM API error' : trimmed;
+}
+
+/// 将 HTTP 状态码映射为 OpenAI 标准错误类型
+String _statusErrorType(int statusCode) {
+  switch (statusCode) {
+    case 400:
+    case 422:
+      return 'invalid_request_error';
+    case 401:
+      return 'authentication_error';
+    case 403:
+      return 'permission_error';
+    case 404:
+      return 'not_found_error';
+    case 429:
+      return 'rate_limit_error';
+    default:
+      return statusCode >= 500 ? 'server_error' : 'api_error';
+  }
 }

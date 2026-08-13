@@ -30,19 +30,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get otherSettings => 'その他の設定';
 
   @override
-  String get resetSystem => 'システムをリセット';
+  String get resetSystem => 'データを削除';
 
   @override
-  String get resetAllSessions => 'すべてのセッションをリセット';
+  String get resetAllSessions => 'すべてのセッションを削除';
 
   @override
-  String get resetAllModels => 'すべてのモデルをリセット';
+  String get resetAllModels => 'すべてのモデルを削除';
 
   @override
-  String get resetAllMcp => 'すべてのMCPをリセット';
+  String get resetAllMcp => 'すべてのMCPを削除';
 
   @override
-  String get resetAll => 'すべてリセット';
+  String get resetAll => 'すべて削除';
 
   @override
   String resetConfirmMsg(Object action) {
@@ -1809,7 +1809,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'このセッションのAPIキーをリセットしますか？リセット後、古いキーは直ちに無効になり、古いキーを使用する外部リクエストはアクセスできなくなります。';
 
   @override
-  String get confirmReset => 'リセットを確認';
+  String get confirmReset => '削除を確認';
 
   @override
   String get connectorSkillRelation => 'コネクタとスキルの関連説明';

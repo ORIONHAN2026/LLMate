@@ -30,19 +30,19 @@ class AppLocalizationsVi extends AppLocalizations {
   String get otherSettings => '其他设置';
 
   @override
-  String get resetSystem => 'Đặt lại hệ thống';
+  String get resetSystem => 'Xóa dữ liệu';
 
   @override
-  String get resetAllSessions => 'Đặt lại tất cả phiên';
+  String get resetAllSessions => 'Xóa tất cả phiên';
 
   @override
-  String get resetAllModels => 'Đặt lại tất cả mô hình';
+  String get resetAllModels => 'Xóa tất cả mô hình';
 
   @override
-  String get resetAllMcp => 'Đặt lại tất cả MCP';
+  String get resetAllMcp => 'Xóa tất cả MCP';
 
   @override
-  String get resetAll => 'Đặt lại tất cả';
+  String get resetAll => 'Xóa tất cả';
 
   @override
   String resetConfirmMsg(Object action) {
@@ -1823,7 +1823,7 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đặt lại khóa API của phiên này? Sau khi đặt lại, khóa cũ sẽ ngay lập tức không hợp lệ và các yêu cầu bên ngoài dùng khóa cũ sẽ không thể truy cập.';
 
   @override
-  String get confirmReset => 'Xác nhận đặt lại';
+  String get confirmReset => 'Xác nhận xóa';
 
   @override
   String get connectorSkillRelation =>

@@ -72,7 +72,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
             icon: Icon(
               Icons.add,
               size: 16,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(width: 4),
@@ -93,7 +95,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
           icon: Icon(
             Icons.add,
             size: 16,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ),
@@ -109,7 +113,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
             Icon(
               Icons.widgets,
               size: 48,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.25),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.25),
             ),
             const SizedBox(height: 16),
             Text(
@@ -119,7 +125,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                 fontWeight: FontWeight.w500,
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurface.withOpacity(0.45),
+                ).colorScheme.onSurface.withValues(alpha: 0.45),
               ),
             ),
             const SizedBox(height: 6),
@@ -129,7 +135,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                 fontSize: 12,
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurface.withOpacity(0.35),
+                ).colorScheme.onSurface.withValues(alpha: 0.35),
               ),
             ),
           ],
@@ -235,7 +241,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
+                              color: Colors.green.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
@@ -262,7 +268,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
+                              color: Colors.red.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
@@ -514,14 +520,14 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                                 color: Theme.of(ctx)
                                                     .colorScheme
                                                     .onSurface
-                                                    .withOpacity(0.08),
+                                                    .withValues(alpha: 0.08),
                                                 borderRadius:
                                                     BorderRadius.circular(4),
                                                 border: Border.all(
                                                   color: Theme.of(ctx)
                                                       .colorScheme
                                                       .onSurface
-                                                      .withOpacity(0.15),
+                                                      .withValues(alpha: 0.15),
                                                 ),
                                               ),
                                               child: Text(
@@ -548,7 +554,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Colors.orange.withOpacity(0.1),
+                                      color: Colors.orange.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
@@ -578,9 +586,8 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(
-                                      ctx,
-                                    ).colorScheme.onSurface.withOpacity(0.7),
+                                    color: Theme.of(ctx).colorScheme.onSurface
+                                        .withValues(alpha: 0.7),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -609,8 +616,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                       contentPadding: const EdgeInsets.all(12),
                                     ),
                                     onChanged: (_) {
-                                      if (parseError != null)
+                                      if (parseError != null) {
                                         setSheetState(() => parseError = null);
+                                      }
                                     },
                                   ),
                                 ),
@@ -640,7 +648,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                               top: BorderSide(
                                 color: Theme.of(
                                   ctx,
-                                ).dividerColor.withOpacity(0.3),
+                                ).dividerColor.withValues(alpha: 0.3),
                               ),
                             ),
                           ),
@@ -703,7 +711,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
                                   if (ctx.mounted) {
                                     Navigator.pop(ctx);
-                                    await _loadServices();
+                                  }
+                                  await _loadServices();
+                                  if (mounted) {
                                     SnackBarUtils.showSuccess(context, '配置已更新');
                                   }
                                 },
@@ -801,7 +811,9 @@ class _McpCardState extends State<_McpCard> {
           decoration: BoxDecoration(
             color:
                 _isHovered
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.06)
+                    ? Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.06)
                     : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
@@ -809,8 +821,8 @@ class _McpCardState extends State<_McpCard> {
                   _isHovered
                       ? Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.35)
-                      : Theme.of(context).dividerColor.withOpacity(0.5),
+                      ).colorScheme.onSurface.withValues(alpha: 0.35)
+                      : Theme.of(context).dividerColor.withValues(alpha: 0.5),
             ),
           ),
           child: Row(
@@ -842,7 +854,7 @@ class _McpCardState extends State<_McpCard> {
                               vertical: 1,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
+                              color: Colors.blue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(3),
                             ),
                             child: const Text(
@@ -860,7 +872,7 @@ class _McpCardState extends State<_McpCard> {
                           fontSize: 11,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.65),
+                          ).colorScheme.onSurface.withValues(alpha: 0.65),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -872,7 +884,7 @@ class _McpCardState extends State<_McpCard> {
                           fontSize: 10,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.5),
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
                           fontFamily: 'monospace',
                         ),
                         maxLines: 2,
@@ -893,7 +905,7 @@ class _McpCardState extends State<_McpCard> {
                       decoration: BoxDecoration(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.08),
+                        ).colorScheme.onSurface.withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
                       child:
@@ -923,7 +935,7 @@ class _McpCardState extends State<_McpCard> {
                       decoration: BoxDecoration(
                         color: Theme.of(
                           context,
-                        ).colorScheme.error.withOpacity(0.08),
+                        ).colorScheme.error.withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(

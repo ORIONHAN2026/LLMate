@@ -30,19 +30,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get otherSettings => 'Weitere Einstellungen';
 
   @override
-  String get resetSystem => 'System zurücksetzen';
+  String get resetSystem => 'Daten löschen';
 
   @override
-  String get resetAllSessions => 'Alle Sitzungen zurücksetzen';
+  String get resetAllSessions => 'Alle Sitzungen löschen';
 
   @override
-  String get resetAllModels => 'Alle Modelle zurücksetzen';
+  String get resetAllModels => 'Alle Modelle löschen';
 
   @override
-  String get resetAllMcp => 'Alle MCP zurücksetzen';
+  String get resetAllMcp => 'Alle MCP löschen';
 
   @override
-  String get resetAll => 'Alles zurücksetzen';
+  String get resetAll => 'Alles löschen';
 
   @override
   String resetConfirmMsg(Object action) {
@@ -1865,7 +1865,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Möchten Sie den API-Schlüssel dieser Sitzung zurücksetzen? Nach dem Zurücksetzen wird der alte Schlüssel sofort ungültig und externe Anfragen mit dem alten Schlüssel können nicht mehr zugreifen.';
 
   @override
-  String get confirmReset => 'Zurücksetzen bestätigen';
+  String get confirmReset => 'Löschen bestätigen';
 
   @override
   String get connectorSkillRelation =>

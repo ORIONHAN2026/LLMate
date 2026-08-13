@@ -175,148 +175,248 @@ class _McpManagementPageState extends State<McpManagementPage> {
     String? parseError;
     McpParseResult? parsedResult;
 
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder:
-          (ctx) => StatefulBuilder(
-            builder:
-                (ctx, setDialogState) => AlertDialog(
-                  title: const Text('添加 MCP'),
-                  content: SizedBox(
-                    width: 500,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '支持的格式：\n• mcpServers 包装格式\n• 直接配置格式（含 command 或 url）',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(
-                                  ctx,
-                                ).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: TextField(
-                            controller: jsonCtrl,
-                            maxLines: 12,
-                            minLines: 8,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontFamily: 'monospace',
-                              color: Theme.of(ctx).colorScheme.onSurface,
-                            ),
-                            decoration: InputDecoration(
-                              hintText:
-                                  '{\n  "mcpServers": {\n    "server-name": {\n      "command": "...",\n      "args": ["..."]\n    }\n  }\n}',
-                              hintStyle: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[400],
-                              ),
-                              border: const OutlineInputBorder(
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: const EdgeInsets.all(12),
-                            ),
-                            onChanged: (text) {
-                              setDialogState(() {
-                                parseError = null;
-                                parsedResult = null;
-                                if (text.trim().isNotEmpty) {
-                                  parsedResult = McpJsonParser.parse(text);
-                                }
-                              });
-                            },
-                          ),
-                        ),
-                        if (parsedResult != null) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
+      barrierDismissible: true,
+      barrierLabel: '添加 MCP',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (ctx, anim1, anim2) {
+        return Center(
+          child: FadeTransition(
+            opacity: anim1,
+            child: ScaleTransition(
+              scale: Tween<double>(
+                begin: 0.95,
+                end: 1.0,
+              ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOut)),
+              child: StatefulBuilder(
+                builder: (ctx, setDialogState) {
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Material(
+                      color: Theme.of(ctx).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 头部
+                            Row(
                               children: [
-                                Icon(
-                                  Icons.check_circle_outline,
-                                  size: 12,
-                                  color: Colors.green,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '识别到: ${parsedResult!.name}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.green[700],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        if (parseError != null) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.error_outline,
-                                  size: 12,
-                                  color: Colors.red,
-                                ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    parseError!,
+                                    '添加 MCP',
                                     style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.red,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color:
+                                          Theme.of(ctx).colorScheme.onSurface,
                                     ),
                                   ),
                                 ),
+                                IconButton(
+                                  tooltip: '关闭',
+                                  onPressed: () => Navigator.pop(ctx),
+                                  icon: Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: Theme.of(ctx).colorScheme.onSurface
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                ),
                               ],
                             ),
-                          ),
-                        ],
-                      ],
+                            const SizedBox(height: 16),
+                            Container(
+                              decoration: BoxDecoration(
+                                color:
+                                    Theme.of(
+                                      ctx,
+                                    ).colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Theme.of(
+                                    ctx,
+                                  ).dividerColor.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              child: TextField(
+                                controller: jsonCtrl,
+                                maxLines: 12,
+                                minLines: 8,
+                                autofocus: true,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontFamily: 'monospace',
+                                  color: Theme.of(ctx).colorScheme.onSurface,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText:
+                                      '{\n  "mcpServers": {\n    "server-name": {\n      "command": "...",\n      "args": ["..."]\n    }\n  }\n}',
+                                  hintStyle: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[400],
+                                  ),
+                                  border: const OutlineInputBorder(
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: const EdgeInsets.all(14),
+                                ),
+                                onChanged: (text) {
+                                  setDialogState(() {
+                                    parseError = null;
+                                    parsedResult = null;
+                                    if (text.trim().isNotEmpty) {
+                                      parsedResult = McpJsonParser.parse(text);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                            if (parsedResult != null) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle_outline,
+                                      size: 14,
+                                      color: Colors.green,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '识别到: ${parsedResult!.name}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.green[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            if (parseError != null) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      size: 14,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        parseError!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    textStyle: const TextStyle(fontSize: 13),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '取消',
+                                    style: TextStyle(
+                                      color:
+                                          Theme.of(
+                                            ctx,
+                                          ).textTheme.labelLarge?.color,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                FilledButton(
+                                  onPressed:
+                                      parsedResult == null
+                                          ? null
+                                          : () async {
+                                            Navigator.pop(ctx);
+                                            await _saveNewMcp(
+                                              parsedResult!.name,
+                                              parsedResult!.serverJson,
+                                              parsedResult!.serverConfig,
+                                            );
+                                          },
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    foregroundColor: Colors.white,
+                                    disabledBackgroundColor: Colors.black
+                                        .withValues(alpha: 0.25),
+                                    disabledForegroundColor: Colors.white
+                                        .withValues(alpha: 0.6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 8,
+                                    ),
+                                    textStyle: const TextStyle(fontSize: 13),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.add, size: 16),
+                                      const SizedBox(width: 4),
+                                      const Text('添加'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('取消'),
-                    ),
-                    FilledButton(
-                      onPressed:
-                          parsedResult == null
-                              ? null
-                              : () async {
-                                Navigator.pop(ctx);
-                                await _saveNewMcp(
-                                  parsedResult!.name,
-                                  parsedResult!.serverJson,
-                                  parsedResult!.serverConfig,
-                                );
-                              },
-                      child: const Text('添加'),
-                    ),
-                  ],
-                ),
+                  );
+                },
+              ),
+            ),
           ),
+        );
+      },
     );
   }
 

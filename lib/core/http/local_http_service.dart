@@ -272,8 +272,15 @@ class LocalHttpService {
         );
       }
 
+      final model = session.chatModel;
       final data = <Map<String, dynamic>>[
-        {'id': 'auto', 'object': 'model', 'created': 0, 'owned_by': 'llmate'},
+        {
+          'id': model?.model ?? 'auto',
+          'object': 'model',
+          'created': 0,
+          'owned_by': model?.platform ?? 'llmate',
+          if (model != null && model.name.isNotEmpty) 'display_name': model.name,
+        },
       ];
 
       return Response.ok(

@@ -3812,6 +3812,18 @@ abstract class AppLocalizations {
   /// **'Replace ID card numbers in messages with \'*\''**
   String get maskIdCardSubtitle;
 
+  /// No description provided for @costOptimization.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost Optimization'**
+  String get costOptimization;
+
+  /// No description provided for @costOptimizationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, long questions automatically use the complex model and short questions use the cheaper model'**
+  String get costOptimizationDesc;
+
   /// No description provided for @sessionDetails.
   ///
   /// In en, this message translates to:

@@ -136,6 +136,13 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             AppLocalizations.of(context)!.apiAddress,
             _currentModel.apiUrl ?? widget.apiUrl,
           ),
+          const SizedBox(height: 12),
+          _buildSecuritySwitch(
+            title: AppLocalizations.of(context)!.costOptimization,
+            subtitle: AppLocalizations.of(context)!.costOptimizationDesc,
+            value: _currentModel.routingEnabled,
+            onChanged: _updateRoutingSetting,
+          ),
         ],
       ),
     );
@@ -264,6 +271,13 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         maskPhone: maskPhone,
         maskIdCard: maskIdCard,
       );
+    });
+    widget.onModelUpdated(_currentModel);
+  }
+
+  void _updateRoutingSetting(bool value) {
+    setState(() {
+      _currentModel = _currentModel.copyWith(routingEnabled: value);
     });
     widget.onModelUpdated(_currentModel);
   }

@@ -674,6 +674,8 @@
   "maskPhoneSubtitle": "将消息中的手机号替换为 * 号",
   "maskIdCardTitle": "身份证号脱敏",
   "maskIdCardSubtitle": "将消息中的身份证号替换为 * 号",
+  "costOptimization": "费用优化",
+  "costOptimizationDesc": "开启后，长问题自动使用复杂模型，短问题使用便宜模型",
   "sessionDetails": "会话详情",
   "modelDetails": "模型详情",
   "modelDetailsWithPlatform": "模型详情 · {platform}",

@@ -264,6 +264,56 @@ class OpenAiProvider {
     return true;
   }
 
+  // ── 模型列表查询 ──
+
+  /// 查询该供应商支持的模型列表（OpenAI 兼容协议 GET /models）
+  ///
+  /// 返回模型 id 列表；接口不可用/解析失败时返回空列表，由调用方走本地 fallback。
+  Future<List<String>> fetchAvailableModels() async {
+    if (_model?.apiUrl == null || _model?.apiKey == null) return [];
+    final modelsUrl = _toModelsEndpoint(_model!.apiUrl!);
+
+    try {
+      final resp = await _dio.get(
+        modelsUrl,
+        options: Options(
+          headers: {'Authorization': 'Bearer ${_model!.apiKey}'},
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+        ),
+      );
+      final data = resp.data;
+      if (data is Map && data['data'] is List) {
+        return (data['data'] as List)
+            .map((e) => (e is Map ? e['id'] : null)?.toString())
+            .whereType<String>()
+            .toList();
+      }
+    } catch (_) {
+      // 供应商无 /models 接口 / 网络异常 → 交给调用方 fallback
+    }
+    return [];
+  }
+
+  /// 将 chat/completions 或 base URL 规整为 /models 端点
+  String _toModelsEndpoint(String apiUrl) {
+    var url = apiUrl.trim();
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    for (final suffix in [
+      '/chat/completions',
+      '/v1/chat/completions',
+      '/messages',
+    ]) {
+      if (url.endsWith(suffix)) {
+        url = url.substring(0, url.length - suffix.length);
+        break;
+      }
+    }
+    return '$url/models';
+  }
+
   // ── 错误处理 ──
 
   String handleApiError(dynamic error) {

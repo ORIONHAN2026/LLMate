@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shelf/shelf.dart';
 
 import '../../../controllers/mcp_controller.dart';
+import '../../../core/router/model_router.dart';
 import '../../../models/chat/session.dart';
 import 'audit_guard.dart';
 
@@ -34,8 +35,12 @@ Handler modelToolGuard(Handler innerHandler) {
 
     final body = jsonDecode(bodyStr) as Map<String, dynamic>;
 
-    // 1. 模型替换
-    body['model'] = session.chatModel!.model;
+    // 1. 模型替换（省钱路由：关闭开关强制用指定模型，开启则按字数灵活选）
+    body['model'] = ModelRouter.decide(
+      model: session.chatModel!,
+      body: body,
+    );
+    debugPrint('🧭 [ModelRouter] 本轮使用模型: ${body['model']}');
 
     // 2. 工具注入（合并 session MCP + model MCP，去重）
     //    管理模式同样正常注入 MCP 工具：从服务端视角，输入框请求也是第三方客户端，

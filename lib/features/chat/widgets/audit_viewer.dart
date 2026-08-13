@@ -34,13 +34,19 @@ class AuditViewer extends StatefulWidget {
 
 class _AuditViewerState extends State<AuditViewer> {
   final _traceCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
   final Set<AuditEventType> _selectedTypes = {};
   DateTime? _startDate;
   DateTime? _endDate;
-  static const int _limit = 50;
+
+  /// 每页加载的链路（trace）数量
+  static const int _pageSize = 20;
 
   List<_TraceGroup> _groups = [];
   bool _loading = false;
+  bool _loadingMore = false;
+  bool _hasMore = true;
+  int _total = 0;
   String? _error;
 
   @override
@@ -50,13 +56,22 @@ class _AuditViewerState extends State<AuditViewer> {
     final now = DateTime.now();
     _startDate = DateTime(now.year, now.month, now.day);
     _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    _scrollCtrl.addListener(_onScroll);
     _load();
   }
 
   @override
   void dispose() {
+    _scrollCtrl.dispose();
     _traceCtrl.dispose();
     super.dispose();
+  }
+
+  /// 滚动接近底部时自动加载下一页
+  void _onScroll() {
+    if (_scrollCtrl.hasClients && _scrollCtrl.position.extentAfter < 200) {
+      _loadMore();
+    }
   }
 
   AuditFilter _buildFilter() {
@@ -77,7 +92,8 @@ class _AuditViewerState extends State<AuditViewer> {
       eventTypes: _selectedTypes.isEmpty ? null : _selectedTypes,
       start: _startDate,
       end: end,
-      limit: _limit,
+      // 展示「最新链路」：链路按最新事件时间倒序，配合 searchTraces 分页
+      orderDesc: true,
     );
   }
 
@@ -90,23 +106,16 @@ class _AuditViewerState extends State<AuditViewer> {
     });
     try {
       await AuditController.instance.ensureInitialized();
-      final events = await AuditController.instance.storage.search(
+      final page = await AuditController.instance.storage.searchTraces(
         _buildFilter(),
-      );
-      // 按 traceId 聚合：一次请求 = 一条链路，列表只展示一条
-      final grouped = <String, List<AuditEvent>>{};
-      for (final e in events) {
-        (grouped[e.traceId] ??= []).add(e);
-      }
-      final groups =
-          grouped.entries.map((e) => _TraceGroup(e.key, e.value)).toList();
-      // 链路按时间倒序排列（最新链路在前）；事件本身为时间升序，取末位即最新
-      groups.sort(
-        (a, b) => b.events.last.timestamp.compareTo(a.events.last.timestamp),
+        limit: _pageSize,
+        offset: 0,
       );
       if (mounted) {
         setState(() {
-          _groups = groups;
+          _groups = _toGroups(page.traces);
+          _hasMore = page.hasMore;
+          _total = page.totalTraces;
           _loading = false;
         });
       }
@@ -119,6 +128,38 @@ class _AuditViewerState extends State<AuditViewer> {
       }
     }
   }
+
+  /// 追加加载下一页链路
+  Future<void> _loadMore() async {
+    if (_loadingMore || _loading || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      await AuditController.instance.ensureInitialized();
+      final page = await AuditController.instance.storage.searchTraces(
+        _buildFilter(),
+        limit: _pageSize,
+        offset: _groups.length,
+      );
+      if (mounted) {
+        setState(() {
+          _groups.addAll(_toGroups(page.traces));
+          _hasMore = page.hasMore;
+          _total = page.totalTraces;
+          _loadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingMore = false);
+      }
+    }
+  }
+
+  /// 将分页返回的链路事件列表转换为 [_TraceGroup]（事件已按时间升序）
+  List<_TraceGroup> _toGroups(List<List<AuditEvent>> traces) => traces
+      .where((events) => events.isNotEmpty)
+      .map((events) => _TraceGroup(events.first.traceId, events))
+      .toList();
 
   void _reset() {
     _traceCtrl.clear();
@@ -435,14 +476,18 @@ class _AuditViewerState extends State<AuditViewer> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: SectionTitle('审计链路 (${_groups.length})'),
+          child: SectionTitle(
+            '审计链路${_total > 0 ? ' (${_groups.length} / $_total)' : ' (${_groups.length})'}',
+          ),
         ),
         Expanded(
           child: ListView.separated(
+            controller: _scrollCtrl,
             padding: const EdgeInsets.all(16),
-            itemCount: _groups.length,
+            itemCount: _groups.length + 1,
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, i) {
+              if (i == _groups.length) return _buildFooter();
               final g = _groups[i];
               final first = g.events.first;
               return Container(
@@ -501,6 +546,38 @@ class _AuditViewerState extends State<AuditViewer> {
           ),
         ),
       ],
+    );
+  }
+
+  /// 列表底部：加载中 / 上滑加载更多 / 已全部加载 提示
+  Widget _buildFooter() {
+    final cs = Theme.of(context).colorScheme;
+    final style = TextStyle(
+      fontSize: 12,
+      color: cs.onSurface.withValues(alpha: 0.5),
+    );
+    Widget content;
+    if (_loadingMore) {
+      content = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 8),
+          Text('加载中…', style: style),
+        ],
+      );
+    } else if (_hasMore) {
+      content = Text('上滑加载更多', style: style);
+    } else {
+      content = Text('已全部加载', style: style);
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(child: content),
     );
   }
 }

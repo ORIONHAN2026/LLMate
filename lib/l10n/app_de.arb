@@ -624,6 +624,8 @@
   "maskPhoneSubtitle": "Telefonnummern in Nachrichten durch '*' ersetzen",
   "maskIdCardTitle": "Ausweisnummern maskieren",
   "maskIdCardSubtitle": "Ausweisnummern in Nachrichten durch '*' ersetzen",
+  "costOptimization": "Kostenoptimierung",
+  "costOptimizationDesc": "Wenn aktiviert, verwenden lange Fragen automatisch das komplexe Modell und kurze Fragen das günstigere Modell",
   "sessionDetails": "Sitzungsdetails",
   "modelDetails": "Modelldetails",
   "modelDetailsWithPlatform": "Modelldetails · {platform}",

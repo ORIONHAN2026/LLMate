@@ -583,6 +583,8 @@
   "maskPhoneSubtitle": "แทนที่เบอร์โทรศัพท์ในข้อความด้วย '*'",
   "maskIdCardTitle": "ปกปิดเลขบัตรประจำตัวประชาชน",
   "maskIdCardSubtitle": "แทนที่เลขบัตรประจำตัวประชาชนในข้อความด้วย '*'",
+  "costOptimization": "การเพิ่มประสิทธิภาพต้นทุน",
+  "costOptimizationDesc": "เมื่อเปิดใช้งาน คำถามยาวจะใช้โมเดลที่ซับซ้อนโดยอัตโนมัติ และคำถามสั้นจะใช้โมเดลที่ถูกกว่า",
   "sessionDetails": "รายละเอียดเซสชัน",
   "modelDetails": "รายละเอียดโมเดล",
   "modelDetailsWithPlatform": "รายละเอียดโมเดล · {platform}",

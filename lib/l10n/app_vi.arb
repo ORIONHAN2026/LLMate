@@ -583,6 +583,8 @@
   "maskPhoneSubtitle": "Thay thế số điện thoại trong tin nhắn bằng '*'",
   "maskIdCardTitle": "Che giấu số CMND/CCCD",
   "maskIdCardSubtitle": "Thay thế số CMND/CCCD trong tin nhắn bằng '*'",
+  "costOptimization": "Tối ưu chi phí",
+  "costOptimizationDesc": "Khi bật, câu hỏi dài tự động dùng mô hình phức tạp, câu hỏi ngắn dùng mô hình rẻ hơn",
   "sessionDetails": "Chi tiết phiên",
   "modelDetails": "Chi tiết mô hình",
   "modelDetailsWithPlatform": "Chi tiết mô hình · {platform}",

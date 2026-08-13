@@ -626,6 +626,8 @@
   "maskPhoneSubtitle": "メッセージ内の電話番号を「*」に置換",
   "maskIdCardTitle": "身分証番号のマスキング",
   "maskIdCardSubtitle": "メッセージ内の身分証番号を「*」に置換",
+  "costOptimization": "コスト最適化",
+  "costOptimizationDesc": "有効にすると、長い質問には複雑なモデル、短い質問には安価なモデルを自動的に使用します",
   "sessionDetails": "セッション詳細",
   "modelDetails": "モデル詳細",
   "modelDetailsWithPlatform": "モデル詳細 · {platform}",

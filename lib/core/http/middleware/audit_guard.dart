@@ -64,7 +64,7 @@ Handler auditGuard(Handler innerHandler) {
     final rawRequest = _buildRawRequest(parsedBody, session);
 
     // 提取客户端 IP
-    final clientIp = _extractClientIp(request);
+    final clientIp = extractClientIp(request);
 
     // 构建审计条目基础结构
     final auditEntry = <String, dynamic>{
@@ -244,7 +244,7 @@ Map<String, dynamic> _buildRawRequest(
 }
 
 /// 提取客户端 IP 地址
-String _extractClientIp(Request request) {
+String extractClientIp(Request request) {
   final forwarded =
       request.headers['x-forwarded-for'] ?? request.headers['X-Forwarded-For'];
   if (forwarded != null && forwarded.isNotEmpty) {

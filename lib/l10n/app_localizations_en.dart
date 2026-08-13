@@ -2037,6 +2037,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Replace ID card numbers in messages with \'*\'';
 
   @override
+  String get costOptimization => 'Cost Optimization';
+
+  @override
+  String get costOptimizationDesc =>
+      'When enabled, long questions automatically use the complex model and short questions use the cheaper model';
+
+  @override
   String get sessionDetails => 'Session Details';
 
   @override

@@ -2065,6 +2065,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Remplacer les numéros de carte d\'identité dans les messages par \'*\'';
 
   @override
+  String get costOptimization => 'Optimisation des coûts';
+
+  @override
+  String get costOptimizationDesc =>
+      'Lorsqu\'il est activé, les questions longues utilisent automatiquement le modèle complexe et les questions courtes utilisent le modèle moins cher';
+
+  @override
   String get sessionDetails => 'Détails de la session';
 
   @override

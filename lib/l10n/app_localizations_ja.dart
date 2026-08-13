@@ -1999,6 +1999,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get maskIdCardSubtitle => 'メッセージ内の身分証番号を「*」に置換';
 
   @override
+  String get costOptimization => 'コスト最適化';
+
+  @override
+  String get costOptimizationDesc =>
+      '有効にすると、長い質問には複雑なモデル、短い質問には安価なモデルを自動的に使用します';
+
+  @override
   String get sessionDetails => 'セッション詳細';
 
   @override

@@ -1998,6 +1998,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get maskIdCardSubtitle => '메시지의 신분증 번호를 \'*\'로 대체';
 
   @override
+  String get costOptimization => '비용 최적화';
+
+  @override
+  String get costOptimizationDesc =>
+      '사용하면 긴 질문에는 복잡한 모델을, 짧은 질문에는 저렴한 모델을 자동으로 사용합니다';
+
+  @override
   String get sessionDetails => '세션 세부정보';
 
   @override

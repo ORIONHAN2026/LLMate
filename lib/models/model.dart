@@ -38,6 +38,18 @@ class ChatModel {
   /// 安全设置：开启后，请求/响应中的身份证号将被 * 号脱敏
   final bool maskIdCard;
 
+  /// 该供应商支持的模型列表（候选池，来自 /models 接口或本地 fallback）
+  final List<String> availableModels;
+
+  /// 便宜模型（省钱路由：短文本/简单任务）
+  final String? cheapModel;
+
+  /// 复杂模型（省钱路由：长文本/复杂任务）
+  final String? complexModel;
+
+  /// 是否启用省钱路由（关闭时强制使用 [model] 指定的模型）
+  final bool routingEnabled;
+
   const ChatModel({
     required this.modelId,
     required this.name,
@@ -58,6 +70,10 @@ class ChatModel {
     this.replyLanguage,
     this.maskPhone = false,
     this.maskIdCard = false,
+    this.availableModels = const [],
+    this.cheapModel,
+    this.complexModel,
+    this.routingEnabled = false,
   });
 
   /// 生成唯一的模型ID
@@ -106,6 +122,14 @@ class ChatModel {
           (cs?['maskPhone'] as bool?) ?? (map['maskPhone'] as bool?) ?? false,
       maskIdCard:
           (cs?['maskIdCard'] as bool?) ?? (map['maskIdCard'] as bool?) ?? false,
+      availableModels:
+          (map['availableModels'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      cheapModel: map['cheapModel'] as String?,
+      complexModel: map['complexModel'] as String?,
+      routingEnabled: map['routingEnabled'] as bool? ?? false,
     );
   }
 
@@ -134,6 +158,13 @@ class ChatModel {
     if (replyLanguage != null) result['replyLanguage'] = replyLanguage;
     result['maskPhone'] = maskPhone;
     result['maskIdCard'] = maskIdCard;
+
+    if (availableModels.isNotEmpty) {
+      result['availableModels'] = availableModels;
+    }
+    if (cheapModel != null) result['cheapModel'] = cheapModel;
+    if (complexModel != null) result['complexModel'] = complexModel;
+    result['routingEnabled'] = routingEnabled;
 
     return result;
   }
@@ -168,6 +199,10 @@ class ChatModel {
     String? replyLanguage,
     bool maskPhone = false,
     bool maskIdCard = false,
+    List<String> availableModels = const [],
+    String? cheapModel,
+    String? complexModel,
+    bool routingEnabled = false,
   }) {
     return ChatModel(
       modelId: generateModelId(),
@@ -189,6 +224,10 @@ class ChatModel {
       replyLanguage: replyLanguage,
       maskPhone: maskPhone,
       maskIdCard: maskIdCard,
+      availableModels: availableModels,
+      cheapModel: cheapModel,
+      complexModel: complexModel,
+      routingEnabled: routingEnabled,
     );
   }
 
@@ -213,6 +252,10 @@ class ChatModel {
     String? replyLanguage,
     bool? maskPhone,
     bool? maskIdCard,
+    List<String>? availableModels,
+    String? cheapModel,
+    String? complexModel,
+    bool? routingEnabled,
   }) {
     return ChatModel(
       modelId: modelId ?? this.modelId,
@@ -234,6 +277,10 @@ class ChatModel {
       replyLanguage: replyLanguage ?? this.replyLanguage,
       maskPhone: maskPhone ?? this.maskPhone,
       maskIdCard: maskIdCard ?? this.maskIdCard,
+      availableModels: availableModels ?? this.availableModels,
+      cheapModel: cheapModel ?? this.cheapModel,
+      complexModel: complexModel ?? this.complexModel,
+      routingEnabled: routingEnabled ?? this.routingEnabled,
     );
   }
 

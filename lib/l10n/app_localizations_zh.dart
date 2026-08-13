@@ -1991,6 +1991,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get maskIdCardSubtitle => '将消息中的身份证号替换为 * 号';
 
   @override
+  String get costOptimization => '费用优化';
+
+  @override
+  String get costOptimizationDesc => '开启后，长问题自动使用复杂模型，短问题使用便宜模型';
+
+  @override
   String get sessionDetails => '会话详情';
 
   @override

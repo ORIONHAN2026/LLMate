@@ -674,6 +674,8 @@
   "maskPhoneSubtitle": "Replace phone numbers in messages with '*'",
   "maskIdCardTitle": "Mask ID Card Numbers",
   "maskIdCardSubtitle": "Replace ID card numbers in messages with '*'",
+  "costOptimization": "Cost Optimization",
+  "costOptimizationDesc": "When enabled, long questions automatically use the complex model and short questions use the cheaper model",
   "sessionDetails": "Session Details",
   "modelDetails": "Model Details",
   "modelDetailsWithPlatform": "Model Details · {platform}",

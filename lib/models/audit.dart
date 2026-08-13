@@ -103,6 +103,15 @@ class AuditFilter {
   final DateTime? end;
   final int? limit;
 
+  /// 分页偏移：跳过前 [offset] 条后返回（配合 [limit] 使用，事件级检索）。
+  final int offset;
+
+  /// 是否按时间倒序返回（最新在前）。默认 false（升序）。
+  ///
+  /// 用于「展示最新链路」场景：配合 [limit] 取最新 N 条，避免升序时
+  /// 最早的事件挤占名额、导致最新记录被截断。
+  final bool orderDesc;
+
   const AuditFilter({
     this.traceId,
     this.sessionId,
@@ -110,6 +119,8 @@ class AuditFilter {
     this.start,
     this.end,
     this.limit,
+    this.offset = 0,
+    this.orderDesc = false,
   });
 }
 
@@ -122,6 +133,27 @@ class AuditTrace {
   final String sessionId;
 
   AuditTrace({required this.traceId, required this.sessionId});
+}
+
+/// 审计链路分页结果
+///
+/// 按「链路（trace）」粒度分页：一次请求 = 一条链路。每个元素是该链路下的
+/// 全部事件（时间升序）。相比事件级分页，能保证同一条链路不会被拆散到两页。
+class AuditTracePage {
+  /// 本页链路列表（每条链路的事件按时间升序排列）
+  final List<List<AuditEvent>> traces;
+
+  /// 是否还有下一页
+  final bool hasMore;
+
+  /// 满足筛选条件的链路总数（用于展示「x / y」）
+  final int totalTraces;
+
+  const AuditTracePage({
+    required this.traces,
+    required this.hasMore,
+    required this.totalTraces,
+  });
 }
 
 /// 单条审计事件

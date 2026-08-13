@@ -2037,6 +2037,13 @@ class AppLocalizationsTh extends AppLocalizations {
       'แทนที่เลขบัตรประจำตัวประชาชนในข้อความด้วย \'*\'';
 
   @override
+  String get costOptimization => 'การเพิ่มประสิทธิภาพต้นทุน';
+
+  @override
+  String get costOptimizationDesc =>
+      'เมื่อเปิดใช้งาน คำถามยาวจะใช้โมเดลที่ซับซ้อนโดยอัตโนมัติ และคำถามสั้นจะใช้โมเดลที่ถูกกว่า';
+
+  @override
   String get sessionDetails => 'รายละเอียดเซสชัน';
 
   @override

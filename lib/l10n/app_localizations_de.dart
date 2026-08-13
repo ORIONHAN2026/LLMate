@@ -2063,6 +2063,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ausweisnummern in Nachrichten durch \'*\' ersetzen';
 
   @override
+  String get costOptimization => 'Kostenoptimierung';
+
+  @override
+  String get costOptimizationDesc =>
+      'Wenn aktiviert, verwenden lange Fragen automatisch das komplexe Modell und kurze Fragen das günstigere Modell';
+
+  @override
   String get sessionDetails => 'Sitzungsdetails';
 
   @override

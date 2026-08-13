@@ -41,9 +41,17 @@ class AuditController {
   // ══════════════════════════════════════════════════════════
 
   /// 开启一条审计链路
-  Future<AuditTrace> beginTrace({required String sessionId}) async {
+  ///
+  /// [ip] 记录请求发起方的 IP 地址（可为空）。
+  Future<AuditTrace> beginTrace({
+    required String sessionId,
+    String? ip,
+  }) async {
     final trace = AuditTrace(traceId: _uuid.v4(), sessionId: sessionId);
-    await emit(trace, AuditEventType.request, {'sessionId': sessionId});
+    await emit(trace, AuditEventType.request, {
+      'sessionId': sessionId,
+      if (ip != null && ip.isNotEmpty) 'ip': ip,
+    });
     return trace;
   }
 

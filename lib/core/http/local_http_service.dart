@@ -20,6 +20,7 @@ import 'middleware/disabled_guard.dart';
 import 'middleware/quota_guard.dart';
 import 'middleware/model_tool_guard.dart';
 import 'middleware/risk_control_guard.dart';
+import 'middleware/audit_guard.dart';
 import 'sensitive_masker.dart';
 import 'stream_round.dart' show streamSingleRound;
 import '../../controllers/mcp_controller.dart';
@@ -353,7 +354,10 @@ class LocalHttpService {
         final auditProvider = session.chatModel?.platform ?? 'unknown';
         final auditModel = session.chatModel?.model ?? 'unknown';
         try {
-          auditTrace = await audit.beginTrace(sessionId: session.sessionId);
+          auditTrace = await audit.beginTrace(
+            sessionId: session.sessionId,
+            ip: extractClientIp(request),
+          );
           audit.prompt(auditTrace, _extractUserPrompt(body));
         } catch (e) {
           debugPrint('⚠️ [Audit] 开启链路追踪失败: $e');
@@ -582,15 +586,13 @@ class LocalHttpService {
             error: null,
           );
 
-          // ── 保存按分钟累计的用量统计（管理模式不计入统计）──
-          if (session.mode != SessionMode.management.name) {
-            _saveUsageStats(
-              session: session,
-              startTime: generationStartTime,
-              promptTokens: promptTokens,
-              completionTokens: completionTokens,
-            );
-          }
+          // ── 保存按分钟累计的用量统计 ──
+          _saveUsageStats(
+            session: session,
+            startTime: generationStartTime,
+            promptTokens: promptTokens,
+            completionTokens: completionTokens,
+          );
         } catch (e) {
           // ── 异步 IIFE 内部异常 ──
           debugPrint('❌ 流式代理错误: $e');

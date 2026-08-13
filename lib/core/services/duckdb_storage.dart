@@ -150,32 +150,94 @@ class DuckDBStorage {
 
   /// 按过滤器检索审计事件（时间升序）
   Future<List<AuditEvent>> search(AuditFilter filter) {
-    final conds = <String>[];
-    if (filter.traceId != null) {
-      conds.add('trace_id = ${_q(filter.traceId!)}');
-    }
-    if (filter.sessionId != null) {
-      conds.add('session_id = ${_q(filter.sessionId!)}');
-    }
-    if (filter.eventTypes != null && filter.eventTypes!.isNotEmpty) {
-      final types = filter.eventTypes!.map((e) => _q(e.name)).join(', ');
-      conds.add('event_type IN ($types)');
-    }
-    // timestamp 以 ISO8601 字符串存储，字典序即时间序，可直接比较
-    if (filter.start != null) {
-      conds.add('timestamp >= ${_q(filter.start!.toIso8601String())}');
-    }
-    if (filter.end != null) {
-      conds.add('timestamp <= ${_q(filter.end!.toIso8601String())}');
-    }
-
+    final conds = _buildWhere(filter);
     var sql = 'SELECT * FROM audit_events';
     if (conds.isNotEmpty) sql += ' WHERE ${conds.join(' AND ')}';
-    sql += ' ORDER BY timestamp ASC';
+    sql += ' ORDER BY timestamp ${filter.orderDesc ? 'DESC' : 'ASC'}';
     if (filter.limit != null && filter.limit! > 0) {
       sql += ' LIMIT ${filter.limit}';
     }
+    if (filter.offset > 0) {
+      sql += ' OFFSET ${filter.offset}';
+    }
     return _query(sql);
+  }
+
+  /// 按「链路（trace）」粒度分页检索。
+  ///
+  /// 一次请求 = 一条链路，每条链路包含其全部事件（时间升序）。链路按最新
+  /// 事件时间排序（[AuditFilter.orderDesc] 为 true 时最新链路在前）。
+  ///
+  /// 分页基于链路数：先筛出满足条件的 trace 并按 `max(timestamp)` 排序，
+  /// 取一页 traceId 后，再一次性取回这些 trace 的全部事件。相比事件级分页，
+  /// 能保证同一条链路不会被拆散到两页。
+  Future<AuditTracePage> searchTraces(
+    AuditFilter filter, {
+    required int limit,
+    int offset = 0,
+  }) async {
+    if (!_initialized || _conn == null || limit <= 0) {
+      return const AuditTracePage(traces: [], hasMore: false, totalTraces: 0);
+    }
+
+    final conds = _buildWhere(filter);
+    final where = conds.isEmpty ? '' : ' WHERE ${conds.join(' AND ')}';
+    final order = filter.orderDesc ? 'DESC' : 'ASC';
+
+    // 1) 满足条件的链路总数
+    final total = await _serialize(() async {
+      final rs = await _conn!.query(
+        'SELECT count(DISTINCT trace_id) AS c FROM audit_events$where',
+      );
+      final rows = rs.fetchAll();
+      await rs.dispose();
+      if (rows.isEmpty || rows.first.isEmpty) return 0;
+      return (rows.first.first as num).toInt();
+    });
+
+    // 2) 本页链路 id（按该链路最新事件时间排序）
+    final pageTraceIds = await _serialize(() async {
+      final rs = await _conn!.query(
+        'SELECT trace_id FROM audit_events$where '
+        'GROUP BY trace_id '
+        'ORDER BY max(timestamp) $order '
+        'LIMIT $limit OFFSET $offset',
+      );
+      final rows = rs.fetchAll();
+      await rs.dispose();
+      return rows
+          .where((r) => r.isNotEmpty)
+          .map((r) => r.first.toString())
+          .toList();
+    });
+
+    if (pageTraceIds.isEmpty) {
+      return AuditTracePage(traces: [], hasMore: false, totalTraces: total);
+    }
+
+    // 3) 取回这些链路的全部事件（不重复应用事件级筛选，保证链路完整）
+    final inList = pageTraceIds.map(_q).join(', ');
+    final events = await _query(
+      'SELECT * FROM audit_events WHERE trace_id IN ($inList) '
+      'ORDER BY timestamp ASC',
+    );
+
+    // 4) 聚合：每条链路一个事件列表（时间升序），并保持 pageTraceIds 的排序
+    final byTrace = <String, List<AuditEvent>>{};
+    for (final e in events) {
+      (byTrace[e.traceId] ??= []).add(e);
+    }
+    final traces = <List<AuditEvent>>[];
+    for (final id in pageTraceIds) {
+      final list = byTrace[id];
+      if (list != null && list.isNotEmpty) traces.add(list);
+    }
+
+    return AuditTracePage(
+      traces: traces,
+      hasMore: offset + traces.length < total,
+      totalTraces: total,
+    );
   }
 
   /// 按 id 查询单条审计事件
@@ -247,6 +309,29 @@ class DuckDBStorage {
           // 前序任务失败不影响后续任务，保持队列存活
         });
     return completer.future;
+  }
+
+  /// 根据过滤器构建 WHERE 条件片段（供 [search] 与 [searchTraces] 复用）
+  List<String> _buildWhere(AuditFilter filter) {
+    final conds = <String>[];
+    if (filter.traceId != null) {
+      conds.add('trace_id = ${_q(filter.traceId!)}');
+    }
+    if (filter.sessionId != null) {
+      conds.add('session_id = ${_q(filter.sessionId!)}');
+    }
+    if (filter.eventTypes != null && filter.eventTypes!.isNotEmpty) {
+      final types = filter.eventTypes!.map((e) => _q(e.name)).join(', ');
+      conds.add('event_type IN ($types)');
+    }
+    // timestamp 以 ISO8601 字符串存储，字典序即时间序，可直接比较
+    if (filter.start != null) {
+      conds.add('timestamp >= ${_q(filter.start!.toIso8601String())}');
+    }
+    if (filter.end != null) {
+      conds.add('timestamp <= ${_q(filter.end!.toIso8601String())}');
+    }
+    return conds;
   }
 
   /// 转义 SQL 字符串字面量（仅将单引号转义为双单引号，符合标准 SQL）

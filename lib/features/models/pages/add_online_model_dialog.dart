@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/model.dart';
+import '../../../models/model_catalog.dart';
 import '../../../models/chat/session.dart';
 import '../../../core/llm/common/openai_provider.dart';
 
@@ -21,6 +22,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   bool _isCustomModel = false; // 是否使用自定义模型（在预设提供商下）
   bool _isCustomProvider = false; // 是否使用自定义提供商（完全手动输入）
 
+  // 省钱路由相关状态
+  List<String> _availableModels = []; // 供应商候选模型池（来自 /models 或本地 fallback）
+  bool _routingEnabled = true; // 费用优化开关（关闭则强制使用指定模型）
+
   // 配置测试相关状态
   bool _isTesting = false;
   bool _testCompleted = false;
@@ -32,6 +37,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   final TextEditingController _apiUrlController = TextEditingController();
   final TextEditingController _customModelController =
       TextEditingController(); // 新增：自定义模型输入控制器
+  final TextEditingController _promptPriceController = TextEditingController();
+  final TextEditingController _completionPriceController =
+      TextEditingController();
 
   @override
   void dispose() {
@@ -39,6 +47,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     _apiKeyController.dispose();
     _apiUrlController.dispose();
     _customModelController.dispose();
+    _promptPriceController.dispose();
+    _completionPriceController.dispose();
     super.dispose();
   }
 
@@ -1289,6 +1299,97 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             AppLocalizations.of(context)!.modelNameSuggestion,
             style: TextStyle(fontSize: 11, color: Colors.grey[600]),
           ),
+
+          const SizedBox(height: 16),
+          // 价格设置（每百万 token，用于成本统计）
+          Text(
+            AppLocalizations.of(context)!.inputPriceLabel,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _promptPriceController,
+            style: const TextStyle(fontSize: 12),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.examplePriceHint,
+              hintStyle: const TextStyle(fontSize: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFF1F2937)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            AppLocalizations.of(context)!.outputPriceLabel,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _completionPriceController,
+            style: const TextStyle(fontSize: 12),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.examplePriceHint,
+              hintStyle: const TextStyle(fontSize: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: const BorderSide(color: Color(0xFF1F2937)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _buildPriceUnitDesc(),
+            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+          ),
+
+          const SizedBox(height: 16),
+          // 费用优化开关
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: SwitchListTile(
+              value: _routingEnabled,
+              onChanged: (value) {
+                setState(() {
+                  _routingEnabled = value;
+                });
+              },
+              activeThumbColor: const Color(0xFF10B981),
+              title: const Text(
+                '费用优化',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                '开启后，长问题自动使用复杂模型，短问题使用便宜模型',
+                style: TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          ),
         ],
       ),
     );
@@ -1301,6 +1402,19 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       (provider) => provider['id'] == _selectedProvider,
       orElse: () => {},
     );
+  }
+
+  /// 当前模型的货币单位（自定义提供商默认人民币）
+  String _currentCurrency() {
+    if (_isCustomProvider) return 'CNY';
+    return _getSelectedProviderData()['currency'] as String? ?? 'CNY';
+  }
+
+  /// 价格单位描述（复用模型配置页文案）
+  String _buildPriceUnitDesc() {
+    final loc = AppLocalizations.of(context)!;
+    final unitText = _currentCurrency() == 'CNY' ? loc.cny : loc.usd;
+    return loc.priceUnitDescription(unitText);
   }
 
   bool _canProceed() {
@@ -1432,6 +1546,13 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
       }
 
+      // 省钱路由：候选池 + 便宜/复杂模型 + 开关
+      final routeModels = _availableModels.isNotEmpty
+          ? _availableModels
+          : ModelCatalog.resolveModels(_selectedProvider, const []);
+      final cheapModel = ModelCatalog.pickCheap(routeModels);
+      final complexModel = ModelCatalog.pickComplex(routeModels);
+
       final newModel = {
         'modelId': ChatModel.generateModelId(),
         'name': _customModelName,
@@ -1447,6 +1568,20 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         'systemPrompt': '',
         'temperature': 1.0,
         'replyLanguage': '',
+        if (_promptPriceController.text.trim().isNotEmpty)
+          'promptPrice': double.tryParse(_promptPriceController.text.trim()),
+        if (_completionPriceController.text.trim().isNotEmpty)
+          'completionPrice': double.tryParse(
+            _completionPriceController.text.trim(),
+          ),
+        'availableModels': routeModels,
+        if (cheapModel != null) 'cheapModel': cheapModel,
+        if (complexModel != null) 'complexModel': complexModel,
+        'routingEnabled':
+            _routingEnabled &&
+            cheapModel != null &&
+            complexModel != null &&
+            routeModels.length >= 2,
       };
       Navigator.pop(context, newModel);
     }
@@ -1863,9 +1998,27 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         testProtocol = selectedProviderData['protocol'];
       }
 
+      // 查询供应商模型列表（仅 OpenAI 兼容协议）：有接口就拉，否则本地写死 fallback
+      if (testProtocol == 'openai' &&
+          testApiUrl.isNotEmpty &&
+          testApiKey.isNotEmpty) {
+        await _fetchProviderModels(testApiUrl, testApiKey);
+      }
+
+      // 测试用模型：优先候选池第一个，否则回退用户手选的模型
+      String testModelId = _availableModels.isNotEmpty
+          ? _availableModels.first
+          : _selectedOnlineModel;
+      if (_availableModels.isEmpty &&
+          !_isCustomModel &&
+          _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
+        testModelId =
+            '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
+      }
+
       if (testApiUrl.isEmpty ||
           (apiKeyRequired && testApiKey.isEmpty) ||
-          _selectedOnlineModel.isEmpty) {
+          testModelId.isEmpty) {
         setState(() {
           _isTesting = false;
           _testCompleted = true;
@@ -1877,14 +2030,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
       // 构建完整API端点
       String finalApiUrl = testApiUrl;
-
-      // 构建最终的模型标识符
-      String testModelId = _selectedOnlineModel;
-      if (!_isCustomModel &&
-          _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
-        testModelId =
-            '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
-      }
 
       // 根据协议自动补全API端点路径
       switch (testProtocol) {
@@ -2018,5 +2163,28 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       _testPassed = false;
       _testResponse = '';
     });
+  }
+
+  /// 查询供应商模型列表：优先 GET /models，失败则回退本地写死清单
+  Future<void> _fetchProviderModels(String apiUrl, String apiKey) async {
+    if (_availableModels.isNotEmpty) return;
+    try {
+      final tmp = ChatModel(
+        modelId: 'tmp_fetch',
+        name: 'tmp',
+        model: '',
+        protocol: 'openai',
+        apiKey: apiKey,
+        apiUrl: apiUrl,
+      );
+      final provider = OpenAiProvider()..configure(tmp);
+      final online = await provider.fetchAvailableModels();
+      _availableModels = ModelCatalog.resolveModels(_selectedProvider, online);
+    } catch (_) {
+      _availableModels = ModelCatalog.resolveModels(
+        _selectedProvider,
+        const [],
+      );
+    }
   }
 }

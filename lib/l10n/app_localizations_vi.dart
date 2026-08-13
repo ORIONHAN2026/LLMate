@@ -2020,6 +2020,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Thay thế số CMND/CCCD trong tin nhắn bằng \'*\'';
 
   @override
+  String get costOptimization => 'Tối ưu chi phí';
+
+  @override
+  String get costOptimizationDesc =>
+      'Khi bật, câu hỏi dài tự động dùng mô hình phức tạp, câu hỏi ngắn dùng mô hình rẻ hơn';
+
+  @override
   String get sessionDetails => 'Chi tiết phiên';
 
   @override

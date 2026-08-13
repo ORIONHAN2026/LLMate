@@ -72,11 +72,12 @@ String randomEmoji() {
 
 /// 聊天模式
 ///
-/// - [session]：会话模式（默认）。消息经本机 HTTP 服务转发，由服务侧统一完成
-///   鉴权 / 配额 / 工具执行 / 审计与用量统计；聊天记录由客户端生成，服务侧仅
-///   保存审计与用量信息，不再生成消息记录。
-/// - [management]：管理模式。消息由客户端本地直连大模型，不经过本机 HTTP 服务，
-///   用量不计入统计（不写审计 / 用量记录），适合本地调试与管理类操作。
+/// - [session]：会话模式。消息经本机 HTTP 服务转发，由服务侧统一完成
+///   鉴权 / 配额 / MCP 工具注入与执行 / 审计与用量统计，适合绑定会话 MCP 工具的
+///   常规对话场景。
+/// - [management]：管理模式（聊天输入框默认）。管理工具 schema 由客户端注入，
+///   服务端视作第三方透传回来、由客户端本地执行；用量不计入统计、绕过脱敏与配额
+///   检查，适合审计 / 用量查询等管理类操作。
 enum SessionMode {
   /// 会话模式
   session,
@@ -156,7 +157,7 @@ class ChatSession {
   /// 是否禁用该会话：禁用后任何调用（应用内与外部 HTTP 请求）均返回错误
   final bool isDisabled;
 
-  /// 聊天模式（会话模式 / 管理模式），默认会话模式
+  /// 聊天模式（会话模式 / 管理模式），默认管理模式
   final String mode;
 
   // === 用量配额设置 ===
@@ -216,7 +217,7 @@ class ChatSession {
     this.quotaRequestCount = 0,
     this.noAuthEnabled = false,
     this.isDisabled = false,
-    this.mode = "session",
+    this.mode = "management",
   }) : modelId = modelId ?? chatModel?.modelId,
        mcps = mcps,
        emoji = emoji ?? randomEmoji(),
@@ -596,7 +597,7 @@ class ChatSession {
       quotaRequestCount: json['quotaRequestCount'] as int? ?? 0,
       noAuthEnabled: json['noAuthEnabled'] as bool? ?? false,
       isDisabled: json['isDisabled'] as bool? ?? false,
-      mode: json['mode'] == 'management' ? "management" : "session",
+      mode: json['mode'] == 'session' ? "session" : "management",
     );
   }
 

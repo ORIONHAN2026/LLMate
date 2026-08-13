@@ -10,7 +10,7 @@ import '../../../models/chat/session.dart';
 import 'openai_provider.dart';
 import 'chunk_parser.dart';
 import '../tools/management_tools.dart'
-    show managementToolDefinitions, managementToolNames, executeManagementTool;
+    show managementToolDefinitions, executeManagementTool;
 
 /// 通过本机会话 HTTP 服务转发聊天请求，并将服务返回的
 /// OpenAI 格式 SSE 流转译为 LLMChat 消费方期望的 chunk 格式。
@@ -18,9 +18,10 @@ import '../tools/management_tools.dart'
 /// 服务侧 [modelToolGuard] 负责注入 model / tools / 系统提示词。
 ///
 /// 工具执行分工：
-/// - MCP 工具：由服务端识别并在服务端执行、回填（会话模式）。
+/// - MCP 工具：由服务端识别并在服务端执行、回填（与模式无关，一视同仁）。
 /// - 管理工具（审计/用量/额度）：客户端注入 schema，服务端视作第三方透传回来，
 ///   由客户端本地执行 [executeManagementTool] 并回填，继续多轮请求。
+///   客户端输入框只在本软件执行，收到的工具调用全部是管理工具，无真第三方工具。
 Stream<Map<String, dynamic>> streamViaHttpService({
   required ChatSession session,
   required OpenAiProvider provider,
@@ -68,25 +69,10 @@ Stream<Map<String, dynamic>> streamViaHttpService({
       return;
     }
 
-    // 分类第三方工具：管理工具（客户端本地执行） vs 真第三方（透传 UI）
-    final managementCalls = <Map<String, dynamic>>[];
-    final thirdPartyToolCalls = <Map<String, dynamic>>[];
-    for (final tc in round.toolCalls) {
-      final name = (tc['function']?['name'] ?? '').toString();
-      if (isManagement && managementToolNames.contains(name)) {
-        managementCalls.add(tc);
-      } else {
-        thirdPartyToolCalls.add(tc);
-      }
-    }
-
-    // 真第三方工具 → 透传给 UI 自行处理
-    if (thirdPartyToolCalls.isNotEmpty) {
-      yield {'toolcall': jsonEncode(thirdPartyToolCalls)};
-    }
-
-    // 管理工具 → 客户端本地执行并回填，继续下一轮
-    if (managementCalls.isNotEmpty) {
+    // 客户端只注入了管理工具 schema，服务端把不认识的管理工具视作第三方透传回来；
+    // 聊天输入框的输入只在本软件执行，不会出现真第三方工具，因此这里的 tool_calls
+    // 全都是管理工具，直接本地执行回填，继续下一轮。
+    if (round.toolCalls.isNotEmpty) {
       toolIteration++;
       if (toolIteration >= maxToolIterations) {
         debugPrint('⚠️ [LLMChat] 管理工具调用已达最大轮次 $maxToolIterations，停止循环');
@@ -101,7 +87,7 @@ Stream<Map<String, dynamic>> streamViaHttpService({
       currentMessages.add({
         'role': 'assistant',
         'content': null,
-        'tool_calls': managementCalls.map((tc) {
+        'tool_calls': round.toolCalls.map((tc) {
           return {
             'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
             'type': 'function',
@@ -114,7 +100,7 @@ Stream<Map<String, dynamic>> streamViaHttpService({
       });
 
       // 逐个执行管理工具，追加 tool 结果
-      for (final tc in managementCalls) {
+      for (final tc in round.toolCalls) {
         final name = (tc['function']?['name'] ?? '').toString();
         final argsStr = (tc['function']?['arguments'] ?? '{}').toString();
         Map<String, dynamic> args;
@@ -143,7 +129,7 @@ Stream<Map<String, dynamic>> streamViaHttpService({
 /// 单轮 HTTP 请求的聚合结果。
 class _HttpRoundResult {
   final List<Map<String, dynamic>> chunks; // content / think / tool 状态 chunk
-  final List<Map<String, dynamic>> toolCalls; // 第三方工具调用（含管理工具）
+  final List<Map<String, dynamic>> toolCalls; // 管理工具调用（服务端透传回来）
   final bool error;
   _HttpRoundResult({
     required this.chunks,
@@ -213,8 +199,8 @@ Future<_HttpRoundResult> _postRound(
           }
           for (final c in parseOpenAiChunk(dataStr)) {
             final toolcall = c['toolcall'];
-            // 真实工具调用（JSON 数组）→ 收集，交外层分类/执行；
-            // 哨兵值（服务端执行 MCP 工具状态）则透传。
+            // 真实工具调用（JSON 数组）→ 收集，交外层本地执行；
+            // 哨兵值（服务端执行 MCP 工具状态）则透传 UI。
             if (toolcall is String &&
                 toolcall.isNotEmpty &&
                 toolcall != mcpExecutingSentinel) {

@@ -38,25 +38,21 @@ Handler modelToolGuard(Handler innerHandler) {
     body['model'] = session.chatModel!.model;
 
     // 2. 工具注入（合并 session MCP + model MCP，去重）
-    //    管理模式不注入 MCP 工具：客户端已注入管理工具（审计/用量/额度），
-    //    这些工具由服务端视作第三方透传、客户端本地执行，避免混入会话 MCP 工具
-    //    干扰管理模式语义。
-    final isManagement = session.mode == SessionMode.management.name;
-    if (!isManagement) {
-      final mcpTools = McpController.instance.getMergedTools(session);
-      if (mcpTools.isNotEmpty) {
-        final tools = mcpTools.map((t) => t.toOpenAIFunction()).toList();
-        final existing = body['tools'];
-        if (existing is List) {
-          body['tools'] = [...existing, ...tools];
-        } else {
-          body['tools'] = tools;
-        }
-        body['tool_choice'] = 'auto';
-        debugPrint(
-          '🔧 [ModelTool] 注入 ${tools.length} 个 MCP 工具 (含 session + model)',
-        );
+    //    管理模式同样正常注入 MCP 工具：从服务端视角，输入框请求也是第三方客户端，
+    //    一视同仁；客户端注入的管理工具与 MCP 工具在此合并。
+    final mcpTools = McpController.instance.getMergedTools(session);
+    if (mcpTools.isNotEmpty) {
+      final tools = mcpTools.map((t) => t.toOpenAIFunction()).toList();
+      final existing = body['tools'];
+      if (existing is List) {
+        body['tools'] = [...existing, ...tools];
+      } else {
+        body['tools'] = tools;
       }
+      body['tool_choice'] = 'auto';
+      debugPrint(
+        '🔧 [ModelTool] 注入 ${tools.length} 个 MCP 工具 (含 session + model)',
+      );
     }
 
     // 3. 系统提示词注入（顺序与 mode_utils.buildBaseSystemMessages 一致：

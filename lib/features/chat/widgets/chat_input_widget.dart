@@ -452,8 +452,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         children: [
                           _buildSettingsEntry(),
                           const SizedBox(width: 8),
-                          _buildChatModeToggle(),
-                          const SizedBox(width: 8),
                           _buildAuditEntry(),
                           const SizedBox(width: 8),
                           _buildUsageEntry(),
@@ -666,65 +664,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: active ? onSurface : onSurface.withOpacity(0.3),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    });
-  }
-
-  /// 构建聊天模式切换按钮（会话模式 / 管理模式）
-  /// 模式是每个会话各自的设置：点击切换「当前会话」的模式。
-  Widget _buildChatModeToggle() {
-    final l10n = AppLocalizations.of(context)!;
-    return Obx(() {
-      final currentSession = sessionController.currentSession.value;
-      final isManagement = currentSession?.mode == SessionMode.management.name;
-      final onSurface = Theme.of(context).colorScheme.onSurface;
-      final active = !_isSending && currentSession != null;
-      return Tooltip(
-        message: isManagement ? l10n.managementModeDesc : l10n.sessionModeDesc,
-        child: GestureDetector(
-          onTap:
-              active
-                  ? () {
-                    if (currentSession != null) {
-                      sessionController.updateSession(
-                        currentSession.copyWith(
-                          mode:
-                              isManagement
-                                  ? SessionMode.session.name
-                                  : SessionMode.management.name,
-                        ),
-                      );
-                    }
-                  }
-                  : null,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isManagement
-                      ? Icons.admin_panel_settings_outlined
-                      : Icons.chat_bubble_outline,
-                  size: 13,
-                  color: active ? onSurface : onSurface.withOpacity(0.3),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  isManagement ? l10n.managementMode : l10n.sessionMode,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight:
-                        isManagement ? FontWeight.w700 : FontWeight.w500,
                     color: active ? onSurface : onSurface.withOpacity(0.3),
                   ),
                 ),

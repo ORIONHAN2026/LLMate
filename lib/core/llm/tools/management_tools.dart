@@ -10,14 +10,16 @@ import '../../../models/chat/session.dart';
 
 /// 管理模式下的「系统工具」定义（OpenAI function-calling 格式）。
 ///
-/// 仅在管理模式（本地直连大模型）时注入，用于让大模型通过工具调用完成：
+/// 仅在管理模式时注入，用于让大模型通过工具调用完成：
 ///   - 审计内容：增删改查（[audit_search] / [audit_get] / [audit_add] /
 ///     [audit_update] / [audit_delete]）
 ///   - 用量与额度：用量查询（[usage_query]）、会话额度查询（[quota_get]）、
 ///     会话额度设置（[quota_set]）、会话额度重置（[quota_reset]）
 ///
-/// 这些工具在客户端本地执行（[executeManagementTool]），不经过本机 HTTP 服务，
-/// 也不写入新的审计 / 用量记录（即「管理模式用量不计入统计」）。
+/// 工具 schema 由客户端注入；服务端视作第三方透传回来，由客户端本地执行
+/// （[executeManagementTool]）并回填继续多轮。
+/// 管理模式不写入新的用量记录（即「管理模式用量不计入统计」），
+/// 且绕过风控脱敏（审计/用量查询需返回真实内容）。
 const List<Map<String, dynamic>> managementToolDefinitions = [
   // ───────────────── 审计：查询 ─────────────────
   {

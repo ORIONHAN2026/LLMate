@@ -24,6 +24,11 @@ Handler riskControlGuard(Handler innerHandler) {
       return innerHandler(request);
     }
 
+    // 管理模式：绕过脱敏（审计/用量查询需返回真实内容，脱敏会失真）
+    if (session.mode == SessionMode.management.name) {
+      return innerHandler(request);
+    }
+
     final body = request.context['body'] as Map<String, dynamic>?;
     if (body == null) {
       // 上游未装载 body，直接放行

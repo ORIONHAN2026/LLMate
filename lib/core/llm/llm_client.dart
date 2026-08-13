@@ -7,12 +7,13 @@ import 'common/openai_provider.dart';
 import './common/message_builder.dart';
 import './modes/mode_utils.dart';
 import 'common/stream_http_service.dart';
-import 'common/stream_local.dart';
 
 /// LLM 客户端（聊天窗口侧代理）
 ///
-/// 仅负责把会话消息组装好并转发给本机会话 HTTP 服务；
-/// 工具注入、工具执行、会话持久化与用量统计均由 HTTP 服务统一处理。
+/// 负责把会话消息组装好并转发给本机会话 HTTP 服务。
+/// 会话模式：工具注入 / 工具执行 / 会话持久化 / 用量统计均由 HTTP 服务统一处理；
+/// 管理模式：管理工具 schema 由客户端注入、服务端视作第三方透传回来，
+/// 由客户端本地执行并回填，继续多轮请求。
 class LlmClient {
   ChatSession _session;
   final OpenAiProvider _provider;
@@ -39,8 +40,8 @@ class LlmClient {
   /// 发送消息并获取流式响应。
   ///
   /// 始终经由本机会话 HTTP 服务转发，复用服务侧中间件
-  /// （鉴权 / 配额 / 模型工具注入 / 工具执行 / 审计 / 用量统计），
-  /// 客户端不再重复组装或执行工具。
+  /// （鉴权 / 配额 / 模型工具注入 / 审计 / 用量统计）。
+  /// 会话模式的工具执行由服务端完成；管理模式的工具由客户端本地执行。
   Stream<Map<String, dynamic>> LLMChat(ChatMessage userMessage) async* {
     _cancelled = false;
 
@@ -55,21 +56,10 @@ class LlmClient {
       session: _session,
     );
 
-    // 管理模式：消息本地直连大模型，不经过本机 HTTP 服务，用量不计入统计
-    if (_session.mode == SessionMode.management.name) {
-      await for (final chunk in streamLocal(
-        session: _session,
-        provider: _provider,
-        isCancelled: () => _cancelled,
-        history: messages,
-      )) {
-        yield chunk;
-      }
-      return;
-    }
-
-    // 会话模式：始终经由本机会话 HTTP 服务转发，复用服务侧中间件
-    // （鉴权 / 配额 / 模型工具注入 / 工具执行 / 审计 / 用量统计）。
+    // 统一经由本机会话 HTTP 服务转发（含管理模式），复用服务侧中间件
+    // （鉴权 / 配额 / 模型工具注入 / 审计 / 用量统计）。
+    // 管理模式同样走 HTTP：客户端注入管理工具、服务端视作第三方透传，
+    // 客户端本地执行并回填，用量不计入统计。
     await for (final chunk in streamViaHttpService(
       session: _session,
       provider: _provider,

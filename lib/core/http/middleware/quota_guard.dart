@@ -23,6 +23,11 @@ Handler quotaGuard(Handler innerHandler) {
       return innerHandler(request);
     }
 
+    // 管理模式：跳过配额检查（管理操作不计费、不受配额限制）
+    if (session.mode == SessionMode.management.name) {
+      return innerHandler(request);
+    }
+
     // Step 1: 尝试重置配额周期
     var currentSession = session;
     final resetSession = currentSession.tryResetQuotaPeriod();

@@ -7,8 +7,8 @@ import '../../../controllers/audit_controller.dart';
 import '../../../data/database.dart';
 import '../../../models/audit.dart';
 import '../../../models/chat/session.dart';
-import '../../../widgets/section_title.dart';
-import '../../../widgets/standard_app_bar.dart';
+import 'package:llmate/features/widgets/section_title.dart';
+import 'package:llmate/features/widgets/standard_app_bar.dart';
 
 /// 审计查看器
 ///

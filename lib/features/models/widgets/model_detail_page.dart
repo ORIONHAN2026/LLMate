@@ -2,7 +2,7 @@ import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/models/model.dart';
 import 'package:llmate/utils/snackbar_utils.dart';
 import 'package:llmate/features/models/widgets/model_config_tab.dart';
-import 'package:llmate/widgets/confirm_delete_dialog.dart';
+import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 

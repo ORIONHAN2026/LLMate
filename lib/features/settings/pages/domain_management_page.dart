@@ -1,5 +1,5 @@
 import 'dart:io' show File;
-import '../../../widgets/standard_app_bar.dart';
+import 'package:llmate/features/widgets/standard_app_bar.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../services/storage_paths.dart';
+import '../../../core/services/storage_paths.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../controllers/settings_controller.dart';
 import '../../../controllers/address_detector_controller.dart';
@@ -40,10 +40,12 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
     super.initState();
     _controller = Get.find<SettingsController>();
     _domainController = TextEditingController(text: _controller.domain.value);
-    _httpPortController =
-        TextEditingController(text: _controller.httpPort.value.toString());
-    _httpsPortController =
-        TextEditingController(text: _controller.httpsPort.value.toString());
+    _httpPortController = TextEditingController(
+      text: _controller.httpPort.value.toString(),
+    );
+    _httpsPortController = TextEditingController(
+      text: _controller.httpsPort.value.toString(),
+    );
     _certPath = _controller.certPath.value;
     _keyPath = _controller.keyPath.value;
 
@@ -72,9 +74,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: StandardAppBar(
-        title: l10n.domainManagement,
-      ),
+      appBar: StandardAppBar(title: l10n.domainManagement),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
@@ -159,16 +159,23 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
             height: 10,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _isStarting ? Colors.orange : (running ? Colors.green : colorScheme.onSurface.withValues(alpha: 0.3)),
-              boxShadow: (_isStarting || running)
-                  ? [
-                      BoxShadow(
-                        color: (_isStarting ? Colors.orange : Colors.green).withValues(alpha: 0.4),
-                        blurRadius: 6,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : null,
+              color:
+                  _isStarting
+                      ? Colors.orange
+                      : (running
+                          ? Colors.green
+                          : colorScheme.onSurface.withValues(alpha: 0.3)),
+              boxShadow:
+                  (_isStarting || running)
+                      ? [
+                        BoxShadow(
+                          color: (_isStarting ? Colors.orange : Colors.green)
+                              .withValues(alpha: 0.4),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                      : null,
             ),
           ),
           const SizedBox(width: 14),
@@ -189,11 +196,12 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
                   statusText,
                   style: TextStyle(
                     fontSize: 12,
-                    color: _isStarting
-                        ? Colors.orange
-                        : (running
-                            ? Colors.green
-                            : colorScheme.onSurface.withValues(alpha: 0.5)),
+                    color:
+                        _isStarting
+                            ? Colors.orange
+                            : (running
+                                ? Colors.green
+                                : colorScheme.onSurface.withValues(alpha: 0.5)),
                   ),
                 ),
               ],
@@ -202,11 +210,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
           if (running)
             TextButton.icon(
               onPressed: _restartService,
-              icon: Icon(
-                Icons.refresh,
-                size: 16,
-                color: colorScheme.onSurface,
-              ),
+              icon: Icon(Icons.refresh, size: 16, color: colorScheme.onSurface),
               label: Text(
                 l10n.restart,
                 style: TextStyle(
@@ -216,7 +220,10 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
                 ),
               ),
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 visualDensity: VisualDensity.compact,
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -254,7 +261,9 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               icon: Icons.router,
               label: l10n.localAddress,
               address: detector.localAddress.value,
-              loading: detector.isDetecting.value && detector.localAddress.value == null,
+              loading:
+                  detector.isDetecting.value &&
+                  detector.localAddress.value == null,
               running: running,
             ),
             const SizedBox(height: 14),
@@ -265,7 +274,9 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               icon: Icons.public,
               label: l10n.externalAddress,
               address: detector.externalAddress.value,
-              loading: detector.isDetecting.value && detector.externalAddress.value == null,
+              loading:
+                  detector.isDetecting.value &&
+                  detector.externalAddress.value == null,
               running: running,
             ),
             const SizedBox(height: 12),
@@ -273,9 +284,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               children: [
                 Expanded(
                   child: Text(
-                    running
-                        ? l10n.addressDesc
-                        : l10n.serviceNotRunningHint,
+                    running ? l10n.addressDesc : l10n.serviceNotRunningHint,
                     style: TextStyle(
                       fontSize: 12,
                       color: colorScheme.onSurface.withValues(alpha: 0.5),
@@ -284,20 +293,22 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
                 ),
                 if (running)
                   TextButton.icon(
-                    onPressed: detector.isDetecting.value
-                        ? null
-                        : () => detector.detect(force: true),
-                    icon: detector.isDetecting.value
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Icon(
-                            Icons.refresh,
-                            size: 16,
-                            color: colorScheme.onSurface,
-                          ),
+                    onPressed:
+                        detector.isDetecting.value
+                            ? null
+                            : () => detector.detect(force: true),
+                    icon:
+                        detector.isDetecting.value
+                            ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : Icon(
+                              Icons.refresh,
+                              size: 16,
+                              color: colorScheme.onSurface,
+                            ),
                     label: Text(
                       l10n.detecting,
                       style: TextStyle(
@@ -648,7 +659,8 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
             colorScheme,
             icon: Icons.description,
             title: l10n.sslCertificate,
-            subtitle: _certPath != null ? _certPath!.split('/').last : l10n.notSet,
+            subtitle:
+                _certPath != null ? _certPath!.split('/').last : l10n.notSet,
             selected: _certPath != null,
             isFirst: true,
             isLast: false,
@@ -661,7 +673,8 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
             colorScheme,
             icon: Icons.lock,
             title: l10n.sslPrivateKey,
-            subtitle: _keyPath != null ? _keyPath!.split('/').last : l10n.notSet,
+            subtitle:
+                _keyPath != null ? _keyPath!.split('/').last : l10n.notSet,
             selected: _keyPath != null,
             isFirst: false,
             isLast: true,
@@ -717,20 +730,17 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: selected
-                          ? colorScheme.onSurface
-                          : colorScheme.onSurface.withValues(alpha: 0.5),
+                      color:
+                          selected
+                              ? colorScheme.onSurface
+                              : colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
               ),
             ),
             if (selected)
-              Icon(
-                Icons.check_circle,
-                size: 22,
-                color: colorScheme.onSurface,
-              ),
+              Icon(Icons.check_circle, size: 22, color: colorScheme.onSurface),
             if (onClear != null)
               IconButton(
                 onPressed: onClear,
@@ -767,7 +777,10 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
           Icon(
             httpsOn ? Icons.lock : Icons.lock_open,
             size: 20,
-            color: httpsOn ? Colors.green : colorScheme.onSurface.withValues(alpha: 0.4),
+            color:
+                httpsOn
+                    ? Colors.green
+                    : colorScheme.onSurface.withValues(alpha: 0.4),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -784,9 +797,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  hasCert
-                      ? l10n.httpsEnabledDesc
-                      : l10n.httpsDisabledDesc,
+                  hasCert ? l10n.httpsEnabledDesc : l10n.httpsDisabledDesc,
                   style: TextStyle(
                     fontSize: 12,
                     color: colorScheme.onSurface.withValues(alpha: 0.5),
@@ -798,9 +809,10 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: httpsOn
-                  ? Colors.green.withValues(alpha: 0.1)
-                  : colorScheme.onSurface.withValues(alpha: 0.05),
+              color:
+                  httpsOn
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : colorScheme.onSurface.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -808,7 +820,10 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: httpsOn ? Colors.green : colorScheme.onSurface.withValues(alpha: 0.4),
+                color:
+                    httpsOn
+                        ? Colors.green
+                        : colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ),
           ),
@@ -830,11 +845,7 @@ class _DomainManagementPageState extends State<DomainManagementPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info,
-            size: 18,
-            color: colorScheme.onSurface,
-          ),
+          Icon(Icons.info, size: 18, color: colorScheme.onSurface),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

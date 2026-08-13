@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../widgets/standard_app_bar.dart';
+import 'package:llmate/features/widgets/standard_app_bar.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../l10n/app_localizations.dart';

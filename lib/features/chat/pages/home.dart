@@ -9,7 +9,7 @@ import 'dart:io' show Platform;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../../models/models.dart';
-import '../../../widgets/standard_app_bar.dart';
+import 'package:llmate/features/widgets/standard_app_bar.dart';
 import '../../../controllers/model_controller.dart';
 
 import '../widgets/sidebars/chat_left_sidebar.dart';
@@ -24,7 +24,7 @@ import '../../mcp/pages/mcp_management_page.dart';
 import '../../settings/pages/other_settings_page.dart';
 import '../../settings/pages/domain_management_page.dart';
 import '../widgets/usage_dashboard.dart';
-import 'package:llmate/widgets/command_palette.dart';
+import 'package:llmate/features/widgets/command_palette.dart';
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});

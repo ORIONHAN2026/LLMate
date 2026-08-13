@@ -10,12 +10,12 @@ import '../../../../controllers/session_controller.dart';
 import '../../../../controllers/settings_controller.dart';
 import '../../../../controllers/mcp_controller.dart';
 import '../../../../core/http/local_http_service.dart';
-import '../../../../widgets/mcp_detail_dialog.dart';
+import 'package:llmate/features/mcp/widgets/mcp_detail_dialog.dart';
 import '../../../../models/chat/session.dart';
 import '../../../../models/chat/mcp.dart';
 import '../../../../models/model.dart';
 import '../../../../utils/snackbar_utils.dart';
-import '../../../../widgets/confirm_delete_dialog.dart';
+import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 
 /// 会话配置侧边栏内容
 class SessionConfigSidebar {

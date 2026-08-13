@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import '../../../widgets/standard_app_bar.dart';
-import '../../../widgets/confirm_delete_dialog.dart';
+import 'package:llmate/features/widgets/standard_app_bar.dart';
+import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

@@ -1,6 +1,6 @@
 import 'package:llmate/utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../widgets/standard_app_bar.dart';
+import 'package:llmate/features/widgets/standard_app_bar.dart';
 
 import '../../../controllers/session_controller.dart';
 import '../../../controllers/model_controller.dart';

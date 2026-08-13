@@ -1,6 +1,6 @@
 import 'package:llmate/l10n/app_localizations.dart';
-import 'package:llmate/utils/snackbar_utils.dart';
-import 'package:llmate/utils/responsive_utils.dart';
+import 'package:llmate/features/utils/snackbar_utils.dart';
+import 'package:llmate/features/utils/responsive_utils.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:llmate/controllers/session_controller.dart';
 import 'package:llmate/models/chat/session.dart';

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:llmate/controllers/session_controller.dart';
 import 'package:llmate/controllers/message_controller.dart';
 import 'package:llmate/models/models.dart';
-import 'package:llmate/utils/snackbar_utils.dart';
+import 'package:llmate/features/utils/snackbar_utils.dart';
 import 'package:llmate/core/llm/llm_client.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -356,8 +356,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                     Builder(
                                       builder: (buttonContext) {
                                         return _buildActionButton(
-                                          icon:
-                                              Icons.more_vert,
+                                          icon: Icons.more_vert,
                                           tooltip: l10n.more,
                                           onTap: () {},
                                           onTapDown:
@@ -769,77 +768,77 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     String actionName,
     RegenerateActionType actionType,
   ) async {
-      final messages = session.messages;
+    final messages = session.messages;
 
-      try {
-        ChatSession updatedSession;
-        ChatMessage? botMessageToUpdate;
-        List<ChatMessage> removedMessages = [];
+    try {
+      ChatSession updatedSession;
+      ChatMessage? botMessageToUpdate;
+      List<ChatMessage> removedMessages = [];
 
-        switch (actionType) {
-          case RegenerateActionType.regenerateThisReply:
-            // 重新生成此回复：只替换当前消息内容，保留前后所有消息
-            if (targetIndex < 0 || targetIndex >= messages.length) {
-              if (mounted) {
-                SnackBarUtils.showError(
-                  context,
-                  AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
-                );
-              }
-              return;
+      switch (actionType) {
+        case RegenerateActionType.regenerateThisReply:
+          // 重新生成此回复：只替换当前消息内容，保留前后所有消息
+          if (targetIndex < 0 || targetIndex >= messages.length) {
+            if (mounted) {
+              SnackBarUtils.showError(
+                context,
+                AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
+              );
             }
+            return;
+          }
 
-            // 创建一个临时的更新会话，将目标消息内容清空但保留消息位置
-            final updatedMessages = List<ChatMessage>.from(messages);
-            final newBot = ChatMessage(
-              msgId: messages[targetIndex].msgId,
-              role: MessageRole.bot,
-              content: '', // 清空内容，准备重新生成
-              timestamp: messages[targetIndex].timestamp,
-              sessionId: session.sessionId,
-              isError: false,
-            );
-            updatedMessages[targetIndex] = newBot;
-            botMessageToUpdate = newBot;
+          // 创建一个临时的更新会话，将目标消息内容清空但保留消息位置
+          final updatedMessages = List<ChatMessage>.from(messages);
+          final newBot = ChatMessage(
+            msgId: messages[targetIndex].msgId,
+            role: MessageRole.bot,
+            content: '', // 清空内容，准备重新生成
+            timestamp: messages[targetIndex].timestamp,
+            sessionId: session.sessionId,
+            isError: false,
+          );
+          updatedMessages[targetIndex] = newBot;
+          botMessageToUpdate = newBot;
 
-            updatedSession = session.copyWith(
-              messages: updatedMessages,
-              isSending: true,
-            );
-            break;
+          updatedSession = session.copyWith(
+            messages: updatedMessages,
+            isSending: true,
+          );
+          break;
 
-          case RegenerateActionType.regenerateFromHere:
-          case RegenerateActionType.regenerate:
-          case RegenerateActionType.regenerateLastReply:
-            // 其他情况：删除从目标索引开始的所有消息
-            if (targetIndex < 0 || targetIndex > messages.length) {
-              if (mounted) {
-                SnackBarUtils.showError(
-                  context,
-                  AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
-                );
-              }
-              return;
+        case RegenerateActionType.regenerateFromHere:
+        case RegenerateActionType.regenerate:
+        case RegenerateActionType.regenerateLastReply:
+          // 其他情况：删除从目标索引开始的所有消息
+          if (targetIndex < 0 || targetIndex > messages.length) {
+            if (mounted) {
+              SnackBarUtils.showError(
+                context,
+                AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
+              );
             }
+            return;
+          }
 
-            final updatedMessages = messages.sublist(0, targetIndex);
-            removedMessages = messages.sublist(targetIndex);
-            updatedSession = session.copyWith(
-              messages: updatedMessages,
-              isSending: true,
-            );
-            break;
-        }
+          final updatedMessages = messages.sublist(0, targetIndex);
+          removedMessages = messages.sublist(targetIndex);
+          updatedSession = session.copyWith(
+            messages: updatedMessages,
+            isSending: true,
+          );
+          break;
+      }
 
-        await sessionController.updateSession(updatedSession);
-        // 单条落盘（替代批量写入）
-        final messageController = MessageController.instance;
-        if (botMessageToUpdate != null) {
-          messageController.updateMessage(botMessageToUpdate);
-        }
-        for (final m in removedMessages) {
-          messageController.deleteMessage(m);
-        }
+      await sessionController.updateSession(updatedSession);
+      // 单条落盘（替代批量写入）
+      final messageController = MessageController.instance;
+      if (botMessageToUpdate != null) {
+        messageController.updateMessage(botMessageToUpdate);
+      }
+      for (final m in removedMessages) {
+        messageController.deleteMessage(m);
+      }
 
       // 生成新的AI回复
       await _generateAIResponse(

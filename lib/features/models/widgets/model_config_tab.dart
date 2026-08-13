@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/models/model.dart';
-import 'package:llmate/utils/snackbar_utils.dart';
+import 'package:llmate/features/utils/snackbar_utils.dart';
 
 class ModelConfigTab extends StatefulWidget {
   final ChatModel model;
@@ -89,7 +89,10 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               icon: const Icon(Icons.monetization_on_outlined, size: 16),
             ),
             Tab(text: loc.modelParams, icon: const Icon(Icons.tune, size: 16)),
-            Tab(text: loc.securitySettings, icon: const Icon(Icons.security, size: 16)),
+            Tab(
+              text: loc.securitySettings,
+              icon: const Icon(Icons.security, size: 16),
+            ),
           ],
         ),
         Expanded(
@@ -392,9 +395,10 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                   size: 12,
                                   color:
                                       _isHoveringModelName
-                                          ? Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface.withOpacity(0.7)
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.7)
                                           : Theme.of(context)
                                               .colorScheme
                                               .onSurface
@@ -854,5 +858,4 @@ class _ModelConfigTabState extends State<ModelConfigTab>
       ],
     );
   }
-
 }

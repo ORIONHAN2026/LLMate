@@ -6,7 +6,7 @@ import '../../../models/chat/message.dart';
 import '../../../models/chat/mcp.dart';
 import '../../../controllers/mcp_controller.dart';
 
-import '../../../services/storage_paths.dart';
+import '../../services/storage_paths.dart';
 
 /// 安全函数名 → 原始函数名 映射（用于还原 MCP 工具名中的非法字符）
 final Map<String, String> _safeNameToOriginal = {};
@@ -17,7 +17,10 @@ String resolveOriginalToolName(String safeName) {
 }
 
 /// 加载聊天室模式的所有角色上下文
-Future<List<String>> loadRoleContexts(String sessionId, {String? workDirectory}) async {
+Future<List<String>> loadRoleContexts(
+  String sessionId, {
+  String? workDirectory,
+}) async {
   final rolesDirPath = StoragePaths.rolesDir(
     sessionId: sessionId,
     workDirectory: workDirectory,
@@ -57,7 +60,8 @@ Future<String?> findModeFile({
 }) async {
   // 1. 先查工作目录
   if (workDirectory != null && workDirectory.isNotEmpty) {
-    final workPath = '${StoragePaths.modeDir(sessionId: sessionId, workMode: workMode, workDirectory: workDirectory)}/$fileName';
+    final workPath =
+        '${StoragePaths.modeDir(sessionId: sessionId, workMode: workMode, workDirectory: workDirectory)}/$fileName';
     debugPrint('🔍 查找工作目录文件: $workPath');
     if (await File(workPath).exists()) {
       debugPrint('✅ 找到文件: $workPath');
@@ -67,7 +71,8 @@ Future<String?> findModeFile({
   }
 
   // 2. 再查会话目录
-  final sessionPath = '${StoragePaths.modeDir(sessionId: sessionId, workMode: workMode)}/$fileName';
+  final sessionPath =
+      '${StoragePaths.modeDir(sessionId: sessionId, workMode: workMode)}/$fileName';
   debugPrint('🔍 查格會话目录文件: $sessionPath');
   if (await File(sessionPath).exists()) {
     debugPrint('✅ 找到文件: $sessionPath');
@@ -88,7 +93,11 @@ Future<List<FileSystemEntity>> findModeFiles({
 }) async {
   // 1. 先查工作目录
   if (workDirectory != null && workDirectory.isNotEmpty) {
-    final workDir = StoragePaths.modeDir(sessionId: sessionId, workMode: workMode, workDirectory: workDirectory);
+    final workDir = StoragePaths.modeDir(
+      sessionId: sessionId,
+      workMode: workMode,
+      workDirectory: workDirectory,
+    );
     if (await Directory(workDir).exists()) {
       final files = await Directory(workDir).list(recursive: true).toList();
       if (files.any((e) => e is File)) {
@@ -98,7 +107,10 @@ Future<List<FileSystemEntity>> findModeFiles({
   }
 
   // 2. 再查会话目录
-  final sessionDir = StoragePaths.modeDir(sessionId: sessionId, workMode: workMode);
+  final sessionDir = StoragePaths.modeDir(
+    sessionId: sessionId,
+    workMode: workMode,
+  );
   if (await Directory(sessionDir).exists()) {
     return await Directory(sessionDir).list(recursive: true).toList();
   }

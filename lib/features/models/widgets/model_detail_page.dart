@@ -1,6 +1,6 @@
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/models/model.dart';
-import 'package:llmate/utils/snackbar_utils.dart';
+import 'package:llmate/features/utils/snackbar_utils.dart';
 import 'package:llmate/features/models/widgets/model_config_tab.dart';
 import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
@@ -170,8 +170,9 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                 Text(
                   _currentModel.platform != null &&
                           _currentModel.platform!.isNotEmpty
-                      ? AppLocalizations.of(context)!
-                          .modelDetailsWithPlatform(_currentModel.platform!)
+                      ? AppLocalizations.of(
+                        context,
+                      )!.modelDetailsWithPlatform(_currentModel.platform!)
                       : AppLocalizations.of(context)!.modelDetails,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

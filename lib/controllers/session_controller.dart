@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 import '../data/database.dart';
 import '../models/chat/session.dart';
 import '../models/model.dart';
-import '../services/storage_paths.dart';
+import '../core/services/storage_paths.dart';
 
 import './model_controller.dart';
 import './mcp_controller.dart';

@@ -4,7 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path/path.dart' as p;
 
-import '../services/storage_paths.dart';
+import '../core/services/storage_paths.dart';
 import '../models/audit.dart';
 import '../models/chat/mcp.dart';
 import '../models/chat/message.dart';
@@ -126,28 +126,26 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onUpgrade: (migrator, from, to) async {
-          if (from < 2) {
-            await migrator.addColumn(usageRows, usageRows.promptTokens);
-            await migrator.addColumn(usageRows, usageRows.completionTokens);
-            await migrator.addColumn(usageRows, usageRows.cost);
-            await migrator.addColumn(usageRows, usageRows.currency);
-            await customStatement('ALTER TABLE usage_rows DROP COLUMN data');
-          }
-          if (from < 3) {
-            await migrator.addColumn(usageRows, usageRows.modelId);
-            await customStatement(
-              'UPDATE usage_rows SET model_id = model WHERE model IS NOT NULL',
-            );
-            await customStatement('ALTER TABLE usage_rows DROP COLUMN model');
-          }
-          if (from < 4) {
-            await customStatement(
-              'ALTER TABLE usage_rows DROP COLUMN detail_key',
-            );
-          }
-        },
-      );
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.addColumn(usageRows, usageRows.promptTokens);
+        await migrator.addColumn(usageRows, usageRows.completionTokens);
+        await migrator.addColumn(usageRows, usageRows.cost);
+        await migrator.addColumn(usageRows, usageRows.currency);
+        await customStatement('ALTER TABLE usage_rows DROP COLUMN data');
+      }
+      if (from < 3) {
+        await migrator.addColumn(usageRows, usageRows.modelId);
+        await customStatement(
+          'UPDATE usage_rows SET model_id = model WHERE model IS NOT NULL',
+        );
+        await customStatement('ALTER TABLE usage_rows DROP COLUMN model');
+      }
+      if (from < 4) {
+        await customStatement('ALTER TABLE usage_rows DROP COLUMN detail_key');
+      }
+    },
+  );
 }
 
 /// 全局单例

@@ -12,7 +12,7 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart' as cors;
 import '../../controllers/settings_controller.dart';
 import '../../controllers/audit_controller.dart';
 import '../../controllers/usage_controller.dart';
-import '../../services/storage_paths.dart';
+import '../services/storage_paths.dart';
 import '../../models/chat/session.dart';
 import '../../models/audit.dart';
 import 'middleware/api_key_guard.dart';

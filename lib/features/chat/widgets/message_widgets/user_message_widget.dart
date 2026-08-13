@@ -2,8 +2,8 @@ import 'package:llmate/controllers/session_controller.dart';
 import 'package:llmate/controllers/message_controller.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/models/models.dart';
-import 'package:llmate/utils/snackbar_utils.dart';
-import 'package:llmate/utils/responsive_utils.dart';
+import 'package:llmate/features/utils/snackbar_utils.dart';
+import 'package:llmate/features/utils/responsive_utils.dart';
 import 'package:llmate/core/llm/llm_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -46,7 +46,9 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
   }
 
   // 根据消息ID异步查找包含该消息的会话（内存+Isar）
-  Future<ChatSession?> _findSessionContainingMessageAsync(String messageId) async {
+  Future<ChatSession?> _findSessionContainingMessageAsync(
+    String messageId,
+  ) async {
     // 先尝试内存查找
     final memorySession = _findSessionContainingMessage(messageId);
     if (memorySession != null) return memorySession;
@@ -215,7 +217,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
   // 复制消息内容
   void _copyMessage(BuildContext context, String content) {
     Clipboard.setData(ClipboardData(text: content));
-    SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.copiedToClipboard);
+    SnackBarUtils.showSuccess(
+      context,
+      AppLocalizations.of(context)!.copiedToClipboard,
+    );
   }
 
   // 编辑消息
@@ -293,7 +298,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
                 final newContent = controller.text.trim();
                 if (newContent.isNotEmpty) {
                   if (newContent.trim().isEmpty) {
-                    SnackBarUtils.showError(context, l10n.messageContentCannotBeEmpty);
+                    SnackBarUtils.showError(
+                      context,
+                      l10n.messageContentCannotBeEmpty,
+                    );
                     return;
                   }
 
@@ -307,7 +315,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
                   Navigator.of(context).pop();
                 } else {
-                  SnackBarUtils.showError(context, l10n.messageContentCannotBeEmpty);
+                  SnackBarUtils.showError(
+                    context,
+                    l10n.messageContentCannotBeEmpty,
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -332,10 +343,15 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
   // 统一的重新生成方法
   void _regenerateMessage(RegenerateActionType actionType) async {
-    final session = await _findSessionContainingMessageAsync(widget.message.msgId);
+    final session = await _findSessionContainingMessageAsync(
+      widget.message.msgId,
+    );
     if (session == null) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.sessionNotFoundForMessage);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.sessionNotFoundForMessage,
+        );
       }
       return;
     }
@@ -348,7 +364,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
       if (messageIndex == -1) {
         if (mounted) {
-          SnackBarUtils.showError(context, AppLocalizations.of(context)!.messageNotFound);
+          SnackBarUtils.showError(
+            context,
+            AppLocalizations.of(context)!.messageNotFound,
+          );
         }
         return;
       }
@@ -374,7 +393,12 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(AppLocalizations.of(context)!.regenerate, e.toString()));
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(
+            context,
+          )!.xFailed(AppLocalizations.of(context)!.regenerate, e.toString()),
+        );
       }
     }
   }
@@ -387,12 +411,20 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
     if (userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.messageContentCannotBeEmpty);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.messageContentCannotBeEmpty,
+        );
       }
       return;
     }
 
-    await _performRegeneration(session, userQuestion, startDeleteIndex, AppLocalizations.of(context)!.regenerate);
+    await _performRegeneration(
+      session,
+      userQuestion,
+      startDeleteIndex,
+      AppLocalizations.of(context)!.regenerate,
+    );
   }
 
   // 从此处重新生成
@@ -404,7 +436,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
     if (userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.messageContentCannotBeEmpty);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.messageContentCannotBeEmpty,
+        );
       }
       return;
     }
@@ -436,7 +471,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
     if (lastAiMessage == null) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.noAiReplyFound);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.noAiReplyFound,
+        );
       }
       return;
     }
@@ -458,7 +496,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       } catch (e) {
         // 如果通过 pairedMsgId 找不到，说明对应的用户消息已被删除
         if (mounted) {
-          SnackBarUtils.showError(context, AppLocalizations.of(context)!.messageNotFound);
+          SnackBarUtils.showError(
+            context,
+            AppLocalizations.of(context)!.messageNotFound,
+          );
         }
         return;
       }
@@ -477,7 +518,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
 
     if (userQuestion == null || userQuestion.isEmpty) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotFindQuestion);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.cannotFindQuestion,
+        );
       }
       return;
     }
@@ -508,7 +552,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     final messages = session.messages;
     if (startDeleteIndex < 0 || startDeleteIndex > messages.length) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.cannotRegenerateInvalidIndex);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.cannotRegenerateInvalidIndex,
+        );
       }
       return;
     }
@@ -528,7 +575,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       await _generateAIResponse(updatedSession, userQuestion, actionName);
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(actionName, e.toString()));
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.xFailed(actionName, e.toString()),
+        );
       }
 
       // 确保重置发送状态
@@ -634,11 +684,17 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       }
 
       if (mounted) {
-        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.xDone(actionName));
+        SnackBarUtils.showSuccess(
+          context,
+          AppLocalizations.of(context)!.xDone(actionName),
+        );
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(actionName, e.toString()));
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.xFailed(actionName, e.toString()),
+        );
       }
 
       // 重置发送状态
@@ -660,11 +716,19 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       // 通知父组件更新
       if (mounted) {
         widget.onUpdate?.call();
-        SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.messageDeleted);
+        SnackBarUtils.showSuccess(
+          context,
+          AppLocalizations.of(context)!.messageDeleted,
+        );
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.xFailed(AppLocalizations.of(context)!.deleteMessage, e.toString()));
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(
+            context,
+          )!.xFailed(AppLocalizations.of(context)!.deleteMessage, e.toString()),
+        );
       }
     }
   }
@@ -693,19 +757,28 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
           // 通知父组件更新
           if (mounted) {
             widget.onUpdate?.call();
-            SnackBarUtils.showSuccess(context, AppLocalizations.of(context)!.replyDeleted);
+            SnackBarUtils.showSuccess(
+              context,
+              AppLocalizations.of(context)!.replyDeleted,
+            );
           }
         }
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.deleteReplyFailed);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.deleteReplyFailed,
+        );
       }
     }
   }
 
   // 从消息创建新对话
-  Future<void> _createNewSessionFromMessage(BuildContext context, ChatMessage message) async {
+  Future<void> _createNewSessionFromMessage(
+    BuildContext context,
+    ChatMessage message,
+  ) async {
     try {
       final l10n = AppLocalizations.of(context)!;
       // 根据消息ID查找包含该消息的会话
@@ -746,7 +819,10 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, AppLocalizations.of(context)!.createNewChatFailed);
+        SnackBarUtils.showError(
+          context,
+          AppLocalizations.of(context)!.createNewChatFailed,
+        );
       }
     }
   }
@@ -1029,6 +1105,4 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
       ),
     );
   }
-
-
 }

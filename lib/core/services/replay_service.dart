@@ -1,4 +1,4 @@
-import '../models/audit.dart';
+import '../../models/audit.dart';
 import 'duckdb_storage.dart';
 
 /// 审计回放服务
@@ -11,6 +11,5 @@ class ReplayService {
   ReplayService(this.storage);
 
   /// 回放指定链路（traceId）下的全部事件，按发生时间升序返回
-  Future<List<AuditEvent>> replay(String traceId) =>
-      storage.loadTrace(traceId);
+  Future<List<AuditEvent>> replay(String traceId) => storage.loadTrace(traceId);
 }

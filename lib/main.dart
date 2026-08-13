@@ -11,10 +11,10 @@ import './controllers/settings_controller.dart';
 import './controllers/mcp_controller.dart';
 import './controllers/audit_controller.dart';
 import './features/chat/pages/home.dart';
-import './pages/loading_page.dart';
+import 'features/loading_page.dart';
 import './core/http/local_http_service.dart';
 
-import './services/storage_paths.dart';
+import 'core/services/storage_paths.dart';
 
 // 最小窗口宽度组成: 左侧边栏最小 150 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
 const double kMinLeftSidebarWidth = 150;
@@ -117,7 +117,7 @@ class MyApp extends StatelessWidget {
               Locale('fr'),
               Locale('de'),
             ],
-              theme: ThemeData(
+            theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
                 primary: const Color(0xFF1F2937),
                 seedColor: const Color(0xFF1F2937), // 深色主色调（与添加模型按钮一致）
@@ -152,15 +152,33 @@ class MyApp extends StatelessWidget {
               dividerColor: const Color(0xFFE5E7EB),
               primaryColor: const Color(0xFF1F2937),
               textTheme: const TextTheme(
-                headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-                headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                titleLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                titleMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                titleSmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                headlineLarge: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                ),
+                headlineMedium: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+                titleLarge: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+                titleMedium: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                titleSmall: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
                 bodyLarge: TextStyle(fontSize: 15, height: 1.6),
                 bodyMedium: TextStyle(fontSize: 13, height: 1.5),
                 bodySmall: TextStyle(fontSize: 11, height: 1.4),
-                labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                labelLarge: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
                 labelMedium: TextStyle(fontSize: 12),
                 labelSmall: TextStyle(fontSize: 10),
               ),
@@ -209,15 +227,33 @@ class MyApp extends StatelessWidget {
               canvasColor: const Color(0xFF1A1B23),
               primaryColor: const Color(0xFF1F2937),
               textTheme: const TextTheme(
-                headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-                headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                titleLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                titleMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                titleSmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                headlineLarge: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                ),
+                headlineMedium: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+                titleLarge: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+                titleMedium: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                titleSmall: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
                 bodyLarge: TextStyle(fontSize: 15, height: 1.6),
                 bodyMedium: TextStyle(fontSize: 13, height: 1.5),
                 bodySmall: TextStyle(fontSize: 11, height: 1.4),
-                labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                labelLarge: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
                 labelMedium: TextStyle(fontSize: 12),
                 labelSmall: TextStyle(fontSize: 10),
               ),
@@ -251,13 +287,17 @@ class MyApp extends StatelessWidget {
               ),
               outlinedButtonTheme: OutlinedButtonThemeData(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF9CA3AF), // 深色模式下保证可读的中性灰（与按钮同色系）
+                  foregroundColor: const Color(
+                    0xFF9CA3AF,
+                  ), // 深色模式下保证可读的中性灰（与按钮同色系）
                   side: const BorderSide(color: Color(0xFF9CA3AF)),
                 ),
               ),
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF9CA3AF), // 深色模式下保证可读的中性灰（与按钮同色系）
+                  foregroundColor: const Color(
+                    0xFF9CA3AF,
+                  ), // 深色模式下保证可读的中性灰（与按钮同色系）
                 ),
               ),
               cardColor: const Color(0xFF23242A),

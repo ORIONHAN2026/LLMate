@@ -8,8 +8,7 @@ import '../../../controllers/mcp_controller.dart';
 import '../../../models/models.dart';
 import '../../../core/llm/llm_client.dart';
 import '../../../controllers/model_controller.dart';
-import '../../../core/config/feature_toggle_service.dart';
-import '../../../utils/snackbar_utils.dart';
+import '../../utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:llmate/features/mcp/widgets/mcp_detail_dialog.dart';
 import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
@@ -101,9 +100,6 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
     McpController.instance.ensureLoaded().then((_) {
       if (mounted) setState(() {});
     });
-    // 加载功能开关配置
-    FeatureToggleService().init();
-
     _inputController = TextEditingController();
     _inputFocusNode = FocusNode();
     _hasText = _inputController.text.isNotEmpty;

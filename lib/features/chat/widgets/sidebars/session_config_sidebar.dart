@@ -14,7 +14,7 @@ import 'package:llmate/features/mcp/widgets/mcp_detail_dialog.dart';
 import '../../../../models/chat/session.dart';
 import '../../../../models/chat/mcp.dart';
 import '../../../../models/model.dart';
-import '../../../../utils/snackbar_utils.dart';
+import '../../../utils/snackbar_utils.dart';
 import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 
 /// 会话配置侧边栏内容
@@ -213,11 +213,11 @@ class SessionConfigSidebar {
                     value,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ],
               ),
@@ -774,7 +774,10 @@ class SessionConfigSidebar {
   }
 
   /// 禁用会话开关：开启后该会话的任何调用（应用内 / 外部 HTTP）都会返回错误
-  static Widget _buildDisabledToggle(BuildContext context, ChatSession session) {
+  static Widget _buildDisabledToggle(
+    BuildContext context,
+    ChatSession session,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1234,7 +1237,10 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
 
         if (_session.quotaEnabled) ...[
           const SizedBox(height: 12),
-          SessionConfigSidebar._buildSectionTitle(context, l10n.usageQuotaLabel),
+          SessionConfigSidebar._buildSectionTitle(
+            context,
+            l10n.usageQuotaLabel,
+          ),
           const SizedBox(height: 8),
 
           // Token 用量上限
@@ -1321,7 +1327,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
       decoration: BoxDecoration(
         color:
             _session.quotaEnabled
-                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)
+                ? Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.08)
                 : Theme.of(
                   context,
                 ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
@@ -1645,7 +1653,9 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               ),
               const SizedBox(width: 6),
               Text(
-                quotaResult.exceeded ? l10n.quotaExhausted : l10n.currentUsageStatus,
+                quotaResult.exceeded
+                    ? l10n.quotaExhausted
+                    : l10n.currentUsageStatus,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -2057,7 +2067,10 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SessionConfigSidebar._buildSectionTitle(context, l10n.basicInfoLabel),
+                    SessionConfigSidebar._buildSectionTitle(
+                      context,
+                      l10n.basicInfoLabel,
+                    ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildEditableConfigItem(
                       context,
@@ -2106,7 +2119,10 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     if (session.connectPrompt != null &&
                         session.connectPrompt!.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      SessionConfigSidebar._buildSectionTitle(context, l10n.relatedPrompt),
+                      SessionConfigSidebar._buildSectionTitle(
+                        context,
+                        l10n.relatedPrompt,
+                      ),
                       const SizedBox(height: 8),
                       SessionConfigSidebar._buildPromptCard(
                         context,
@@ -2133,7 +2149,10 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SessionConfigSidebar._buildSectionTitle(context, l10n.serviceConfigLabel),
+                    SessionConfigSidebar._buildSectionTitle(
+                      context,
+                      l10n.serviceConfigLabel,
+                    ),
                     const SizedBox(height: 8),
                     _SessionServiceAddresses(session: session),
                     const SizedBox(height: 8),
@@ -2173,7 +2192,10 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SessionConfigSidebar._buildSectionTitle(context, l10n.usageQuotaLabel),
+                    SessionConfigSidebar._buildSectionTitle(
+                      context,
+                      l10n.usageQuotaLabel,
+                    ),
                     const SizedBox(height: 8),
                     _QuotaConfigSection(session: session),
                   ],
@@ -2268,10 +2290,7 @@ class _McpConfigSectionState extends State<_McpConfigSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SessionConfigSidebar._buildSectionTitle(
-          context,
-          l10n.mcpLabel,
-        ),
+        SessionConfigSidebar._buildSectionTitle(context, l10n.mcpLabel),
         const SizedBox(height: 8),
         if (!_loaded)
           const Padding(
@@ -2336,10 +2355,7 @@ class _McpConfigSectionState extends State<_McpConfigSection> {
                   borderRadius: BorderRadius.circular(4),
                   child: const Padding(
                     padding: EdgeInsets.all(4),
-                    child: Icon(
-                      Icons.visibility_outlined,
-                      size: 16,
-                    ),
+                    child: Icon(Icons.visibility_outlined, size: 16),
                   ),
                 ),
               ),
@@ -2384,13 +2400,14 @@ class _SessionServiceAddressesState extends State<_SessionServiceAddresses> {
               ? null
               : 'http://$externalIp:$port/$sessionId';
       final domainUrl =
-          settings.isConfigured ? _withSession(settings.systemSetting.baseUrl) : null;
+          settings.isConfigured
+              ? _withSession(settings.systemSetting.baseUrl)
+              : null;
 
       Widget row(IconData icon, String label, String? value) {
         if (value == null || value.isEmpty) {
-          final hint = running
-              ? l10n.serviceNotRunningHint
-              : l10n.serviceNotRunningHint;
+          final hint =
+              running ? l10n.serviceNotRunningHint : l10n.serviceNotRunningHint;
           return SessionConfigSidebar._buildCopyableConfigItem(
             context,
             icon: icon,

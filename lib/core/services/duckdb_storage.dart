@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:dart_duckdb/dart_duckdb.dart';
 import 'package:path/path.dart' as p;
 
-import '../services/storage_paths.dart';
-import '../models/audit.dart';
+import 'storage_paths.dart';
+import '../../models/audit.dart';
 
 /// DuckDB 审计存储
 ///
@@ -41,8 +41,7 @@ class DuckDBStorage {
   Future<void> initialize() async {
     if (_initialized) return;
     await StoragePaths.ensureRoot();
-    final path =
-        _explicitPath ?? p.join(StoragePaths.root, 'audit.duckdb');
+    final path = _explicitPath ?? p.join(StoragePaths.root, 'audit.duckdb');
     const maxAttempts = 3;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -66,9 +65,7 @@ class DuckDBStorage {
       } on DuckDBException catch (e) {
         await _safeClose();
         if (_isLockError(e) && attempt < maxAttempts) {
-          debugPrint(
-            '⚠️ [Audit] 审计库被占用，重试 ($attempt/$maxAttempts): $e',
-          );
+          debugPrint('⚠️ [Audit] 审计库被占用，重试 ($attempt/$maxAttempts): $e');
           await Future.delayed(const Duration(milliseconds: 400));
           continue;
         }
@@ -105,8 +102,7 @@ class DuckDBStorage {
   }
 
   /// 判断异常是否为 DuckDB 文件锁冲突
-  bool _isLockError(Object e) =>
-      e.toString().toLowerCase().contains('lock');
+  bool _isLockError(Object e) => e.toString().toLowerCase().contains('lock');
 
   /// 写入单条审计事件
   Future<void> save(AuditEvent event) => saveBatch([event]);
@@ -147,10 +143,10 @@ class DuckDBStorage {
 
   /// 加载某条链路（traceId）下的全部事件，按时间升序
   Future<List<AuditEvent>> loadTrace(String traceId) => _query(
-        'SELECT * FROM audit_events '
-        'WHERE trace_id = ${_q(traceId)} '
-        'ORDER BY timestamp ASC',
-      );
+    'SELECT * FROM audit_events '
+    'WHERE trace_id = ${_q(traceId)} '
+    'ORDER BY timestamp ASC',
+  );
 
   /// 按过滤器检索审计事件（时间升序）
   Future<List<AuditEvent>> search(AuditFilter filter) {
@@ -222,32 +218,34 @@ class DuckDBStorage {
   Future<List<AuditEvent>> _query(String sql) {
     if (!_initialized || _conn == null) return Future.value([]);
     return _serialize(() async {
-        final rs = await _conn!.query(sql);
-        final names = rs.columnNames.map((n) => n.toLowerCase()).toList();
-        final rows = rs.fetchAll();
-        await rs.dispose();
-        return rows.map((row) {
-          final map = <String, dynamic>{};
-          for (var i = 0; i < names.length; i++) {
-            map[names[i]] = i < row.length ? row[i] : null;
-          }
-          return AuditEvent.fromRow(map);
-        }).toList();
-      });
+      final rs = await _conn!.query(sql);
+      final names = rs.columnNames.map((n) => n.toLowerCase()).toList();
+      final rows = rs.fetchAll();
+      await rs.dispose();
+      return rows.map((row) {
+        final map = <String, dynamic>{};
+        for (var i = 0; i < names.length; i++) {
+          map[names[i]] = i < row.length ? row[i] : null;
+        }
+        return AuditEvent.fromRow(map);
+      }).toList();
+    });
   }
 
   /// 将所有数据库操作串行进队列，保证单连接安全
   Future<T> _serialize<T>(Future<T> Function() task) {
     final completer = Completer<T>();
-    _lastOp = _lastOp.then((_) async {
-      try {
-        completer.complete(await task());
-      } catch (e, st) {
-        completer.completeError(e, st);
-      }
-    }).catchError((_) {
-      // 前序任务失败不影响后续任务，保持队列存活
-    });
+    _lastOp = _lastOp
+        .then((_) async {
+          try {
+            completer.complete(await task());
+          } catch (e, st) {
+            completer.completeError(e, st);
+          }
+        })
+        .catchError((_) {
+          // 前序任务失败不影响后续任务，保持队列存活
+        });
     return completer.future;
   }
 

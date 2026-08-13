@@ -1,4 +1,4 @@
-import 'package:llmate/utils/snackbar_utils.dart';
+import 'package:llmate/features/utils/snackbar_utils.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:llmate/features/widgets/standard_app_bar.dart';
 
@@ -264,7 +264,9 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
         border:
             isSelected
                 ? Border.all(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.3),
                   width: 1,
                 )
                 : null,

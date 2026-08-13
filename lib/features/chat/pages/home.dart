@@ -15,8 +15,8 @@ import '../../../controllers/model_controller.dart';
 import '../widgets/sidebars/chat_left_sidebar.dart';
 import '../widgets/sidebars/chat_right_sidebar.dart';
 import '../widgets/chat_input_widget.dart';
-import 'package:llmate/utils/snackbar_utils.dart';
-import 'package:llmate/utils/responsive_utils.dart';
+import 'package:llmate/features/utils/snackbar_utils.dart';
+import 'package:llmate/features/utils/responsive_utils.dart';
 import '../widgets/chat_conversation_area.dart';
 import '../../settings/pages/modelssetting.dart';
 import '../../mcp/pages/mcp_management_page.dart';
@@ -74,7 +74,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
 
     _loadModels();
     _loadSessions(); // 加载保存的会话
-
 
     // 添加滚动监听器来保存滚动位置
     _scrollController.addListener(_onScrollChanged);
@@ -426,7 +425,8 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               builder: (context) {
                 return Positioned(
                   left: () {
-                    final leftSidebarWidth = _isSidebarCollapsed ? 0 : _sidebarWidth;
+                    final leftSidebarWidth =
+                        _isSidebarCollapsed ? 0 : _sidebarWidth;
                     final screenWidth = MediaQuery.of(context).size.width;
                     final chatAreaWidth = screenWidth - leftSidebarWidth;
                     // 按钮居中于整个对话区域
@@ -615,7 +615,10 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 12),
-              Text(l10n.connectorManagement, style: const TextStyle(fontSize: 12)),
+              Text(
+                l10n.connectorManagement,
+                style: const TextStyle(fontSize: 12),
+              ),
             ],
           ),
           onTap: () {
@@ -701,9 +704,8 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       ),
       CommandPaletteAction(
         id: 'toggle-sidebar',
-        title: _isSidebarCollapsed
-            ? (l10n.expandSidebar)
-            : (l10n.collapseSidebar),
+        title:
+            _isSidebarCollapsed ? (l10n.expandSidebar) : (l10n.collapseSidebar),
         icon: Icons.menu,
         shortcut: '\u2318B',
         onTap: () {
@@ -714,9 +716,10 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       ),
       CommandPaletteAction(
         id: 'toggle-right-panel',
-        title: _isRightSidebarCollapsed
-            ? (l10n.expandRightSidebar)
-            : (l10n.collapseRightSidebar),
+        title:
+            _isRightSidebarCollapsed
+                ? (l10n.expandRightSidebar)
+                : (l10n.collapseRightSidebar),
         icon: Icons.menu_open,
         shortcut: '\u2318]',
         onTap: () {
@@ -733,9 +736,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const OtherSettingsPage(),
-            ),
+            MaterialPageRoute(builder: (context) => const OtherSettingsPage()),
           );
         },
       ),
@@ -747,9 +748,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         onTap: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const ModelSettingPage(),
-            ),
+            MaterialPageRoute(builder: (context) => const ModelSettingPage()),
           );
           _loadModels();
         },
@@ -762,9 +761,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const McpManagementPage(),
-            ),
+            MaterialPageRoute(builder: (context) => const McpManagementPage()),
           );
         },
       ),
@@ -786,10 +783,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     );
     try {
       if (await canLaunchUrl(feedbackUri)) {
-        await launchUrl(
-          feedbackUri,
-          mode: LaunchMode.externalApplication,
-        );
+        await launchUrl(feedbackUri, mode: LaunchMode.externalApplication);
       }
     } catch (_) {}
   }
@@ -881,9 +875,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               });
             },
             icon: Icon(
-              _isRightSidebarCollapsed
-                  ? Icons.menu_open
-                  : Icons.menu_open,
+              _isRightSidebarCollapsed ? Icons.menu_open : Icons.menu_open,
               size: 14,
               color: Theme.of(context).colorScheme.onSurface.withValues(
                 alpha: _isRightSidebarCollapsed ? 0.6 : 0.4,
@@ -909,10 +901,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         margin: const EdgeInsets.symmetric(vertical: 0),
         decoration: BoxDecoration(
           border: Border(
-            left: BorderSide(
-              color: Theme.of(context).dividerColor,
-              width: 1,
-            ),
+            left: BorderSide(color: Theme.of(context).dividerColor, width: 1),
           ),
         ),
       ),

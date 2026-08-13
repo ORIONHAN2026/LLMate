@@ -9,7 +9,7 @@ import 'package:get/get.dart';
 import '../../../controllers/mcp_controller.dart';
 import '../../../controllers/session_controller.dart';
 import '../../../models/chat/mcp.dart';
-import '../../../utils/snackbar_utils.dart';
+import '../../utils/snackbar_utils.dart';
 
 class McpManagementPage extends StatefulWidget {
   final bool embedded;
@@ -49,9 +49,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    final content = _isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : _buildBody();
+    final content =
+        _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _buildBody();
 
     if (widget.embedded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -116,7 +117,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.45),
               ),
             ),
             const SizedBox(height: 6),
@@ -124,7 +127,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
               '点击右上角 + 添加',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.35),
               ),
             ),
           ],
@@ -166,116 +171,155 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('添加 MCP'),
-          content: SizedBox(
-            width: 500,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '支持的格式：\n• mcpServers 包装格式\n• 直接配置格式（含 command 或 url）',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: TextField(
-                    controller: jsonCtrl,
-                    maxLines: 12,
-                    minLines: 8,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'monospace',
-                      color: Theme.of(ctx).colorScheme.onSurface,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: '{\n  "mcpServers": {\n    "server-name": {\n      "command": "...",\n      "args": ["..."]\n    }\n  }\n}',
-                      hintStyle: TextStyle(fontSize: 10, color: Colors.grey[400]),
-                      border: const OutlineInputBorder(borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.all(12),
-                    ),
-                    onChanged: (text) {
-                      setDialogState(() {
-                        parseError = null;
-                        parsedResult = null;
-                        if (text.trim().isNotEmpty) {
-                          parsedResult = McpJsonParser.parse(text);
-                        }
-                      });
-                    },
-                  ),
-                ),
-                if (parsedResult != null) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (ctx, setDialogState) => AlertDialog(
+                  title: const Text('添加 MCP'),
+                  content: SizedBox(
+                    width: 500,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.check_circle_outline, size: 12, color: Colors.green),
-                        const SizedBox(width: 4),
                         Text(
-                          '识别到: ${parsedResult!.name}',
-                          style: TextStyle(fontSize: 11, color: Colors.green[700]),
+                          '支持的格式：\n• mcpServers 包装格式\n• 直接配置格式（含 command 或 url）',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                          ),
                         ),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(
+                                  ctx,
+                                ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: TextField(
+                            controller: jsonCtrl,
+                            maxLines: 12,
+                            minLines: 8,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                              color: Theme.of(ctx).colorScheme.onSurface,
+                            ),
+                            decoration: InputDecoration(
+                              hintText:
+                                  '{\n  "mcpServers": {\n    "server-name": {\n      "command": "...",\n      "args": ["..."]\n    }\n  }\n}',
+                              hintStyle: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[400],
+                              ),
+                              border: const OutlineInputBorder(
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
+                            onChanged: (text) {
+                              setDialogState(() {
+                                parseError = null;
+                                parsedResult = null;
+                                if (text.trim().isNotEmpty) {
+                                  parsedResult = McpJsonParser.parse(text);
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                        if (parsedResult != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 12,
+                                  color: Colors.green,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '识别到: ${parsedResult!.name}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.green[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (parseError != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  size: 12,
+                                  color: Colors.red,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    parseError!,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                ],
-                if (parseError != null) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('取消'),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline, size: 12, color: Colors.red),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(parseError!, style: TextStyle(fontSize: 11, color: Colors.red)),
-                        ),
-                      ],
+                    FilledButton(
+                      onPressed:
+                          parsedResult == null
+                              ? null
+                              : () async {
+                                Navigator.pop(ctx);
+                                await _saveNewMcp(
+                                  parsedResult!.name,
+                                  parsedResult!.serverJson,
+                                  parsedResult!.serverConfig,
+                                );
+                              },
+                      child: const Text('添加'),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                  ],
+                ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-            FilledButton(
-              onPressed: parsedResult == null
-                  ? null
-                  : () async {
-                      Navigator.pop(ctx);
-                      await _saveNewMcp(
-                        parsedResult!.name,
-                        parsedResult!.serverJson,
-                        parsedResult!.serverConfig,
-                      );
-                    },
-              child: const Text('添加'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
   /// 保存新添加的 MCP
-  Future<void> _saveNewMcp(String name, Map<String, dynamic> serverJson, Map<String, dynamic> serverConfig) async {
+  Future<void> _saveNewMcp(
+    String name,
+    Map<String, dynamic> serverJson,
+    Map<String, dynamic> serverConfig,
+  ) async {
     try {
       final mcpc = Get.find<McpController>();
       final mcp = Mcp(
@@ -284,9 +328,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
         command: serverConfig['command'] as String?,
         args: (serverConfig['args'] as List?)?.cast<String>(),
         url: serverConfig['url'] as String?,
-        headers: serverConfig['headers'] != null
-            ? Map<String, String>.from(serverConfig['headers'] as Map)
-            : null,
+        headers:
+            serverConfig['headers'] != null
+                ? Map<String, String>.from(serverConfig['headers'] as Map)
+                : null,
       );
       await mcpc.addService(mcp, serverJson: serverJson);
 
@@ -320,7 +365,8 @@ class _McpManagementPageState extends State<McpManagementPage> {
         if (summary != null) {
           finalDescription = summary['description'] ?? '';
         } else {
-          finalDescription = '提供 ${tools.length} 个工具: ${tools.map((t) => t.name).join(", ")}';
+          finalDescription =
+              '提供 ${tools.length} 个工具: ${tools.map((t) => t.name).join(", ")}';
         }
       }
 
@@ -330,7 +376,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
         lastUpdated: DateTime.now(),
       );
 
-      await Get.find<McpController>().updateService(service.name, updatedService);
+      await Get.find<McpController>().updateService(
+        service.name,
+        updatedService,
+      );
       await _loadServices();
 
       if (mounted) {
@@ -386,17 +435,31 @@ class _McpManagementPageState extends State<McpManagementPage> {
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
-                              Icon(Icons.widgets, size: 20, color: Theme.of(ctx).colorScheme.onSurface),
+                              Icon(
+                                Icons.widgets,
+                                size: 20,
+                                color: Theme.of(ctx).colorScheme.onSurface,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(service.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                                    if (service.description != null && service.description!.isNotEmpty)
+                                    Text(
+                                      service.name,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (service.description != null &&
+                                        service.description!.isNotEmpty)
                                       Text(
                                         service.description!,
-                                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[500],
+                                        ),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -422,41 +485,61 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: Theme.of(ctx).colorScheme.onSurface,
+                                      color:
+                                          Theme.of(ctx).colorScheme.onSurface,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Wrap(
                                     spacing: 6,
                                     runSpacing: 4,
-                                    children: tools.map((tool) {
-                                      final name = tool.name;
-                                      final desc = tool.description;
-                                      final label = desc.isNotEmpty ? '$name - $desc' : name;
-                                      return Tooltip(
-                                        message: desc.isNotEmpty ? desc : name,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.08),
-                                            borderRadius: BorderRadius.circular(4),
-                                            border: Border.all(
-                                              color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.15),
+                                    children:
+                                        tools.map((tool) {
+                                          final name = tool.name;
+                                          final desc = tool.description;
+                                          final label =
+                                              desc.isNotEmpty
+                                                  ? '$name - $desc'
+                                                  : name;
+                                          return Tooltip(
+                                            message:
+                                                desc.isNotEmpty ? desc : name,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(ctx)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withOpacity(0.08),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                                border: Border.all(
+                                                  color: Theme.of(ctx)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withOpacity(0.15),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                label,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color:
+                                                      Theme.of(
+                                                        ctx,
+                                                      ).colorScheme.onSurface,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                             ),
-                                          ),
-                                          child: Text(
-                                            label,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Theme.of(ctx).colorScheme.onSurface,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
+                                          );
+                                        }).toList(),
                                   ),
                                   const SizedBox(height: 12),
                                   const Divider(),
@@ -470,11 +553,18 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(Icons.error_outline, size: 14, color: Colors.orange),
+                                        Icon(
+                                          Icons.error_outline,
+                                          size: 14,
+                                          color: Colors.orange,
+                                        ),
                                         const SizedBox(width: 8),
                                         Text(
                                           '暂未获取工具列表，请点击刷新按钮',
-                                          style: TextStyle(fontSize: 12, color: Colors.orange[700]),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.orange[700],
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -488,13 +578,18 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.7),
+                                    color: Theme.of(
+                                      ctx,
+                                    ).colorScheme.onSurface.withOpacity(0.7),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
                                 Container(
                                   decoration: BoxDecoration(
-                                    color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                                    color:
+                                        Theme.of(
+                                          ctx,
+                                        ).colorScheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: TextField(
@@ -504,20 +599,30 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontFamily: 'monospace',
-                                      color: Theme.of(ctx).colorScheme.onSurface,
+                                      color:
+                                          Theme.of(ctx).colorScheme.onSurface,
                                     ),
                                     decoration: InputDecoration(
-                                      border: const OutlineInputBorder(borderSide: BorderSide.none),
+                                      border: const OutlineInputBorder(
+                                        borderSide: BorderSide.none,
+                                      ),
                                       contentPadding: const EdgeInsets.all(12),
                                     ),
                                     onChanged: (_) {
-                                      if (parseError != null) setSheetState(() => parseError = null);
+                                      if (parseError != null)
+                                        setSheetState(() => parseError = null);
                                     },
                                   ),
                                 ),
                                 if (parseError != null) ...[
                                   const SizedBox(height: 8),
-                                  Text(parseError!, style: TextStyle(fontSize: 11, color: Colors.red)),
+                                  Text(
+                                    parseError!,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.red,
+                                    ),
+                                  ),
                                 ],
                               ],
                             ),
@@ -526,13 +631,24 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
                         // 底部按钮
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
-                            border: Border(top: BorderSide(color: Theme.of(ctx).dividerColor.withOpacity(0.3))),
+                            border: Border(
+                              top: BorderSide(
+                                color: Theme.of(
+                                  ctx,
+                                ).dividerColor.withOpacity(0.3),
+                              ),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              if (!Get.find<McpController>().isBuiltin(service.name))
+                              if (!Get.find<McpController>().isBuiltin(
+                                service.name,
+                              ))
                                 OutlinedButton.icon(
                                   onPressed: () {
                                     Navigator.pop(ctx);
@@ -551,22 +667,34 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   final jsonText = jsonCtrl.text.trim();
                                   Map<String, dynamic> newServerJson;
                                   try {
-                                    newServerJson = jsonDecode(jsonText) as Map<String, dynamic>;
+                                    newServerJson =
+                                        jsonDecode(jsonText)
+                                            as Map<String, dynamic>;
                                   } catch (e) {
-                                    setSheetState(() => parseError = 'JSON 格式错误');
+                                    setSheetState(
+                                      () => parseError = 'JSON 格式错误',
+                                    );
                                     return;
                                   }
 
-                                  await Get.find<McpController>().updateServerConfig(
-                                    service.name,
-                                    newServerJson,
-                                  );
+                                  await Get.find<McpController>()
+                                      .updateServerConfig(
+                                        service.name,
+                                        newServerJson,
+                                      );
 
-                                  final mcpServers = newServerJson['mcpServers'] as Map<String, dynamic>?;
-                                  final serverConfig = mcpServers?.values.firstOrNull as Map<String, dynamic>?;
+                                  final mcpServers =
+                                      newServerJson['mcpServers']
+                                          as Map<String, dynamic>?;
+                                  final serverConfig =
+                                      mcpServers?.values.firstOrNull
+                                          as Map<String, dynamic>?;
                                   final updatedService = service.copyWith(
-                                    command: serverConfig?['command'] as String?,
-                                    args: (serverConfig?['args'] as List?)?.cast<String>(),
+                                    command:
+                                        serverConfig?['command'] as String?,
+                                    args:
+                                        (serverConfig?['args'] as List?)
+                                            ?.cast<String>(),
                                   );
                                   await Get.find<McpController>().updateService(
                                     service.name,
@@ -658,7 +786,8 @@ class _McpCardState extends State<_McpCard> {
   Widget build(BuildContext context) {
     final service = widget.service;
     final isBuiltin = Get.find<McpController>().isBuiltin(service.name);
-    final description = service.description?.isNotEmpty == true ? service.description : null;
+    final description =
+        service.description?.isNotEmpty == true ? service.description : null;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -670,125 +799,145 @@ class _McpCardState extends State<_McpCard> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
-            color: _isHovered
-                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.06)
-                : Theme.of(context).colorScheme.surface,
+            color:
+                _isHovered
+                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.06)
+                    : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: _isHovered
-                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.35)
-                  : Theme.of(context).dividerColor.withOpacity(0.5),
+              color:
+                  _isHovered
+                      ? Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.35)
+                      : Theme.of(context).dividerColor.withOpacity(0.5),
             ),
           ),
           child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                service.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            if (isBuiltin) ...[
-                              const SizedBox(width: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                                child: const Text('内置', style: TextStyle(fontSize: 8, color: Colors.blue)),
-                              ),
-                            ],
-                          ],
-                        ),
-                        if (description != null)
-                          Text(
-                            description,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
-                            ),
-                            maxLines: 2,
+                        Flexible(
+                          child: Text(
+                            service.name,
                             overflow: TextOverflow.ellipsis,
-                          )
-                        else
-                          Text(
-                            service.command ?? service.url ?? '',
                             style: TextStyle(
-                              fontSize: 10,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                              fontFamily: 'monospace',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
+                        ),
+                        if (isBuiltin) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: const Text(
+                              '内置',
+                              style: TextStyle(fontSize: 8, color: Colors.blue),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      GestureDetector(
-                        onTap: widget.loading ? null : widget.onRefresh,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          child: widget.loading
+                    if (description != null)
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.65),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    else
+                      Text(
+                        service.command ?? service.url ?? '',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
+                          fontFamily: 'monospace',
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: widget.loading ? null : widget.onRefresh,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child:
+                          widget.loading
                               ? SizedBox(
-                                  width: 10,
-                                  height: 10,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 1.5,
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.refresh,
-                                  size: 10,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                width: 10,
+                                height: 10,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
-                        ),
+                              )
+                              : Icon(
+                                Icons.refresh,
+                                size: 10,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: widget.onDelete,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.error.withOpacity(0.08),
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 4),
-                      GestureDetector(
-                        onTap: widget.onDelete,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.error.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.delete,
-                            size: 10,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
+                      child: Icon(
+                        Icons.delete,
+                        size: 10,
+                        color: Theme.of(context).colorScheme.error,
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
-            ),
+            ],
+          ),
+        ),
       ),
     );
   }

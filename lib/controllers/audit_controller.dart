@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/audit.dart';
-import '../services/duckdb_storage.dart';
-import '../services/replay_service.dart';
+import '../core/services/duckdb_storage.dart';
+import '../core/services/replay_service.dart';
 
 /// 审计控制器
 ///
@@ -41,18 +41,9 @@ class AuditController {
   // ══════════════════════════════════════════════════════════
 
   /// 开启一条审计链路
-  Future<AuditTrace> beginTrace({
-    required String sessionId,
-  }) async {
-    final trace = AuditTrace(
-      traceId: _uuid.v4(),
-      sessionId: sessionId,
-    );
-    await emit(
-      trace,
-      AuditEventType.request,
-      {'sessionId': sessionId},
-    );
+  Future<AuditTrace> beginTrace({required String sessionId}) async {
+    final trace = AuditTrace(traceId: _uuid.v4(), sessionId: sessionId);
+    await emit(trace, AuditEventType.request, {'sessionId': sessionId});
     return trace;
   }
 
@@ -71,17 +62,11 @@ class AuditController {
   Future<void> policy(AuditTrace trace, Map<String, dynamic> policy) =>
       emit(trace, AuditEventType.policy, policy);
 
-  Future<void> memoryRead(AuditTrace trace, String key, dynamic value) => emit(
-        trace,
-        AuditEventType.memoryRead,
-        {'key': key, 'value': value},
-      );
+  Future<void> memoryRead(AuditTrace trace, String key, dynamic value) =>
+      emit(trace, AuditEventType.memoryRead, {'key': key, 'value': value});
 
-  Future<void> memoryWrite(AuditTrace trace, String key, dynamic value) => emit(
-        trace,
-        AuditEventType.memoryWrite,
-        {'key': key, 'value': value},
-      );
+  Future<void> memoryWrite(AuditTrace trace, String key, dynamic value) =>
+      emit(trace, AuditEventType.memoryWrite, {'key': key, 'value': value});
 
   Future<void> toolStart(AuditTrace trace, String tool) =>
       emit(trace, AuditEventType.toolStart, {'tool': tool});
@@ -90,8 +75,7 @@ class AuditController {
     AuditTrace trace,
     String tool,
     Map<String, dynamic> result,
-  ) =>
-      emit(trace, AuditEventType.toolFinish, {'tool': tool, 'result': result});
+  ) => emit(trace, AuditEventType.toolFinish, {'tool': tool, 'result': result});
 
   Future<void> llmRequest(AuditTrace trace, String provider, String model) =>
       emit(trace, AuditEventType.llmRequest, {
@@ -104,12 +88,11 @@ class AuditController {
     int inputTokens,
     int outputTokens,
     double cost,
-  ) =>
-      emit(trace, AuditEventType.llmResponse, {
-        'inputTokens': inputTokens,
-        'outputTokens': outputTokens,
-        'cost': cost,
-      });
+  ) => emit(trace, AuditEventType.llmResponse, {
+    'inputTokens': inputTokens,
+    'outputTokens': outputTokens,
+    'cost': cost,
+  });
 
   Future<void> response(AuditTrace trace, String text) =>
       emit(trace, AuditEventType.response, {'text': text});

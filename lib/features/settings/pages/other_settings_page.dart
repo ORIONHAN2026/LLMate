@@ -7,7 +7,7 @@ import '../../../controllers/settings_controller.dart';
 import '../../../controllers/session_controller.dart';
 import '../../../controllers/model_controller.dart';
 import '../../../controllers/mcp_controller.dart';
-import '../../../utils/snackbar_utils.dart';
+import '../../utils/snackbar_utils.dart';
 
 /// 其他设置页面，包含语言设置和皮肤设置
 class OtherSettingsPage extends StatelessWidget {
@@ -22,9 +22,7 @@ class OtherSettingsPage extends StatelessWidget {
     final localeController = Get.find<SettingsController>();
 
     return Scaffold(
-      appBar: StandardAppBar(
-        title: l10n.otherSettings,
-      ),
+      appBar: StandardAppBar(title: l10n.otherSettings),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
@@ -70,15 +68,16 @@ class OtherSettingsPage extends StatelessWidget {
             title: l10n.resetAllSessions,
             isFirst: true,
             isLast: false,
-            onTap: () => _confirmReset(
-              context,
-              colorScheme,
-              l10n,
-              action: l10n.resetAllSessions,
-              onConfirm: () async {
-                await Get.find<SessionController>().resetAllSessions();
-              },
-            ),
+            onTap:
+                () => _confirmReset(
+                  context,
+                  colorScheme,
+                  l10n,
+                  action: l10n.resetAllSessions,
+                  onConfirm: () async {
+                    await Get.find<SessionController>().resetAllSessions();
+                  },
+                ),
           ),
           _buildDivider(colorScheme),
           _buildResetTile(
@@ -88,15 +87,16 @@ class OtherSettingsPage extends StatelessWidget {
             title: l10n.resetAllModels,
             isFirst: false,
             isLast: false,
-            onTap: () => _confirmReset(
-              context,
-              colorScheme,
-              l10n,
-              action: l10n.resetAllModels,
-              onConfirm: () async {
-                await Get.find<ModelController>().resetAllModels();
-              },
-            ),
+            onTap:
+                () => _confirmReset(
+                  context,
+                  colorScheme,
+                  l10n,
+                  action: l10n.resetAllModels,
+                  onConfirm: () async {
+                    await Get.find<ModelController>().resetAllModels();
+                  },
+                ),
           ),
           _buildDivider(colorScheme),
           _buildResetTile(
@@ -106,15 +106,16 @@ class OtherSettingsPage extends StatelessWidget {
             title: l10n.resetAllMcp,
             isFirst: false,
             isLast: false,
-            onTap: () => _confirmReset(
-              context,
-              colorScheme,
-              l10n,
-              action: l10n.resetAllMcp,
-              onConfirm: () async {
-                await Get.find<McpController>().resetAllMcps();
-              },
-            ),
+            onTap:
+                () => _confirmReset(
+                  context,
+                  colorScheme,
+                  l10n,
+                  action: l10n.resetAllMcp,
+                  onConfirm: () async {
+                    await Get.find<McpController>().resetAllMcps();
+                  },
+                ),
           ),
           _buildDivider(colorScheme),
           _buildResetTile(
@@ -124,17 +125,18 @@ class OtherSettingsPage extends StatelessWidget {
             title: l10n.resetAll,
             isFirst: false,
             isLast: true,
-            onTap: () => _confirmReset(
-              context,
-              colorScheme,
-              l10n,
-              action: l10n.resetAll,
-              onConfirm: () async {
-                await Get.find<SessionController>().resetAllSessions();
-                await Get.find<ModelController>().resetAllModels();
-                await Get.find<McpController>().resetAllMcps();
-              },
-            ),
+            onTap:
+                () => _confirmReset(
+                  context,
+                  colorScheme,
+                  l10n,
+                  action: l10n.resetAll,
+                  onConfirm: () async {
+                    await Get.find<SessionController>().resetAllSessions();
+                    await Get.find<ModelController>().resetAllModels();
+                    await Get.find<McpController>().resetAllMcps();
+                  },
+                ),
           ),
         ],
       ),
@@ -192,23 +194,24 @@ class OtherSettingsPage extends StatelessWidget {
   }) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.confirmReset),
-        content: Text(l10n.resetConfirmMsg(action)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.cancel),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: Text(l10n.confirmReset),
+            content: Text(l10n.resetConfirmMsg(action)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(l10n.cancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFEF4444),
+                ),
+                child: Text(l10n.confirm),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFEF4444),
-            ),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
     );
     if (confirmed != true) return;
     try {
@@ -379,11 +382,7 @@ class OtherSettingsPage extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(
-                Icons.check_circle,
-                size: 22,
-                color: colorScheme.onSurface,
-              ),
+              Icon(Icons.check_circle, size: 22, color: colorScheme.onSurface),
           ],
         ),
       ),
@@ -497,11 +496,7 @@ class OtherSettingsPage extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(
-                Icons.check_circle,
-                size: 22,
-                color: colorScheme.onSurface,
-              ),
+              Icon(Icons.check_circle, size: 22, color: colorScheme.onSurface),
           ],
         ),
       ),

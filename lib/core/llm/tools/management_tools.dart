@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 
-import '../../controllers/audit_controller.dart';
-import '../../controllers/session_controller.dart';
-import '../../controllers/usage_controller.dart';
-import '../../models/audit.dart';
-import '../../models/chat/session.dart';
+import '../../../controllers/audit_controller.dart';
+import '../../../controllers/session_controller.dart';
+import '../../../controllers/usage_controller.dart';
+import '../../../models/audit.dart';
+import '../../../models/chat/session.dart';
 
 /// 管理模式下的「系统工具」定义（OpenAI function-calling 格式）。
 ///
@@ -30,14 +30,8 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
       'parameters': {
         'type': 'object',
         'properties': {
-          'sessionId': {
-            'type': 'string',
-            'description': '按会话ID过滤',
-          },
-          'traceId': {
-            'type': 'string',
-            'description': '按审计链路ID过滤',
-          },
+          'sessionId': {'type': 'string', 'description': '按会话ID过滤'},
+          'traceId': {'type': 'string', 'description': '按审计链路ID过滤'},
           'eventTypes': {
             'type': 'array',
             'items': {'type': 'string'},
@@ -50,14 +44,8 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
             'type': 'string',
             'description': '起始时间，ISO8601 格式（如 2026-07-01T00:00:00）',
           },
-          'end': {
-            'type': 'string',
-            'description': '结束时间，ISO8601 格式',
-          },
-          'limit': {
-            'type': 'integer',
-            'description': '最大返回条数，默认 100',
-          },
+          'end': {'type': 'string', 'description': '结束时间，ISO8601 格式'},
+          'limit': {'type': 'integer', 'description': '最大返回条数，默认 100'},
         },
       },
     },
@@ -71,10 +59,7 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
       'parameters': {
         'type': 'object',
         'properties': {
-          'id': {
-            'type': 'string',
-            'description': '审计事件 id',
-          },
+          'id': {'type': 'string', 'description': '审计事件 id'},
         },
         'required': ['id'],
       },
@@ -85,15 +70,11 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
     'type': 'function',
     'function': {
       'name': 'audit_add',
-      'description':
-          '新增一条审计事件（系统自动生成 id 与 spanId）。可用于手动记录管理操作。',
+      'description': '新增一条审计事件（系统自动生成 id 与 spanId）。可用于手动记录管理操作。',
       'parameters': {
         'type': 'object',
         'properties': {
-          'sessionId': {
-            'type': 'string',
-            'description': '所属会话ID',
-          },
+          'sessionId': {'type': 'string', 'description': '所属会话ID'},
           'traceId': {
             'type': 'string',
             'description': '可选，归属的审计链路ID；不填则自动新建链路',
@@ -104,10 +85,7 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
                 '事件类型，如 request/prompt/toolStart/toolFinish/'
                 'llmRequest/llmResponse/response/error/cost',
           },
-          'payload': {
-            'type': 'object',
-            'description': '事件负载（任意 JSON 对象）',
-          },
+          'payload': {'type': 'object', 'description': '事件负载（任意 JSON 对象）'},
           'parentSpanId': {
             'type': 'string',
             'description': '可选，父 spanId，用于表达调用层级',
@@ -126,10 +104,7 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
       'parameters': {
         'type': 'object',
         'properties': {
-          'id': {
-            'type': 'string',
-            'description': '审计事件 id',
-          },
+          'id': {'type': 'string', 'description': '审计事件 id'},
           'payload': {
             'type': 'object',
             'description': '要写入的新 payload（任意 JSON 对象）',
@@ -148,10 +123,7 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
       'parameters': {
         'type': 'object',
         'properties': {
-          'id': {
-            'type': 'string',
-            'description': '审计事件 id',
-          },
+          'id': {'type': 'string', 'description': '审计事件 id'},
         },
         'required': ['id'],
       },
@@ -162,31 +134,15 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
     'type': 'function',
     'function': {
       'name': 'usage_query',
-      'description':
-          '查询用量统计。可按会话ID、模型、时间范围过滤，返回累计统计与明细列表。',
+      'description': '查询用量统计。可按会话ID、模型、时间范围过滤，返回累计统计与明细列表。',
       'parameters': {
         'type': 'object',
         'properties': {
-          'sessionId': {
-            'type': 'string',
-            'description': '按会话ID过滤',
-          },
-          'modelId': {
-            'type': 'string',
-            'description': '按模型过滤',
-          },
-          'start': {
-            'type': 'string',
-            'description': '起始时间 ISO8601',
-          },
-          'end': {
-            'type': 'string',
-            'description': '结束时间 ISO8601',
-          },
-          'limit': {
-            'type': 'integer',
-            'description': '返回明细条数上限，默认 50',
-          },
+          'sessionId': {'type': 'string', 'description': '按会话ID过滤'},
+          'modelId': {'type': 'string', 'description': '按模型过滤'},
+          'start': {'type': 'string', 'description': '起始时间 ISO8601'},
+          'end': {'type': 'string', 'description': '结束时间 ISO8601'},
+          'limit': {'type': 'integer', 'description': '返回明细条数上限，默认 50'},
         },
       },
     },
@@ -196,12 +152,8 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
     'type': 'function',
     'function': {
       'name': 'quota_get',
-      'description':
-          '查询当前会话的额度配置（是否启用、各项上限、重置周期）及当前用量。',
-      'parameters': {
-        'type': 'object',
-        'properties': {},
-      },
+      'description': '查询当前会话的额度配置（是否启用、各项上限、重置周期）及当前用量。',
+      'parameters': {'type': 'object', 'properties': {}},
     },
   },
   // ───────────────── 额度：设置 ─────────────────
@@ -209,23 +161,16 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
     'type': 'function',
     'function': {
       'name': 'quota_set',
-      'description':
-          '设置当前会话的额度。仅传入需要修改的字段即可，未传入的字段保持不变。',
+      'description': '设置当前会话的额度。仅传入需要修改的字段即可，未传入的字段保持不变。',
       'parameters': {
         'type': 'object',
         'properties': {
-          'enabled': {
-            'type': 'boolean',
-            'description': '是否启用额度限制',
-          },
+          'enabled': {'type': 'boolean', 'description': '是否启用额度限制'},
           'tokenLimit': {
             'type': 'integer',
             'description': 'Token 用量上限（null/不传=不限制）',
           },
-          'costLimit': {
-            'type': 'number',
-            'description': '费用预算上限（null/不传=不限制）',
-          },
+          'costLimit': {'type': 'number', 'description': '费用预算上限（null/不传=不限制）'},
           'requestLimit': {
             'type': 'integer',
             'description': '请求次数上限（null/不传=不限制）',
@@ -243,12 +188,8 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
     'type': 'function',
     'function': {
       'name': 'quota_reset',
-      'description':
-          '重置当前会话的额度计数（清零请求次数并将周期起点设为现在）。',
-      'parameters': {
-        'type': 'object',
-        'properties': {},
-      },
+      'description': '重置当前会话的额度计数（清零请求次数并将周期起点设为现在）。',
+      'parameters': {'type': 'object', 'properties': {}},
     },
   },
 ];
@@ -431,8 +372,7 @@ Map<String, dynamic> _quotaSnapshot(ChatSession s) => {
   'quotaRequestCount': s.quotaRequestCount,
 };
 
-String _ok(Map<String, dynamic> data) =>
-    jsonEncode({'success': true, ...data});
+String _ok(Map<String, dynamic> data) => jsonEncode({'success': true, ...data});
 
 String _err(String message) => jsonEncode({'success': false, 'error': message});
 

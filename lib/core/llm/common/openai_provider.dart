@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../../models/model.dart';
-import '../../models/responses/openai_response.dart';
-import '../../models/chat/session.dart';
-import '../../models/chat/message.dart';
+import '../../../models/model.dart';
+import '../../../models/responses/openai_response.dart';
+import '../../../models/chat/session.dart';
+import '../../../models/chat/message.dart';
 
 /// OpenAI 兼容协议 Provider
 ///

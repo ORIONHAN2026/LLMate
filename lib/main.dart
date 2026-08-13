@@ -14,7 +14,7 @@ import './features/chat/pages/home.dart';
 import './pages/loading_page.dart';
 import './core/http/local_http_service.dart';
 
-import './services/storage_service.dart';
+import './services/storage_paths.dart';
 
 // 最小窗口宽度组成: 左侧边栏最小 150 + 中间聊天区最小 520 + 右侧面板最小 260 + 额外缓冲 40
 const double kMinLeftSidebarWidth = 150;
@@ -63,7 +63,7 @@ void main() async {
   }
 
   // 初始化文件存储（必须在 SettingsController 之前）
-  await StorageService.instance.initialize();
+  await StoragePaths.ensureRoot();
 
   // 初始化 SettingsController（统一设置：主题 / 域名 / 语言）
   final settingsController = Get.put(SettingsController());

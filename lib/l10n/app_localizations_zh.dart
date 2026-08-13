@@ -2062,7 +2062,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sessionModeDesc => '会话模式：经本地服务做审计与用量统计';
 
   @override
-  String get managementModeDesc => '管理模式：本地直连大模型，不计入用量统计';
+  String get managementModeDesc => '会话使用情况管理';
 
   @override
   String get mcpNotConfigured => '无MCP配置';

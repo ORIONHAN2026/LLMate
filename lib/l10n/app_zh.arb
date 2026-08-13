@@ -706,7 +706,7 @@
   "sessionMode": "会话模式",
   "managementMode": "管理模式",
   "sessionModeDesc": "会话模式：经本地服务做审计与用量统计",
-  "managementModeDesc": "管理模式：本地直连大模型，不计入用量统计",
+  "managementModeDesc": "会话使用情况管理",
   "mcpNotConfigured": "无MCP配置",
   "mcpConfigured": "{count} 个 MCP",
   "mcpViewTip": "当前会话绑定的 MCP（点击查看，可在会话详情中配置）",

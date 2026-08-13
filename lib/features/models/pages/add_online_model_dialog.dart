@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/model.dart';
 import '../../../models/chat/session.dart';
-import '../../../core/llm/openai_provider.dart';
+import '../../../core/llm/common/openai_provider.dart';
 
 class AddOnlineModelDialog extends StatefulWidget {
   const AddOnlineModelDialog({super.key});
@@ -312,7 +312,9 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                                 fontWeight: FontWeight.w500,
                                 color:
                                     isSelected
-                                        ? Theme.of(context).colorScheme.onSurface
+                                        ? Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface
                                         : Theme.of(context)
                                             .colorScheme
                                             .onSurface
@@ -1431,7 +1433,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         'currency': currency,
         'apiKey': inputApiKey,
         'apiUrl': finalApiUrl,
-        'conversationName': AppLocalizations.of(context)!.newConversationDefault,
+        'conversationName':
+            AppLocalizations.of(context)!.newConversationDefault,
         'systemPrompt': '',
         'temperature': 1.0,
         'replyLanguage': '',

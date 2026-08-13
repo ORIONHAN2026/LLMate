@@ -6,7 +6,7 @@ import '../core/mcp/mcp_client.dart';
 import '../models/chat/session.dart';
 import '../models/chat/mcp.dart';
 import '../models/model.dart';
-import '../core/llm/openai_provider.dart';
+import '../core/llm/common/openai_provider.dart';
 import '../core/llm/modes/mode_utils.dart' show resolveOriginalToolName;
 import '../data/database.dart';
 import '../features/mcp/storage/mcp_storage_manager.dart';
@@ -840,7 +840,8 @@ class McpController extends GetxController {
     // init session MCPs
     Mcp? lastServer;
     for (final mcpName in _effectiveMcpNames(s)) {
-      if (_clients.containsKey(mcpName) && _availableTools.containsKey(mcpName)) {
+      if (_clients.containsKey(mcpName) &&
+          _availableTools.containsKey(mcpName)) {
         debugPrint('📡 MCP 已就绪: $mcpName');
         continue;
       }
@@ -1240,9 +1241,7 @@ class McpJsonParser {
 
     // 包装为标准格式
     final wrappedJson = {
-      'mcpServers': {
-        name: json,
-      },
+      'mcpServers': {name: json},
     };
 
     return McpParseResult(
@@ -1263,9 +1262,7 @@ class McpJsonParser {
     final config = Map<String, dynamic>.from(json)..remove('name');
 
     final wrappedJson = {
-      'mcpServers': {
-        name: config,
-      },
+      'mcpServers': {name: config},
     };
 
     return McpParseResult(

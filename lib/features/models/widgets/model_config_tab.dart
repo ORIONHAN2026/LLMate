@@ -38,7 +38,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     _apiKeyController = TextEditingController();
     _modelNameController = TextEditingController();
     _systemPromptController = TextEditingController();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _initializeData();
   }
 
@@ -84,10 +84,6 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               text: loc.basicInfo,
               icon: const Icon(Icons.info_outline, size: 16),
             ),
-            Tab(
-              text: loc.billingSettings,
-              icon: const Icon(Icons.monetization_on_outlined, size: 16),
-            ),
             Tab(text: loc.modelParams, icon: const Icon(Icons.tune, size: 16)),
             Tab(
               text: loc.securitySettings,
@@ -101,11 +97,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             children: [
               // Tab 1: 基本信息
               _buildBasicInfoTab(),
-              // Tab 2: 计费设置
-              _buildBillingTab(),
-              // Tab 3: 模型参数
+              // Tab 2: 模型参数
               _buildModelParamsTab(),
-              // Tab 4: 安全设置（敏感信息脱敏）
+              // Tab 3: 安全设置（敏感信息脱敏）
               _buildSecurityTab(),
             ],
           ),
@@ -132,37 +126,6 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           _buildConfigItem(
             AppLocalizations.of(context)!.apiAddress,
             _currentModel.apiUrl ?? widget.apiUrl,
-          ),
-          const SizedBox(height: 12),
-          _buildSecuritySwitch(
-            title: AppLocalizations.of(context)!.costOptimization,
-            subtitle: AppLocalizations.of(context)!.costOptimizationDesc,
-            value: _currentModel.routingEnabled,
-            onChanged: _updateRoutingSetting,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBillingTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildCurrencySelector(),
-          const SizedBox(height: 12),
-          _buildPromptPriceField(),
-          const SizedBox(height: 12),
-          _buildCompletionPriceField(),
-          const SizedBox(height: 8),
-          Text(
-            _buildPriceUnitDesc(),
-            style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
           ),
         ],
       ),
@@ -268,13 +231,6 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         maskPhone: maskPhone,
         maskIdCard: maskIdCard,
       );
-    });
-    widget.onModelUpdated(_currentModel);
-  }
-
-  void _updateRoutingSetting(bool value) {
-    setState(() {
-      _currentModel = _currentModel.copyWith(routingEnabled: value);
     });
     widget.onModelUpdated(_currentModel);
   }
@@ -702,242 +658,4 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     );
   }
 
-  /// 获取当前价格单位描述
-  String _buildPriceUnitDesc() {
-    final loc = AppLocalizations.of(context)!;
-    final unitText = _currentModel.currency == 'CNY' ? loc.cny : loc.usd;
-    return loc.priceUnitDescription(unitText);
-  }
-
-  Widget _buildCurrencySelector() {
-    final isCNY = _currentModel.currency == 'CNY';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)!.currencyTypeLabel,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            _buildCurrencyChip(
-              AppLocalizations.of(context)!.cny,
-              '¥',
-              isCNY,
-              () {
-                setState(() {
-                  _currentModel = _currentModel.copyWith(currency: 'CNY');
-                });
-                widget.onModelUpdated(_currentModel);
-              },
-            ),
-            const SizedBox(width: 8),
-            _buildCurrencyChip(
-              AppLocalizations.of(context)!.usd,
-              '\$',
-              !isCNY,
-              () {
-                setState(() {
-                  _currentModel = _currentModel.copyWith(currency: 'USD');
-                });
-                widget.onModelUpdated(_currentModel);
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCurrencyChip(
-    String label,
-    String symbol,
-    bool isSelected,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color:
-              isSelected
-                  ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color:
-                isSelected
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).dividerColor,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              symbol,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color:
-                    isSelected
-                        ? Theme.of(context).colorScheme.surface
-                        : Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color:
-                    isSelected
-                        ? Theme.of(context).colorScheme.surface
-                        : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.8),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _buildCurrencyUnitText() {
-    final loc = AppLocalizations.of(context)!;
-    final unitText = _currentModel.currency == 'CNY' ? loc.cny : loc.usd;
-    return loc.pricePerMillionTokens(unitText);
-  }
-
-  Widget _buildPromptPriceField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              AppLocalizations.of(context)!.inputPriceLabel,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            Text(
-              _buildCurrencyUnitText(),
-              style: TextStyle(
-                fontSize: 10,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: TextEditingController(
-            text: _currentModel.promptPrice?.toString() ?? '',
-          ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            hintText: AppLocalizations.of(context)!.examplePriceHint,
-            hintStyle: const TextStyle(fontSize: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Theme.of(context).dividerColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            contentPadding: const EdgeInsets.all(10),
-            isDense: true,
-          ),
-          style: const TextStyle(fontSize: 12),
-          onChanged: (value) {
-            _debounceTimer?.cancel();
-            _debounceTimer = Timer(const Duration(seconds: 1), () {
-              final price = double.tryParse(value);
-              setState(() {
-                _currentModel = _currentModel.copyWith(promptPrice: price);
-              });
-              widget.onModelUpdated(_currentModel);
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCompletionPriceField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              AppLocalizations.of(context)!.outputPriceLabel,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            Text(
-              _buildCurrencyUnitText(),
-              style: TextStyle(
-                fontSize: 10,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: TextEditingController(
-            text: _currentModel.completionPrice?.toString() ?? '',
-          ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            hintText: AppLocalizations.of(context)!.examplePriceHint,
-            hintStyle: const TextStyle(fontSize: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Theme.of(context).dividerColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            contentPadding: const EdgeInsets.all(10),
-            isDense: true,
-          ),
-          style: const TextStyle(fontSize: 12),
-          onChanged: (value) {
-            _debounceTimer?.cancel();
-            _debounceTimer = Timer(const Duration(seconds: 1), () {
-              final price = double.tryParse(value);
-              setState(() {
-                _currentModel = _currentModel.copyWith(completionPrice: price);
-              });
-              widget.onModelUpdated(_currentModel);
-            });
-          },
-        ),
-      ],
-    );
-  }
 }

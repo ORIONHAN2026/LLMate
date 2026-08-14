@@ -768,17 +768,13 @@ Color _typeColor(AuditEventType type) {
       return Colors.indigo;
     case AuditEventType.policy:
       return Colors.purple;
-    case AuditEventType.memoryRead:
-      return Colors.teal;
-    case AuditEventType.memoryWrite:
-      return Colors.cyan;
     case AuditEventType.toolStart:
       return Colors.orange;
     case AuditEventType.toolFinish:
       return Colors.deepOrange;
-    case AuditEventType.llmRequest:
+    case AuditEventType.model:
       return Colors.green;
-    case AuditEventType.llmResponse:
+    case AuditEventType.usage:
       return Colors.lightGreen;
     case AuditEventType.response:
       return Colors.green.shade700;

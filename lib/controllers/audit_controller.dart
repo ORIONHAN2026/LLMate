@@ -11,7 +11,7 @@ import '../core/services/replay_service.dart';
 /// 底层落盘到 `~/.llmate/audit.duckdb`。
 ///
 /// 采用「链路（Trace）+ 事件（Event）」模型：一次业务请求 [beginTrace] 开启
-/// 一条链路，后续 [prompt] / [llmRequest] / [toolStart] / [response] 等高层
+/// 一条链路，后续 [prompt] / [model] / [usage] / [toolStart] / [response] 等高层
 /// API 向该链路追加事件；请求结束时 [endTrace] 收尾。事件以 span 形式记录
 /// 层级关系，支持通过 [replayService] 回放整条链路。
 ///
@@ -56,9 +56,11 @@ class AuditController {
   }
 
   /// 结束一条审计链路
-  Future<void> endTrace(AuditTrace trace) async {
-    await emit(trace, AuditEventType.response, {'ended': true});
-  }
+  ///
+  /// 链路结束无需额外落库事件：是否结束可由该 trace 是否已有
+  /// [AuditEventType.response] 事件推断。此方法保留以便调用方收尾，
+  /// 若后续需要显式标记结束状态，可在此追加专用事件类型。
+  Future<void> endTrace(AuditTrace trace) async {}
 
   // ══════════════════════════════════════════════════════════
   // 高层事件 API
@@ -70,12 +72,6 @@ class AuditController {
   Future<void> policy(AuditTrace trace, Map<String, dynamic> policy) =>
       emit(trace, AuditEventType.policy, policy);
 
-  Future<void> memoryRead(AuditTrace trace, String key, dynamic value) =>
-      emit(trace, AuditEventType.memoryRead, {'key': key, 'value': value});
-
-  Future<void> memoryWrite(AuditTrace trace, String key, dynamic value) =>
-      emit(trace, AuditEventType.memoryWrite, {'key': key, 'value': value});
-
   Future<void> toolStart(AuditTrace trace, String tool) =>
       emit(trace, AuditEventType.toolStart, {'tool': tool});
 
@@ -85,21 +81,19 @@ class AuditController {
     Map<String, dynamic> result,
   ) => emit(trace, AuditEventType.toolFinish, {'tool': tool, 'result': result});
 
-  Future<void> llmRequest(AuditTrace trace, String provider, String model) =>
-      emit(trace, AuditEventType.llmRequest, {
+  Future<void> model(AuditTrace trace, String provider, String model) =>
+      emit(trace, AuditEventType.model, {
         'provider': provider,
         'model': model,
       });
 
-  Future<void> llmResponse(
+  Future<void> usage(
     AuditTrace trace,
     int inputTokens,
     int outputTokens,
-    double cost,
-  ) => emit(trace, AuditEventType.llmResponse, {
+  ) => emit(trace, AuditEventType.usage, {
     'inputTokens': inputTokens,
     'outputTokens': outputTokens,
-    'cost': cost,
   });
 
   Future<void> response(AuditTrace trace, String text) =>

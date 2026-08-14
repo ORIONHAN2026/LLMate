@@ -39,9 +39,9 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
             'type': 'array',
             'items': {'type': 'string'},
             'description':
-                '事件类型列表，可选值：request/prompt/policy/memoryRead/'
-                'memoryWrite/toolStart/toolFinish/llmRequest/llmResponse/'
-                'response/error/cost',
+                '事件类型列表，可选值：request/prompt/policy/'
+                'toolStart/toolFinish/model/usage/'
+                'response/error',
           },
           'start': {
             'type': 'string',
@@ -86,7 +86,7 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
             'type': 'string',
             'description':
                 '事件类型，如 request/prompt/toolStart/toolFinish/'
-                'llmRequest/llmResponse/response/error/cost',
+                'model/usage/response/error',
           },
           'payload': {'type': 'object', 'description': '事件负载（任意 JSON 对象）'},
           'parentSpanId': {

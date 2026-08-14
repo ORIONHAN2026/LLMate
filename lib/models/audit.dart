@@ -68,27 +68,29 @@ enum AuditEventType {
   request,
   prompt,
   policy,
-  memoryRead,
-  memoryWrite,
   toolStart,
   toolFinish,
-  llmRequest,
-  llmResponse,
+  model,
+  usage,
   response,
   error,
 }
 
 /// [AuditEventType] 的便捷扩展
 extension AuditEventTypeX on AuditEventType {
-  /// 枚举名（与数据库存储值一致，如 `llmRequest`）
+  /// 枚举名（与数据库存储值一致，如 `model`）
   String get name => toString().split('.').last;
 
   /// 由字符串解析回枚举，未知值回退到 [AuditEventType.request]
-  static AuditEventType fromName(String name) =>
-      AuditEventType.values.firstWhere(
-        (e) => e.name == name,
-        orElse: () => AuditEventType.request,
-      );
+  static AuditEventType fromName(String name) {
+    // 兼容旧数据：`llmRequest` 已更名为 `model`，`llmResponse` 已更名为 `usage`
+    if (name == 'llmRequest') return AuditEventType.model;
+    if (name == 'llmResponse') return AuditEventType.usage;
+    return AuditEventType.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => AuditEventType.request,
+    );
+  }
 }
 
 /// 审计检索过滤器
@@ -126,7 +128,7 @@ class AuditFilter {
 /// 审计链路（Trace）
 ///
 /// 一次完整业务交互（如一次 Chat Completion 请求）对应一条 Trace，
-/// 之下挂载多个 [AuditEvent]（prompt / llmRequest / toolStart ...）。
+/// 之下挂载多个 [AuditEvent]（prompt / model / usage / toolStart ...）。
 class AuditTrace {
   final String traceId;
   final String sessionId;

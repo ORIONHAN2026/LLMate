@@ -313,7 +313,7 @@ class LocalHttpService {
   /// - request.context['body'] 包含已注入 model/tools 的请求体
   ///
   /// 后置任务（本服务只做审计与统计，不创建/持久化任何消息）：
-  /// - 审计链路追踪（prompt / llmRequest / llmResponse / tool / response / error）
+  /// - 审计链路追踪（prompt / model / usage / tool / response / error）
   /// - 写入用量统计（token / 费用明细，由 UsageController 持久化）
   /// - 覆盖写入最近一次请求/响应到 log/log.json
   ///
@@ -378,7 +378,7 @@ class LocalHttpService {
           while (true) {
             // ── 审计：LLM 请求开始 ──
             if (auditTrace != null) {
-              audit.llmRequest(auditTrace, auditProvider, auditModel);
+              audit.model(auditTrace, auditProvider, auditModel);
             }
 
             // 单轮流式请求：post LLM API，解析 SSE chunk
@@ -398,23 +398,10 @@ class LocalHttpService {
 
             // ── 审计：LLM 响应完成 ──
             if (auditTrace != null) {
-              var roundCost = 0.0;
-              final m = session.chatModel;
-              final promptPrice = m?.promptPrice;
-              final completionPrice = m?.completionPrice;
-              if (promptPrice != null) {
-                roundCost +=
-                    (round.promptTokens ?? 0) * promptPrice / 1000000.0;
-              }
-              if (completionPrice != null) {
-                roundCost +=
-                    (round.completionTokens ?? 0) * completionPrice / 1000000.0;
-              }
-              audit.llmResponse(
+              audit.usage(
                 auditTrace,
                 round.promptTokens ?? 0,
                 round.completionTokens ?? 0,
-                roundCost,
               );
             }
 

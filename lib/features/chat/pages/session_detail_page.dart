@@ -2,10 +2,10 @@ import 'package:llmate/features/widgets/standard_app_bar.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../../controllers/session_controller.dart';
-import 'sidebars/session_config_sidebar.dart';
-import 'usage_dashboard.dart';
-import 'audit_viewer.dart';
+import '../../../controllers/session_controller.dart';
+import '../widgets/sidebars/session_config_sidebar.dart';
+import '../widgets/panels/usage_dashboard.dart';
+import '../widgets/panels/audit_viewer.dart';
 
 /// 会话详情页 — 以 Tab 形式展示原本位于右侧边栏的全部会话配置信息
 class SessionDetailPage extends StatelessWidget {
@@ -40,6 +40,15 @@ class SessionDetailPage extends StatelessWidget {
           icon: Icons.info_outline,
           builder:
               (ctx) => SessionConfigSidebar.buildBasicInfoSection(ctx, session),
+        ),
+        _DetailTab(
+          label: '模型设置',
+          icon: Icons.smart_toy_outlined,
+          builder:
+              (ctx) => SessionConfigSidebar.buildModelSettingsSection(
+                ctx,
+                session,
+              ),
         ),
         _DetailTab(
           label: '会话设定',

@@ -35,9 +35,9 @@ Handler modelToolGuard(Handler innerHandler) {
 
     final body = jsonDecode(bodyStr) as Map<String, dynamic>;
 
-    // 1. 模型替换（省钱路由：关闭开关强制用指定模型，开启则按字数灵活选）
-    body['model'] = ModelRouter.decide(
-      model: session.chatModel!,
+    // 1. 模型替换（会话级：自动选择开关开启则按字数灵活选，关闭则用手动选定模型）
+    body['model'] = ModelRouter.decideForSession(
+      session: session,
       body: body,
     );
     debugPrint('🧭 [ModelRouter] 本轮使用模型: ${body['model']}');

@@ -9,10 +9,12 @@ import 'package:llmate/l10n/app_localizations.dart';
 import '../../../../controllers/session_controller.dart';
 import '../../../../controllers/settings_controller.dart';
 import '../../../../controllers/mcp_controller.dart';
+import '../../../../controllers/model_controller.dart';
 import '../../../../core/http/local_http_service.dart';
 import 'package:llmate/features/mcp/widgets/mcp_detail_dialog.dart';
 import '../../../../models/chat/session.dart';
 import '../../../../models/chat/mcp.dart';
+import '../../../../models/model.dart';
 import '../../../utils/snackbar_utils.dart';
 import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 
@@ -419,10 +421,7 @@ class SessionConfigSidebar {
   static String sFormatTokenCount(int count) => _formatTokenCount(count);
 
   /// 构建计费信息区域（独立使用）
-  static Widget buildBillingInfo(
-    BuildContext context,
-    ChatSession session,
-  ) {
+  static Widget buildBillingInfo(BuildContext context, ChatSession session) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     return Column(
@@ -454,9 +453,8 @@ class SessionConfigSidebar {
   /// 基础信息分节
   static Widget buildBasicInfoSection(
     BuildContext context,
-    ChatSession session, {
-    bool showMessageCount = true,
-  }) {
+    ChatSession session,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,35 +488,12 @@ class SessionConfigSidebar {
             );
           },
         ),
-        const SizedBox(height: 8),
-        _buildConfigItem(
-          context,
-          icon: Icons.language,
-          label: l10n.boundModel,
-          value:
-              session.chatModel != null
-                  ? '${session.chatModel!.name} (${session.chatModel!.model})'
-                  : l10n.notSet,
-          valueColor:
-              session.chatModel != null
-                  ? Theme.of(context).colorScheme.onSurface
-                  : null,
-        ),
         if (session.connectPrompt != null &&
             session.connectPrompt!.isNotEmpty) ...[
           const SizedBox(height: 12),
           _buildSectionTitle(context, l10n.relatedPrompt),
           const SizedBox(height: 8),
           _buildPromptCard(context, session.connectPrompt!),
-        ],
-        if (showMessageCount) ...[
-          const SizedBox(height: 8),
-          _buildConfigItem(
-            context,
-            icon: Icons.chat_bubble_outline,
-            label: l10n.messageCountLabel,
-            value: l10n.messageCount(session.messages.length),
-          ),
         ],
       ],
     );
@@ -563,6 +538,14 @@ class SessionConfigSidebar {
     ChatSession session,
   ) {
     return _SessionSettingsSection(session: session);
+  }
+
+  /// 模型设置分节（会话级：手动选择模型 + 自动选择开关）
+  static Widget buildModelSettingsSection(
+    BuildContext context,
+    ChatSession session,
+  ) {
+    return _ModelSettingsSection(session: session);
   }
 
   /// 用量配额分节
@@ -766,7 +749,7 @@ class SessionConfigSidebar {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       children: [
-        buildBasicInfoSection(context, session, showMessageCount: false),
+        buildBasicInfoSection(context, session),
         const SizedBox(height: 16),
         buildServiceConfigSection(context, session),
       ],
@@ -1020,6 +1003,336 @@ class _SessionSettingsSectionState extends State<_SessionSettingsSection> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// 模型设置区域（会话级：手动选择模型 + 自动选择开关）
+class _ModelSettingsSection extends StatefulWidget {
+  final ChatSession session;
+
+  const _ModelSettingsSection({required this.session});
+
+  @override
+  State<_ModelSettingsSection> createState() => _ModelSettingsSectionState();
+}
+
+class _ModelSettingsSectionState extends State<_ModelSettingsSection> {
+  List<ChatModel> _allModels = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadModels();
+  }
+
+  Future<void> _loadModels() async {
+    try {
+      final models = await Get.find<ModelController>().loadModels();
+      if (mounted) {
+        setState(() => _allModels = models);
+      }
+    } catch (_) {
+      // 模型列表加载失败时保持空列表，回退为只读展示
+    }
+  }
+
+  void _update(ChatSession updated) {
+    Get.find<SessionController>().updateSession(updated);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.session;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildAutoSelectToggle(context, session),
+        const SizedBox(height: 8),
+
+        _buildBoundModelPicker(context, session),
+        const SizedBox(height: 8),
+        _buildModelPicker(context, session),
+      ],
+    );
+  }
+
+  /// 绑定模型选择器（从所有可用模型中选择要绑定到会话的模型配置）
+  Widget _buildBoundModelPicker(BuildContext context, ChatSession session) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final current = session.chatModel;
+
+    if (_allModels.isEmpty) {
+      return SessionConfigSidebar._buildConfigItem(
+        context,
+        icon: Icons.language,
+        label: l10n.boundModel,
+        value:
+            current != null
+                ? '${current.name} (${current.platform ?? current.model})'
+                : l10n.notSet,
+        valueColor: current != null ? theme.colorScheme.onSurface : null,
+      );
+    }
+
+    final currentId = current?.modelId;
+    final effectiveId =
+        _allModels.any((m) => m.modelId == currentId)
+            ? currentId
+            : (_allModels.first.modelId);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.language,
+            size: 14,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.boundModel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: effectiveId,
+                    isDense: true,
+                    isExpanded: true,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    onChanged: (id) {
+                      if (id == null) return;
+                      final selected = _allModels.firstWhere(
+                        (m) => m.modelId == id,
+                      );
+                      // 切换模型配置时，下方的「模型」自动改为该配置可用模型的第一个
+                      final firstModel =
+                          selected.availableModels.isNotEmpty
+                              ? selected.availableModels.first
+                              : selected.model;
+                      _update(
+                        session.copyWith(
+                          chatModel: selected,
+                          model: firstModel,
+                        ),
+                      );
+                    },
+                    items:
+                        _allModels
+                            .map(
+                              (m) => DropdownMenuItem<String>(
+                                value: m.modelId,
+                                child: Text(
+                                  '${m.name} (${m.platform ?? m.model})',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 自动选择模型开关（即原来的「费用优化」省钱路由，挪到会话级）
+  Widget _buildAutoSelectToggle(BuildContext context, ChatSession session) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color:
+            session.autoSelectModel
+                ? theme.colorScheme.onSurface.withValues(alpha: 0.08)
+                : theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.3,
+                ),
+        borderRadius: BorderRadius.circular(8),
+        border:
+            session.autoSelectModel
+                ? Border.all(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  width: 1,
+                )
+                : null,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            session.autoSelectModel
+                ? Icons.auto_awesome
+                : Icons.auto_awesome_outlined,
+            size: 16,
+            color:
+                session.autoSelectModel
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.costOptimization,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color:
+                        session.autoSelectModel
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                  ),
+                ),
+                Text(
+                  l10n.costOptimizationDesc,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.75,
+            child: CupertinoSwitch(
+              value: session.autoSelectModel,
+              activeTrackColor: theme.colorScheme.onSurface,
+              onChanged:
+                  (val) => _update(session.copyWith(autoSelectModel: val)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 模型选择下拉（从绑定模型的可用模型清单里选；自动模式下禁用）
+  Widget _buildModelPicker(BuildContext context, ChatSession session) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final chatModel = session.chatModel;
+    final available = chatModel?.availableModels ?? const <String>[];
+
+    final options =
+        <String>{
+          if (chatModel != null && chatModel.model.isNotEmpty) chatModel.model,
+          if (session.model != null && session.model!.isNotEmpty)
+            session.model!,
+          ...available,
+        }.toList();
+
+    final current =
+        (session.model != null && session.model!.isNotEmpty)
+            ? session.model!
+            : (chatModel?.model ?? '');
+
+    if (options.isEmpty) {
+      return SessionConfigSidebar._buildConfigItem(
+        context,
+        icon: Icons.smart_toy_outlined,
+        label: l10n.modelLabel,
+        value: current.isNotEmpty ? current : l10n.notSet,
+      );
+    }
+
+    final effective = options.contains(current) ? current : options.first;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.smart_toy_outlined,
+            size: 14,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.modelLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: effective,
+                    isDense: true,
+                    isExpanded: true,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color:
+                          session.autoSelectModel
+                              ? theme.colorScheme.onSurface.withValues(
+                                alpha: 0.4,
+                              )
+                              : theme.colorScheme.onSurface,
+                    ),
+                    onChanged:
+                        session.autoSelectModel
+                            ? null
+                            : (v) {
+                              if (v == null) return;
+                              _update(session.copyWith(model: v));
+                            },
+                    items:
+                        options
+                            .map(
+                              (m) => DropdownMenuItem<String>(
+                                value: m,
+                                child: Text(
+                                  m,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1938,20 +2251,6 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                           session.copyWith(group: newGroup.trim()),
                         );
                       },
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildConfigItem(
-                      context,
-                      icon: Icons.language,
-                      label: l10n.boundModel,
-                      value:
-                          session.chatModel != null
-                              ? '${session.chatModel!.name} (${session.chatModel!.model})'
-                              : l10n.notSet,
-                      valueColor:
-                          session.chatModel != null
-                              ? Theme.of(context).colorScheme.onSurface
-                              : null,
                     ),
                     // 关联提示词
                     if (session.connectPrompt != null &&

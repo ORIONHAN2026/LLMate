@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../controllers/audit_controller.dart';
-import '../../../data/database.dart';
-import '../../../models/audit.dart';
-import '../../../models/chat/session.dart';
+import '../../../../controllers/audit_controller.dart';
+import '../../../../data/database.dart';
+import '../../../../models/audit.dart';
+import '../../../../models/chat/session.dart';
 import 'package:llmate/features/widgets/section_title.dart';
 import 'package:llmate/features/widgets/standard_app_bar.dart';
 

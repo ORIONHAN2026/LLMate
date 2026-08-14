@@ -122,10 +122,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         children: [
           _buildEditableModelNameItem(),
           const SizedBox(height: 8),
-          _buildConfigItem(
-            AppLocalizations.of(context)!.modelLabel,
-            _currentModel.model,
-          ),
+          _buildAvailableModelsItem(),
           const SizedBox(height: 8),
           _buildConfigItem(
             AppLocalizations.of(context)!.platformLabel,
@@ -306,6 +303,77 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 可用模型列表：以标签样式展示当前模型与可用模型，不支持选择。
+  /// 无可用模型（availableModels 为空）时退化为只读文本显示。
+  Widget _buildAvailableModelsItem() {
+    final loc = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final options = <String>{
+      if (_currentModel.model.isNotEmpty) _currentModel.model,
+      ..._currentModel.availableModels,
+    }.toList();
+
+    // 没有可用模型列表时，保持原有只读展示
+    if (options.isEmpty) {
+      return _buildConfigItem(loc.modelLabel, _currentModel.model);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '${loc.modelLabel}:',
+              style: TextStyle(
+                fontSize: 12,
+                color: scheme.onSurface.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: options.map((m) {
+                final isCurrent = m == _currentModel.model;
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isCurrent
+                        ? scheme.primary.withValues(alpha: 0.12)
+                        : scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isCurrent
+                          ? scheme.primary.withValues(alpha: 0.5)
+                          : scheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Text(
+                    m,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isCurrent
+                          ? scheme.primary
+                          : scheme.onSurface.withValues(alpha: 0.75),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ],

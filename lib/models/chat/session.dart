@@ -136,6 +136,14 @@ class ChatSession {
   /// 绑定的模型ID，用于动态加载 chatModel
   final String? modelId;
 
+  /// 会话手动选择的模型（从 [ChatModel.availableModels] 里选）。
+  /// 当 [autoSelectModel] 为 false 时生效；为空时回退使用 [ChatModel.model]。
+  final String? model;
+
+  /// 是否开启自动选择模型：开启后每次请求从 [ChatModel.availableModels] 里
+  /// 自动挑选最合适的模型（便宜/复杂按字数路由）；关闭时使用 [model]。
+  final bool autoSelectModel;
+
   /// 会话头像 emoji
   final String emoji;
 
@@ -192,6 +200,8 @@ class ChatSession {
     required this.createdAt,
     required this.messages,
     String? modelId,
+    this.model,
+    this.autoSelectModel = false,
     this.mcps,
     this.chatModel,
     this.isFavorite = false,
@@ -408,6 +418,9 @@ class ChatSession {
     bool? noAuthEnabled,
     bool? isDisabled,
     String? mode, //session|manager
+    String? model,
+    bool clearModel = false,
+    bool? autoSelectModel,
   }) {
     // 当显式设置 chatModel 时，自动同步 modelId
     final String? resolvedModelId;
@@ -480,6 +493,8 @@ class ChatSession {
       noAuthEnabled: noAuthEnabled ?? this.noAuthEnabled,
       isDisabled: isDisabled ?? this.isDisabled,
       mode: mode ?? this.mode,
+      model: clearModel ? null : (model ?? this.model),
+      autoSelectModel: autoSelectModel ?? this.autoSelectModel,
     );
   }
 
@@ -584,6 +599,8 @@ class ChatSession {
       noAuthEnabled: json['noAuthEnabled'] as bool? ?? false,
       isDisabled: json['isDisabled'] as bool? ?? false,
       mode: json['mode'] == 'session' ? "session" : "management",
+      model: json['model'] as String?,
+      autoSelectModel: json['autoSelectModel'] as bool? ?? false,
     );
   }
 
@@ -624,6 +641,8 @@ class ChatSession {
       'noAuthEnabled': noAuthEnabled,
       'isDisabled': isDisabled,
       'mode': mode,
+      if (model != null && model!.isNotEmpty) 'model': model,
+      'autoSelectModel': autoSelectModel,
     };
   }
 }

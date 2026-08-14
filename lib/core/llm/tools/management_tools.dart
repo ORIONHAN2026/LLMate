@@ -15,6 +15,7 @@ import '../../../models/chat/session.dart';
 ///     [audit_update] / [audit_delete]）
 ///   - 用量与额度：用量查询（[usage_query]）、会话额度查询（[quota_get]）、
 ///     会话额度设置（[quota_set]）、会话额度重置（[quota_reset]）
+///   - 会话配置：会话配置查询（[session_config_get]）
 ///
 /// 工具 schema 由客户端注入；服务端视作第三方透传回来，由客户端本地执行
 /// （[executeManagementTool]）并回填继续多轮。
@@ -194,6 +195,19 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
       'parameters': {'type': 'object', 'properties': {}},
     },
   },
+  // ───────────────── 会话配置：查询 ─────────────────
+  {
+    'type': 'function',
+    'function': {
+      'name': 'session_config_get',
+      'description':
+          '查询当前会话的完整配置，包括：基础信息（名称、组织、模式、消息数）、'
+          '绑定模型（含对话参数与安全设置）、绑定的 MCP 服务列表、'
+          '会话级功能配置（关联提示词、会话级系统提示词、快捷指令）、'
+          '服务配置（API Key、免授权开关、禁用状态）、用量配额设置与累计 Token 统计。',
+      'parameters': {'type': 'object', 'properties': {}},
+    },
+  },
 ];
 
 /// 所有管理模式系统工具的名称集合
@@ -207,6 +221,7 @@ const Set<String> managementToolNames = {
   'quota_get',
   'quota_set',
   'quota_reset',
+  'session_config_get',
 };
 
 /// 执行一个管理模式系统工具，返回 JSON 字符串结果（含 success / error 或 data）。
@@ -353,6 +368,11 @@ Future<String> executeManagementTool(
         sc.updateSession(updated);
         return _ok(_quotaSnapshot(updated));
 
+      // ───────────── 会话配置 ─────────────
+      case 'session_config_get':
+        final s = Get.find<SessionController>().currentSession.value ?? session;
+        return _ok(_sessionConfigSnapshot(s));
+
       default:
         return _err('未知的系统工具: $name');
     }
@@ -373,6 +393,62 @@ Map<String, dynamic> _quotaSnapshot(ChatSession s) => {
   'quotaPeriodStart': s.quotaPeriodStart?.toIso8601String(),
   'quotaRequestCount': s.quotaRequestCount,
 };
+
+/// 当前会话的完整配置快照（供 [session_config_get] 使用）。
+Map<String, dynamic> _sessionConfigSnapshot(ChatSession s) {
+  final quota = _quotaSnapshot(s)..remove('sessionId');
+  final m = s.chatModel;
+  return {
+    'sessionId': s.sessionId,
+    'basic': {
+      'name': s.name,
+      'emoji': s.emoji,
+      'group': s.group,
+      'createdAt': s.createdAt.toIso8601String(),
+      'mode': s.mode,
+      'messageCount': s.messages.length,
+      'model': s.model,
+      'autoSelectModel': s.autoSelectModel,
+    },
+    'model': m == null
+        ? null
+        : {
+            'modelId': m.modelId,
+            'name': m.name,
+            'model': m.model,
+            'type': m.type,
+            'platform': m.platform,
+            'protocol': m.protocol,
+            'temperature': m.temperature,
+            'replyLanguage': m.replyLanguage,
+            'systemPrompt': m.systemPrompt,
+            'maskPhone': m.maskPhone,
+            'maskIdCard': m.maskIdCard,
+            'routingEnabled': m.routingEnabled,
+            'cheapModel': m.cheapModel,
+            'complexModel': m.complexModel,
+          },
+    'mcps': s.mcps ?? const <String>[],
+    'prompts': {
+      'connectPrompt': s.connectPrompt,
+      'systemPrompt': s.systemPrompt,
+      'quickCommands': s.sessionQuickCommands
+          .map((c) => c.toJson())
+          .toList(),
+    },
+    'service': {
+      'apiKey': s.apiKey,
+      'noAuthEnabled': s.noAuthEnabled,
+      'isDisabled': s.isDisabled,
+    },
+    'quota': quota,
+    'tokens': {
+      'promptTokens': s.promptTokens,
+      'completionTokens': s.completionTokens,
+      'totalTokens': s.totalTokens,
+    },
+  };
+}
 
 String _ok(Map<String, dynamic> data) => jsonEncode({'success': true, ...data});
 

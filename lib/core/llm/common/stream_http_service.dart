@@ -35,8 +35,6 @@ Stream<Map<String, dynamic>> streamViaHttpService({
     return;
   }
 
-  final isManagement = session.mode == SessionMode.management.name;
-
   // 可变消息列表：多轮工具调用时回填 assistant(tool_calls) 与 tool 结果
   var currentMessages = List<Map<String, dynamic>>.from(messages);
 
@@ -49,12 +47,13 @@ Stream<Map<String, dynamic>> streamViaHttpService({
       return;
     }
 
-    // 管理模式：客户端注入管理工具；会话模式：tools 传空，MCP 工具由服务端注入
+    // 只要是从本软件聊天输入框发出的请求，一律注入全部管理工具；
+    // MCP 工具仍由服务端注入
     final body = await provider.buildRequestData(
       messages: currentMessages,
       session: session,
       stream: true,
-      tools: isManagement ? managementToolDefinitions : const [],
+      tools: managementToolDefinitions,
     );
 
     final round = await _postRound(session, body, isCancelled);

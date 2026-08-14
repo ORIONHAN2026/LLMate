@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../services/usage_loader.dart';
+import '../../services/usage_loader.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 
 /// 用量曲线图组件 - 使用 CustomPaint 绘制，无第三方依赖

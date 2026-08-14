@@ -3,8 +3,8 @@ import 'package:llmate/features/chat/widgets/message_widgets/ai_message_widget.d
 import 'package:llmate/features/chat/widgets/message_widgets/user_message_widget.dart';
 import 'package:llmate/features/chat/widgets/message_widgets/tool_message_widget.dart';
 import 'package:llmate/features/utils/responsive_utils.dart';
-import '../../../l10n/app_localizations.dart';
-import '../../../models/models.dart';
+import '../../../../l10n/app_localizations.dart';
+import '../../../../models/models.dart';
 import 'dart:ui' as ui;
 import 'dart:io';
 import 'dart:convert';

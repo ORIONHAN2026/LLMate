@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:llmate/controllers/session_controller.dart';
-import 'package:llmate/features/chat/widgets/model_selector.dart';
+import 'package:llmate/features/chat/widgets/conversation/model_selector.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -14,16 +14,16 @@ import '../../../controllers/model_controller.dart';
 
 import '../widgets/sidebars/chat_left_sidebar.dart';
 import '../widgets/sidebars/chat_right_sidebar.dart';
-import '../widgets/chat_input_widget.dart';
+import '../widgets/conversation/chat_input_widget.dart';
 import 'package:llmate/features/utils/snackbar_utils.dart';
 import 'package:llmate/features/utils/responsive_utils.dart';
-import '../widgets/chat_conversation_area.dart';
+import '../widgets/conversation/chat_conversation_area.dart';
 import '../../settings/pages/modelssetting.dart';
 import '../../mcp/pages/mcp_management_page.dart';
 
 import '../../settings/pages/other_settings_page.dart';
 import '../../settings/pages/domain_management_page.dart';
-import '../widgets/usage_dashboard.dart';
+import '../widgets/panels/usage_dashboard.dart';
 import 'package:llmate/features/widgets/command_palette.dart';
 
 class CodeChatHomePage extends StatefulWidget {

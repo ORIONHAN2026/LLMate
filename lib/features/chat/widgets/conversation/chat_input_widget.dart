@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'dart:async';
-import '../../../controllers/session_controller.dart';
-import '../../../controllers/message_controller.dart';
-import '../../../controllers/mcp_controller.dart';
-import '../../../models/models.dart';
-import '../../../core/llm/llm_client.dart';
-import '../../../controllers/model_controller.dart';
-import '../../utils/snackbar_utils.dart';
-import '../../../l10n/app_localizations.dart';
+import '../../../../controllers/session_controller.dart';
+import '../../../../controllers/message_controller.dart';
+import '../../../../controllers/mcp_controller.dart';
+import '../../../../models/models.dart';
+import '../../../../core/llm/llm_client.dart';
+import '../../../../controllers/model_controller.dart';
+import '../../../utils/snackbar_utils.dart';
+import '../../../../l10n/app_localizations.dart';
 import 'package:llmate/features/mcp/widgets/mcp_detail_dialog.dart';
-import 'session_detail_page.dart';
-import 'audit_viewer.dart';
-import 'usage_dashboard.dart';
+import '../../pages/session_detail_page.dart';
+import '../panels/audit_viewer.dart';
+import '../panels/usage_dashboard.dart';
 
 /// 聊天输入框组件
 ///

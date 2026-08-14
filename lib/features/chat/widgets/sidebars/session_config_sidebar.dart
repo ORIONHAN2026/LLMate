@@ -13,7 +13,6 @@ import '../../../../core/http/local_http_service.dart';
 import 'package:llmate/features/mcp/widgets/mcp_detail_dialog.dart';
 import '../../../../models/chat/session.dart';
 import '../../../../models/chat/mcp.dart';
-import '../../../../models/model.dart';
 import '../../../utils/snackbar_utils.dart';
 import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 
@@ -419,92 +418,11 @@ class SessionConfigSidebar {
   /// 供同文件其他类使用的格式化方法
   static String sFormatTokenCount(int count) => _formatTokenCount(count);
 
-  /// 获取货币符号
-  static String _getCurrencySymbol(ChatModel? model) {
-    return model?.currency == 'CNY' ? '¥' : '\$';
-  }
-
-  /// 获取货币单位名称
-  static String _getCurrencyName(ChatModel? model, AppLocalizations l10n) {
-    return model?.currency == 'CNY' ? l10n.cny : l10n.usd;
-  }
-
-  /// 构建价格卡片
-  static Widget _buildPriceCard(
-    BuildContext context, {
-    double? promptPrice,
-    double? completionPrice,
-    ChatModel? chatModel,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
-    final symbol = _getCurrencySymbol(chatModel);
-    final currencyName = _getCurrencyName(chatModel, l10n);
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.secondaryContainer.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                size: 12,
-                color: Theme.of(
-                  context,
-                ).colorScheme.secondary.withValues(alpha: 0.7),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                l10n.modelPricing(currencyName),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.secondary.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (promptPrice != null)
-            Text(
-              '${l10n.inputLabel}: $symbol${promptPrice.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          if (promptPrice != null && completionPrice != null)
-            const SizedBox(height: 4),
-          if (completionPrice != null)
-            Text(
-              '${l10n.outputLabel}: $symbol${completionPrice.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   /// 构建计费信息区域（独立使用）
   static Widget buildBillingInfo(
     BuildContext context,
-    ChatSession session, {
-    bool showPriceCard = true,
-  }) {
+    ChatSession session,
+  ) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     return Column(
@@ -527,29 +445,6 @@ class SessionConfigSidebar {
           value: '${_formatTokenCount(session.completionTokens)} Token',
           valueColor: theme.colorScheme.onSurface,
         ),
-        const SizedBox(height: 8),
-        _buildConfigItem(
-          context,
-          icon: Icons.monetization_on_outlined,
-          label: l10n.cumulativeCost,
-          value:
-              '${_getCurrencySymbol(session.chatModel)}${session.totalCost.toStringAsFixed(6)}',
-          valueColor:
-              session.totalCost > 0
-                  ? theme.colorScheme.error
-                  : theme.colorScheme.onSurface,
-        ),
-        if (showPriceCard &&
-            (session.chatModel?.promptPrice != null ||
-                session.chatModel?.completionPrice != null)) ...[
-          const SizedBox(height: 8),
-          _buildPriceCard(
-            context,
-            promptPrice: session.chatModel?.promptPrice,
-            completionPrice: session.chatModel?.completionPrice,
-            chatModel: session.chatModel,
-          ),
-        ],
       ],
     );
   }
@@ -1143,7 +1038,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   late ChatSession _session;
 
   late final TextEditingController _tokenLimitController;
-  late final TextEditingController _costLimitController;
   late final TextEditingController _requestLimitController;
 
   @override
@@ -1154,12 +1048,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
       text:
           _session.quotaTokenLimit != null
               ? _session.quotaTokenLimit.toString()
-              : '',
-    );
-    _costLimitController = TextEditingController(
-      text:
-          _session.quotaCostLimit != null
-              ? _session.quotaCostLimit.toString()
               : '',
     );
     _requestLimitController = TextEditingController(
@@ -1173,7 +1061,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   @override
   void dispose() {
     _tokenLimitController.dispose();
-    _costLimitController.dispose();
     _requestLimitController.dispose();
     super.dispose();
   }
@@ -1185,7 +1072,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
       _session = widget.session;
       // 外部更新时同步 controller 文本
       _syncTokenLimitText();
-      _syncCostLimitText();
       _syncRequestLimitText();
     }
   }
@@ -1197,16 +1083,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
             : '';
     if (_tokenLimitController.text != newText) {
       _tokenLimitController.text = newText;
-    }
-  }
-
-  void _syncCostLimitText() {
-    final newText =
-        _session.quotaCostLimit != null
-            ? _session.quotaCostLimit.toString()
-            : '';
-    if (_costLimitController.text != newText) {
-      _costLimitController.text = newText;
     }
   }
 
@@ -1256,28 +1132,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                 _session.copyWith(
                   quotaTokenLimit: val as int?,
                   clearQuotaTokenLimit: val == null,
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-
-          // 费用预算上限
-          _buildNumberField(
-            context,
-            controller: _costLimitController,
-            icon: Icons.monetization_on_outlined,
-            label: l10n.costBudgetLimit(
-              SessionConfigSidebar._getCurrencyName(_session.chatModel, l10n),
-            ),
-            value: _session.quotaCostLimit,
-            hint: l10n.noLimit,
-            isDouble: true,
-            onChanged: (val) {
-              _updateSession(
-                _session.copyWith(
-                  quotaCostLimit: val as double?,
-                  clearQuotaCostLimit: val == null,
                 ),
               );
             },
@@ -1611,7 +1465,6 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
         hasPeriod
             ? periodBilling.inputTokens + periodBilling.outputTokens
             : _session.promptTokens + _session.completionTokens;
-    final effectiveCost = hasPeriod ? periodBilling.cost : _session.totalCost;
     final quotaResult = _session.checkQuota();
 
     return Container(
@@ -1675,23 +1528,8 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               used: effectiveTokens,
               limit: _session.quotaTokenLimit!,
             ),
-          if (_session.quotaCostLimit != null) ...[
-            if (_session.quotaTokenLimit != null) const SizedBox(height: 6),
-            _buildQuotaProgress(
-              context,
-              label: l10n.quotaCostLabel,
-              used: effectiveCost,
-              limit: _session.quotaCostLimit!,
-              isDouble: true,
-              suffix: SessionConfigSidebar._getCurrencySymbol(
-                _session.chatModel,
-              ),
-            ),
-          ],
           if (_session.quotaRequestLimit != null) ...[
-            if (_session.quotaTokenLimit != null ||
-                _session.quotaCostLimit != null)
-              const SizedBox(height: 6),
+            if (_session.quotaTokenLimit != null) const SizedBox(height: 6),
             _buildQuotaProgress(
               context,
               label: l10n.quotaRequestLabel,

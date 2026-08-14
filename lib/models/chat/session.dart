@@ -266,25 +266,12 @@ class ChatSession {
         quotaPeriodStart != null
             ? periodBilling.inputTokens + periodBilling.outputTokens
             : promptTokens + completionTokens;
-    final effectiveCost =
-        quotaPeriodStart != null ? periodBilling.cost : totalCost;
-
     // 检查 Token 用量
     if (quotaTokenLimit != null && effectiveTokens >= quotaTokenLimit!) {
       return QuotaCheckResult(
         exceeded: true,
         reason: 'Token 用量已达上限',
         detail: '已使用 $effectiveTokens Token，上限 $quotaTokenLimit Token',
-      );
-    }
-
-    // 检查费用预算
-    if (quotaCostLimit != null && effectiveCost >= quotaCostLimit!) {
-      return QuotaCheckResult(
-        exceeded: true,
-        reason: '费用预算已达上限',
-        detail:
-            '已花费 \$${effectiveCost.toStringAsFixed(4)}，预算 \$${quotaCostLimit!.toStringAsFixed(2)}',
       );
     }
 

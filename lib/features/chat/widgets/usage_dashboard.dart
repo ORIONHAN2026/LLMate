@@ -47,7 +47,6 @@ class UsageDashboard extends StatefulWidget {
 class _UsageDashboardState extends State<UsageDashboard> {
   String _granularity = 'hour';
   final _showTokens = ValueNotifier<bool>(true);
-  final _showCost = ValueNotifier<bool>(true);
   List<UsageChartPoint> _chartData = [];
   bool _chartLoading = false;
   UsageStats? _stats;
@@ -76,7 +75,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
   @override
   void dispose() {
     _showTokens.dispose();
-    _showCost.dispose();
     super.dispose();
   }
 
@@ -153,7 +151,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
         ms.chatModel ??= modelMap[d.modelId];
         ms.promptTokens += d.promptTokens;
         ms.completionTokens += d.completionTokens;
-        ms.totalCost += d.cost;
         sessionStats.putIfAbsent(d.sessionId, () => UsageStats.empty()).add(d);
       }
 
@@ -263,10 +260,8 @@ class _UsageDashboardState extends State<UsageDashboard> {
           final completionTokens =
               _stats?.completionTokens ?? currentSession.completionTokens;
           final totalTokens = promptTokens + completionTokens;
-          final totalCost = _stats?.totalCost ?? currentSession.totalCost;
           final quotaEnabled = currentSession.quotaEnabled;
           final tokenLimit = currentSession.quotaTokenLimit;
-          final costLimit = currentSession.quotaCostLimit;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,14 +286,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     value: _formatTokenCount(completionTokens),
                     accentColor: const Color(0xFF059669),
                   ),
-                  _buildStatCard(
-                    theme,
-                    isDark: isDark,
-                    title: l10n.totalCostLabel,
-                    value:
-                        '${_getCurrencySymbol(currentSession.chatModel)}${totalCost.toStringAsFixed(4)}',
-                    accentColor: const Color(0xFFDC2626),
-                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -319,10 +306,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   theme,
                   isDark,
                   totalTokens,
-                  totalCost,
                   tokenLimit,
-                  costLimit,
-                  currentSession.chatModel,
                   l10n,
                 ),
               ],
@@ -359,18 +343,10 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   : ValueListenableBuilder<bool>(
                     valueListenable: _showTokens,
                     builder:
-                        (_, showToken, _) => ValueListenableBuilder<bool>(
-                          valueListenable: _showCost,
-                          builder:
-                              (_, showCost, _) => UsageCurveChart(
-                                data: _chartData,
-                                showTokens: showToken,
-                                showCost: showCost,
-                                currencySymbol: _getCurrencySymbol(
-                                  session.chatModel,
-                                ),
-                                granularity: _granularity,
-                              ),
+                        (_, showToken, _) => UsageCurveChart(
+                          data: _chartData,
+                          showTokens: showToken,
+                          granularity: _granularity,
                         ),
                   ),
         ),
@@ -438,10 +414,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
         final totalCompletion =
             stats?.completionTokens ??
             sessions.fold<int>(0, (s, session) => s + session.completionTokens);
-        final totalCost =
-            stats?.totalCost ??
-            sessions.fold<double>(0, (s, session) => s + session.totalCost);
-
         // 按模型分组：真实用量（modelId 聚合），加载完成前回退到会话缓存分组
         final modelStats =
             stats == null ? _fallbackModelStats(sessions) : _globalModelStats;
@@ -498,13 +470,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
                     title: l10n.totalTokens,
                     value: _formatTokenCount(totalPrompt + totalCompletion),
                     accentColor: const Color(0xFF059669),
-                  ),
-                  _buildStatCard(
-                    theme,
-                    isDark: isDark,
-                    title: l10n.totalCostLabel,
-                    value: '\$${totalCost.toStringAsFixed(4)}',
-                    accentColor: const Color(0xFFDC2626),
                   ),
                 ],
               ),
@@ -584,7 +549,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
       stat.sessionCount++;
       stat.promptTokens += session.promptTokens;
       stat.completionTokens += session.completionTokens;
-      stat.totalCost += session.totalCost;
     }
     return map;
   }
@@ -788,10 +752,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
     ThemeData theme,
     bool isDark,
     int totalTokens,
-    double totalCost,
     int? tokenLimit,
-    double? costLimit,
-    ChatModel? chatModel,
     AppLocalizations l10n,
   ) {
     return Container(
@@ -853,57 +814,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               ),
             ),
           ],
-          if (costLimit != null && costLimit > 0) ...[
-            if (tokenLimit != null && tokenLimit > 0)
-              const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(
-                  Icons.attach_money,
-                  size: 16,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.costUsage,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${_getCurrencySymbol(chatModel)}${totalCost.toStringAsFixed(4)} / ${_getCurrencySymbol(chatModel)}${costLimit.toStringAsFixed(4)}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF9CA3AF),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value:
-                    costLimit > 0
-                        ? (totalCost / costLimit).clamp(0.0, 1.0)
-                        : 0.0,
-                minHeight: 6,
-                backgroundColor:
-                    isDark ? const Color(0xFF1A1B23) : const Color(0xFFF3F4F6),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  totalCost > costLimit
-                      ? const Color(0xFFDC2626)
-                      : const Color(0xFF9CA3AF),
-                ),
-              ),
-            ),
-          ],
-          if ((tokenLimit == null || tokenLimit <= 0) &&
-              (costLimit == null || costLimit <= 0))
+          if (tokenLimit == null || tokenLimit <= 0)
             Text(
               l10n.noQuotaLimit,
               style: TextStyle(
@@ -966,7 +877,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 ),
               ),
               Text(
-                '${_formatTokenCount(modelTotal)} · ${_getCurrencySymbol(usage.chatModel)}${usage.totalCost.toStringAsFixed(4)}',
+                _formatTokenCount(modelTotal),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -1103,7 +1014,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
     final st = _globalSessionStats[session.sessionId];
     final promptTokens = st?.promptTokens ?? session.promptTokens;
     final completionTokens = st?.completionTokens ?? session.completionTokens;
-    final totalCost = st?.totalCost ?? session.totalCost;
     final total = promptTokens + completionTokens;
     final promptRatio = total > 0 ? promptTokens / total : 0.0;
     final completionRatio = total > 0 ? completionTokens / total : 0.0;
@@ -1134,7 +1044,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 ),
               ),
               Text(
-                '${_formatTokenCount(total)} · ${_getCurrencySymbol(session.chatModel)}${totalCost.toStringAsFixed(4)}',
+                _formatTokenCount(total),
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -1224,11 +1134,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
       return '${(count / 1000).toStringAsFixed(1)}K';
     }
     return '$count';
-  }
-
-  /// 获取模型对应的货币符号
-  String _getCurrencySymbol(ChatModel? model) {
-    return model?.currency == 'CNY' ? '¥' : '\$';
   }
 
   // ==================== 用量曲线 ====================
@@ -1494,28 +1399,16 @@ class _UsageDashboardState extends State<UsageDashboard> {
     return ValueListenableBuilder<bool>(
       valueListenable: _showTokens,
       builder:
-          (_, showToken, _) => ValueListenableBuilder<bool>(
-            valueListenable: _showCost,
-            builder:
-                (_, showCost, _) => Row(
-                  children: [
-                    _toggleChip(
-                      theme: theme,
-                      label: l10n.tokenToggle,
-                      color: const Color(0xFF9CA3AF),
-                      selected: showToken,
-                      onTap: () => _showTokens.value = !_showTokens.value,
-                    ),
-                    const SizedBox(width: 8),
-                    _toggleChip(
-                      theme: theme,
-                      label: l10n.costToggle,
-                      color: const Color(0xFFDC2626),
-                      selected: showCost,
-                      onTap: () => _showCost.value = !_showCost.value,
-                    ),
-                  ],
-                ),
+          (_, showToken, _) => Row(
+            children: [
+              _toggleChip(
+                theme: theme,
+                label: l10n.tokenToggle,
+                color: const Color(0xFF9CA3AF),
+                selected: showToken,
+                onTap: () => _showTokens.value = !_showTokens.value,
+              ),
+            ],
           ),
     );
   }
@@ -1566,6 +1459,5 @@ class _ModelUsage {
   int sessionCount = 0;
   int promptTokens = 0;
   int completionTokens = 0;
-  double totalCost = 0.0;
   ChatModel? chatModel;
 }

@@ -9,16 +9,12 @@ import 'package:llmate/l10n/app_localizations.dart';
 class UsageCurveChart extends StatelessWidget {
   final List<UsageChartPoint> data;
   final bool showTokens;
-  final bool showCost;
-  final String currencySymbol;
   final String granularity;
 
   const UsageCurveChart({
     super.key,
     required this.data,
     required this.showTokens,
-    required this.showCost,
-    required this.currencySymbol,
     this.granularity = 'day',
   });
 
@@ -54,9 +50,6 @@ class UsageCurveChart extends StatelessWidget {
     final maxTokens = showTokens
         ? data.map((p) => p.totalTokens).reduce(max)
         : 0;
-    final maxCost = showCost
-        ? data.map((p) => p.totalCost).reduce(max)
-        : 0.0;
 
     return Container(
       padding: const EdgeInsets.only(top: 12, right: 8, bottom: 4, left: 4),
@@ -81,20 +74,6 @@ class UsageCurveChart extends StatelessWidget {
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
               ],
             ),
-          if (showCost && maxCost > 0) ...[
-            if (showTokens) const SizedBox(height: 4),
-            Row(
-              children: [
-                const SizedBox(width: 8),
-                _legendDot(const Color(0xFFDC2626)),
-                const SizedBox(width: 6),
-                Text(l10n.chartLegendCost(currencySymbol),
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-              ],
-            ),
-          ],
           const SizedBox(height: 8),
           Expanded(
             child: CustomPaint(
@@ -102,11 +81,8 @@ class UsageCurveChart extends StatelessWidget {
               painter: _ChartPainter(
                 data: data,
                 showTokens: showTokens,
-                showCost: showCost,
                 maxTokens: maxTokens,
-                maxCost: maxCost,
                 isDark: isDark,
-                currencySymbol: currencySymbol,
                 granularity: granularity,
               ),
             ),
@@ -129,21 +105,15 @@ class UsageCurveChart extends StatelessWidget {
 class _ChartPainter extends CustomPainter {
   final List<UsageChartPoint> data;
   final bool showTokens;
-  final bool showCost;
   final int maxTokens;
-  final double maxCost;
   final bool isDark;
-  final String currencySymbol;
   final String granularity;
 
   _ChartPainter({
     required this.data,
     required this.showTokens,
-    required this.showCost,
     required this.maxTokens,
-    required this.maxCost,
     required this.isDark,
-    required this.currencySymbol,
     required this.granularity,
   });
 
@@ -188,23 +158,8 @@ class _ChartPainter extends CustomPainter {
       );
     }
 
-    // 费用折线
-    if (showCost && maxCost > 0) {
-      _drawLine(
-        canvas,
-        data: data,
-        chartLeft: chartLeft,
-        chartWidth: chartWidth,
-        chartTop: chartTop,
-        chartHeight: chartHeight,
-        maxValue: maxCost,
-        color: const Color(0xFFDC2626),
-        strokeWidth: 2.0,
-      );
-    }
-
     // Y 轴标签
-    _drawYLabels(canvas, chartLeft, chartTop, chartHeight, maxTokens, maxCost);
+    _drawYLabels(canvas, chartLeft, chartTop, chartHeight, maxTokens);
 
     // X 轴标签（直接对齐到每个数据点的正下方）
     _drawXLabels(canvas: canvas, chartLeft: chartLeft, chartWidth: chartWidth,
@@ -361,62 +316,6 @@ class _ChartPainter extends CustomPainter {
     }
   }
 
-  void _drawLine(
-    Canvas canvas, {
-    required List<UsageChartPoint> data,
-    required double chartLeft,
-    required double chartWidth,
-    required double chartTop,
-    required double chartHeight,
-    required double maxValue,
-    required Color color,
-    required double strokeWidth,
-  }) {
-    if (data.length < 2) return;
-
-    final stepX = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth;
-
-    final path = Path();
-    path.moveTo(chartLeft,
-        chartTop + chartHeight * (1 - data[0].totalCost / maxValue));
-
-    for (var i = 1; i < data.length; i++) {
-      final x = chartLeft + stepX * i;
-      final y =
-          chartTop + chartHeight * (1 - data[i].totalCost / maxValue);
-      path.lineTo(x, y);
-    }
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round,
-    );
-
-    // 数据点 + 标签
-    for (var i = 0; i < data.length; i++) {
-      final x = chartLeft + stepX * i;
-      final y =
-          chartTop + chartHeight * (1 - data[i].totalCost / maxValue);
-      canvas.drawCircle(Offset(x, y), 4, Paint()..color = color);
-      canvas.drawCircle(
-          Offset(x, y), 4, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 1.5);
-
-      _drawLabel(
-        canvas,
-        text: '$currencySymbol${data[i].totalCost.toStringAsFixed(4)}',
-        x: x,
-        y: y,
-        color: color,
-        chartTop: chartTop,
-        chartRight: chartLeft + chartWidth,
-      );
-    }
-  }
-
   /// 在数据点上方绘制数值标签
   void _drawLabel(
     Canvas canvas, {
@@ -467,7 +366,7 @@ class _ChartPainter extends CustomPainter {
   }
 
   void _drawYLabels(Canvas canvas, double chartLeft, double chartTop,
-      double chartHeight, int maxTokensVal, double maxCostVal) {
+      double chartHeight, int maxTokensVal) {
     final textStyle = TextStyle(
       color: isDark
           ? const Color(0xFF888899)
@@ -486,18 +385,8 @@ class _ChartPainter extends CustomPainter {
     // 绘制 4 档刻度标签
     for (var i = 0; i <= 4; i++) {
       final y = chartTop + chartHeight * i / 4;
-      String label;
-      if (showTokens && maxTokensVal > 0 && !showCost) {
-        // 仅 Token：直接除
-        final v = maxTokensVal * (1 - i / 4);
-        label = _formatTokenLabel(v.round());
-      } else if (showCost && maxCostVal > 0 && !showTokens) {
-        // 仅费用
-        final v = maxCostVal * (1 - i / 4);
-        label = '$currencySymbol${v.toStringAsFixed(4)}';
-      } else {
-        label = '';
-      }
+      final v = maxTokensVal * (1 - i / 4);
+      final label = _formatTokenLabel(v.round());
       if (label.isNotEmpty) {
         drawOne(label, y);
       }
@@ -508,8 +397,6 @@ class _ChartPainter extends CustomPainter {
   bool shouldRepaint(covariant _ChartPainter oldDelegate) {
     return data != oldDelegate.data ||
         showTokens != oldDelegate.showTokens ||
-        showCost != oldDelegate.showCost ||
-        currencySymbol != oldDelegate.currencySymbol ||
         granularity != oldDelegate.granularity;
   }
 }

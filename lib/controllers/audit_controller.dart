@@ -108,9 +108,6 @@ class AuditController {
   Future<void> error(AuditTrace trace, String message) =>
       emit(trace, AuditEventType.error, {'message': message});
 
-  Future<void> cost(AuditTrace trace, double cost, String currency) =>
-      emit(trace, AuditEventType.cost, {'cost': cost, 'currency': currency});
-
   // ══════════════════════════════════════════════════════════
   // 审计内容增删改查（供管理模式系统工具调用，客户端本地执行）
   // ══════════════════════════════════════════════════════════

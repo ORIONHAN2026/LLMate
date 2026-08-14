@@ -784,8 +784,6 @@ Color _typeColor(AuditEventType type) {
       return Colors.green.shade700;
     case AuditEventType.error:
       return Colors.red;
-    case AuditEventType.cost:
-      return Colors.amber;
   }
 }
 

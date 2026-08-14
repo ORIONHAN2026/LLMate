@@ -76,7 +76,6 @@ enum AuditEventType {
   llmResponse,
   response,
   error,
-  cost,
 }
 
 /// [AuditEventType] 的便捷扩展

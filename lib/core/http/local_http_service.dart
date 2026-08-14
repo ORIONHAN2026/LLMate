@@ -231,50 +231,65 @@ class LocalHttpService {
     });
 
     // 模型列表路由（返回当前会话绑定的模型，兼容 OpenAI /v1/models 格式）
-    router.get('/<segment>/models', (Request request, String sessionId) async {
-      final pipeline = const Pipeline()
-          .addMiddleware(apiKeyGuard) // API Key 校验，装载 session
-          .addMiddleware(disabledGuard); // 禁用状态检查
+    // 同时注册 /v1 前缀版本：编程工具（如 CodeBuddy）按 OpenAI 标准会发送
+    // {base}/v1/chat/completions，而 LLMate 地址格式为 http://ip:port/{sessionId}
+    router.get('/<segment>/models', _handleModelsRoute);
+    router.get('/<segment>/v1/models', _handleModelsRoute);
 
-      return pipeline.addHandler((Request req) {
-        return _handleModelsList(req);
-      })(request);
-    });
-
-    // Chat Completion 路由（内联中间件链）
-    router.post('/<segment>/chat/completions', (
-      Request request,
-      String sessionId,
-    ) async {
-      // 读取原始请求体（中间件处理前的原始请求，用于日志保存）
-      String originBodyStr = '';
-      try {
-        originBodyStr = await request.readAsString();
-      } catch (e) {
-        debugPrint('⚠️ 读取原始请求体失败: $e');
-      }
-
-      final requestWithId = request.change(
-        context: {...request.context, 'originBody': originBodyStr},
-        body: utf8.encode(originBodyStr),
-      );
-
-      // 构建中间件管道（洋葱模型）：
-      // 请求进入：apiKey → quota → modelTool → audit → 业务处理
-      // 响应返回：业务处理（直接审计） → audit → modelTool → quota → apiKey
-      final pipeline = const Pipeline()
-          .addMiddleware(apiKeyGuard) //api判断,装载session
-          .addMiddleware(disabledGuard) //禁用状态检查
-          .addMiddleware(quotaGuard) //配额判断
-          .addMiddleware(modelToolGuard) //模型工具判断，装载body
-          .addMiddleware(riskControlGuard); //风控脱敏：手机号/身份证号等*
-
-      return pipeline.addHandler((Request req) {
-        return _handleChatCompletion(req);
-      })(requestWithId);
-    });
+    // Chat Completion 路由（含 /v1 前缀兼容版本）
+    router.post('/<segment>/chat/completions', _handleChatRoute);
+    router.post('/<segment>/v1/chat/completions', _handleChatRoute);
 
     return router;
+  }
+
+  /// 模型列表路由处理（含中间件链），
+  /// 供 `/<segment>/models` 与 `/<segment>/v1/models` 共用
+  static Future<Response> _handleModelsRoute(
+    Request request,
+    String sessionId,
+  ) async {
+    final pipeline = const Pipeline()
+        .addMiddleware(apiKeyGuard) // API Key 校验，装载 session
+        .addMiddleware(disabledGuard); // 禁用状态检查
+
+    return pipeline.addHandler((Request req) {
+      return _handleModelsList(req);
+    })(request);
+  }
+
+  /// Chat Completion 路由处理（含中间件链），
+  /// 供 `/<segment>/chat/completions` 与 `/<segment>/v1/chat/completions` 共用
+  static Future<Response> _handleChatRoute(
+    Request request,
+    String sessionId,
+  ) async {
+    // 读取原始请求体（中间件处理前的原始请求，用于日志保存）
+    String originBodyStr = '';
+    try {
+      originBodyStr = await request.readAsString();
+    } catch (e) {
+      debugPrint('⚠️ 读取原始请求体失败: $e');
+    }
+
+    final requestWithId = request.change(
+      context: {...request.context, 'originBody': originBodyStr},
+      body: utf8.encode(originBodyStr),
+    );
+
+    // 构建中间件管道（洋葱模型）：
+    // 请求进入：apiKey → quota → modelTool → audit → 业务处理
+    // 响应返回：业务处理（直接审计） → audit → modelTool → quota → apiKey
+    final pipeline = const Pipeline()
+        .addMiddleware(apiKeyGuard) //api判断,装载session
+        .addMiddleware(disabledGuard) //禁用状态检查
+        .addMiddleware(quotaGuard) //配额判断
+        .addMiddleware(modelToolGuard) //模型工具判断，装载body
+        .addMiddleware(riskControlGuard); //风控脱敏：手机号/身份证号等*
+
+    return pipeline.addHandler((Request req) {
+      return _handleChatCompletion(req);
+    })(requestWithId);
   }
 
   /// 返回当前会话绑定的模型（OpenAI /v1/models 兼容格式）
@@ -355,6 +370,13 @@ class LocalHttpService {
       final session = request.context['session'] as ChatSession;
       final body = request.context['body'] as Map<String, dynamic>;
 
+      // 客户端是否请求流式响应（缺省视为流式）。
+      // 编程工具等第三方客户端可能发送 stream: false，此时本服务内部仍按流式
+      // 请求上游，待生成完成后将 SSE 聚合为标准 JSON 响应返回。
+      final wantStream = body['stream'] != false;
+      // 上游 LLM 始终按流式请求（保证 streamSingleRound 能解析 SSE chunk）
+      body['stream'] = true;
+
       // 客户端断开时取消后端请求
       bool cancelStream = false;
       streamController.onCancel = () {
@@ -364,9 +386,10 @@ class LocalHttpService {
 
       // ──────────────────────────────────────────
       // 2. 异步 IIFE：发起 LLM 请求 + 工具调用循环
-      //    不 await，立即返回 Response，流内容异步写入
+      //    流式模式下不 await，立即返回 Response，流内容异步写入；
+      //    非流式模式下 await 其完成后聚合为 JSON 返回
       // ──────────────────────────────────────────
-      () async {
+      final pipelineFuture = () async {
         // 记录生成开始时间，用于计算耗时
         final generationStartTime = DateTime.now();
 
@@ -703,9 +726,40 @@ class LocalHttpService {
       }(); // ← 立即执行，不 await
 
       // ──────────────────────────────────────────
-      // 3. 立即返回 SSE 流式响应给 shelf
-      //    异步 IIFE 中的内容会逐步写入 streamController.stream
+      // 3. 按客户端请求类型返回响应
       // ──────────────────────────────────────────
+      if (!wantStream) {
+        // 非流式：等待生成完成，将 SSE 聚合为标准 OpenAI JSON 响应
+        try {
+          await pipelineFuture;
+          final chunks = await streamController.stream.toList();
+          final bytes = chunks.fold<List<int>>(
+            <int>[],
+            (acc, chunk) => acc..addAll(chunk),
+          );
+          final sseText = utf8.decode(bytes, allowMalformed: true);
+          final model = body['model']?.toString() ?? 'unknown';
+          return Response.ok(
+            jsonEncode(_sseToChatCompletionJson(sseText, model)),
+            headers: {'content-type': 'application/json'},
+          );
+        } catch (e) {
+          debugPrint('❌ 非流式请求处理失败: $e');
+          return Response(
+            500,
+            body: jsonEncode({
+              'error': {
+                'message': 'Internal error: $e',
+                'type': 'api_error',
+                'code': 500,
+              },
+            }),
+            headers: {'content-type': 'application/json'},
+          );
+        }
+      }
+
+      // 流式：立即返回 SSE 响应，内容由异步 IIFE 逐步写入 streamController.stream
       return Response(
         200,
         body: streamController.stream,
@@ -731,6 +785,77 @@ class LocalHttpService {
         headers: {'content-type': 'application/json'},
       );
     }
+  }
+
+  /// 将 SSE 流文本（含 `data: {...}` 行与 `[DONE]`）聚合为 OpenAI 标准
+  /// `chat.completion` JSON 响应。
+  ///
+  /// 供 `stream: false` 的非流式客户端（编程工具等）使用：服务端内部仍按流式
+  /// 请求上游并逐条写出，最后由本函数把 SSE 数据还原为普通 JSON 响应。
+  static Map<String, dynamic> _sseToChatCompletionJson(
+    String sseText,
+    String model,
+  ) {
+    final content = StringBuffer();
+    String finishReason = 'stop';
+    Map<String, dynamic>? usage;
+    Map<String, dynamic>? error;
+
+    for (final line in sseText.split('\n')) {
+      final trimmed = line.trim();
+      if (!trimmed.startsWith('data: ')) continue;
+      final payload = trimmed.substring('data: '.length).trim();
+      if (payload.isEmpty || payload == '[DONE]') continue;
+
+      try {
+        final obj = jsonDecode(payload) as Map<String, dynamic>;
+        final err = obj['error'];
+        if (err is Map<String, dynamic> && error == null) {
+          error = err;
+          continue;
+        }
+        final choices = obj['choices'];
+        if (choices is List && choices.isNotEmpty) {
+          final choice = choices.first as Map<String, dynamic>;
+          final delta = choice['delta'];
+          if (delta is Map<String, dynamic>) {
+            content.write(delta['content']?.toString() ?? '');
+          }
+          final fr = choice['finish_reason'];
+          if (fr is String && fr.isNotEmpty) finishReason = fr;
+        }
+        if (obj['usage'] is Map<String, dynamic>) {
+          usage = obj['usage'] as Map<String, dynamic>;
+        }
+      } catch (_) {
+        // 忽略无法解析的行
+      }
+    }
+
+    if (error != null) {
+      return {
+        'error': {
+          'message': error['message']?.toString() ?? 'LLM API error',
+          'type': error['type']?.toString() ?? 'api_error',
+          'code': error['code'] ?? 500,
+        },
+      };
+    }
+
+    return {
+      'id': 'chatcmpl-${DateTime.now().millisecondsSinceEpoch}',
+      'object': 'chat.completion',
+      'created': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      'model': model,
+      'choices': [
+        {
+          'index': 0,
+          'message': {'role': 'assistant', 'content': content.toString()},
+          'finish_reason': finishReason,
+        },
+      ],
+      if (usage != null) 'usage': usage,
+    };
   }
 
   /// 保存用量统计（写入用量数据库 `~/.llmate/usages.db`）

@@ -272,6 +272,13 @@ class LocalHttpService {
       debugPrint('⚠️ 读取原始请求体失败: $e');
     }
 
+    // 保存第三方客户请求的原始内容到 log_request 目录（每个请求一个文件，追加保存）
+    await _saveRequestLog(
+      request: request,
+      sessionId: sessionId,
+      originBody: originBodyStr,
+    );
+
     final requestWithId = request.change(
       context: {...request.context, 'originBody': originBodyStr},
       body: utf8.encode(originBodyStr),
@@ -897,6 +904,45 @@ class LocalHttpService {
         debugPrint('⚠️ [Usage] 保存用量统计失败: $e');
       }
     }();
+  }
+
+  /// 保存第三方客户请求的原始内容到 `~/.llmate/log_request/`（追加，每个请求一个文件）。
+  ///
+  /// 与 `~/.llmate/log/log.json`（覆盖写入最近一次）不同，本目录按请求逐条落盘，
+  /// 保留所有第三方客户（如编程工具）发送的原始报文，便于离线审计与排查。
+  /// 文件名格式：`yyyyMMdd_HHmmss_SSS_{sessionId}.json`
+  static Future<void> _saveRequestLog({
+    required Request request,
+    required String sessionId,
+    required String originBody,
+  }) async {
+    try {
+      final logDir = Directory('${StoragePaths.root}/log_request');
+      if (!await logDir.exists()) {
+        await logDir.create(recursive: true);
+      }
+
+      final now = DateTime.now();
+      String two(int n) => n.toString().padLeft(2, '0');
+      final fileName =
+          '${now.year}${two(now.month)}${two(now.day)}_'
+          '${two(now.hour)}${two(now.minute)}${two(now.second)}_'
+          '${now.millisecond.toString().padLeft(3, '0')}_$sessionId.json';
+
+      final entry = <String, dynamic>{
+        'timestamp': now.toIso8601String(),
+        'sessionId': sessionId,
+        'method': request.method,
+        'uri': request.requestedUri.toString(),
+        'headers': request.headers,
+        'body': originBody,
+      };
+
+      final file = File('${logDir.path}/$fileName');
+      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(entry));
+    } catch (e) {
+      debugPrint('⚠️ [RequestLog] 保存请求日志失败: $e');
+    }
   }
 
   /// 保存最新一次请求/响应的「实时日志」到 `~/.llmate/log/log.json`

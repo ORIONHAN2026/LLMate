@@ -144,16 +144,16 @@ class SettingsController extends GetxController {
     required String domain,
     String? certPath,
     String? keyPath,
-    required bool httpsEnabled,
+    bool? httpsEnabled,
     required int httpPort,
-    required int httpsPort,
+    int? httpsPort,
   }) async {
     systemSetting.domain.value = domain;
     systemSetting.certPath.value = certPath;
     systemSetting.keyPath.value = keyPath;
-    systemSetting.httpsEnabled.value = httpsEnabled;
+    systemSetting.httpsEnabled.value = httpsEnabled ?? systemSetting.httpsEnabled.value;
     systemSetting.httpPort.value = httpPort;
-    systemSetting.httpsPort.value = httpsPort;
+    systemSetting.httpsPort.value = httpsPort ?? systemSetting.httpsPort.value;
     await _saveSystemSetting();
     debugPrint('✅ 域名配置已保存: ${systemSetting.baseUrl}');
   }

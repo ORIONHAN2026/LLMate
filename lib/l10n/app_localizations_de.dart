@@ -53,7 +53,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get languageSettings => 'Sprache';
 
   @override
-  String get skinSettings => 'Design';
+  String get skinSettings => 'Darstellung';
 
   @override
   String get followSystem => 'System folgen';
@@ -1559,6 +1559,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get detecting => 'Wird erkannt...';
 
   @override
+  String get reDetect => 'Erneut erkennen';
+
+  @override
   String get addressDesc =>
       'Die lokale Adresse ist im selben LAN erreichbar. Die externe Adresse erfordert Portweiterleitung / öffentlichen Zugang.';
 
@@ -1614,7 +1617,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get portDesc =>
-      'HTTP-Lauschport, Standard 80. HTTPS-Lauschport, Standard 443. Dienst neu starten, um Änderungen zu übernehmen.';
+      'HTTP-Lauschport, Standard 80. Dienst neu starten, um Änderungen zu übernehmen.';
 
   @override
   String get sslCertificate => 'SSL-Zertifikat';

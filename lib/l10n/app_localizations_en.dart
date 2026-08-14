@@ -53,7 +53,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageSettings => 'Language';
 
   @override
-  String get skinSettings => 'Skin';
+  String get skinSettings => 'Appearance';
 
   @override
   String get followSystem => 'Follow System';
@@ -1537,6 +1537,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get detecting => 'Detecting...';
 
   @override
+  String get reDetect => 'Re-detect';
+
+  @override
   String get addressDesc =>
       'The local address can be accessed within the same LAN. The external address requires port forwarding / public network access.';
 
@@ -1591,7 +1594,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get portDesc =>
-      'HTTP listening port, default 80. HTTPS listening port, default 443. Restart the service to apply changes.';
+      'HTTP listening port, default 80. Restart the service to apply changes.';
 
   @override
   String get sslCertificate => 'SSL Certificate';

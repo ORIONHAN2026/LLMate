@@ -53,7 +53,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get languageSettings => '语言设置';
 
   @override
-  String get skinSettings => '外观设置';
+  String get skinSettings => 'Cài đặt giao diện';
 
   @override
   String get followSystem => '跟随系统';
@@ -1519,6 +1519,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get detecting => 'Detecting...';
 
   @override
+  String get reDetect => 'Detect lại';
+
+  @override
   String get addressDesc =>
       'The local address can be accessed within the same LAN. The external address requires port forwarding / public network access.';
 
@@ -1573,7 +1576,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get portDesc =>
-      'Cổng lắng nghe HTTP, mặc định 80. Cổng lắng nghe HTTPS, mặc định 443. Khởi động lại dịch vụ để áp dụng.';
+      'Cổng lắng nghe HTTP, mặc định 80. Khởi động lại dịch vụ để áp dụng.';
 
   @override
   String get sslCertificate => 'SSL Certificate';

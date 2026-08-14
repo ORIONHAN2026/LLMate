@@ -244,6 +244,7 @@ class OtherSettingsPage extends StatelessWidget {
     ColorScheme colorScheme,
     AppLocalizations l10n,
   ) {
+    final options = _languageOptions(l10n);
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
@@ -254,148 +255,142 @@ class OtherSettingsPage extends StatelessWidget {
       ),
       child: Obx(() {
         final currentLang = localeController.locale.value.languageCode;
-        return Column(
-          children: [
-            _buildLangTile(
+        final current = options.firstWhere(
+          (o) => o.code == currentLang,
+          orElse: () => options.first,
+        );
+        return Builder(
+          builder: (itemContext) => InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _showLanguagePicker(
+              itemContext,
+              localeController,
               colorScheme,
-              title: l10n.chinese,
-              subtitle: l10n.chineseDesc,
-              selected: currentLang == 'zh',
-              isFirst: true,
-              isLast: false,
-              onTap: () => localeController.setLocale(const Locale('zh')),
+              l10n,
+              options,
+              currentLang,
             ),
-            _buildDivider(colorScheme),
-            _buildLangTile(
-              colorScheme,
-              title: l10n.english,
-              subtitle: l10n.englishDesc,
-              selected: currentLang == 'en',
-              isFirst: false,
-              isLast: false,
-              onTap: () => localeController.setLocale(const Locale('en')),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          current.title,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          current.subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: colorScheme.onSurface.withValues(alpha: 0.3),
+                  ),
+                ],
+              ),
             ),
-            _buildDivider(colorScheme),
-            _buildLangTile(
-              colorScheme,
-              title: l10n.japanese,
-              subtitle: l10n.japaneseDesc,
-              selected: currentLang == 'ja',
-              isFirst: false,
-              isLast: false,
-              onTap: () => localeController.setLocale(const Locale('ja')),
-            ),
-            _buildDivider(colorScheme),
-            _buildLangTile(
-              colorScheme,
-              title: l10n.thai,
-              subtitle: l10n.thaiDesc,
-              selected: currentLang == 'th',
-              isFirst: false,
-              isLast: false,
-              onTap: () => localeController.setLocale(const Locale('th')),
-            ),
-            _buildDivider(colorScheme),
-            _buildLangTile(
-              colorScheme,
-              title: l10n.vietnamese,
-              subtitle: l10n.vietnameseDesc,
-              selected: currentLang == 'vi',
-              isFirst: false,
-              isLast: false,
-              onTap: () => localeController.setLocale(const Locale('vi')),
-            ),
-            _buildDivider(colorScheme),
-            _buildLangTile(
-              colorScheme,
-              title: l10n.korean,
-              subtitle: l10n.koreanDesc,
-              selected: currentLang == 'ko',
-              isFirst: false,
-              isLast: false,
-              onTap: () => localeController.setLocale(const Locale('ko')),
-            ),
-            _buildDivider(colorScheme),
-            _buildLangTile(
-              colorScheme,
-              title: l10n.french,
-              subtitle: l10n.frenchDesc,
-              selected: currentLang == 'fr',
-              isFirst: false,
-              isLast: false,
-              onTap: () => localeController.setLocale(const Locale('fr')),
-            ),
-            _buildDivider(colorScheme),
-            _buildLangTile(
-              colorScheme,
-              title: l10n.german,
-              subtitle: l10n.germanDesc,
-              selected: currentLang == 'de',
-              isFirst: false,
-              isLast: true,
-              onTap: () => localeController.setLocale(const Locale('de')),
-            ),
-          ],
+          ),
         );
       }),
     );
   }
 
-  Widget _buildLangTile(
-    ColorScheme colorScheme, {
-    required String title,
-    required String subtitle,
-    required bool selected,
-    required bool isFirst,
-    required bool isLast,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.vertical(
-        top: isFirst ? const Radius.circular(12) : Radius.zero,
-        bottom: isLast ? const Radius.circular(12) : Radius.zero,
+  Future<void> _showLanguagePicker(
+    BuildContext context,
+    SettingsController localeController,
+    ColorScheme colorScheme,
+    AppLocalizations l10n,
+    List<_LanguageOption> options,
+    String currentLang,
+  ) async {
+    // 以触发条目为锚点，菜单宽度与条目一致
+    final overlayBox =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final itemBox = context.findRenderObject() as RenderBox;
+    final itemRect = itemBox.localToGlobal(Offset.zero) & itemBox.size;
+
+    final selectedCode = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(itemRect, Offset.zero & overlayBox.size),
+      constraints: BoxConstraints(
+        minWidth: itemRect.width,
+        maxWidth: itemRect.width,
       ),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.onSurface,
-                    ),
+      items: [
+        for (final option in options)
+          PopupMenuItem<String>(
+            value: option.code,
+            height: 56,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        option.title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        option.subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                if (option.code == currentLang)
+                  Icon(Icons.check, size: 20, color: colorScheme.primary),
+              ],
             ),
-            if (selected)
-              Icon(Icons.check_circle, size: 22, color: colorScheme.onSurface),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
+    if (selectedCode == null || selectedCode == currentLang) return;
+    localeController.setLocale(Locale(selectedCode));
   }
+
+  List<_LanguageOption> _languageOptions(AppLocalizations l10n) => [
+    _LanguageOption('zh', l10n.chinese, l10n.chineseDesc),
+    _LanguageOption('en', l10n.english, l10n.englishDesc),
+    _LanguageOption('ja', l10n.japanese, l10n.japaneseDesc),
+    _LanguageOption('th', l10n.thai, l10n.thaiDesc),
+    _LanguageOption('vi', l10n.vietnamese, l10n.vietnameseDesc),
+    _LanguageOption('ko', l10n.korean, l10n.koreanDesc),
+    _LanguageOption('fr', l10n.french, l10n.frenchDesc),
+    _LanguageOption('de', l10n.german, l10n.germanDesc),
+  ];
 
   Widget _buildSkinOptions(
     SettingsController themeController,
     ColorScheme colorScheme,
     AppLocalizations l10n,
   ) {
+    final options = _themeOptions(l10n);
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
@@ -407,103 +402,159 @@ class OtherSettingsPage extends StatelessWidget {
       child: Obx(() {
         final isSys = themeController.useSystemTheme.value;
         final isDark = themeController.isDarkMode.value;
+        final currentMode = isSys
+            ? ThemeMode.system
+            : (isDark ? ThemeMode.dark : ThemeMode.light);
+        final current = options.firstWhere(
+          (o) => o.mode == currentMode,
+          orElse: () => options.first,
+        );
 
-        return Column(
-          children: [
-            _buildSkinTile(
+        return Builder(
+          builder: (itemContext) => InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _showThemePicker(
+              itemContext,
+              themeController,
               colorScheme,
-              icon: Icons.sync,
-              title: l10n.followSystem,
-              subtitle: l10n.followSystemDesc,
-              selected: isSys,
-              isFirst: true,
-              isLast: false,
-              onTap: () => themeController.setThemeMode(ThemeMode.system),
+              options,
+              currentMode,
             ),
-            _buildDivider(colorScheme),
-            _buildSkinTile(
-              colorScheme,
-              icon: Icons.light_mode_outlined,
-              title: l10n.lightMode,
-              subtitle: l10n.lightModeDesc,
-              selected: !isSys && !isDark,
-              isFirst: false,
-              isLast: false,
-              onTap: () => themeController.setThemeMode(ThemeMode.light),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(
+                    current.icon,
+                    size: 20,
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          current.title,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          current.subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: colorScheme.onSurface.withValues(alpha: 0.3),
+                  ),
+                ],
+              ),
             ),
-            _buildDivider(colorScheme),
-            _buildSkinTile(
-              colorScheme,
-              icon: Icons.dark_mode_outlined,
-              title: l10n.darkMode,
-              subtitle: l10n.darkModeDesc,
-              selected: !isSys && isDark,
-              isFirst: false,
-              isLast: true,
-              onTap: () => themeController.setThemeMode(ThemeMode.dark),
-            ),
-          ],
+          ),
         );
       }),
     );
   }
 
-  Widget _buildSkinTile(
-    ColorScheme colorScheme, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool selected,
-    required bool isFirst,
-    required bool isLast,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.vertical(
-        top: isFirst ? const Radius.circular(12) : Radius.zero,
-        bottom: isLast ? const Radius.circular(12) : Radius.zero,
+  Future<void> _showThemePicker(
+    BuildContext context,
+    SettingsController themeController,
+    ColorScheme colorScheme,
+    List<_ThemeOption> options,
+    ThemeMode currentMode,
+  ) async {
+    // 以触发条目为锚点，菜单宽度与条目一致
+    final overlayBox =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final itemBox = context.findRenderObject() as RenderBox;
+    final itemRect = itemBox.localToGlobal(Offset.zero) & itemBox.size;
+
+    final selectedMode = await showMenu<ThemeMode>(
+      context: context,
+      position: RelativeRect.fromRect(itemRect, Offset.zero & overlayBox.size),
+      constraints: BoxConstraints(
+        minWidth: itemRect.width,
+        maxWidth: itemRect.width,
       ),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.onSurface,
-                    ),
+      items: [
+        for (final option in options)
+          PopupMenuItem<ThemeMode>(
+            value: option.mode,
+            height: 56,
+            child: Row(
+              children: [
+                Icon(
+                  option.icon,
+                  size: 20,
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        option.title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        option.subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                if (option.mode == currentMode)
+                  Icon(Icons.check, size: 20, color: colorScheme.primary),
+              ],
             ),
-            if (selected)
-              Icon(Icons.check_circle, size: 22, color: colorScheme.onSurface),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
+    if (selectedMode == null || selectedMode == currentMode) return;
+    themeController.setThemeMode(selectedMode);
   }
+
+  List<_ThemeOption> _themeOptions(AppLocalizations l10n) => [
+    _ThemeOption(
+      ThemeMode.system,
+      Icons.sync,
+      l10n.followSystem,
+      l10n.followSystemDesc,
+    ),
+    _ThemeOption(
+      ThemeMode.light,
+      Icons.light_mode_outlined,
+      l10n.lightMode,
+      l10n.lightModeDesc,
+    ),
+    _ThemeOption(
+      ThemeMode.dark,
+      Icons.dark_mode_outlined,
+      l10n.darkMode,
+      l10n.darkModeDesc,
+    ),
+  ];
 
   Widget _buildDivider(ColorScheme colorScheme) {
     return Divider(
@@ -513,4 +564,23 @@ class OtherSettingsPage extends StatelessWidget {
       color: colorScheme.outlineVariant.withValues(alpha: 0.15),
     );
   }
+}
+
+/// 语言选项数据
+class _LanguageOption {
+  final String code;
+  final String title;
+  final String subtitle;
+
+  const _LanguageOption(this.code, this.title, this.subtitle);
+}
+
+/// 外观选项数据
+class _ThemeOption {
+  final ThemeMode mode;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _ThemeOption(this.mode, this.icon, this.title, this.subtitle);
 }

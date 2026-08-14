@@ -53,7 +53,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get languageSettings => '语言设置';
 
   @override
-  String get skinSettings => '皮肤设置';
+  String get skinSettings => '外观设置';
 
   @override
   String get followSystem => '跟随系统';
@@ -1504,6 +1504,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get detecting => '检测中…';
 
   @override
+  String get reDetect => '重新检测';
+
+  @override
   String get addressDesc => '内网地址可在同一局域网内访问；外网地址需要端口映射/公网可达后方可访问。';
 
   @override
@@ -1555,7 +1558,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get httpsPort => 'HTTPS 端口';
 
   @override
-  String get portDesc => 'HTTP 服务监听端口，默认 80。HTTPS 服务监听端口，默认 443。修改后需重启服务生效。';
+  String get portDesc => 'HTTP 服务监听端口，默认 80。修改后需重启服务生效。';
 
   @override
   String get sslCertificate => 'SSL 证书';

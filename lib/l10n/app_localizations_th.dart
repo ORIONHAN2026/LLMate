@@ -53,7 +53,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get languageSettings => 'การตั้งค่าภาษา';
 
   @override
-  String get skinSettings => 'การตั้งค่าสกิน';
+  String get skinSettings => 'การตั้งค่ารูปลักษณ์';
 
   @override
   String get followSystem => 'ทำตามระบบ';
@@ -1537,6 +1537,9 @@ class AppLocalizationsTh extends AppLocalizations {
   String get detecting => 'Detecting...';
 
   @override
+  String get reDetect => 'ตรวจจับใหม่';
+
+  @override
   String get addressDesc =>
       'The local address can be accessed within the same LAN. The external address requires port forwarding / public network access.';
 
@@ -1591,7 +1594,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get portDesc =>
-      'พอร์ตรับฟัง HTTP ค่าเริ่มต้น 80. พอร์ตรับฟัง HTTPS ค่าเริ่มต้น 443. รีสตาร์ทบริการเพื่อนำไปใช้';
+      'พอร์ตรับฟัง HTTP ค่าเริ่มต้น 80. รีสตาร์ทบริการเพื่อนำไปใช้';
 
   @override
   String get sslCertificate => 'SSL Certificate';

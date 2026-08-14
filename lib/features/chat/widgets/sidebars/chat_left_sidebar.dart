@@ -1,5 +1,5 @@
 import 'package:llmate/controllers/session_controller.dart';
-import 'package:llmate/controllers/settings_controller.dart';
+import 'package:llmate/core/http/local_http_service.dart';
 import 'package:llmate/l10n/app_localizations.dart';
 import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
@@ -390,14 +390,14 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
               );
             }),
           ),
-          // 底部设置 + 主题切换
+          // 底部设置 + 服务状态
           Container(
             padding: const EdgeInsets.all(5),
             child: Row(
               children: [
                 _buildSettingsButton(),
                 const Spacer(),
-                _buildThemeToggle(),
+                _buildServiceStatusDot(),
               ],
             ),
           ),
@@ -590,20 +590,34 @@ class _ChatLeftSidebarState extends State<ChatLeftSidebar>
     );
   }
 
-  // 底部主题切换按钮
-  Widget _buildThemeToggle() {
-    final themeController = Get.find<SettingsController>();
+  // 底部服务运行状态指示灯
+  Widget _buildServiceStatusDot() {
+    final serviceController = Get.find<LocalHttpServiceController>();
     return Obx(() {
-      final isDark = themeController.isDarkMode.value;
-      return InkWell(
-        onTap: () => themeController.toggleTheme(),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Icon(
-            isDark ? Icons.dark_mode : Icons.light_mode,
-            size: 15,
-            color: isDark ? Colors.indigo[300] : Colors.amber[600],
+      final running = serviceController.isRunning.value;
+      final color = running
+          ? Colors.green
+          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3);
+      return Tooltip(
+        message: running
+            ? AppLocalizations.of(context)!.serviceRunning
+            : AppLocalizations.of(context)!.serviceStopped,
+        child: Container(
+          width: 10,
+          height: 10,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color,
+            boxShadow: running
+                ? [
+                    BoxShadow(
+                      color: Colors.green.withValues(alpha: 0.4),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
           ),
         ),
       );

@@ -36,6 +36,11 @@ class LocalHttpServiceController extends GetxController {
   void onInit() {
     super.onInit();
     _syncPortFromDomain();
+    // 与真实服务状态对齐（例如应用启动时服务可能已由 main() 直接启动）
+    isRunning.value = LocalHttpService.isRunning;
+    if (isRunning.value) {
+      port.value = LocalHttpService.port;
+    }
   }
 
   void _syncPortFromDomain() {
@@ -84,6 +89,18 @@ class LocalHttpService {
   static bool get isRunning => _isRunning;
   static bool get isHttps => _isHttps;
   static int get port => _port;
+
+  /// 将真实运行状态同步到 [LocalHttpServiceController]，
+  /// 保证 UI 响应式状态（如侧栏状态灯）与真实服务状态一致。
+  static void _syncController() {
+    if (Get.isRegistered<LocalHttpServiceController>()) {
+      final controller = Get.find<LocalHttpServiceController>();
+      controller.isRunning.value = _isRunning;
+      if (_isRunning) {
+        controller.port.value = _port;
+      }
+    }
+  }
 
   /// 获取当前监听的地址，如 http://0.0.0.0:8899
   static String get listenAddress {
@@ -146,16 +163,19 @@ class LocalHttpService {
         debugPrint('🚀 HTTP 服务已启动: http://$_bindAddress:$port');
       }
       _isRunning = true;
+      _syncController();
       debugPrint('📡 API: POST /{sessionId}/chat/completions');
       debugPrint('📡 API: GET /{sessionId}/models');
       return true;
     } on SocketException catch (e) {
       debugPrint('❌ HTTP 服务启动失败：端口 $port 已被占用（可能有另一个实例在运行）: $e');
       _isRunning = false;
+      _syncController();
       return false;
     } catch (e) {
       debugPrint('❌ HTTP 服务启动失败: $e');
       _isRunning = false;
+      _syncController();
       return false;
     }
   }
@@ -194,6 +214,7 @@ class LocalHttpService {
     _server = null;
     _isRunning = false;
     _isHttps = false;
+    _syncController();
     debugPrint('🛑 HTTP 服务已停止');
   }
 

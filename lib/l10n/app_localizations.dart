@@ -197,7 +197,7 @@ abstract class AppLocalizations {
   /// No description provided for @skinSettings.
   ///
   /// In en, this message translates to:
-  /// **'Skin'**
+  /// **'Appearance'**
   String get skinSettings;
 
   /// No description provided for @followSystem.
@@ -2888,6 +2888,12 @@ abstract class AppLocalizations {
   /// **'Detecting...'**
   String get detecting;
 
+  /// No description provided for @reDetect.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-detect'**
+  String get reDetect;
+
   /// No description provided for @addressDesc.
   ///
   /// In en, this message translates to:
@@ -2993,7 +2999,7 @@ abstract class AppLocalizations {
   /// No description provided for @portDesc.
   ///
   /// In en, this message translates to:
-  /// **'HTTP listening port, default 80. HTTPS listening port, default 443. Restart the service to apply changes.'**
+  /// **'HTTP listening port, default 80. Restart the service to apply changes.'**
   String get portDesc;
 
   /// No description provided for @sslCertificate.

@@ -53,7 +53,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get languageSettings => '言語';
 
   @override
-  String get skinSettings => 'テーマ';
+  String get skinSettings => '外観';
 
   @override
   String get followSystem => 'システムに従う';
@@ -1508,6 +1508,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get detecting => '検出中...';
 
   @override
+  String get reDetect => '再検出';
+
+  @override
   String get addressDesc =>
       '内網アドレスは同一LAN内からアクセス可能です。外網アドレスはポート転送／公開ネットワーク到達が必要です。';
 
@@ -1561,8 +1564,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get httpsPort => 'HTTPSポート';
 
   @override
-  String get portDesc =>
-      'HTTP待受ポート、既定80。HTTPS待受ポート、既定443。変更を適用するにはサービスを再起動してください。';
+  String get portDesc => 'HTTP待受ポート、既定80。変更を適用するにはサービスを再起動してください。';
 
   @override
   String get sslCertificate => 'SSL証明書';

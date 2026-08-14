@@ -53,7 +53,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get languageSettings => '언어';
 
   @override
-  String get skinSettings => '테마';
+  String get skinSettings => '외관';
 
   @override
   String get followSystem => '시스템 따르기';
@@ -1508,6 +1508,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get detecting => '감지 중...';
 
   @override
+  String get reDetect => '다시 감지';
+
+  @override
   String get addressDesc =>
       '내부 주소는 동일 LAN 내에서 접근 가능합니다. 외부 주소는 포트 포워딩/공개 네트워크 접근이 필요합니다.';
 
@@ -1561,8 +1564,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get httpsPort => 'HTTPS 포트';
 
   @override
-  String get portDesc =>
-      'HTTP 수신 포트, 기본값 80. HTTPS 수신 포트, 기본값 443. 변경 적용을 위해 서비스를 다시 시작하세요.';
+  String get portDesc => 'HTTP 수신 포트, 기본값 80. 변경 적용을 위해 서비스를 다시 시작하세요.';
 
   @override
   String get sslCertificate => 'SSL 인증서';

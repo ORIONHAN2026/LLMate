@@ -23,7 +23,6 @@ import '../../mcp/pages/mcp_management_page.dart';
 
 import '../../settings/pages/other_settings_page.dart';
 import '../../settings/pages/domain_management_page.dart';
-import '../widgets/panels/usage_dashboard.dart';
 import 'package:llmate/features/widgets/command_palette.dart';
 
 class CodeChatHomePage extends StatefulWidget {
@@ -537,32 +536,6 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       elevation: 8,
       color: Theme.of(context).scaffoldBackgroundColor,
       items: [
-        PopupMenuItem(
-          height: 48,
-          child: Row(
-            children: [
-              Icon(
-                Icons.bar_chart_rounded,
-                size: 16,
-                color: const Color(0xFF9CA3AF),
-              ),
-              const SizedBox(width: 12),
-              Text(l10n.usageDashboard, style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () {
-              if (mounted) {
-                UsageDashboard.show(context, global: true);
-              }
-            });
-          },
-        ),
-        PopupMenuItem(
-          enabled: false,
-          height: 1,
-          child: const Divider(height: 1, thickness: 1),
-        ),
         PopupMenuItem(
           height: 48,
           onTap: _openFeedbackPage,

@@ -23,6 +23,11 @@ class StreamRoundResult {
   int? promptTokens;
   int? completionTokens;
 
+  /// 错误信息（error=true 时有效，供回退重试 / 最终写出使用）
+  String? errorMessage;
+  String? errorType;
+  int? errorCode;
+
   StreamRoundResult({
     this.sessionToolChunks = const [],
     this.thirdToolChunks = const [],
@@ -31,6 +36,9 @@ class StreamRoundResult {
     this.error = false,
     this.promptTokens,
     this.completionTokens,
+    this.errorMessage,
+    this.errorType,
+    this.errorCode,
   }) : contentBuffer = contentBuffer ?? StringBuffer(),
        reasonBuffer = reasonBuffer ?? StringBuffer();
 }
@@ -48,6 +56,7 @@ Future<StreamRoundResult> streamSingleRound({
   required ChatSession session,
   required String body,
   required StreamController<List<int>> controller,
+  bool deferErrorWrite = false,
 }) async {
   final client = HttpClient();
   StringBuffer contentBuffer = StringBuffer();
@@ -73,16 +82,19 @@ Future<StreamRoundResult> streamSingleRound({
     if (response.statusCode >= 400) {
       final errorBody = await response.transform(utf8.decoder).join();
       debugPrint('❌ LLM 返回错误: ${response.statusCode}\n$errorBody');
-      _writeOpenAiError(
-        controller,
-        message: _extractUpstreamError(errorBody),
-        type: _statusErrorType(response.statusCode),
-        code: response.statusCode,
-      );
+      final message = _extractUpstreamError(errorBody);
+      final type = _statusErrorType(response.statusCode);
+      final code = response.statusCode;
+      if (!deferErrorWrite) {
+        writeOpenAiError(controller, message: message, type: type, code: code);
+      }
       return StreamRoundResult(
         error: true,
         promptTokens: 0,
         completionTokens: 0,
+        errorMessage: message,
+        errorType: type,
+        errorCode: code,
       );
     }
 
@@ -227,32 +239,53 @@ Future<StreamRoundResult> streamSingleRound({
   } on SocketException catch (e) {
     // 网络连接异常：按 OpenAI 标准错误格式返回，不向外抛
     debugPrint('❌ LLM 网络错误: ${e.message}');
-    _writeOpenAiError(
-      controller,
-      message: 'Network error: ${e.message}',
-      type: 'api_error',
-      code: 502,
+    const type = 'api_error';
+    const code = 502;
+    final message = 'Network error: ${e.message}';
+    if (!deferErrorWrite) {
+      writeOpenAiError(controller, message: message, type: type, code: code);
+    }
+    return StreamRoundResult(
+      error: true,
+      promptTokens: 0,
+      completionTokens: 0,
+      errorMessage: message,
+      errorType: type,
+      errorCode: code,
     );
-    return StreamRoundResult(error: true, promptTokens: 0, completionTokens: 0);
   } on TimeoutException catch (e) {
     debugPrint('❌ LLM 请求超时: ${e.message}');
-    _writeOpenAiError(
-      controller,
-      message: 'Request timeout: ${e.message}',
-      type: 'api_error',
-      code: 504,
+    const type = 'api_error';
+    const code = 504;
+    final message = 'Request timeout: ${e.message}';
+    if (!deferErrorWrite) {
+      writeOpenAiError(controller, message: message, type: type, code: code);
+    }
+    return StreamRoundResult(
+      error: true,
+      promptTokens: 0,
+      completionTokens: 0,
+      errorMessage: message,
+      errorType: type,
+      errorCode: code,
     );
-    return StreamRoundResult(error: true, promptTokens: 0, completionTokens: 0);
   } catch (e) {
     // 其它异常（HttpException / 解析异常等）：统一转为标准错误返回
     debugPrint('❌ LLM 请求异常: $e');
-    _writeOpenAiError(
-      controller,
-      message: 'LLM request failed: $e',
-      type: 'api_error',
-      code: 500,
+    const type = 'api_error';
+    const code = 500;
+    final message = 'LLM request failed: $e';
+    if (!deferErrorWrite) {
+      writeOpenAiError(controller, message: message, type: type, code: code);
+    }
+    return StreamRoundResult(
+      error: true,
+      promptTokens: 0,
+      completionTokens: 0,
+      errorMessage: message,
+      errorType: type,
+      errorCode: code,
     );
-    return StreamRoundResult(error: true, promptTokens: 0, completionTokens: 0);
   } finally {
     client.close();
   }
@@ -307,7 +340,10 @@ Future<StreamRoundResult> streamSingleRound({
 ///
 /// 格式遵循 OpenAI 规范：
 /// `data: {"error":{"message":...,"type":...,"param":...,"code":...}}`
-void _writeOpenAiError(
+///
+/// 供回退重试场景使用：`streamSingleRound(deferErrorWrite: true)` 出错后
+/// 调用方判断无法回退时，调用此函数把错误最终写出给客户端。
+void writeOpenAiError(
   StreamController<List<int>> controller, {
   required String message,
   required String type,

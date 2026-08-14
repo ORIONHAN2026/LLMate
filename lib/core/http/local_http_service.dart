@@ -22,7 +22,8 @@ import 'middleware/model_tool_guard.dart';
 import 'middleware/risk_control_guard.dart';
 import 'middleware/audit_guard.dart';
 import 'sensitive_masker.dart';
-import 'stream_round.dart' show streamSingleRound;
+import 'stream_round.dart' show streamSingleRound, writeOpenAiError;
+import '../router/model_router.dart';
 import '../../controllers/mcp_controller.dart';
 import '../../models/responses/chunk.dart';
 
@@ -372,6 +373,7 @@ class LocalHttpService {
 
           int toolIteration = 0; // 当前工具调用轮次
           const maxToolIterations = 20; // 防止无限循环
+          bool fallbackTried = false; // 失败回退链：是否已重试过复杂模型
 
           // ── 工具调用循环 ──
           // 每一轮：请求 LLM → 解析响应 → 如果有 MCP 工具调用则执行 → 结果回填 → 继续下一轮
@@ -382,14 +384,16 @@ class LocalHttpService {
             }
 
             // 单轮流式请求：post LLM API，解析 SSE chunk
-            final round = await streamSingleRound(
+            // deferErrorWrite: 错误延迟写出，便于失败回退重试，最终错误统一写出
+            var round = await streamSingleRound(
               session: session,
               body: jsonEncode(body),
               controller: streamController,
+              deferErrorWrite: true,
             );
-            final sessionTools = round.sessionToolChunks;
-            final thirdTools = round.thirdToolChunks;
-            final hasError = round.error;
+            var sessionTools = round.sessionToolChunks;
+            var thirdTools = round.thirdToolChunks;
+            var hasError = round.error;
 
             contentBuffer.write(round.contentBuffer);
             reasonBuffer.write(round.reasonBuffer);
@@ -405,8 +409,57 @@ class LocalHttpService {
               );
             }
 
-            // LLM 返回错误 或 客户端断开 → 退出循环
-            if (hasError || cancelStream) break;
+            // ── 回退链：便宜模型出错（网络/超时/5xx/429）且存在不同复杂模型 → 重试一次 ──
+            if (hasError && !cancelStream && !fallbackTried) {
+              final currentModel = body['model']?.toString() ?? '';
+              final fallbackModel = ModelRouter.fallbackModelFor(
+                session,
+                currentModel,
+              );
+              if (fallbackModel != null &&
+                  fallbackModel != currentModel &&
+                  _isRetryableError(round.errorCode)) {
+                debugPrint(
+                  '🔄 [Fallback] 模型 $currentModel 失败(code=${round.errorCode})，切换复杂模型重试: $fallbackModel',
+                );
+                body['model'] = fallbackModel;
+                fallbackTried = true;
+                round = await streamSingleRound(
+                  session: session,
+                  body: jsonEncode(body),
+                  controller: streamController,
+                  deferErrorWrite: true,
+                );
+                sessionTools = round.sessionToolChunks;
+                thirdTools = round.thirdToolChunks;
+                hasError = round.error;
+                contentBuffer.write(round.contentBuffer);
+                reasonBuffer.write(round.reasonBuffer);
+                promptTokens += round.promptTokens ?? 0;
+                completionTokens += round.completionTokens ?? 0;
+                // ── 审计：回退重试后的用量 ──
+                if (auditTrace != null) {
+                  audit.usage(
+                    auditTrace,
+                    round.promptTokens ?? 0,
+                    round.completionTokens ?? 0,
+                  );
+                }
+              }
+            }
+
+            // LLM 最终仍错误 → 把延迟的错误 SSE 写出并退出
+            if (hasError) {
+              writeOpenAiError(
+                streamController,
+                message: round.errorMessage ?? 'LLM API error',
+                type: round.errorType ?? 'api_error',
+                code: round.errorCode,
+              );
+              break;
+            }
+            // 客户端断开 → 退出循环
+            if (cancelStream) break;
 
             // 第三方工具 chunk 直接透传给客户端（客户端自行解析执行）
             if (thirdTools.isNotEmpty) {
@@ -573,6 +626,15 @@ class LocalHttpService {
             error: null,
           );
 
+          // ── 保存路由决策日志（JSONL 追加，供回测调参）──
+          await _saveRouteLog(
+            sessionId: session.sessionId,
+            routeDecision: request.context['routeDecision'] as RouteDecision?,
+            fallbackTried: fallbackTried,
+            promptTokens: promptTokens,
+            completionTokens: completionTokens,
+          );
+
           // ── 保存按分钟累计的用量统计 ──
           _saveUsageStats(
             session: session,
@@ -726,6 +788,44 @@ class LocalHttpService {
       debugPrint('⚠️ [Log] 保存实时日志失败: $e');
     }
   }
+
+  /// 追加写入路由决策日志到 `~/.llmate/log/route_log.jsonl`（JSONL，一行一条）。
+  ///
+  /// 供离线回测调参：记录每次路由决策的输入特征、信号命中、阈值，
+  /// 以及实际 token 用量与回退情况，用于分析各信号/阈值是否合理。
+  /// 仅记录开启费用优化且成功完成流式的请求（routeDecision 为 null 时跳过）。
+  static Future<void> _saveRouteLog({
+    required String sessionId,
+    required RouteDecision? routeDecision,
+    required bool fallbackTried,
+    required int promptTokens,
+    required int completionTokens,
+  }) async {
+    try {
+      if (routeDecision == null) return;
+      final logDir = Directory('${StoragePaths.root}/log');
+      if (!await logDir.exists()) {
+        await logDir.create(recursive: true);
+      }
+      final entry = <String, dynamic>{
+        'timestamp': DateTime.now().toIso8601String(),
+        'sessionId': sessionId,
+        'decision': routeDecision.toJson(),
+        'fallbackTried': fallbackTried,
+        'actualTokens': {
+          'prompt': promptTokens,
+          'completion': completionTokens,
+        },
+      };
+      final file = File('${logDir.path}/route_log.jsonl');
+      await file.writeAsString(
+        '${jsonEncode(entry)}\n',
+        mode: FileMode.append,
+      );
+    } catch (e) {
+      debugPrint('⚠️ [RouteLog] 保存路由日志失败: $e');
+    }
+  }
 }
 
 /// 从请求体 messages 中提取最近一条 user 消息的文本内容（供审计 prompt 记录）
@@ -747,4 +847,17 @@ String _extractUserPrompt(Map<String, dynamic> body) {
     }
   }
   return '';
+}
+
+/// 判断 LLM 错误是否可回退重试。
+///
+/// - code 为 null（网络/超时/未知异常）→ 可重试
+/// - 429（限流）→ 可重试（换模型可能绕过配额）
+/// - >= 500（服务端错误）→ 可重试
+/// - 其余 4xx（鉴权/参数错误）→ 不可重试，换模型通常无效
+bool _isRetryableError(int? code) {
+  if (code == null) return true;
+  if (code == 429) return true;
+  if (code >= 500) return true;
+  return false;
 }

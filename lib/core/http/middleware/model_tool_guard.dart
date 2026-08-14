@@ -35,12 +35,16 @@ Handler modelToolGuard(Handler innerHandler) {
 
     final body = jsonDecode(bodyStr) as Map<String, dynamic>;
 
-    // 1. 模型替换（会话级：自动选择开关开启则按字数灵活选，关闭则用手动选定模型）
-    body['model'] = ModelRouter.decideForSession(
+    // 1. 模型替换（会话级：自动选择开关开启则按多信号灵活选，关闭则用手动选定模型）
+    final routeDecision = ModelRouter.decideForSessionDetailed(
       session: session,
       body: body,
     );
-    debugPrint('🧭 [ModelRouter] 本轮使用模型: ${body['model']}');
+    body['model'] = routeDecision.modelId;
+    debugPrint(
+      '🧭 [ModelRouter] 本轮使用模型: ${routeDecision.modelId}'
+      '(complex=${routeDecision.usedComplex})',
+    );
 
     // 2. 工具注入（合并 session MCP + model MCP，去重）
     //    管理模式同样正常注入 MCP 工具：从服务端视角，输入框请求也是第三方客户端，
@@ -91,7 +95,12 @@ Handler modelToolGuard(Handler innerHandler) {
     }
 
     final updatedRequest = request.change(
-      context: {...request.context, 'body': body},
+      context: {
+        ...request.context,
+        'body': body,
+        // 路由决策明细（供流式处理阶段写入路由日志用于回测调参）
+        'routeDecision': routeDecision,
+      },
     );
 
     return innerHandler(updatedRequest);

@@ -204,7 +204,7 @@ const List<Map<String, dynamic>> managementToolDefinitions = [
           '查询当前会话的完整配置，包括：基础信息（名称、组织、模式、消息数）、'
           '绑定模型（含对话参数与安全设置）、绑定的 MCP 服务列表、'
           '会话级功能配置（关联提示词、会话级系统提示词、快捷指令）、'
-          '服务配置（API Key、免授权开关、禁用状态）、用量配额设置与累计 Token 统计。',
+          '服务配置（API Key、禁用状态）、用量配额设置与累计 Token 统计。',
       'parameters': {'type': 'object', 'properties': {}},
     },
   },
@@ -438,7 +438,6 @@ Map<String, dynamic> _sessionConfigSnapshot(ChatSession s) {
     },
     'service': {
       'apiKey': s.apiKey,
-      'noAuthEnabled': s.noAuthEnabled,
       'isDisabled': s.isDisabled,
     },
     'quota': quota,

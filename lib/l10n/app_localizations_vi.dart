@@ -1902,16 +1902,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get usageQuotaLabel => 'Hạn ngạch sử dụng';
 
   @override
-  String get noAuthAccess => 'Truy cập không cần xác thực';
-
-  @override
-  String get noAuthEnabledDesc =>
-      '⚠️ Đã tắt xác thực, bất kỳ ai cũng có thể truy cập';
-
-  @override
-  String get noAuthDisabledDesc => 'Bật: truy cập mà không cần khóa API';
-
-  @override
   String get disableSession => 'Vô hiệu hóa phiên';
 
   @override

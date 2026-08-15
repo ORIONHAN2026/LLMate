@@ -31,10 +31,9 @@ LLMate 为每个会话提供独立的**API地址设置**（底层为内置的本
 
 - **服务地址**：本会话独立的 HTTP/HTTPS 服务地址，点击即可复制到剪贴板，供第三方客户端调用
 - **API Key**：会话独立的请求密钥，可复制，也支持一键重置（重置后会生成新密钥）
-- **免授权访问**：开关。开启后无需密钥即可使用本会话的模型接口（建议仅在可信内网开启）
 - **禁用会话**：开关。开启后该会话的任何调用（包括应用内与外部 HTTP 调用）都会被拒绝
 
-{{< figure src="images/session-service/step-session-config.png" caption="会话设置 - 服务配置：服务地址、API Key、免授权与禁用开关" >}}
+{{< figure src="images/session-service/step-session-config.png" caption="会话设置 - 服务配置：服务地址、API Key 与禁用开关" >}}
 
 ### 使用方式
 

@@ -1885,15 +1885,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get usageQuotaLabel => '사용량 할당량';
 
   @override
-  String get noAuthAccess => '인증 없음 접근';
-
-  @override
-  String get noAuthEnabledDesc => '⚠️ 인증 비활성화, 누구나 접근 가능';
-
-  @override
-  String get noAuthDisabledDesc => '사용: API 키 없이 접근';
-
-  @override
   String get disableSession => '세션 비활성화';
 
   @override

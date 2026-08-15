@@ -1919,16 +1919,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get usageQuotaLabel => 'โควตาการใช้งาน';
 
   @override
-  String get noAuthAccess => 'เข้าถึงโดยไม่ต้องรับรอง';
-
-  @override
-  String get noAuthEnabledDesc => '⚠️ ปิดการรับรองแล้ว ทุกคนสามารถเข้าถึงได้';
-
-  @override
-  String get noAuthDisabledDesc =>
-      'เปิดใช้งาน: เข้าถึงได้โดยไม่ต้องใช้คีย์ API';
-
-  @override
   String get disableSession => 'ปิดใช้งานเซสชัน';
 
   @override

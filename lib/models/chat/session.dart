@@ -159,9 +159,6 @@ class ChatSession {
   /// 格式: lm-{32位随机hex字符串}
   final String apiKey;
 
-  /// 免授权模式：开启后外部请求无需提供 API Key 即可访问
-  final bool noAuthEnabled;
-
   /// 是否禁用该会话：禁用后任何调用（应用内与外部 HTTP 请求）均返回错误
   final bool isDisabled;
 
@@ -225,7 +222,6 @@ class ChatSession {
     this.quotaResetPeriod,
     this.quotaPeriodStart,
     this.quotaRequestCount = 0,
-    this.noAuthEnabled = false,
     this.isDisabled = false,
     this.mode = "management",
   }) : modelId = modelId ?? chatModel?.modelId,
@@ -415,7 +411,6 @@ class ChatSession {
     DateTime? quotaPeriodStart,
     bool clearQuotaPeriodStart = false,
     int? quotaRequestCount,
-    bool? noAuthEnabled,
     bool? isDisabled,
     String? mode, //session|manager
     String? model,
@@ -490,7 +485,6 @@ class ChatSession {
               ? null
               : (quotaPeriodStart ?? this.quotaPeriodStart),
       quotaRequestCount: quotaRequestCount ?? this.quotaRequestCount,
-      noAuthEnabled: noAuthEnabled ?? this.noAuthEnabled,
       isDisabled: isDisabled ?? this.isDisabled,
       mode: mode ?? this.mode,
       model: clearModel ? null : (model ?? this.model),
@@ -596,7 +590,6 @@ class ChatSession {
               ? DateTime.tryParse(json['quotaPeriodStart'] as String)
               : null,
       quotaRequestCount: json['quotaRequestCount'] as int? ?? 0,
-      noAuthEnabled: json['noAuthEnabled'] as bool? ?? false,
       isDisabled: json['isDisabled'] as bool? ?? false,
       mode: json['mode'] == 'session' ? "session" : "management",
       model: json['model'] as String?,
@@ -638,7 +631,6 @@ class ChatSession {
       if (quotaPeriodStart != null)
         'quotaPeriodStart': quotaPeriodStart!.toIso8601String(),
       'quotaRequestCount': quotaRequestCount,
-      'noAuthEnabled': noAuthEnabled,
       'isDisabled': isDisabled,
       'mode': mode,
       if (model != null && model!.isNotEmpty) 'model': model,

@@ -3596,24 +3596,6 @@ abstract class AppLocalizations {
   /// **'Usage Quota'**
   String get usageQuotaLabel;
 
-  /// No description provided for @noAuthAccess.
-  ///
-  /// In en, this message translates to:
-  /// **'No-auth Access'**
-  String get noAuthAccess;
-
-  /// No description provided for @noAuthEnabledDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'⚠️ Auth disabled, anyone can access'**
-  String get noAuthEnabledDesc;
-
-  /// No description provided for @noAuthDisabledDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Enabled: access without API Key'**
-  String get noAuthDisabledDesc;
-
   /// No description provided for @disableSession.
   ///
   /// In en, this message translates to:

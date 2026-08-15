@@ -1945,16 +1945,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get usageQuotaLabel => 'Quota d\'utilisation';
 
   @override
-  String get noAuthAccess => 'Accès sans authentification';
-
-  @override
-  String get noAuthEnabledDesc =>
-      '⚠️ Auth désactivée, tout le monde peut accéder';
-
-  @override
-  String get noAuthDisabledDesc => 'Activé : accès sans clé API';
-
-  @override
   String get disableSession => 'Désactiver la session';
 
   @override

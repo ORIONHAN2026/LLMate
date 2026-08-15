@@ -1885,15 +1885,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get usageQuotaLabel => '使用量クォータ';
 
   @override
-  String get noAuthAccess => '認証なしアクセス';
-
-  @override
-  String get noAuthEnabledDesc => '⚠️ 認証無効、誰でもアクセス可能';
-
-  @override
-  String get noAuthDisabledDesc => '有効：APIキーなしでアクセス';
-
-  @override
   String get disableSession => 'セッションを無効化';
 
   @override

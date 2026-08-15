@@ -520,8 +520,6 @@ class SessionConfigSidebar {
           onReset: () => _resetApiKey(context, session),
         ),
         const SizedBox(height: 8),
-        _buildNoAuthToggle(context, session),
-        const SizedBox(height: 8),
         _buildDisabledToggle(context, session),
       ],
     );
@@ -558,96 +556,6 @@ class SessionConfigSidebar {
         const SizedBox(height: 8),
         _QuotaConfigSection(session: session),
       ],
-    );
-  }
-
-  /// 免授权访问开关（独立构建，供精简边栏与详情页复用）
-  static Widget _buildNoAuthToggle(BuildContext context, ChatSession session) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color:
-            session.noAuthEnabled
-                ? Theme.of(context).colorScheme.error.withValues(alpha: 0.08)
-                : Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-        border:
-            session.noAuthEnabled
-                ? Border.all(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.error.withValues(alpha: 0.3),
-                  width: 1,
-                )
-                : null,
-      ),
-      child: Row(
-        children: [
-          Icon(
-            session.noAuthEnabled ? Icons.lock_open : Icons.shield,
-            size: 16,
-            color:
-                session.noAuthEnabled
-                    ? Theme.of(context).colorScheme.error
-                    : Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.noAuthAccess,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color:
-                        session.noAuthEnabled
-                            ? Theme.of(context).colorScheme.error
-                            : Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                Text(
-                  session.noAuthEnabled
-                      ? l10n.noAuthEnabledDesc
-                      : l10n.noAuthDisabledDesc,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color:
-                        session.noAuthEnabled
-                            ? Theme.of(
-                              context,
-                            ).colorScheme.error.withValues(alpha: 0.7)
-                            : Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Transform.scale(
-            scale: 0.75,
-            child: CupertinoSwitch(
-              value: session.noAuthEnabled,
-              activeTrackColor: Theme.of(context).colorScheme.error,
-              onChanged: (val) {
-                final sessionController = Get.find<SessionController>();
-                sessionController.updateSession(
-                  session.copyWith(noAuthEnabled: val),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -2304,8 +2212,6 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                             session,
                           ),
                     ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildNoAuthToggle(context, session),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildDisabledToggle(context, session),
                   ],

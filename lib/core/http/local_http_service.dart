@@ -341,7 +341,12 @@ class LocalHttpService {
       }
 
       final data = <Map<String, dynamic>>[
-        {'id': 'auto', 'object': 'model', 'created': 0, 'owned_by': 'auto'},
+        {
+          'id': session.name,
+          'object': 'model',
+          'created': 0,
+          'owned_by': 'LLMate',
+        },
       ];
 
       return Response.ok(

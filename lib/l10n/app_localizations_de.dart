@@ -1944,15 +1944,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get usageQuotaLabel => 'Nutzungskontingent';
 
   @override
-  String get noAuthAccess => 'Zugriff ohne Authentifizierung';
-
-  @override
-  String get noAuthEnabledDesc => '⚠️ Auth deaktiviert, jeder kann zugreifen';
-
-  @override
-  String get noAuthDisabledDesc => 'Aktiviert: Zugriff ohne API-Schlüssel';
-
-  @override
   String get disableSession => 'Sitzung deaktivieren';
 
   @override

@@ -1919,15 +1919,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get usageQuotaLabel => 'Usage Quota';
 
   @override
-  String get noAuthAccess => 'No-auth Access';
-
-  @override
-  String get noAuthEnabledDesc => '⚠️ Auth disabled, anyone can access';
-
-  @override
-  String get noAuthDisabledDesc => 'Enabled: access without API Key';
-
-  @override
   String get disableSession => 'Disable Session';
 
   @override

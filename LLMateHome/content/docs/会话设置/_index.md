@@ -10,6 +10,6 @@ weight: 5
 
 - **[基础信息](/docs/会话设置/05-session-basic-info/)**：会话名称、所属分组（可双击编辑）、绑定模型、关联提示词、消息数量
 - **[提示词设置](/docs/会话设置/06-session-prompt/)**：配置本会话的系统提示词，定义 AI 角色与行为约束
-- **[API地址设置](/docs/会话设置/07-session-service/)**：会话服务地址、API Key、免授权访问与禁用开关，以及本地 HTTP 代理
+- **[API地址设置](/docs/会话设置/07-session-service/)**：会话服务地址、API Key 与禁用开关，以及本地 HTTP 代理
 
 > 用量的限制与监控（用量配额）已归入 [用量设置](/docs/用量设置/) 菜单。

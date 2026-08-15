@@ -1879,15 +1879,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get usageQuotaLabel => '用量配额';
 
   @override
-  String get noAuthAccess => '免授权访问';
-
-  @override
-  String get noAuthEnabledDesc => '⚠️ 已关闭认证，任何人均可访问';
-
-  @override
-  String get noAuthDisabledDesc => '开启后不需要 API Key 即可访问';
-
-  @override
   String get disableSession => '禁用会话';
 
   @override

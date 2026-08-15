@@ -510,7 +510,7 @@ class SessionConfigSidebar {
       children: [
         _buildSectionTitle(context, l10n.serviceConfigLabel),
         const SizedBox(height: 8),
-        _SessionServiceAddresses(session: session),
+        const _SessionServiceAddresses(),
         const SizedBox(height: 8),
         _buildCopyableConfigItem(
           context,
@@ -2291,7 +2291,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       l10n.serviceConfigLabel,
                     ),
                     const SizedBox(height: 8),
-                    _SessionServiceAddresses(session: session),
+                    const _SessionServiceAddresses(),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildCopyableConfigItem(
                       context,
@@ -2503,11 +2503,9 @@ class _McpConfigSectionState extends State<_McpConfigSection> {
   }
 }
 
-/// 会话服务地址：根据系统设置提供三种可复制地址（本地/外网/域名）
+/// 会话服务地址：根据系统设置提供三种 OpenAI 兼容 Base URL（本地/外网/域名）
 class _SessionServiceAddresses extends StatefulWidget {
-  const _SessionServiceAddresses({required this.session});
-
-  final ChatSession session;
+  const _SessionServiceAddresses();
 
   @override
   State<_SessionServiceAddresses> createState() =>
@@ -2519,26 +2517,29 @@ class _SessionServiceAddressesState extends State<_SessionServiceAddresses> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settings = Get.find<SettingsController>();
-    final sessionId = widget.session.sessionId;
-    final port = settings.httpPort.value;
     final running = LocalHttpService.isRunning;
 
     return Obx(() {
       // 内网 / 外网 IP 直接取自系统服务配置（由服务管理页检测并保存）
       final localIp = settings.systemSetting.lanIp.value;
       final externalIp = settings.systemSetting.publicIp.value;
+      final scheme = settings.httpsEnabled.value ? 'https' : 'http';
+      final port =
+          settings.httpsEnabled.value
+              ? settings.systemSetting.httpsPort.value
+              : settings.httpPort.value;
 
       final localUrl =
           localIp == null || localIp.isEmpty
               ? null
-              : 'http://$localIp:$port/$sessionId';
+              : _withOpenAiBase('$scheme://$localIp:$port');
       final externalUrl =
           externalIp == null || externalIp.isEmpty
               ? null
-              : 'http://$externalIp:$port/$sessionId';
+              : _withOpenAiBase('$scheme://$externalIp:$port');
       final domainUrl =
           settings.isConfigured
-              ? _withSession(settings.systemSetting.baseUrl)
+              ? _withOpenAiBase(settings.systemSetting.baseUrl)
               : null;
 
       Widget row(IconData icon, String label, String? value) {
@@ -2579,9 +2580,10 @@ class _SessionServiceAddressesState extends State<_SessionServiceAddresses> {
     });
   }
 
-  String _withSession(String base) {
-    final sessionId = widget.session.sessionId;
+  String _withOpenAiBase(String base) {
     if (base.isEmpty) return base;
-    return base.endsWith('/') ? '$base$sessionId' : '$base/$sessionId';
+    final normalized =
+        base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    return normalized.endsWith('/v1') ? normalized : '$normalized/v1';
   }
 }

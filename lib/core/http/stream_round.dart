@@ -57,6 +57,8 @@ Future<StreamRoundResult> streamSingleRound({
   required String body,
   required StreamController<List<int>> controller,
   bool deferErrorWrite = false,
+  bool handleSessionTools = true,
+  String responseModel = 'auto',
 }) async {
   final client = HttpClient();
   StringBuffer contentBuffer = StringBuffer();
@@ -67,11 +69,13 @@ Future<StreamRoundResult> streamSingleRound({
     Uri.parse(session.chatModel!.apiUrl!),
   );
   httpRequest.headers.contentType = ContentType.json;
+  httpRequest.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
+  httpRequest.headers.set(HttpHeaders.cacheControlHeader, 'no-cache');
   httpRequest.headers.set(
     'Authorization',
     'Bearer ${session.chatModel!.apiKey}',
   );
-  debugPrint('❌ 大模型请求地址: ${session.chatModel!.apiUrl!}\n');
+  debugPrint('📡 大模型请求地址: ${session.chatModel!.apiUrl!}\n');
 
   try {
     httpRequest.write(body);
@@ -105,8 +109,6 @@ Future<StreamRoundResult> streamSingleRound({
     // 避免逐片 utf8.decode 把中文等字符切断成乱码 / 截断 JSON。
     String lineBuffer = '';
     await for (final raw in response.transform(utf8.decoder)) {
-      debugPrint('chunk: $raw');
-
       lineBuffer += raw;
       final lines = lineBuffer.split('\n');
       // 最后一项是不完整的半行，留待下一次拼接
@@ -128,25 +130,50 @@ Future<StreamRoundResult> streamSingleRound({
           final choice =
               sseChunk.choices.isNotEmpty ? sseChunk.choices.first : null;
           final delta = choice?.delta;
+          final clientChunk = _withResponseModel(sseChunk, responseModel);
+
+          // 客户端自带 tools 时，代理不参与工具循环，所有 chunk 原样透传。
+          // 这能完整保留 role / tool_calls / finish_reason / usage 等协议字段。
+          if (!handleSessionTools) {
+            controller.add(clientChunk.toIntList());
+            if (delta?.content != null) {
+              contentBuffer.write(delta!.content);
+            }
+            if (delta?.reasoningContent != null) {
+              reasonBuffer.write(delta!.reasoningContent);
+            }
+            if (sseChunk.usage != null) {
+              promptTokens += sseChunk.usage!.promptTokens ?? 0;
+              completionTokens += sseChunk.usage!.completionTokens ?? 0;
+            }
+            continue;
+          }
 
           // 文本内容 → 透传给客户端并累积
           if (delta?.content != null) {
-            controller.add(sseChunk.toIntList());
-            debugPrint('sseChunk content: $trimmed');
+            controller.add(clientChunk.toIntList());
             contentBuffer.write(delta!.content);
           }
 
           // 推理/思考内容（reasoning） → 透传并累积
           if (delta?.reasoningContent != null) {
-            controller.add(sseChunk.toIntList());
-            debugPrint('sseChunk reasoning: $trimmed');
+            controller.add(clientChunk.toIntList());
             reasonBuffer.write(delta!.reasoningContent);
+          }
+
+          // 非工具调用的协议 chunk（role、finish_reason、usage 等）也应透传，
+          // 否则严格一点的 OpenAI 客户端会等待缺失字段或无法正确收尾。
+          final hasToolCalls = delta?.toolCalls != null;
+          final hasText =
+              delta?.content != null || delta?.reasoningContent != null;
+          if (!hasToolCalls && !hasText) {
+            controller.add(clientChunk.toIntList());
           }
 
           // Token 用量 → 暂存，由调用方决定如何使用
           if (sseChunk.usage != null) {
-            promptTokens += sseChunk.usage!.promptTokens!;
-            completionTokens += sseChunk.usage!.completionTokens!;
+            promptTokens += sseChunk.usage!.promptTokens ?? 0;
+            completionTokens += sseChunk.usage!.completionTokens ?? 0;
           }
 
           // tool_calls → 按 index 增量合并（不透传给客户端，由 ToolLoop 统一处理）
@@ -155,7 +182,7 @@ Future<StreamRoundResult> streamSingleRound({
               final idx = tc.index ?? 0;
               if (toolCallList[idx] == null) {
                 // 首次出现该 index，直接存储整个 Chunk
-                toolCallList[idx] = sseChunk;
+                toolCallList[idx] = clientChunk;
               } else {
                 // 后续增量：与已存储的 Chunk 合并 arguments
                 final existingChunk = toolCallList[idx]!;
@@ -292,6 +319,19 @@ Future<StreamRoundResult> streamSingleRound({
   }
 }
 
+/// 对外隐藏企业平台内部真实模型名，统一呈现为代理模型 ID（默认 auto）。
+Chunk _withResponseModel(Chunk chunk, String responseModel) {
+  if (chunk.model == responseModel) return chunk;
+  return Chunk(
+    id: chunk.id,
+    object: chunk.object,
+    created: chunk.created,
+    model: responseModel,
+    choices: chunk.choices,
+    usage: chunk.usage,
+  );
+}
+
 /// 将工具调用分类为会话工具（匹配 MCP 工具）和第三方工具
 ///
 /// 从累积的 Chunk Map 中匹配会话绑定的 MCP 工具名：
@@ -354,12 +394,7 @@ void writeOpenAiError(
   controller.add(
     utf8.encode(
       'data: ${jsonEncode({
-        'error': {
-          'message': message,
-          'type': type,
-          'param': param,
-          'code': code,
-        },
+        'error': {'message': message, 'type': type, 'param': param, 'code': code},
       })}\n\n',
     ),
   );

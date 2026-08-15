@@ -9,7 +9,7 @@ import '../../../controllers/session_controller.dart';
 /// API Key 校验中间件（风控检查）
 ///
 /// 1. 从 Authorization header 提取 Bearer Token
-/// 2. 根据 URL 中的 sessionId 查找会话
+/// 2. 通过 API Key 从数据库反查会话
 /// 3. 如果会话开启了免授权模式，跳过 API Key 校验
 /// 4. 否则校验 apiKey 是否匹配
 /// 5. 检查会话是否配置了模型
@@ -17,20 +17,25 @@ import '../../../controllers/session_controller.dart';
 /// 将校验通过的 [ChatSession] 存入 `request.context['session']` 供下游使用。
 Handler apiKeyGuard(Handler innerHandler) {
   return (Request request) async {
-    final sessionId = _extractSessionIdFromPath(request.url.path);
+    final authHeader =
+        request.headers['Authorization'] ??
+        request.headers['authorization'] ??
+        '';
+    final apiKey = _extractBearerToken(authHeader);
+    debugPrint('🔑 [API Key Guard] 收到请求: path=${request.url.path}, apiKey=$apiKey');
 
-    // Step 1: 查找会话
+    // Step 1: 通过 API Key 从数据库反查会话
     final sessionController = Get.find<SessionController>();
-    final session = sessionController.sessions.firstWhereOrNull(
-      (s) => s.sessionId == sessionId,
-    );
+    final session = apiKey != null
+        ? await sessionController.getSessionByApiKey(apiKey)
+        : null;
 
     if (session == null) {
-      debugPrint('🔒 [API Key Guard] 会话未找到: $sessionId → 404');
+      debugPrint('🔒 [API Key Guard] 会话未找到 (by api key=$apiKey) → 404');
       return Response.notFound(
         jsonEncode({
           'error': {
-            'message': 'Session not found',
+            'message': 'Session not found for API key',
             'type': 'invalid_request_error',
             'code': 404,
           },
@@ -41,15 +46,8 @@ Handler apiKeyGuard(Handler innerHandler) {
 
     // Step 2: 免授权模式 — 跳过 API Key 校验
     if (session.noAuthEnabled) {
-      debugPrint('🔓 [API Key Guard] 免授权模式，跳过 API Key 校验: session=$sessionId');
+      debugPrint('🔓 [API Key Guard] 免授权模式，跳过 API Key 校验: session=${session.sessionId}');
     } else {
-      // Step 3: 提取 Bearer Token
-      final authHeader =
-          request.headers['Authorization'] ??
-          request.headers['authorization'] ??
-          '';
-      final apiKey = _extractBearerToken(authHeader);
-
       if (apiKey == null || apiKey.isEmpty) {
         debugPrint('🔒 [API Key Guard] 缺少 API Key → 401');
         return Response(
@@ -102,24 +100,15 @@ Handler apiKeyGuard(Handler innerHandler) {
       );
     }
 
-    debugPrint('✅ [API Key Guard] 校验通过: session=$sessionId');
+    debugPrint('✅ [API Key Guard] 校验通过: session=${session.sessionId}');
 
     // 将会话存入 context 供下游中间件和 handler 使用
     final updatedRequest = request.change(
-      context: {...request.context, 'session': session},
+      context: {...request.context, 'session': session, 'apiKey': apiKey},
     );
 
     return innerHandler(updatedRequest);
   };
-}
-
-/// 从 URL path 中提取 sessionId
-/// path 格式: /{sessionId}/chat/completions
-String _extractSessionIdFromPath(String path) {
-  final clean = path.startsWith('/') ? path.substring(1) : path;
-  final slashIdx = clean.indexOf('/');
-  if (slashIdx == -1) return clean;
-  return clean.substring(0, slashIdx);
 }
 
 /// 从 Authorization header 中提取 Bearer Token

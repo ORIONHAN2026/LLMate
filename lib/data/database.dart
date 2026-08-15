@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path/path.dart' as p;
@@ -210,6 +211,26 @@ extension SessionDao on AppDatabase {
           ..where((t) => t.id.equals(sessionId))).getSingleOrNull();
     if (row == null) return null;
     return ChatSession.fromJson(jsonDecode(row.data) as Map<String, dynamic>);
+  }
+
+  /// 按 apiKey 反查会话（遍历 data JSON 匹配 apiKey 字段）
+  Future<ChatSession?> getSessionByApiKey(String apiKey) async {
+    if (apiKey.isEmpty) return null;
+    final rows = await select(sessionRows).get();
+    debugPrint('🔑 [DB] getSessionByApiKey: target=$apiKey, rows=${rows.length}');
+    for (final r in rows) {
+      try {
+        final map = jsonDecode(r.data) as Map<String, dynamic>;
+        final storedKey = map['apiKey'];
+        debugPrint('🔑 [DB] row id=${r.id}, storedApiKey=$storedKey, match=${storedKey == apiKey}');
+        if (storedKey == apiKey) {
+          return ChatSession.fromJson(map);
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+    return null;
   }
 
   Future<String?> getCurrentSessionId() async {

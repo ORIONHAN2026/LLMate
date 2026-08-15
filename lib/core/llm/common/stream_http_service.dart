@@ -97,16 +97,17 @@ Stream<Map<String, dynamic>> streamViaHttpService({
       currentMessages.add({
         'role': 'assistant',
         'content': null,
-        'tool_calls': toolCalls.map((tc) {
-          return {
-            'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
-            'type': 'function',
-            'function': {
-              'name': tc['function']?['name'] ?? '',
-              'arguments': tc['function']?['arguments'] ?? '{}',
-            },
-          };
-        }).toList(),
+        'tool_calls':
+            toolCalls.map((tc) {
+              return {
+                'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
+                'type': 'function',
+                'function': {
+                  'name': tc['function']?['name'] ?? '',
+                  'arguments': tc['function']?['arguments'] ?? '{}',
+                },
+              };
+            }).toList(),
       });
 
       // 逐个执行管理工具，追加 tool 结果
@@ -150,12 +151,11 @@ Stream<Map<String, dynamic>> _postRound(
   // 优先使用本机回环地址 127.0.0.1（比 localhost 更可靠，避免 IPv6 ::1 解析问题）
   final host = '127.0.0.1';
   // 端口：优先用本机服务实际监听端口，无效时回退到系统设置中配置的 HTTP 端口
-  final port = LocalHttpService.port > 0
-      ? LocalHttpService.port
-      : Get.find<SettingsController>().httpPort.value;
-  final uri = Uri.parse(
-    '$scheme://$host:$port/${session.sessionId}/chat/completions',
-  );
+  final port =
+      LocalHttpService.port > 0
+          ? LocalHttpService.port
+          : Get.find<SettingsController>().httpPort.value;
+  final uri = Uri.parse('$scheme://$host:$port/v1/chat/completions');
 
   final client = HttpClient();
   if (LocalHttpService.isHttps) {
@@ -203,11 +203,16 @@ Stream<Map<String, dynamic>> _postRound(
               final json = jsonDecode(dataStr) as Map<String, dynamic>;
               final err = json['error'];
               if (err != null) {
-                final msg = err is Map
-                    ? (err['message']?.toString() ?? err.toString())
-                    : err.toString();
+                final msg =
+                    err is Map
+                        ? (err['message']?.toString() ?? err.toString())
+                        : err.toString();
                 yield {'content': '错误: $msg'};
-                yield {'roundEnd': 'true', 'toolCalls': toolCalls, 'error': 'true'};
+                yield {
+                  'roundEnd': 'true',
+                  'toolCalls': toolCalls,
+                  'error': 'true',
+                };
                 return;
               }
             } catch (_) {}
@@ -237,9 +242,10 @@ Stream<Map<String, dynamic>> _postRound(
             final json = jsonDecode(trimmed) as Map<String, dynamic>;
             final err = json['error'];
             if (err != null) {
-              final msg = err is Map
-                  ? (err['message']?.toString() ?? err.toString())
-                  : err.toString();
+              final msg =
+                  err is Map
+                      ? (err['message']?.toString() ?? err.toString())
+                      : err.toString();
               yield {'content': '错误: $msg'};
             }
           } catch (_) {}

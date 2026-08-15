@@ -85,6 +85,14 @@ class LocalHttpService {
   static bool _isHttps = false;
   static int _port = 80;
   static String _bindAddress = '0.0.0.0';
+  static const _corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers':
+        'Authorization, Content-Type, Accept, Cache-Control, OpenAI-Organization, OpenAI-Project, X-Request-ID, X-Requested-With',
+    'Access-Control-Expose-Headers': 'X-Request-ID',
+    'Access-Control-Max-Age': '86400',
+  };
 
   static bool get isRunning => _isRunning;
   static bool get isHttps => _isHttps;
@@ -133,15 +141,7 @@ class LocalHttpService {
 
       // 添加 CORS 中间件
       final handler = const Pipeline()
-          .addMiddleware(
-            cors.corsHeaders(
-              headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-              },
-            ),
-          )
+          .addMiddleware(cors.corsHeaders(headers: _corsHeaders))
           .addMiddleware(logRequests())
           .addHandler(router.call);
 
@@ -164,8 +164,9 @@ class LocalHttpService {
       }
       _isRunning = true;
       _syncController();
-      debugPrint('📡 API: POST /{sessionId}/chat/completions');
-      debugPrint('📡 API: GET /{sessionId}/models');
+      debugPrint('📡 API: POST /v1/chat/completions');
+      debugPrint('📡 API: GET /v1/models');
+      debugPrint('📡 兼容会话路径: /{sessionId}/v1/chat/completions');
       return true;
     } on SocketException catch (e) {
       debugPrint('❌ HTTP 服务启动失败：端口 $port 已被占用（可能有另一个实例在运行）: $e');
@@ -229,22 +230,44 @@ class LocalHttpService {
         headers: {'content-type': 'application/json'},
       );
     });
+    router.options('/health', _handleCorsPreflight);
 
-    // 模型列表路由（返回当前会话绑定的模型，兼容 OpenAI /v1/models 格式）
-    // 同时注册 /v1 前缀版本：编程工具（如 CodeBuddy）按 OpenAI 标准会发送
-    // {base}/v1/chat/completions，而 LLMate 地址格式为 http://ip:port/{sessionId}
-    router.get('/<segment>/models', _handleModelsRoute);
+    // CORS 预检请求不携带业务 API Key，必须在业务中间件前直接放行。
+    router.options('/v1/models', _handleCorsPreflight);
+    router.options(
+      '/<segment>/v1/models',
+      (Request request, String _) => _handleCorsPreflight(request),
+    );
+    router.options('/v1/chat/completions', _handleCorsPreflight);
+    router.options(
+      '/<segment>/v1/chat/completions',
+      (Request request, String _) => _handleCorsPreflight(request),
+    );
+
+    // 模型列表路由（对外仅暴露企业统一代理模型 auto，兼容 OpenAI /v1/models 格式）
+    // 标准入口通过 API Key 定位会话；/{sessionId}/v1 仅作为旧配置兼容。
+    router.get(
+      '/v1/models',
+      (Request request) => _handleModelsRoute(request, ''),
+    );
     router.get('/<segment>/v1/models', _handleModelsRoute);
 
     // Chat Completion 路由（含 /v1 前缀兼容版本）
-    router.post('/<segment>/chat/completions', _handleChatRoute);
+    router.post(
+      '/v1/chat/completions',
+      (Request request) => _handleChatRoute(request, ''),
+    );
     router.post('/<segment>/v1/chat/completions', _handleChatRoute);
 
     return router;
   }
 
+  static Response _handleCorsPreflight(Request request) {
+    return Response(204, headers: _corsHeaders);
+  }
+
   /// 模型列表路由处理（含中间件链），
-  /// 供 `/<segment>/models` 与 `/<segment>/v1/models` 共用
+  /// 供 `/v1/models` 与 `/<segment>/v1/models` 共用
   static Future<Response> _handleModelsRoute(
     Request request,
     String sessionId,
@@ -259,7 +282,7 @@ class LocalHttpService {
   }
 
   /// Chat Completion 路由处理（含中间件链），
-  /// 供 `/<segment>/chat/completions` 与 `/<segment>/v1/chat/completions` 共用
+  /// 供 `/v1/chat/completions` 与 `/<segment>/v1/chat/completions` 共用
   static Future<Response> _handleChatRoute(
     Request request,
     String sessionId,
@@ -275,7 +298,7 @@ class LocalHttpService {
     // 保存第三方客户请求的原始内容到 log_request 目录（每个请求一个文件，追加保存）
     await _saveRequestLog(
       request: request,
-      sessionId: sessionId,
+      sessionId: sessionId.isEmpty ? 'by-api-key' : sessionId,
       originBody: originBodyStr,
     );
 
@@ -369,6 +392,8 @@ class LocalHttpService {
       // 从中间件注入的 context 中提取会话和增强后的请求体
       final session = request.context['session'] as ChatSession;
       final body = request.context['body'] as Map<String, dynamic>;
+      final clientProvidedTools =
+          request.context['clientProvidedTools'] == true;
 
       // 客户端是否请求流式响应（缺省视为流式）。
       // 编程工具等第三方客户端可能发送 stream: false，此时本服务内部仍按流式
@@ -434,6 +459,7 @@ class LocalHttpService {
               body: jsonEncode(body),
               controller: streamController,
               deferErrorWrite: true,
+              handleSessionTools: !clientProvidedTools,
             );
             var sessionTools = round.sessionToolChunks;
             var thirdTools = round.thirdToolChunks;
@@ -473,6 +499,7 @@ class LocalHttpService {
                   body: jsonEncode(body),
                   controller: streamController,
                   deferErrorWrite: true,
+                  handleSessionTools: !clientProvidedTools,
                 );
                 sessionTools = round.sessionToolChunks;
                 thirdTools = round.thirdToolChunks;
@@ -734,9 +761,8 @@ class LocalHttpService {
             (acc, chunk) => acc..addAll(chunk),
           );
           final sseText = utf8.decode(bytes, allowMalformed: true);
-          final model = body['model']?.toString() ?? 'unknown';
           return Response.ok(
-            jsonEncode(_sseToChatCompletionJson(sseText, model)),
+            jsonEncode(_sseToChatCompletionJson(sseText, 'auto')),
             headers: {'content-type': 'application/json'},
           );
         } catch (e) {
@@ -796,6 +822,7 @@ class LocalHttpService {
     String finishReason = 'stop';
     Map<String, dynamic>? usage;
     Map<String, dynamic>? error;
+    final toolCallsByIndex = <int, Map<String, dynamic>>{};
 
     for (final line in sseText.split('\n')) {
       final trimmed = line.trim();
@@ -816,6 +843,43 @@ class LocalHttpService {
           final delta = choice['delta'];
           if (delta is Map<String, dynamic>) {
             content.write(delta['content']?.toString() ?? '');
+            final toolCalls = delta['tool_calls'];
+            if (toolCalls is List) {
+              for (final rawToolCall in toolCalls) {
+                if (rawToolCall is! Map<String, dynamic>) continue;
+                final index = rawToolCall['index'] as int? ?? 0;
+                final existing =
+                    toolCallsByIndex[index] ??
+                    <String, dynamic>{
+                      'id': null,
+                      'type': 'function',
+                      'function': {'name': null, 'arguments': ''},
+                    };
+
+                final function =
+                    (existing['function'] as Map<String, dynamic>?) ??
+                    <String, dynamic>{'name': null, 'arguments': ''};
+                final rawFunction = rawToolCall['function'];
+                if (rawToolCall['id'] != null) {
+                  existing['id'] = rawToolCall['id'];
+                }
+                if (rawToolCall['type'] != null) {
+                  existing['type'] = rawToolCall['type'];
+                }
+                if (rawFunction is Map<String, dynamic>) {
+                  if (rawFunction['name'] != null) {
+                    function['name'] = rawFunction['name'];
+                  }
+                  if (rawFunction['arguments'] != null) {
+                    function['arguments'] =
+                        (function['arguments']?.toString() ?? '') +
+                        rawFunction['arguments'].toString();
+                  }
+                }
+                existing['function'] = function;
+                toolCallsByIndex[index] = existing;
+              }
+            }
           }
           final fr = choice['finish_reason'];
           if (fr is String && fr.isNotEmpty) finishReason = fr;
@@ -838,17 +902,26 @@ class LocalHttpService {
       };
     }
 
+    final toolCalls =
+        toolCallsByIndex.entries.toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
+    final message = <String, dynamic>{
+      'role': 'assistant',
+      'content': content.toString(),
+    };
+    if (toolCalls.isNotEmpty) {
+      message['content'] = content.isEmpty ? null : content.toString();
+      message['tool_calls'] = toolCalls.map((e) => e.value).toList();
+      if (finishReason == 'stop') finishReason = 'tool_calls';
+    }
+
     return {
       'id': 'chatcmpl-${DateTime.now().millisecondsSinceEpoch}',
       'object': 'chat.completion',
       'created': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       'model': model,
       'choices': [
-        {
-          'index': 0,
-          'message': {'role': 'assistant', 'content': content.toString()},
-          'finish_reason': finishReason,
-        },
+        {'index': 0, 'message': message, 'finish_reason': finishReason},
       ],
       if (usage != null) 'usage': usage,
     };

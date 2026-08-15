@@ -454,9 +454,20 @@ class SessionController extends GetxController {
   }
 
   /// 从 SQLite 读取单条会话元数据（并已解析 chatModel）
-  Future<ChatSession?> _getSessionFromDb(String sid) async {
+  Future<ChatSession?> getSessionFromDb(String sid) async {
     try {
       final s = await appDatabase.getSession(sid);
+      if (s == null) return null;
+      return await _resolveChatModel(s);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 从 SQLite 按 apiKey 反查会话（并已解析 chatModel）
+  Future<ChatSession?> getSessionByApiKey(String apiKey) async {
+    try {
+      final s = await appDatabase.getSessionByApiKey(apiKey);
       if (s == null) return null;
       return await _resolveChatModel(s);
     } catch (_) {
@@ -481,7 +492,7 @@ class SessionController extends GetxController {
           session.sessionId,
         );
         if (messagesData.any((m) => m.msgId == messageId)) {
-          return await _getSessionFromDb(session.sessionId);
+          return await getSessionFromDb(session.sessionId);
         }
       }
     } catch (e) {

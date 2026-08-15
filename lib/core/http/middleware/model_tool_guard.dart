@@ -49,19 +49,22 @@ Handler modelToolGuard(Handler innerHandler) {
     // 2. 工具注入（合并 session MCP + model MCP，去重）
     //    管理模式同样正常注入 MCP 工具：从服务端视角，输入框请求也是第三方客户端，
     //    一视同仁；客户端注入的管理工具与 MCP 工具在此合并。
+    //
+    //    如果请求本身已经携带 tools，通常表示调用方是 Cursor/Claude Code/
+    //    Continue 等开发工具，工具调用生命周期应由客户端自己管理。此时保持
+    //    客户端 tools 原样，不追加服务端 MCP 工具，避免模型调用了客户端工具却
+    //    被代理服务截留执行，导致开发工具卡住或协议不完整。
+    final clientProvidedTools = body['tools'] is List;
     final mcpTools = McpController.instance.getMergedTools(session);
-    if (mcpTools.isNotEmpty) {
+    if (!clientProvidedTools && mcpTools.isNotEmpty) {
       final tools = mcpTools.map((t) => t.toOpenAIFunction()).toList();
-      final existing = body['tools'];
-      if (existing is List) {
-        body['tools'] = [...existing, ...tools];
-      } else {
-        body['tools'] = tools;
-      }
+      body['tools'] = tools;
       body['tool_choice'] = 'auto';
       debugPrint(
         '🔧 [ModelTool] 注入 ${tools.length} 个 MCP 工具 (含 session + model)',
       );
+    } else if (clientProvidedTools) {
+      debugPrint('🔧 [ModelTool] 检测到客户端 tools，切换为透明工具代理模式');
     }
 
     // 3. 系统提示词注入（顺序与 mode_utils.buildBaseSystemMessages 一致：
@@ -100,6 +103,7 @@ Handler modelToolGuard(Handler innerHandler) {
         'body': body,
         // 路由决策明细（供流式处理阶段写入路由日志用于回测调参）
         'routeDecision': routeDecision,
+        'clientProvidedTools': clientProvidedTools,
       },
     );
 

@@ -3356,6 +3356,12 @@ abstract class AppLocalizations {
   /// **'{count} sessions'**
   String sessionsCountSuffix(Object count);
 
+  /// No description provided for @requestsCountSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} requests'**
+  String requestsCountSuffix(Object count);
+
   /// No description provided for @granMinute.
   ///
   /// In en, this message translates to:

@@ -1754,6 +1754,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String requestsCountSuffix(Object count) {
+    return '$count次请求';
+  }
+
+  @override
   String get granMinute => '分';
 
   @override

@@ -1775,6 +1775,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String requestsCountSuffix(Object count) {
+    return '$count lượt yêu cầu';
+  }
+
+  @override
   String get granMinute => 'Phút';
 
   @override

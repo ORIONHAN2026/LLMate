@@ -507,6 +507,7 @@
   "outputLabel": "ส่งออก",
   "noQuotaLimit": "ไม่ได้ตั้งค่าขีดจำกัดโควตา",
   "sessionsCountSuffix": "{count} เซสชัน",
+  "requestsCountSuffix": "{count} คำขอ",
   "granMinute": "นาที",
   "granHour": "ชั่วโมง",
   "granDay": "วัน",

@@ -548,6 +548,7 @@
   "outputLabel": "출력",
   "noQuotaLimit": "할당량 제한 미설정",
   "sessionsCountSuffix": "{count}개 세션",
+  "requestsCountSuffix": "{count}회 요청",
   "granMinute": "분",
   "granHour": "시간",
   "granDay": "일",

@@ -507,6 +507,7 @@
   "outputLabel": "Đầu ra",
   "noQuotaLimit": "Chưa đặt giới hạn hạn ngạch",
   "sessionsCountSuffix": "{count} phiên",
+  "requestsCountSuffix": "{count} lượt yêu cầu",
   "granMinute": "Phút",
   "granHour": "Giờ",
   "granDay": "Ngày",

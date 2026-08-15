@@ -583,6 +583,12 @@
     }
   },
   "sessionsCountSuffix": "{count}个会话",
+  "@requestsCountSuffix": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "requestsCountSuffix": "{count}次请求",
   "granMinute": "分",
   "granHour": "小时",
   "granDay": "天",

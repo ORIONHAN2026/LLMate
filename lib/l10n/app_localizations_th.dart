@@ -1792,6 +1792,11 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
+  String requestsCountSuffix(Object count) {
+    return '$count คำขอ';
+  }
+
+  @override
   String get granMinute => 'นาที';
 
   @override

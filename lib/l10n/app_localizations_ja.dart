@@ -1760,6 +1760,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String requestsCountSuffix(Object count) {
+    return '$count 回リクエスト';
+  }
+
+  @override
   String get granMinute => '分';
 
   @override

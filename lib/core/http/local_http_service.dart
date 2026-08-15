@@ -24,6 +24,7 @@ import 'middleware/audit_guard.dart';
 import 'sensitive_masker.dart';
 import 'stream_round.dart' show streamSingleRound, writeOpenAiError;
 import '../router/model_router.dart';
+import '../../models/model_price_catalog.dart';
 import '../../controllers/mcp_controller.dart';
 import '../../models/responses/chunk.dart';
 
@@ -747,6 +748,7 @@ class LocalHttpService {
             startTime: generationStartTime,
             promptTokens: promptTokens,
             completionTokens: completionTokens,
+            routeDecision: request.context['routeDecision'] as RouteDecision?,
           );
         } catch (e, st) {
           // ── 异步 IIFE 内部异常 ──
@@ -971,21 +973,44 @@ class LocalHttpService {
     required DateTime startTime,
     required int promptTokens,
     required int completionTokens,
+    RouteDecision? routeDecision,
   }) {
     () async {
       try {
         final sessionId = session.sessionId;
         final model = session.chatModel;
-        final modelId = model?.modelId ?? 'unknown';
-        final currency = model?.currency ?? 'USD';
+        // 实际使用的模型：路由决策优先（省钱路由可能命中便宜模型），
+        // 否则取配置模型的 API 模型名（model），而非配置记录 id（modelId，形如 model<uuid>）
+        final modelId = routeDecision?.modelId ?? model?.model ?? 'unknown';
+        var currency = model?.currency ?? 'USD';
 
-        // 计算本次请求费用
+        // 计算本次请求费用：优先按「实际使用模型」的价格计价
         double requestCost = 0.0;
-        if (model?.promptPrice != null) {
-          requestCost += promptTokens * model!.promptPrice! / 1000000.0;
-        }
-        if (model?.completionPrice != null) {
-          requestCost += completionTokens * model!.completionPrice! / 1000000.0;
+        if (routeDecision != null && routeDecision.modelId != model?.model) {
+          // 路由实际调用了与配置主模型不同的模型（如命中便宜模型）→ 按该模型价格计价
+          final price = ModelPriceCatalog.priceOf(routeDecision.modelId);
+          if (price != null) {
+            requestCost =
+                promptTokens * price.promptCny / 1000000.0 +
+                completionTokens * price.completionCny / 1000000.0;
+            currency = price.currency == PriceCurrency.cny ? 'CNY' : 'USD';
+          } else {
+            // 取不到实际模型价格 → 回退配置模型价格
+            if (model?.promptPrice != null) {
+              requestCost += promptTokens * model!.promptPrice! / 1000000.0;
+            }
+            if (model?.completionPrice != null) {
+              requestCost += completionTokens * model!.completionPrice! / 1000000.0;
+            }
+          }
+        } else {
+          // 未路由或路由仍使用配置模型 → 按配置模型价格
+          if (model?.promptPrice != null) {
+            requestCost += promptTokens * model!.promptPrice! / 1000000.0;
+          }
+          if (model?.completionPrice != null) {
+            requestCost += completionTokens * model!.completionPrice! / 1000000.0;
+          }
         }
 
         await UsageController.instance.recordUsage(

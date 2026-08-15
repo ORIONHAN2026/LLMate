@@ -548,6 +548,7 @@
   "outputLabel": "Sortie",
   "noQuotaLimit": "Aucune limite de quota définie",
   "sessionsCountSuffix": "{count} sessions",
+  "requestsCountSuffix": "{count} requêtes",
   "granMinute": "Minute",
   "granHour": "Heure",
   "granDay": "Jour",

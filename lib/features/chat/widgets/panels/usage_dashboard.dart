@@ -56,6 +56,9 @@ class _UsageDashboardState extends State<UsageDashboard> {
   final Map<String, _ModelUsage> _globalModelStats = {};
   final Map<String, UsageStats> _globalSessionStats = {};
 
+  // 会话视图：按实际使用模型聚合的用量（用于按模型分别展示便宜/贵模型的使用情况）
+  final Map<String, _ModelUsage> _sessionModelStats = {};
+
   /// 时间区间（按粒度解释）：
   /// - 分/小时：仅取某一天，start=当天 00:00，end=当天 23:59:59.999
   /// - 天/月/年：start~end 的范围（为 null 表示不限该侧）
@@ -113,10 +116,35 @@ class _UsageDashboardState extends State<UsageDashboard> {
         start: start,
         end: end,
       );
+      // 按模型聚合：单会话下分别统计各「实际使用模型」的用量（含路由命中的便宜模型）
+      final details = await UsageController.instance.loadDetails(
+        sessionId: session.sessionId,
+        start: start,
+        end: end,
+      );
+      final modelStats = <String, _ModelUsage>{};
+      final modelMap = <String, ChatModel>{};
+      final configuredModel = session.chatModel;
+      if (configuredModel != null) {
+        modelMap[configuredModel.modelId] = configuredModel;
+      }
+      for (final d in details) {
+        // 归一化分组键：配置记录 id（model<uuid>）→ 真实 API 模型名，让 flash/pro 分开统计
+        final m = modelMap[d.modelId];
+        final key = m != null && m.model.isNotEmpty ? m.model : d.modelId;
+        final ms = modelStats.putIfAbsent(key, () => _ModelUsage());
+        ms.chatModel ??= m;
+        ms.sessionCount++;
+        ms.promptTokens += d.promptTokens;
+        ms.completionTokens += d.completionTokens;
+      }
       if (mounted) {
         setState(() {
           _chartData = data;
           _stats = stats;
+          _sessionModelStats
+            ..clear()
+            ..addAll(modelStats);
           _chartLoading = false;
         });
       }
@@ -147,8 +175,11 @@ class _UsageDashboardState extends State<UsageDashboard> {
 
       for (final d in all) {
         global.add(d);
-        final ms = modelStats.putIfAbsent(d.modelId, () => _ModelUsage());
-        ms.chatModel ??= modelMap[d.modelId];
+        // 归一化分组键：配置记录 id（model<uuid>）→ 真实 API 模型名，让 flash/pro 分开统计
+        final m = modelMap[d.modelId];
+        final key = m != null && m.model.isNotEmpty ? m.model : d.modelId;
+        final ms = modelStats.putIfAbsent(key, () => _ModelUsage());
+        ms.chatModel ??= m;
         ms.promptTokens += d.promptTokens;
         ms.completionTokens += d.completionTokens;
         sessionStats.putIfAbsent(d.sessionId, () => UsageStats.empty()).add(d);
@@ -351,7 +382,44 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   ),
         ),
 
+        // ===== 按模型用量（本会话：便宜/贵模型分别统计）=====
+        if (_sessionModelStats.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          _buildSectionTitle(theme, l10n.byModel),
+          const SizedBox(height: 12),
+          _buildSessionModelUsage(theme, isDark, l10n),
+        ],
+
         const SizedBox(height: 80),
+      ],
+    );
+  }
+
+  /// 会话视图：按实际使用模型分组的用量明细（token 降序）
+  Widget _buildSessionModelUsage(
+    ThemeData theme,
+    bool isDark,
+    AppLocalizations l10n,
+  ) {
+    final entries = _sessionModelStats.entries.toList()
+      ..sort(
+        (a, b) => (b.value.promptTokens + b.value.completionTokens).compareTo(
+          a.value.promptTokens + a.value.completionTokens,
+        ),
+      );
+    return Column(
+      children: [
+        for (final entry in entries) ...[
+          _buildModelUsageRow(
+            theme,
+            isDark,
+            entry.key,
+            entry.value,
+            l10n,
+            showAsRequests: true,
+          ),
+          const SizedBox(height: 8),
+        ],
       ],
     );
   }
@@ -543,9 +611,11 @@ class _UsageDashboardState extends State<UsageDashboard> {
   Map<String, _ModelUsage> _fallbackModelStats(List<ChatSession> sessions) {
     final map = <String, _ModelUsage>{};
     for (final session in sessions) {
-      final modelName = session.chatModel?.name ?? 'Unknown';
-      final stat = map.putIfAbsent(modelName, () => _ModelUsage());
-      stat.chatModel ??= session.chatModel;
+      final m = session.chatModel;
+      // 与真实用量聚合一致：以 API 模型名（model）分组，而非配置记录 id / 显示名
+      final modelKey = m != null && m.model.isNotEmpty ? m.model : 'Unknown';
+      final stat = map.putIfAbsent(modelKey, () => _ModelUsage());
+      stat.chatModel ??= m;
       stat.sessionCount++;
       stat.promptTokens += session.promptTokens;
       stat.completionTokens += session.completionTokens;
@@ -832,8 +902,9 @@ class _UsageDashboardState extends State<UsageDashboard> {
     bool isDark,
     String name,
     _ModelUsage usage,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    bool showAsRequests = false,
+  }) {
     final modelTotal = usage.promptTokens + usage.completionTokens;
     final promptRatio = modelTotal > 0 ? usage.promptTokens / modelTotal : 0.0;
     final completionRatio =
@@ -868,7 +939,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  usage.chatModel?.name ?? name,
+                  _modelDisplayName(usage, name),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -886,7 +957,9 @@ class _UsageDashboardState extends State<UsageDashboard> {
               ),
               const SizedBox(width: 8),
               Text(
-                l10n.sessionsCountSuffix(usage.sessionCount),
+                showAsRequests
+                    ? l10n.requestsCountSuffix(usage.sessionCount)
+                    : l10n.sessionsCountSuffix(usage.sessionCount),
                 style: TextStyle(
                   fontSize: 11,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
@@ -966,6 +1039,34 @@ class _UsageDashboardState extends State<UsageDashboard> {
         ],
       ),
     );
+  }
+
+  /// 模型行显示名：优先配置显示名，否则把 API 模型 id 美化为可读名
+  String _modelDisplayName(_ModelUsage usage, String name) {
+    final displayName = usage.chatModel?.name;
+    if (displayName != null && displayName.isNotEmpty) return displayName;
+    return _friendlyModelName(name);
+  }
+
+  /// 把裸模型 id（如 deepseek-v4-flash）美化为可读名称（chatModel 缺失时兜底）。
+  /// 配置记录 id（`model<uuid>`）无法还原为可读名时返回 Unknown Model。
+  static String _friendlyModelName(String id) {
+    if (id.isEmpty ||
+        id == 'unknown' ||
+        RegExp(r'^model[0-9a-f-]{20,}$').hasMatch(id)) {
+      return 'Unknown Model';
+    }
+    final parts = id.split(RegExp(r'[-_]'));
+    final buf = StringBuffer();
+    var first = true;
+    for (final p in parts) {
+      if (p.isEmpty) continue;
+      if (!first) buf.write(' ');
+      first = false;
+      buf.write(p[0].toUpperCase());
+      buf.write(p.substring(1));
+    }
+    return buf.isEmpty ? id : buf.toString();
   }
 
   Widget _buildEmptySessionsHint(ThemeData theme, AppLocalizations l10n) {

@@ -548,6 +548,7 @@
   "outputLabel": "Ausgabe",
   "noQuotaLimit": "Kein Kontingentlimit festgelegt",
   "sessionsCountSuffix": "{count} Sitzungen",
+  "requestsCountSuffix": "{count} Anfragen",
   "granMinute": "Minute",
   "granHour": "Stunde",
   "granDay": "Tag",

@@ -550,6 +550,7 @@
   "outputLabel": "出力",
   "noQuotaLimit": "クォータ制限は設定されていません",
   "sessionsCountSuffix": "{count} セッション",
+  "requestsCountSuffix": "{count} 回リクエスト",
   "granMinute": "分",
   "granHour": "時",
   "granDay": "日",

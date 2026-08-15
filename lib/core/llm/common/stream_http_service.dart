@@ -166,10 +166,7 @@ Stream<Map<String, dynamic>> _postRound(
   try {
     final req = await client.postUrl(uri);
     req.headers.contentType = ContentType.json;
-    req.headers.set('X-LLMate-InApp', 'true');
-    if (!session.noAuthEnabled) {
-      req.headers.set('Authorization', 'Bearer ${session.apiKey}');
-    }
+    req.headers.set('Authorization', 'Bearer ${session.apiKey}');
     req.write(jsonEncode(body));
 
     final response = await req.close();

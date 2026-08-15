@@ -66,6 +66,7 @@ class AuditLog {
 /// 对应 DuckDB `audit_events` 表中的 `event_type` 列。
 enum AuditEventType {
   request,
+  body,
   prompt,
   policy,
   toolStart,

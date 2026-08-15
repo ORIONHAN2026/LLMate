@@ -66,6 +66,10 @@ class AuditController {
   // 高层事件 API
   // ══════════════════════════════════════════════════════════
 
+  /// 记录第三方请求的完整 body（原样存储，不脱敏）
+  Future<void> body(AuditTrace trace, dynamic body) =>
+      emit(trace, AuditEventType.body, {'body': body});
+
   Future<void> prompt(AuditTrace trace, String prompt) =>
       emit(trace, AuditEventType.prompt, {'prompt': prompt});
 

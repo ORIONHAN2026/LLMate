@@ -764,6 +764,8 @@ Color _typeColor(AuditEventType type) {
   switch (type) {
     case AuditEventType.request:
       return Colors.blue;
+    case AuditEventType.body:
+      return Colors.brown;
     case AuditEventType.prompt:
       return Colors.indigo;
     case AuditEventType.policy:

@@ -15,6 +15,17 @@ String resolveOriginalToolName(String safeName) {
   return _safeNameToOriginal[safeName] ?? safeName;
 }
 
+/// 将工具名 sanitize 为 OpenAI 兼容的安全名称（仅允许 a-zA-Z0-9_-），
+/// 并注册 安全名 → 原始名 映射，供执行端还原。
+/// 若名称本就合法则原样返回，不写入映射。
+String registerSafeToolName(String originalName) {
+  final safeName = originalName.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+  if (safeName != originalName) {
+    _safeNameToOriginal[safeName] = originalName;
+  }
+  return safeName;
+}
+
 /// 加载聊天室模式的所有角色上下文
 Future<List<String>> loadRoleContexts(
   String sessionId, {

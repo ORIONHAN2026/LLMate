@@ -428,6 +428,8 @@ class LocalHttpService {
             sessionId: session.sessionId,
             ip: extractClientIp(request),
           );
+          // 记录第三方请求的完整 body（原样存储，便于离线审计排查）
+          audit.body(auditTrace, body);
           audit.prompt(auditTrace, _extractUserPrompt(body));
         } catch (e) {
           debugPrint('⚠️ [Audit] 开启链路追踪失败: $e');

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shelf/shelf.dart';
 
 import '../../../controllers/mcp_controller.dart';
+import '../../../core/llm/modes/mode_utils.dart';
 import '../../../core/router/model_router.dart';
 import '../../../models/chat/session.dart';
 import 'audit_guard.dart';
@@ -57,7 +58,14 @@ Handler modelToolGuard(Handler innerHandler) {
     final clientProvidedTools = body['tools'] is List;
     final mcpTools = McpController.instance.getMergedTools(session);
     if (!clientProvidedTools && mcpTools.isNotEmpty) {
-      final tools = mcpTools.map((t) => t.toOpenAIFunction()).toList();
+      // OpenAI 要求函数名匹配 ^[a-zA-Z0-9_-]+$，MCP 工具名可能含点号/空格等，
+      // 注入前 sanitize 并注册映射，执行端按安全名还原原始名调用 MCP。
+      final tools = mcpTools.map((t) {
+        final func = t.toOpenAIFunction();
+        final f = func['function'] as Map<String, dynamic>;
+        f['name'] = registerSafeToolName(t.name);
+        return func;
+      }).toList();
       body['tools'] = tools;
       body['tool_choice'] = 'auto';
       debugPrint(

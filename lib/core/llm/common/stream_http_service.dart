@@ -56,14 +56,25 @@ Stream<Map<String, dynamic>> streamViaHttpService({
       tools: managementToolDefinitions,
     );
 
-    final round = await _postRound(session, body, isCancelled);
-
-    // 透传内容 / 思考 / 工具执行状态 chunk
-    for (final c in round.chunks) {
-      yield c;
+    // 流式透传内容 / 思考 / 工具执行状态 chunk，保证实时返回；
+    // 轮次结束时由结束 chunk 带回 toolCalls 与错误标记
+    final toolCalls = <Map<String, dynamic>>[];
+    var roundError = false;
+    await for (final chunk in _postRound(session, body, isCancelled)) {
+      if (chunk['roundEnd'] == 'true') {
+        roundError = chunk['error'] == 'true';
+        final tcList = chunk['toolCalls'];
+        if (tcList is List) {
+          for (final tc in tcList) {
+            if (tc is Map<String, dynamic>) toolCalls.add(tc);
+          }
+        }
+        break;
+      }
+      yield chunk;
     }
 
-    if (round.error) {
+    if (roundError) {
       yield {'done': 'true'};
       return;
     }
@@ -71,7 +82,7 @@ Stream<Map<String, dynamic>> streamViaHttpService({
     // 客户端只注入了管理工具 schema，服务端把不认识的管理工具视作第三方透传回来；
     // 聊天输入框的输入只在本软件执行，不会出现真第三方工具，因此这里的 tool_calls
     // 全都是管理工具，直接本地执行回填，继续下一轮。
-    if (round.toolCalls.isNotEmpty) {
+    if (toolCalls.isNotEmpty) {
       toolIteration++;
       if (toolIteration >= maxToolIterations) {
         debugPrint('⚠️ [LLMChat] 管理工具调用已达最大轮次 $maxToolIterations，停止循环');
@@ -86,7 +97,7 @@ Stream<Map<String, dynamic>> streamViaHttpService({
       currentMessages.add({
         'role': 'assistant',
         'content': null,
-        'tool_calls': round.toolCalls.map((tc) {
+        'tool_calls': toolCalls.map((tc) {
           return {
             'id': tc['id'] ?? 'call_${tc['index'] ?? 0}',
             'type': 'function',
@@ -99,7 +110,7 @@ Stream<Map<String, dynamic>> streamViaHttpService({
       });
 
       // 逐个执行管理工具，追加 tool 结果
-      for (final tc in round.toolCalls) {
+      for (final tc in toolCalls) {
         final name = (tc['function']?['name'] ?? '').toString();
         final argsStr = (tc['function']?['arguments'] ?? '{}').toString();
         Map<String, dynamic> args;
@@ -125,29 +136,16 @@ Stream<Map<String, dynamic>> streamViaHttpService({
   yield {'done': 'true'};
 }
 
-/// 单轮 HTTP 请求的聚合结果。
-class _HttpRoundResult {
-  final List<Map<String, dynamic>> chunks; // content / think / tool 状态 chunk
-  final List<Map<String, dynamic>> toolCalls; // 管理工具调用（服务端透传回来）
-  final bool error;
-  _HttpRoundResult({
-    required this.chunks,
-    required this.toolCalls,
-    this.error = false,
-  });
-}
-
-/// 向本机 HTTP 服务发起一轮 chat completion 请求，解析 SSE 流。
+/// 向本机 HTTP 服务发起一轮 chat completion 请求，流式解析 SSE。
 ///
-/// 返回该轮的 content/think chunk（透传 UI）与 tool_calls（交外层分类）。
-Future<_HttpRoundResult> _postRound(
+/// 边解析边 yield content / think / 工具执行状态 chunk（保证实时返回）；
+/// 轮次结束时 yield 一个带 `roundEnd: true` 的结束 chunk，
+/// 携带该轮收集的 tool_calls 与 error 标记，交外层处理多轮工具循环。
+Stream<Map<String, dynamic>> _postRound(
   ChatSession session,
   Map<String, dynamic> body,
   bool Function() isCancelled,
-) async {
-  final chunks = <Map<String, dynamic>>[];
-  final toolCalls = <Map<String, dynamic>>[];
-
+) async* {
   final scheme = LocalHttpService.isHttps ? 'https' : 'http';
   // 优先使用本机回环地址 127.0.0.1（比 localhost 更可靠，避免 IPv6 ::1 解析问题）
   final host = '127.0.0.1';
@@ -177,10 +175,12 @@ Future<_HttpRoundResult> _postRound(
     final response = await req.close();
     if (response.statusCode >= 400) {
       final err = await response.transform(utf8.decoder).join();
-      chunks.add({'content': '请求失败 ($err)'});
-      return _HttpRoundResult(chunks: chunks, toolCalls: toolCalls, error: true);
+      yield {'content': '请求失败 ($err)'};
+      yield {'roundEnd': 'true', 'toolCalls': const [], 'error': 'true'};
+      return;
     }
 
+    final toolCalls = <Map<String, dynamic>>[];
     String buffer = '';
     await for (final raw in response.transform(utf8.decoder)) {
       debugPrint('🧠 [LLMChat] 接收到的原始 SSE chunk: $raw');
@@ -194,7 +194,8 @@ Future<_HttpRoundResult> _postRound(
         if (trimmed.startsWith('data:')) {
           final dataStr = trimmed.substring(5).trim();
           if (dataStr == '[DONE]') {
-            return _HttpRoundResult(chunks: chunks, toolCalls: toolCalls);
+            yield {'roundEnd': 'true', 'toolCalls': toolCalls};
+            return;
           }
           // 检测服务端返回的标准 OpenAI 错误对象，转成 content chunk 并正常结束
           if (dataStr.startsWith('{')) {
@@ -205,12 +206,9 @@ Future<_HttpRoundResult> _postRound(
                 final msg = err is Map
                     ? (err['message']?.toString() ?? err.toString())
                     : err.toString();
-                chunks.add({'content': '错误: $msg'});
-                return _HttpRoundResult(
-                  chunks: chunks,
-                  toolCalls: toolCalls,
-                  error: true,
-                );
+                yield {'content': '错误: $msg'};
+                yield {'roundEnd': 'true', 'toolCalls': toolCalls, 'error': 'true'};
+                return;
               }
             } catch (_) {}
           }
@@ -231,7 +229,7 @@ Future<_HttpRoundResult> _postRound(
                 }
               } catch (_) {}
             }
-            chunks.add(c);
+            yield c;
           }
         } else if (trimmed.startsWith('{')) {
           // 非 SSE 的原始 JSON（如错误行）
@@ -242,16 +240,17 @@ Future<_HttpRoundResult> _postRound(
               final msg = err is Map
                   ? (err['message']?.toString() ?? err.toString())
                   : err.toString();
-              chunks.add({'content': '错误: $msg'});
+              yield {'content': '错误: $msg'};
             }
           } catch (_) {}
         }
       }
     }
-    return _HttpRoundResult(chunks: chunks, toolCalls: toolCalls);
+    // 上游流结束但未收到 [DONE]（连接关闭 / 取消）
+    yield {'roundEnd': 'true', 'toolCalls': toolCalls};
   } catch (e) {
-    chunks.add({'content': '错误: $e'});
-    return _HttpRoundResult(chunks: chunks, toolCalls: toolCalls, error: true);
+    yield {'content': '错误: $e'};
+    yield {'roundEnd': 'true', 'toolCalls': const [], 'error': 'true'};
   } finally {
     client.close(force: true);
   }

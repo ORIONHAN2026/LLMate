@@ -530,11 +530,6 @@ class OAuthTokenManager {
     _currentToken = null;
   }
 
-  /// Loads previously persisted tokens.
-  Future<void> loadPersistedTokens() async {
-    // TODO: integrate with SecureStorage. Empty placeholder for tests.
-  }
-
   /// Stores an encrypted token.
   Future<void> storeEncryptedToken(
     OAuthToken token,

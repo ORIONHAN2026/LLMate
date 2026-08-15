@@ -319,13 +319,7 @@ class LocalHttpService {
 
       final model = session.chatModel;
       final data = <Map<String, dynamic>>[
-        {
-          'id': model?.model ?? 'auto',
-          'object': 'model',
-          'created': 0,
-          'owned_by': model?.platform ?? 'llmate',
-          if (model != null && model.name.isNotEmpty) 'display_name': model.name,
-        },
+        {'id': 'auto', 'object': 'model', 'created': 0, 'owned_by': 'auto'},
       ];
 
       return Response.ok(
@@ -718,12 +712,7 @@ class LocalHttpService {
           streamController.add(
             utf8.encode(
               'data: ${jsonEncode({
-                'error': {
-                  'message': e.toString(),
-                  'type': 'api_error',
-                  'param': null,
-                  'code': 500,
-                },
+                'error': {'message': e.toString(), 'type': 'api_error', 'param': null, 'code': 500},
               })}\n\n',
             ),
           );
@@ -939,7 +928,9 @@ class LocalHttpService {
       };
 
       final file = File('${logDir.path}/$fileName');
-      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(entry));
+      await file.writeAsString(
+        const JsonEncoder.withIndent('  ').convert(entry),
+      );
     } catch (e) {
       debugPrint('⚠️ [RequestLog] 保存请求日志失败: $e');
     }
@@ -1010,10 +1001,7 @@ class LocalHttpService {
         },
       };
       final file = File('${logDir.path}/route_log.jsonl');
-      await file.writeAsString(
-        '${jsonEncode(entry)}\n',
-        mode: FileMode.append,
-      );
+      await file.writeAsString('${jsonEncode(entry)}\n', mode: FileMode.append);
     } catch (e) {
       debugPrint('⚠️ [RouteLog] 保存路由日志失败: $e');
     }

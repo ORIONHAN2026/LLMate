@@ -454,9 +454,37 @@ class LocalHttpService {
           // ── 工具调用循环 ──
           // 每一轮：请求 LLM → 解析响应 → 如果有 MCP 工具调用则执行 → 结果回填 → 继续下一轮
           while (true) {
-            // ── 审计：LLM 请求开始 ──
+            // ── 审计：LLM 请求开始（含模型使用决策模式）──
             if (auditTrace != null) {
-              audit.model(auditTrace, auditProvider, auditModel);
+              final routeDecision =
+                  request.context['routeDecision'] as RouteDecision?;
+              Map<String, dynamic>? auditDecision;
+              if (routeDecision != null) {
+                final autoSelect = session.autoSelectModel;
+                final routingEnabled = session.chatModel?.routingEnabled ?? false;
+                String decisionMode;
+                if (routeDecision.usedComplex) {
+                  decisionMode = 'auto_complex';
+                } else if (routeDecision.cheapModel != null) {
+                  decisionMode = 'auto_cheap';
+                } else if (autoSelect && routingEnabled) {
+                  decisionMode = 'fallback';
+                } else if (autoSelect) {
+                  decisionMode = 'routing_disabled';
+                } else {
+                  decisionMode = 'manual';
+                }
+                auditDecision = {
+                  'mode': decisionMode,
+                  ...routeDecision.toJson(),
+                };
+              }
+              audit.model(
+                auditTrace,
+                auditProvider,
+                auditModel,
+                decision: auditDecision,
+              );
             }
 
             // 单轮流式请求：post LLM API，解析 SSE chunk

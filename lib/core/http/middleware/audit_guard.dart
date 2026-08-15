@@ -60,8 +60,8 @@ Handler auditGuard(Handler innerHandler) {
       debugPrint('⚠️ [Audit] 读取请求体失败: $e');
     }
 
-    // 构建原始请求（脱敏：移除 API Key 相关信息）
-    final rawRequest = _buildRawRequest(parsedBody, session);
+    // 构建原始请求
+    final rawRequest = _buildRawRequest(parsedBody, session, apiKey);
 
     // 提取客户端 IP
     final clientIp = extractClientIp(request);
@@ -206,14 +206,16 @@ class _AuditCompleter {
   }
 }
 
-/// 构建原始请求内容（脱敏处理）
+/// 构建原始请求内容（含请求方提供的 API Key 便于审计追踪）
 Map<String, dynamic> _buildRawRequest(
   Map<String, dynamic>? parsedBody,
   ChatSession? session,
+  String? apiKey,
 ) {
   final result = <String, dynamic>{
     'stream': parsedBody?['stream'] ?? false,
     'model': session?.chatModel?.model ?? parsedBody?['model'] ?? 'unknown',
+    'apiKey': apiKey,
   };
 
   // 复制消息列表（完整的 messages 内容）

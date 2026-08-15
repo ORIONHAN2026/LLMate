@@ -85,11 +85,16 @@ class AuditController {
     Map<String, dynamic> result,
   ) => emit(trace, AuditEventType.toolFinish, {'tool': tool, 'result': result});
 
-  Future<void> model(AuditTrace trace, String provider, String model) =>
-      emit(trace, AuditEventType.model, {
-        'provider': provider,
-        'model': model,
-      });
+  Future<void> model(
+    AuditTrace trace,
+    String provider,
+    String model, {
+    Map<String, dynamic>? decision,
+  }) => emit(trace, AuditEventType.model, {
+    'provider': provider,
+    'model': model,
+    if (decision != null) 'decision': decision,
+  });
 
   Future<void> usage(
     AuditTrace trace,

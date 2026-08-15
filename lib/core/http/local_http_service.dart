@@ -686,9 +686,10 @@ class LocalHttpService {
             promptTokens: promptTokens,
             completionTokens: completionTokens,
           );
-        } catch (e) {
+        } catch (e, st) {
           // ── 异步 IIFE 内部异常 ──
           debugPrint('❌ 流式代理错误: $e');
+          debugPrint('📌 [pipelineFuture] 堆栈:\n$st');
 
           // 即使出错也记录审计错误并结束链路
           if (auditTrace != null) {

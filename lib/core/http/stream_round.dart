@@ -269,9 +269,10 @@ Future<StreamRoundResult> streamSingleRound({
       errorType: type,
       errorCode: code,
     );
-  } catch (e) {
+  } catch (e, st) {
     // 其它异常（HttpException / 解析异常等）：统一转为标准错误返回
     debugPrint('❌ LLM 请求异常: $e');
+    debugPrint('📌 [streamSingleRound] 堆栈:\n$st');
     const type = 'api_error';
     const code = 500;
     final message = 'LLM request failed: $e';

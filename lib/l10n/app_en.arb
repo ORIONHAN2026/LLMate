@@ -560,13 +560,13 @@
   "inputTokens": "Input Tokens",
   "outputTokens": "Output Tokens",
   "totalCostLabel": "Total Cost",
-  "tokenDistribution": "Token Distribution",
+  "tokenDistribution": "Total Usage Distribution",
   "modelInfo": "Model Info",
   "quotaLimitSection": "Quota Limit",
   "usageCurve": "Usage Curve",
   "totalSessions": "Total Sessions",
   "totalTokens": "Total Tokens",
-  "byModel": "By Model",
+  "byModel": "Model Usage Distribution",
   "allSessions": "All Sessions",
   "@moreSessionsNoData": {
     "placeholders": {

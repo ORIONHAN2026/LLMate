@@ -3281,7 +3281,7 @@ abstract class AppLocalizations {
   /// No description provided for @tokenDistribution.
   ///
   /// In en, this message translates to:
-  /// **'Token Distribution'**
+  /// **'Total Usage Distribution'**
   String get tokenDistribution;
 
   /// No description provided for @modelInfo.
@@ -3317,7 +3317,7 @@ abstract class AppLocalizations {
   /// No description provided for @byModel.
   ///
   /// In en, this message translates to:
-  /// **'By Model'**
+  /// **'Model Usage Distribution'**
   String get byModel;
 
   /// No description provided for @allSessions.

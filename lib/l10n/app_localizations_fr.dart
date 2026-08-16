@@ -1775,7 +1775,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get totalCostLabel => 'Coût total';
 
   @override
-  String get tokenDistribution => 'Distribution des tokens';
+  String get tokenDistribution => 'Répartition de l\'utilisation totale';
 
   @override
   String get modelInfo => 'Infos modèle';
@@ -1793,7 +1793,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get totalTokens => 'Total des tokens';
 
   @override
-  String get byModel => 'Par modèle';
+  String get byModel => 'Répartition par modèle';
 
   @override
   String get allSessions => 'Toutes les sessions';

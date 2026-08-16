@@ -63,7 +63,7 @@ class McpController extends GetxController {
   Future<void> loadAll() async {
     configs.value = await McpStorageManager.loadAll();
     _loaded = true;
-    debugPrint('📦 McpController: 已加载 \${configs.length} 个 MCP 服务');
+    debugPrint('📦 McpController: 已加载  ${configs.length} 个 MCP 服务');
   }
 
   /// 根据会话绑定的 MCP 文件夹名获取连接配置

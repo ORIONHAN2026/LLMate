@@ -1717,7 +1717,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get totalCostLabel => '총 비용';
 
   @override
-  String get tokenDistribution => '토큰 분포';
+  String get tokenDistribution => '총 사용량 분포';
 
   @override
   String get modelInfo => '모델 정보';
@@ -1735,7 +1735,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get totalTokens => '총 토큰';
 
   @override
-  String get byModel => '모델별';
+  String get byModel => '모델 사용량 분포';
 
   @override
   String get allSessions => '모든 세션';

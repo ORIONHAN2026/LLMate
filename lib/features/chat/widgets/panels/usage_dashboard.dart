@@ -126,14 +126,14 @@ class _UsageDashboardState extends State<UsageDashboard> {
       final modelMap = <String, ChatModel>{};
       final configuredModel = session.chatModel;
       if (configuredModel != null) {
-        modelMap[configuredModel.modelId] = configuredModel;
+        _indexModelAliases(modelMap, configuredModel);
       }
       for (final d in details) {
-        // 归一化分组键：配置记录 id（model<uuid>）→ 真实 API 模型名，让 flash/pro 分开统计
-        final m = modelMap[d.modelId];
-        final key = m != null && m.model.isNotEmpty ? m.model : d.modelId;
+        // UsageDetail.modelId 即「实际调用模型」的 API 模型名（如 deepseek-v4-flash），直接作为分组键
+        final key = d.modelId.isEmpty ? 'unknown' : d.modelId;
         final ms = modelStats.putIfAbsent(key, () => _ModelUsage());
-        ms.chatModel ??= m;
+        ms.chatModel ??= modelMap[key];
+        ms.model = d.modelId;
         ms.sessionCount++;
         ms.promptTokens += d.promptTokens;
         ms.completionTokens += d.completionTokens;
@@ -170,16 +170,16 @@ class _UsageDashboardState extends State<UsageDashboard> {
       final modelMap = <String, ChatModel>{};
       for (final s in sessions) {
         final m = s.chatModel;
-        if (m != null) modelMap[m.modelId] = m;
+        if (m != null) _indexModelAliases(modelMap, m);
       }
 
       for (final d in all) {
         global.add(d);
-        // 归一化分组键：配置记录 id（model<uuid>）→ 真实 API 模型名，让 flash/pro 分开统计
-        final m = modelMap[d.modelId];
-        final key = m != null && m.model.isNotEmpty ? m.model : d.modelId;
+        // UsageDetail.modelId 即「实际调用模型」的 API 模型名（如 deepseek-v4-flash），直接作为分组键
+        final key = d.modelId.isEmpty ? 'unknown' : d.modelId;
         final ms = modelStats.putIfAbsent(key, () => _ModelUsage());
-        ms.chatModel ??= m;
+        ms.chatModel ??= modelMap[key];
+        ms.model = d.modelId;
         ms.promptTokens += d.promptTokens;
         ms.completionTokens += d.completionTokens;
         sessionStats.putIfAbsent(d.sessionId, () => UsageStats.empty()).add(d);
@@ -198,6 +198,22 @@ class _UsageDashboardState extends State<UsageDashboard> {
       }
     } catch (_) {
       if (mounted) setState(() {});
+    }
+  }
+
+  /// 将某个模型配置「可能实际调用」的所有 API 模型名（主模型 + 便宜/复杂路由 + 候选池）索引到该配置，
+  /// 供按实际调用模型名（如 deepseek-v4-flash）分组时关联显示名与图标。
+  void _indexModelAliases(Map<String, ChatModel> map, ChatModel m) {
+    final names = <String>{
+      if (m.model.isNotEmpty) m.model,
+      if (m.cheapModel != null && m.cheapModel!.isNotEmpty) m.cheapModel!,
+      if (m.complexModel != null && m.complexModel!.isNotEmpty) m.complexModel!,
+      ...m.availableModels,
+    };
+    for (final n in names) {
+      final existing = map[n];
+      // 已存在时优先保留 name 非空（更可读）的配置
+      if (existing == null || existing.name.isEmpty) map[n] = m;
     }
   }
 
@@ -329,17 +345,17 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 completionTokens,
                 l10n,
               ),
+              if (_sessionModelStats.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                _buildSectionTitle(theme, l10n.byModel),
+                const SizedBox(height: 12),
+                _buildSessionModelUsage(theme, isDark, l10n),
+              ],
               if (quotaEnabled) ...[
                 const SizedBox(height: 24),
                 _buildSectionTitle(theme, l10n.quotaLimitSection),
                 const SizedBox(height: 12),
-                _buildQuotaCard(
-                  theme,
-                  isDark,
-                  totalTokens,
-                  tokenLimit,
-                  l10n,
-                ),
+                _buildQuotaCard(theme, isDark, totalTokens, tokenLimit, l10n),
               ],
             ],
           );
@@ -350,8 +366,10 @@ class _UsageDashboardState extends State<UsageDashboard> {
         _buildSectionTitle(theme, l10n.usageCurve),
         const SizedBox(height: 12),
         _buildGranularitySelector(theme, isDark, l10n),
+
         const SizedBox(height: 12),
         _buildDateRangeSelector(theme, isDark, l10n),
+
         const SizedBox(height: 12),
         _buildChartToggle(theme, l10n),
         const SizedBox(height: 12),
@@ -383,13 +401,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
         ),
 
         // ===== 按模型用量（本会话：便宜/贵模型分别统计）=====
-        if (_sessionModelStats.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          _buildSectionTitle(theme, l10n.byModel),
-          const SizedBox(height: 12),
-          _buildSessionModelUsage(theme, isDark, l10n),
-        ],
-
         const SizedBox(height: 80),
       ],
     );
@@ -401,12 +412,12 @@ class _UsageDashboardState extends State<UsageDashboard> {
     bool isDark,
     AppLocalizations l10n,
   ) {
-    final entries = _sessionModelStats.entries.toList()
-      ..sort(
-        (a, b) => (b.value.promptTokens + b.value.completionTokens).compareTo(
-          a.value.promptTokens + a.value.completionTokens,
-        ),
-      );
+    final entries =
+        _sessionModelStats.entries.toList()..sort(
+          (a, b) => (b.value.promptTokens + b.value.completionTokens).compareTo(
+            a.value.promptTokens + a.value.completionTokens,
+          ),
+        );
     return Column(
       children: [
         for (final entry in entries) ...[
@@ -616,6 +627,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
       final modelKey = m != null && m.model.isNotEmpty ? m.model : 'Unknown';
       final stat = map.putIfAbsent(modelKey, () => _ModelUsage());
       stat.chatModel ??= m;
+      stat.model = modelKey;
       stat.sessionCount++;
       stat.promptTokens += session.promptTokens;
       stat.completionTokens += session.completionTokens;
@@ -940,6 +952,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               Expanded(
                 child: Text(
                   _modelDisplayName(usage, name),
+
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -1041,10 +1054,13 @@ class _UsageDashboardState extends State<UsageDashboard> {
     );
   }
 
-  /// 模型行显示名：优先配置显示名，否则把 API 模型 id 美化为可读名
+  /// 模型行显示名：优先显示用量记录里实际调用的 API 模型名（usage.model，如 deepseek-v4-flash），
+  /// 其次取配置模型名，最后把分组键美化为可读名兜底
   String _modelDisplayName(_ModelUsage usage, String name) {
-    final displayName = usage.chatModel?.name;
-    if (displayName != null && displayName.isNotEmpty) return displayName;
+    final model = usage.model;
+    if (model != null && model.isNotEmpty) return model;
+    final apiModel = usage.chatModel?.model;
+    if (apiModel != null && apiModel.isNotEmpty) return apiModel;
     return _friendlyModelName(name);
   }
 
@@ -1560,5 +1576,9 @@ class _ModelUsage {
   int sessionCount = 0;
   int promptTokens = 0;
   int completionTokens = 0;
+
   ChatModel? chatModel;
+
+  /// 每条用量记录对应的实际调用模型（直接取自 UsageDetail.modelId，如 deepseek-v4-flash）
+  String? model;
 }

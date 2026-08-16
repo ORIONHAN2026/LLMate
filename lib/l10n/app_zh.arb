@@ -560,13 +560,13 @@
   "inputTokens": "输入 Token",
   "outputTokens": "输出 Token",
   "totalCostLabel": "总费用",
-  "tokenDistribution": "Token 分布",
+  "tokenDistribution": "总用量分布",
   "modelInfo": "模型信息",
   "quotaLimitSection": "配额限制",
   "usageCurve": "用量曲线",
   "totalSessions": "总会话数",
   "totalTokens": "总 Token",
-  "byModel": "按模型统计",
+  "byModel": "模型用量分布",
   "allSessions": "所有会话",
   "@moreSessionsNoData": {
     "placeholders": {

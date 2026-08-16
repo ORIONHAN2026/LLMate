@@ -1732,7 +1732,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get totalCostLabel => 'Tổng chi phí';
 
   @override
-  String get tokenDistribution => 'Phân bổ Token';
+  String get tokenDistribution => 'Phân bổ tổng lượng dùng';
 
   @override
   String get modelInfo => 'Thông tin mô hình';
@@ -1750,7 +1750,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get totalTokens => 'Tổng Token';
 
   @override
-  String get byModel => 'Theo mô hình';
+  String get byModel => 'Phân bổ lượng dùng theo mô hình';
 
   @override
   String get allSessions => 'Tất cả phiên';

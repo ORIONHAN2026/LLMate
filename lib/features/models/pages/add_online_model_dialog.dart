@@ -2005,15 +2005,19 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         await _fetchProviderModels(testApiUrl, testApiKey);
       }
 
-      // 测试用模型：优先候选池第一个，否则回退用户手选的模型
-      String testModelId = _availableModels.isNotEmpty
-          ? _availableModels.first
-          : _selectedOnlineModel;
-      if (_availableModels.isEmpty &&
-          !_isCustomModel &&
-          _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
-        testModelId =
-            '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
+      // 测试用模型：自定义输入（含自定义提供商）直接用输入框的模型名；
+      // 否则优先候选池第一个，回退用户选择的模型（预设模型带 size 后缀）
+      String testModelId;
+      if (_isCustomProvider || _isCustomModel) {
+        testModelId = _selectedOnlineModel;
+      } else if (_availableModels.isNotEmpty) {
+        testModelId = _availableModels.first;
+      } else {
+        testModelId = _selectedOnlineModel;
+        if (_selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
+          testModelId =
+              '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
+        }
       }
 
       if (testApiUrl.isEmpty ||

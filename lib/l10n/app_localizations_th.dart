@@ -1378,6 +1378,12 @@ class AppLocalizationsTh extends AppLocalizations {
   String get modelParams => 'พารามิเตอร์แบบจำลอง';
 
   @override
+  String get modelSettings => 'การตั้งค่าโมเดล';
+
+  @override
+  String get autoSelectModel => 'อัตโนมัติ';
+
+  @override
   String get unknown => 'ไม่ทราบ';
 
   @override
@@ -1749,7 +1755,7 @@ class AppLocalizationsTh extends AppLocalizations {
   String get totalCostLabel => 'ค่าใช้จ่ายทั้งหมด';
 
   @override
-  String get tokenDistribution => 'การกระจายการใช้งานทั้งหมด';
+  String get tokenDistribution => 'การกระจายการใช้งานทั้งหมดตามโมเดล';
 
   @override
   String get modelInfo => 'ข้อมูลโมเดล';
@@ -1767,7 +1773,10 @@ class AppLocalizationsTh extends AppLocalizations {
   String get totalTokens => 'โทเค็นทั้งหมด';
 
   @override
-  String get byModel => 'การกระจายการใช้งานตามโมเดล';
+  String get totalUsage => 'การใช้งานทั้งหมด';
+
+  @override
+  String get byModel => 'รายละเอียดการใช้งานตามโมเดล';
 
   @override
   String get allSessions => 'ทุกเซสชัน';

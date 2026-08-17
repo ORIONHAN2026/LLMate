@@ -2588,6 +2588,18 @@ abstract class AppLocalizations {
   /// **'Model Settings'**
   String get modelParams;
 
+  /// No description provided for @modelSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Settings'**
+  String get modelSettings;
+
+  /// No description provided for @autoSelectModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get autoSelectModel;
+
   /// No description provided for @unknown.
   ///
   /// In en, this message translates to:
@@ -3281,7 +3293,7 @@ abstract class AppLocalizations {
   /// No description provided for @tokenDistribution.
   ///
   /// In en, this message translates to:
-  /// **'Total Usage Distribution'**
+  /// **'Model Total Usage Distribution'**
   String get tokenDistribution;
 
   /// No description provided for @modelInfo.
@@ -3314,10 +3326,16 @@ abstract class AppLocalizations {
   /// **'Total Tokens'**
   String get totalTokens;
 
+  /// No description provided for @totalUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Usage'**
+  String get totalUsage;
+
   /// No description provided for @byModel.
   ///
   /// In en, this message translates to:
-  /// **'Model Usage Distribution'**
+  /// **'Model Usage Details'**
   String get byModel;
 
   /// No description provided for @allSessions.

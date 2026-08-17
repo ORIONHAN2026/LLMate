@@ -1356,6 +1356,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get modelParams => '모델 설정';
 
   @override
+  String get modelSettings => '모델 설정';
+
+  @override
+  String get autoSelectModel => '자동 선택';
+
+  @override
   String get unknown => '알 수 없음';
 
   @override
@@ -1717,7 +1723,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get totalCostLabel => '총 비용';
 
   @override
-  String get tokenDistribution => '총 사용량 분포';
+  String get tokenDistribution => '모델 총 사용량 분포';
 
   @override
   String get modelInfo => '모델 정보';
@@ -1735,7 +1741,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get totalTokens => '총 토큰';
 
   @override
-  String get byModel => '모델 사용량 분포';
+  String get totalUsage => '총 사용량';
+
+  @override
+  String get byModel => '모델 사용량 상세';
 
   @override
   String get allSessions => '모든 세션';

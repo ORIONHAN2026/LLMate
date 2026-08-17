@@ -27,33 +27,47 @@ class ModelSelector extends StatefulWidget {
 class _ModelSelectorState extends State<ModelSelector> {
   final sessionController = Get.find<SessionController>();
 
+  /// 优先使用 SessionController 中的实时会话，保证右侧边栏模型设置
+  /// （费用优化/手动模型/绑定模型）更新后，顶部选择器同步刷新。
+  ChatSession? get _liveSession =>
+      sessionController.currentSession.value ?? widget.currentSession;
+
   // 检查是否有有效的模型配置
   bool _hasValidModel() {
-    return widget.currentSession?.chatModel?.name != null &&
-        widget.currentSession!.chatModel!.name.isNotEmpty;
+    final chatModel = _liveSession?.chatModel;
+    return chatModel?.name != null && chatModel!.name.isNotEmpty;
   }
 
   // 获取显示的模型名称
   String _getDisplayModelName() {
-    if (widget.currentSession?.chatModel?.name != null &&
-        widget.currentSession!.chatModel!.name.isNotEmpty) {
-      return widget.currentSession!.chatModel!.name;
+    final chatModel = _liveSession?.chatModel;
+    if (chatModel?.name != null && chatModel!.name.isNotEmpty) {
+      return chatModel.name;
     }
     return AppLocalizations.of(context)!.pleaseSetupModel;
   }
 
-  // 获取显示的模型详情
+  // 获取显示的模型详情（反映实际生效的模型）
   String _getDisplayModelDetail() {
-    if (widget.currentSession?.chatModel?.model != null &&
-        widget.currentSession!.chatModel!.model.isNotEmpty) {
-      final chatModel = widget.currentSession!.chatModel!;
+    final session = _liveSession;
+    final chatModel = session?.chatModel;
+    if (chatModel != null && chatModel.model.isNotEmpty) {
       final platform = chatModel.platform ?? 'Unknown';
+      // 费用优化开启：自动在便宜/复杂模型间路由
+      if (session?.autoSelectModel == true) {
+        return "$platform/${AppLocalizations.of(context)!.autoSelectModel}";
+      }
+      // 手动选择过具体模型：优先显示会话选定模型
+      final selected = session?.model;
+      final modelId = (selected != null && selected.isNotEmpty)
+          ? selected
+          : chatModel.model;
       final prompt = chatModel.systemPrompt ?? '';
       if (prompt.isNotEmpty) {
-        return "$platform/${chatModel.model} | $prompt ";
+        return "$platform/$modelId | $prompt ";
       }
 
-      return "$platform/${chatModel.model}";
+      return "$platform/$modelId";
     }
     return AppLocalizations.of(context)!.clickToSelectModel;
   }
@@ -275,8 +289,7 @@ class _ModelSelectorState extends State<ModelSelector> {
           )
         else
           ...widget.availableModels.map<PopupMenuEntry<dynamic>>((model) {
-            final isSelected =
-                model.modelId == widget.currentSession?.chatModel?.modelId;
+            final isSelected = model.modelId == _liveSession?.chatModel?.modelId;
             return PopupMenuItem<dynamic>(
               height: 60,
               child: Container(
@@ -377,8 +390,10 @@ class _ModelSelectorState extends State<ModelSelector> {
     final maxWidth =
         isMobile ? MediaQuery.of(context).size.width * 0.7 : double.infinity;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 1),
+    // Obx：监听 SessionController.currentSession，右侧边栏模型设置更新后自动重建
+    return Obx(() {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 1),
       child: InkWell(
         key: widget.selectorKey,
         onTap: () => _showModelSelectorPopup(context),
@@ -458,6 +473,7 @@ class _ModelSelectorState extends State<ModelSelector> {
           ),
         ),
       ),
-    );
+      );
+    });
   }
 }

@@ -1356,6 +1356,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get modelParams => 'モデル設定';
 
   @override
+  String get modelSettings => 'モデル設定';
+
+  @override
+  String get autoSelectModel => '自動選択';
+
+  @override
   String get unknown => '不明';
 
   @override
@@ -1717,7 +1723,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get totalCostLabel => '総コスト';
 
   @override
-  String get tokenDistribution => '総使用量分布';
+  String get tokenDistribution => 'モデル総使用量分布';
 
   @override
   String get modelInfo => 'モデル情報';
@@ -1735,7 +1741,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get totalTokens => '総トークン数';
 
   @override
-  String get byModel => 'モデル使用量分布';
+  String get totalUsage => '総使用量';
+
+  @override
+  String get byModel => 'モデル使用量の詳細';
 
   @override
   String get allSessions => 'すべてのセッション';

@@ -1353,6 +1353,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get modelParams => '模型设置';
 
   @override
+  String get modelSettings => '模型设置';
+
+  @override
+  String get autoSelectModel => '自动选择';
+
+  @override
   String get unknown => '未知';
 
   @override
@@ -1711,7 +1717,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get totalCostLabel => '总费用';
 
   @override
-  String get tokenDistribution => '总用量分布';
+  String get tokenDistribution => '模型总用量分布';
 
   @override
   String get modelInfo => '模型信息';
@@ -1729,7 +1735,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get totalTokens => '总 Token';
 
   @override
-  String get byModel => '模型用量分布';
+  String get totalUsage => '总用量';
+
+  @override
+  String get byModel => '模型用量详情';
 
   @override
   String get allSessions => '所有会话';

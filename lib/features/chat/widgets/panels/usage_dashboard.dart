@@ -310,6 +310,21 @@ class _UsageDashboardState extends State<UsageDashboard> {
           final quotaEnabled = currentSession.quotaEnabled;
           final tokenLimit = currentSession.quotaTokenLimit;
 
+          // 「模型总用量分布」数据：优先真实按模型聚合结果；
+          // 加载完成前（_stats == null）回退到配置模型的会话缓存值，避免空白闪烁
+          final distStats =
+              (_stats == null || _sessionModelStats.isEmpty) &&
+                  currentSession.chatModel != null
+              ? <String, _ModelUsage>{
+                  currentSession.chatModel!.model: _ModelUsage()
+                    ..chatModel = currentSession.chatModel
+                    ..model = currentSession.chatModel!.model
+                    ..sessionCount = 1
+                    ..promptTokens = promptTokens
+                    ..completionTokens = completionTokens,
+                }
+              : _sessionModelStats;
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -319,6 +334,13 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
+                  _buildStatCard(
+                    theme,
+                    isDark: isDark,
+                    title: l10n.totalUsage,
+                    value: _formatTokenCount(totalTokens),
+                    accentColor: const Color(0xFF3B82F6),
+                  ),
                   _buildStatCard(
                     theme,
                     isDark: isDark,
@@ -338,11 +360,10 @@ class _UsageDashboardState extends State<UsageDashboard> {
               const SizedBox(height: 24),
               _buildSectionTitle(theme, l10n.tokenDistribution),
               const SizedBox(height: 12),
-              _buildTokenDistributionCard(
+              _buildModelDistributionCard(
                 theme,
                 isDark,
-                promptTokens,
-                completionTokens,
+                _modelDistributionEntries(distStats),
                 l10n,
               ),
               if (_sessionModelStats.isNotEmpty) ...[
@@ -555,11 +576,10 @@ class _UsageDashboardState extends State<UsageDashboard> {
               const SizedBox(height: 24),
               _buildSectionTitle(theme, l10n.tokenDistribution),
               const SizedBox(height: 12),
-              _buildTokenDistributionCard(
+              _buildModelDistributionCard(
                 theme,
                 isDark,
-                totalPrompt,
-                totalCompletion,
+                _modelDistributionEntries(modelStats),
                 l10n,
               ),
               const SizedBox(height: 24),
@@ -726,18 +746,85 @@ class _UsageDashboardState extends State<UsageDashboard> {
     );
   }
 
-  Widget _buildTokenDistributionCard(
+  /// 按模型总用量降序排列，供「模型总用量分布」卡片使用
+  List<MapEntry<String, _ModelUsage>> _modelDistributionEntries(
+    Map<String, _ModelUsage> stats,
+  ) {
+    final entries = stats.entries.toList();
+    entries.sort(
+      (a, b) =>
+          (b.value.promptTokens + b.value.completionTokens).compareTo(
+            a.value.promptTokens + a.value.completionTokens,
+          ),
+    );
+    return entries;
+  }
+
+  Color _distributionColor(int index) {
+    const palette = [
+      Color(0xFF3B82F6),
+      Color(0xFF7C3AED),
+      Color(0xFF059669),
+      Color(0xFFF59E0B),
+      Color(0xFFEF4444),
+      Color(0xFF06B6D4),
+      Color(0xFFEC4899),
+      Color(0xFF8B5CF6),
+      Color(0xFF84CC16),
+      Color(0xFFF97316),
+    ];
+    return palette[index % palette.length];
+  }
+
+  Widget _modelShareLegendItem(
     ThemeData theme,
-    bool isDark,
-    int totalPrompt,
-    int totalCompletion,
+    Color color,
+    String name,
+    int tokens,
+    int total,
     AppLocalizations l10n,
   ) {
-    final total = totalPrompt + totalCompletion;
-    final promptRatio = total > 0 ? totalPrompt / total : 0.0;
-    final completionRatio = total > 0 ? totalCompletion / total : 0.0;
-    final accentBlue = const Color(0xFF9CA3AF);
-    final accentPurple = const Color(0xFF7C3AED);
+    final pct = total > 0 ? (tokens / total * 100) : 0.0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _legendDot(color),
+        const SizedBox(width: 6),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 180),
+          child: Text(
+            name,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '${pct.toStringAsFixed(1)}% · ${_formatTokenCount(tokens)}',
+          style: TextStyle(
+            fontSize: 11,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModelDistributionCard(
+    ThemeData theme,
+    bool isDark,
+    List<MapEntry<String, _ModelUsage>> entries,
+    AppLocalizations l10n,
+  ) {
+    final total = entries.fold<int>(
+      0,
+      (sum, e) => sum + e.value.promptTokens + e.value.completionTokens,
+    );
+    final hasData = entries.isNotEmpty && total > 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -748,77 +835,58 @@ class _UsageDashboardState extends State<UsageDashboard> {
           color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE5E7EB),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _legendDot(accentBlue),
-              const SizedBox(width: 6),
-              Text(
-                '${l10n.inputLabel}: ${_formatTokenCount(totalPrompt)}',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: theme.colorScheme.onSurface,
-                ),
+      child: !hasData
+          ? Text(
+              l10n.noUsageData,
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               ),
-              const Spacer(),
-              _legendDot(accentPurple),
-              const SizedBox(width: 6),
-              Text(
-                '${l10n.outputLabel}: ${_formatTokenCount(totalCompletion)}',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox(
-              height: 12,
-              child: Row(
-                children: [
-                  if (promptRatio > 0)
-                    Expanded(
-                      flex: (promptRatio * 1000).round().clamp(1, 1000),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: accentBlue,
-                          borderRadius:
-                              promptRatio >= 1
-                                  ? BorderRadius.circular(6)
-                                  : const BorderRadius.only(
-                                    topLeft: Radius.circular(6),
-                                    bottomLeft: Radius.circular(6),
-                                  ),
-                        ),
-                      ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    height: 12,
+                    width: double.infinity,
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < entries.length; i++)
+                          Expanded(
+                            flex:
+                                ((entries[i].value.promptTokens +
+                                            entries[i].value.completionTokens) /
+                                        total *
+                                        1000)
+                                    .round()
+                                    .clamp(1, 1000),
+                            child: Container(color: _distributionColor(i)),
+                          ),
+                      ],
                     ),
-                  if (completionRatio > 0)
-                    Expanded(
-                      flex: (completionRatio * 1000).round().clamp(1, 1000),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: accentPurple,
-                          borderRadius:
-                              completionRatio >= 1
-                                  ? BorderRadius.circular(6)
-                                  : const BorderRadius.only(
-                                    topRight: Radius.circular(6),
-                                    bottomRight: Radius.circular(6),
-                                  ),
-                        ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  children: [
+                    for (var i = 0; i < entries.length; i++)
+                      _modelShareLegendItem(
+                        theme,
+                        _distributionColor(i),
+                        _modelDisplayName(entries[i].value, entries[i].key),
+                        entries[i].value.promptTokens +
+                            entries[i].value.completionTokens,
+                        total,
+                        l10n,
                       ),
-                    ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 

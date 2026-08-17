@@ -1362,6 +1362,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get modelParams => 'Tham số mô hình';
 
   @override
+  String get modelSettings => 'Cài đặt mô hình';
+
+  @override
+  String get autoSelectModel => 'Tự động';
+
+  @override
   String get unknown => 'Không xác định';
 
   @override
@@ -1732,7 +1738,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get totalCostLabel => 'Tổng chi phí';
 
   @override
-  String get tokenDistribution => 'Phân bổ tổng lượng dùng';
+  String get tokenDistribution => 'Phân bổ tổng lượng dùng theo mô hình';
 
   @override
   String get modelInfo => 'Thông tin mô hình';
@@ -1750,7 +1756,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get totalTokens => 'Tổng Token';
 
   @override
-  String get byModel => 'Phân bổ lượng dùng theo mô hình';
+  String get totalUsage => 'Tổng lượng dùng';
+
+  @override
+  String get byModel => 'Chi tiết lượng dùng theo mô hình';
 
   @override
   String get allSessions => 'Tất cả phiên';

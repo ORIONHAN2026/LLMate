@@ -1398,6 +1398,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get modelParams => 'Modellparameter';
 
   @override
+  String get modelSettings => 'Modelleinstellungen';
+
+  @override
+  String get autoSelectModel => 'Auto';
+
+  @override
   String get unknown => 'Unbekannt';
 
   @override
@@ -1774,7 +1780,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get totalCostLabel => 'Gesamtkosten';
 
   @override
-  String get tokenDistribution => 'Gesamtverbrauchsverteilung';
+  String get tokenDistribution => 'Gesamtverbrauch nach Modell';
 
   @override
   String get modelInfo => 'Modellinfo';
@@ -1792,7 +1798,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get totalTokens => 'Gesamttokens';
 
   @override
-  String get byModel => 'Modellverbrauchsverteilung';
+  String get totalUsage => 'Gesamtverbrauch';
+
+  @override
+  String get byModel => 'Modellverbrauchsdetails';
 
   @override
   String get allSessions => 'Alle Sitzungen';

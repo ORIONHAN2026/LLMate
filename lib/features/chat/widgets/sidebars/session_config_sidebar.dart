@@ -654,10 +654,21 @@ class SessionConfigSidebar {
 
   /// 精简版右侧边栏内容（仅展示核心信息）
   static Widget buildCompactSidebar(BuildContext context, ChatSession session) {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       children: [
         buildBasicInfoSection(context, session),
+        const SizedBox(height: 16),
+        // ── 模型设置：费用优化 + 模型选项 ──
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle(context, l10n.modelSettings),
+            const SizedBox(height: 8),
+            buildModelSettingsSection(context, session),
+          ],
+        ),
         const SizedBox(height: 16),
         buildServiceConfigSection(context, session),
       ],

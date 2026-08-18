@@ -15,7 +15,8 @@ import '../tools/management_tools.dart'
 /// 通过本机会话 HTTP 服务转发聊天请求，并将服务返回的
 /// OpenAI 格式 SSE 流转译为 LLMChat 消费方期望的 chunk 格式。
 ///
-/// 服务侧 [modelToolGuard] 负责注入 model / tools / 系统提示词。
+/// 服务侧 [sessionCheckGuard]/[modelCheckGuard]/[languageCheckGuard]
+/// 负责注入 model / tools / 系统提示词。
 ///
 /// 工具执行分工：
 /// - MCP 工具：由服务端识别并在服务端执行、回填（与模式无关，一视同仁）。

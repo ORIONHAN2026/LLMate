@@ -5,7 +5,7 @@ import '../sensitive_masker.dart';
 
 /// 风控脱敏中间件（请求路径 / 前置处理）
 ///
-/// 位于 [modelToolGuard] 之后、[userMessageGuard] 之前执行，
+/// 位于 [languageCheckGuard] 之后、[userMessageGuard] 之前执行，
 /// 此时 `request.context['body']` 已由上游中间件装载好增强后的请求体。
 ///
 /// 职责：根据会话所绑定模型的设置（[ChatModel.maskPhone] /

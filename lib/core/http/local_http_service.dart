@@ -16,10 +16,9 @@ import '../../controllers/address_detector_controller.dart';
 import '../services/storage_paths.dart';
 import '../../models/chat/session.dart';
 import '../../models/audit.dart';
-import 'middleware/api_key_guard.dart';
-import 'middleware/disabled_guard.dart';
-import 'middleware/quota_guard.dart';
-import 'middleware/model_tool_guard.dart';
+import 'middleware/session_check_guard.dart';
+import 'middleware/model_check_guard.dart';
+import 'middleware/language_check_guard.dart';
 import 'middleware/risk_control_guard.dart';
 import 'middleware/audit_guard.dart';
 import 'sensitive_masker.dart';
@@ -293,8 +292,7 @@ class LocalHttpService {
     String sessionId,
   ) async {
     final pipeline = const Pipeline()
-        .addMiddleware(apiKeyGuard) // API Key 校验，装载 session
-        .addMiddleware(disabledGuard); // 禁用状态检查
+        .addMiddleware(sessionCheckGuard); // 会话检查：密钥 / 状态 / 配额
 
     return pipeline.addHandler((Request req) {
       return _handleModelsList(req);
@@ -328,13 +326,12 @@ class LocalHttpService {
     );
 
     // 构建中间件管道（洋葱模型）：
-    // 请求进入：apiKey → quota → modelTool → audit → 业务处理
-    // 响应返回：业务处理（直接审计） → audit → modelTool → quota → apiKey
+    // 请求进入：sessionCheck(密钥/状态/配额/会话提示词/会话MCP工具) → modelCheck(模型配置/替换/模型提示词)
+    //          → languageCheck(语言设置/语言要求) → riskControl → 业务处理
     final pipeline = const Pipeline()
-        .addMiddleware(apiKeyGuard) //api判断,装载session
-        .addMiddleware(disabledGuard) //禁用状态检查
-        .addMiddleware(quotaGuard) //配额判断
-        .addMiddleware(modelToolGuard) //模型工具判断，装载body
+        .addMiddleware(sessionCheckGuard) //会话检查：密钥/状态/配额/会话提示词/会话MCP工具
+        .addMiddleware(modelCheckGuard) //模型检查：模型配置/模型替换/模型系统提示词
+        .addMiddleware(languageCheckGuard) //语言检查：语言设置/语言要求
         .addMiddleware(riskControlGuard); //风控脱敏：手机号/身份证号等*
 
     return pipeline.addHandler((Request req) {

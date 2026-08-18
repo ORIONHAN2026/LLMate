@@ -2,7 +2,7 @@ import 'dart:convert';
 
 /// 服务端正在执行 MCP 工具的 SSE 推理内容哨兵值。
 ///
-/// 该值由本机 HTTP 服务（[modelToolGuard] 工具执行）与本地管理模式共同使用，
+/// 该值由本机 HTTP 服务（[sessionCheckGuard] 工具执行）与本地管理模式共同使用，
 /// 用于向聊天 UI 透传「大模型正在执行工具」的状态。
 const String mcpExecutingSentinel = '大模型正在执行MCP服务';
 

@@ -76,8 +76,9 @@ class LlmClient {
 
   /// 构建发送给 HTTP 服务的消息列表。
   ///
-  /// 仅包含会话历史 + 当前用户消息；系统提示词（模型级 / 会话级等）
-  /// 由 HTTP 服务端 [modelToolGuard] 统一注入，客户端不再组装。
+  /// 仅包含会话历史 + 当前用户消息；系统提示词（模型级 / 会话级 / 语言要求等）
+  /// 由 HTTP 服务端 [sessionCheckGuard]/[modelCheckGuard]/[languageCheckGuard]
+  /// 统一注入，客户端不再组装。
   Future<List<Map<String, dynamic>>> _buildMessages({
     required ChatMessage userMessage,
     required ChatSession session,

@@ -1,6 +1,9 @@
+import 'package:get/get.dart';
+
 import '../../../models/model.dart';
 import '../../../models/chat/session.dart';
 import '../../../controllers/mcp_controller.dart';
+import '../../../controllers/settings_controller.dart';
 
 import './system_prompts.dart';
 
@@ -22,6 +25,59 @@ class MessageBuilder {
         .map((m) => m['content'] as String)
         .where((c) => c.isNotEmpty)
         .join('\n\n');
+  }
+
+  /// 解析回复语言代码，供 [buildSystemMessages] 与各注入链路复用，
+  /// 优先级从高到低：
+  /// 1. 模型配置的 `replyLanguage`（显式指定，最高优先级）；
+  /// 2. 会话系统提示词中检测到的语言指令（用户显式要求，如"请用英文回答"）；
+  /// 3. 系统设置的语言（[SettingsController.locale]），作为兜底，保证始终注入。
+  static String? resolveReplyLanguage({
+    ChatModel? model,
+    ChatSession? session,
+  }) {
+    // 1. 模型配置显式指定
+    final configured = model?.replyLanguage;
+    if (configured != null && configured.isNotEmpty) return configured;
+
+    // 2. 会话系统提示词中的显式语言要求
+    final sp = session?.systemPrompt;
+    if (sp != null && sp.isNotEmpty) {
+      final lower = sp.toLowerCase();
+      if (lower.contains('english') ||
+          lower.contains('英文') ||
+          lower.contains('英语')) {
+        return 'en';
+      }
+      if (lower.contains('chinese') || lower.contains('中文')) {
+        return 'zh';
+      }
+      if (lower.contains('japanese') || lower.contains('日语')) return 'ja';
+      if (lower.contains('thai') || lower.contains('泰语')) return 'th';
+      if (lower.contains('vietnamese') || lower.contains('越南语')) return 'vi';
+      if (lower.contains('korean') || lower.contains('韩语')) return 'ko';
+      if (lower.contains('french') || lower.contains('法语')) return 'fr';
+      if (lower.contains('german') || lower.contains('德语')) return 'de';
+    }
+
+    // 3. 系统设置语言（兜底）
+    if (Get.isRegistered<SettingsController>()) {
+      final locale = Get.find<SettingsController>().locale.value;
+      final code = locale.languageCode.toLowerCase();
+      if (const {
+        'zh',
+        'en',
+        'ja',
+        'th',
+        'vi',
+        'ko',
+        'fr',
+        'de',
+      }.contains(code)) {
+        return code;
+      }
+    }
+    return null;
   }
 
   /// 构建多条独立的 system 消息
@@ -48,6 +104,16 @@ class MessageBuilder {
         'name': 'session_system_prompt',
         'content':
             '[SESSION SYSTEM PROMPT] This is a session-level instruction. If it conflicts with the model system prompt, the model system prompt takes precedence.\n\n${session.systemPrompt}',
+      });
+    }
+
+    // 1.6 回复语言要求（强约束，最高优先级，覆盖历史上下文与弱指令）
+    final lang = resolveReplyLanguage(model: model, session: session);
+    if (lang != null) {
+      systemMessages.add({
+        'role': 'system',
+        'name': 'language_requirement',
+        'content': CommonSystemPrompts.responseLanguage(lang),
       });
     }
 

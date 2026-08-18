@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shelf/shelf.dart';
 
 import '../../../controllers/mcp_controller.dart';
+import '../../../core/llm/common/message_builder.dart';
+import '../../../core/llm/common/system_prompts.dart';
 import '../../../core/llm/modes/mode_utils.dart';
 import '../../../core/router/model_router.dart';
 import '../../../models/chat/session.dart';
@@ -102,6 +104,20 @@ Handler modelToolGuard(Handler innerHandler) {
               '[SESSION SYSTEM PROMPT] This is a session-level instruction. If it conflicts with the model system prompt, the model system prompt takes precedence.\n\n${session.systemPrompt}',
         });
         debugPrint('💬 [ModelTool] 注入会话级系统提示词');
+      }
+
+      // 3.3 回复语言要求（强约束，最高优先级，覆盖历史上下文与弱指令）
+      final lang = MessageBuilder.resolveReplyLanguage(
+        model: session.chatModel,
+        session: session,
+      );
+      if (lang != null) {
+        messages.insert(insertIndex++, {
+          'role': 'system',
+          'name': 'language_requirement',
+          'content': CommonSystemPrompts.responseLanguage(lang),
+        });
+        debugPrint('💬 [ModelTool] 注入回复语言要求: $lang');
       }
     }
 

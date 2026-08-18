@@ -12,6 +12,7 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart' as cors;
 import '../../controllers/settings_controller.dart';
 import '../../controllers/audit_controller.dart';
 import '../../controllers/usage_controller.dart';
+import '../../controllers/address_detector_controller.dart';
 import '../services/storage_paths.dart';
 import '../../models/chat/session.dart';
 import '../../models/audit.dart';
@@ -111,6 +112,23 @@ class LocalHttpService {
     }
   }
 
+  /// 服务启动成功后自动执行一次地址检测（内网 / 外网 IP）。
+  ///
+  /// 无论服务从哪条路径启动（应用启动 / 手动开关 / 重启），
+  /// 都会重新检测并持久化访问地址，使「服务管理」页面的
+  /// 地址信息与系统配置保持一致。
+  static void _triggerAddressDetect() {
+    try {
+      final controller =
+          Get.isRegistered<AddressDetectorController>()
+              ? Get.find<AddressDetectorController>()
+              : AddressDetectorController();
+      controller.detect(force: true);
+    } catch (e) {
+      debugPrint('⚠️ [AddressDetect] 服务启动后自动检测地址失败: $e');
+    }
+  }
+
   /// 获取当前监听的地址，如 http://0.0.0.0:8899
   static String get listenAddress {
     if (!_isRunning) return '';
@@ -165,6 +183,7 @@ class LocalHttpService {
       }
       _isRunning = true;
       _syncController();
+      _triggerAddressDetect();
       debugPrint('📡 API: POST /v1/chat/completions');
       debugPrint('📡 API: GET /v1/models');
       debugPrint('📡 兼容会话路径: /{sessionId}/v1/chat/completions');
@@ -398,6 +417,7 @@ class LocalHttpService {
       // 从中间件注入的 context 中提取会话和增强后的请求体
       final session = request.context['session'] as ChatSession;
       final body = request.context['body'] as Map<String, dynamic>;
+      debugPrint('📨 [Request] body: ${jsonEncode(body["messages"])}');
       final clientProvidedTools =
           request.context['clientProvidedTools'] == true;
 
@@ -462,7 +482,8 @@ class LocalHttpService {
               Map<String, dynamic>? auditDecision;
               if (routeDecision != null) {
                 final autoSelect = session.autoSelectModel;
-                final routingEnabled = session.chatModel?.routingEnabled ?? false;
+                final routingEnabled =
+                    session.chatModel?.routingEnabled ?? false;
                 String decisionMode;
                 if (routeDecision.usedComplex) {
                   decisionMode = 'auto_complex';
@@ -490,6 +511,7 @@ class LocalHttpService {
 
             // 单轮流式请求：post LLM API，解析 SSE chunk
             // deferErrorWrite: 错误延迟写出，便于失败回退重试，最终错误统一写出
+
             var round = await streamSingleRound(
               session: session,
               body: jsonEncode(body),
@@ -1000,7 +1022,8 @@ class LocalHttpService {
               requestCost += promptTokens * model!.promptPrice! / 1000000.0;
             }
             if (model?.completionPrice != null) {
-              requestCost += completionTokens * model!.completionPrice! / 1000000.0;
+              requestCost +=
+                  completionTokens * model!.completionPrice! / 1000000.0;
             }
           }
         } else {
@@ -1009,7 +1032,8 @@ class LocalHttpService {
             requestCost += promptTokens * model!.promptPrice! / 1000000.0;
           }
           if (model?.completionPrice != null) {
-            requestCost += completionTokens * model!.completionPrice! / 1000000.0;
+            requestCost +=
+                completionTokens * model!.completionPrice! / 1000000.0;
           }
         }
 

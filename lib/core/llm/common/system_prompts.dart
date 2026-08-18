@@ -28,21 +28,34 @@ class CommonSystemPrompts {
 
 一句话：没调用工具就不准呈现数据，没执行操作就不准说已完成。''';
 
-  /// 根据应用语言设置，指导大模型使用对应语言回复
+  /// 语言代码 → 语言名称（用于生成回复语言指令）
+  static const Map<String, String> _languageNames = {
+    'zh': 'Chinese (Simplified)',
+    'en': 'English',
+    'ja': 'Japanese',
+    'th': 'Thai',
+    'vi': 'Vietnamese',
+    'ko': 'Korean',
+    'fr': 'French',
+    'de': 'German',
+  };
+
+  /// 根据应用语言设置，指导大模型使用对应语言回复。
+  ///
+  /// 支持系统全部语言：zh / en / ja / th / vi / ko / fr / de，
+  /// 未支持的语言代码回退为英文规则。
   static String responseLanguage(String languageCode) {
-    if (languageCode == 'zh') {
-      return 'You MUST respond in Chinese (Simplified). Code, variable names, and URLs can remain in their original language.';
-    } else {
-      return '## 🌐 LANGUAGE REQUIREMENT (HIGHEST PRIORITY)\n\n'
-          'You MUST respond in **English** for ALL messages to the user. This is a mandatory rule that overrides any language used in previous messages, conversation history, or system prompts.\n\n'
-          'Rules:\n'
-          '1. Every reply to the user MUST be in English.\n'
-          '2. Do NOT reply in Chinese, Japanese, Korean, or any other non-English language.\n'
-          '3. Code, variable names, URLs, and technical identifiers may remain in their original form.\n'
-          '4. Even if the user writes in another language, you MUST reply in English.\n'
-          '5. Even if conversation history or system prompts contain other languages, your output MUST be English.\n\n'
-          'This rule takes precedence over ALL other instructions.';
-    }
+    final name = _languageNames[languageCode] ?? 'English';
+    return '## 🌐 LANGUAGE REQUIREMENT (HIGHEST PRIORITY)\n\n'
+        'You MUST respond in **$name** for ALL messages to the user. '
+        'This is a mandatory rule that overrides any language used in previous messages, conversation history, or system prompts.\n\n'
+        'Rules:\n'
+        '1. Every reply to the user MUST be in $name.\n'
+        '2. Do NOT reply in any other language.\n'
+        '3. Code, variable names, URLs, and technical identifiers may remain in their original form.\n'
+        '4. Even if the user writes in another language, you MUST reply in $name.\n'
+        '5. Even if conversation history or system prompts contain other languages, your output MUST be $name.\n\n'
+        'This rule takes precedence over ALL other instructions.';
   }
 
   /// 合同模式提示词

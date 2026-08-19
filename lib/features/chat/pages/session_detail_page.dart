@@ -2,6 +2,7 @@ import 'package:llmate/features/widgets/standard_app_bar.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../controllers/session_controller.dart';
 import '../widgets/sidebars/session_config_sidebar.dart';
 import '../widgets/panels/usage_dashboard.dart';
@@ -15,16 +16,17 @@ class SessionDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final sessionController = Get.find<SessionController>();
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Obx(() {
       final session = sessionController.currentSession.value;
 
       if (session == null) {
         return Scaffold(
-          appBar: StandardAppBar(title: '会话详情'),
+          appBar: StandardAppBar(title: l10n.sessionDetails),
           body: Center(
             child: Text(
-              '请先选择或创建一个会话',
+              l10n.selectOrCreateSession,
               style: TextStyle(
                 fontSize: 13,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
@@ -36,13 +38,13 @@ class SessionDetailPage extends StatelessWidget {
 
       final tabs = <_DetailTab>[
         _DetailTab(
-          label: '基础信息',
+          label: l10n.basicInfoLabel,
           icon: Icons.info_outline,
           builder:
               (ctx) => SessionConfigSidebar.buildBasicInfoSection(ctx, session),
         ),
         _DetailTab(
-          label: '模型设置',
+          label: l10n.modelSettings,
           icon: Icons.smart_toy_outlined,
           builder:
               (ctx) => SessionConfigSidebar.buildModelSettingsSection(
@@ -51,7 +53,7 @@ class SessionDetailPage extends StatelessWidget {
               ),
         ),
         _DetailTab(
-          label: '会话设定',
+          label: l10n.sessionSettingsTab,
           icon: Icons.tune,
           builder:
               (ctx) => SessionConfigSidebar.buildSessionSettingsSection(
@@ -60,30 +62,30 @@ class SessionDetailPage extends StatelessWidget {
               ),
         ),
         _DetailTab(
-          label: '服务配置',
+          label: l10n.serviceConfigLabel,
           icon: Icons.settings_ethernet,
           builder:
               (ctx) =>
                   SessionConfigSidebar.buildServiceConfigSection(ctx, session),
         ),
         _DetailTab(
-          label: 'MCP配置',
+          label: l10n.mcpConfigLabel,
           icon: Icons.grid_view,
           builder: (ctx) => SessionConfigSidebar.buildMcpSection(ctx, session),
         ),
         _DetailTab(
-          label: '用量配额',
+          label: l10n.usageQuotaLabel,
           icon: Icons.speed,
           builder:
               (ctx) => SessionConfigSidebar.buildQuotaSection(ctx, session),
         ),
         _DetailTab(
-          label: '用量查询',
+          label: l10n.usageQueryLabel,
           icon: Icons.monetization_on_outlined,
           builder: (ctx) => UsageDashboard(session: session, embedded: true),
         ),
         _DetailTab(
-          label: '审计',
+          label: l10n.audit,
           icon: Icons.gavel_rounded,
           // 审计内容自带 Expanded，需要填满 Tab 高度，故不包 ScrollView
           scrollable: false,

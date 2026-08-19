@@ -3590,6 +3590,12 @@ abstract class AppLocalizations {
   /// **'MCP'**
   String get mcpLabel;
 
+  /// No description provided for @mcpConfigLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'MCP Config'**
+  String get mcpConfigLabel;
+
   /// No description provided for @modelMcp.
   ///
   /// In en, this message translates to:
@@ -3932,6 +3938,12 @@ abstract class AppLocalizations {
   /// **'Session Settings'**
   String get sessionSettings;
 
+  /// No description provided for @sessionSettingsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Settings'**
+  String get sessionSettingsTab;
+
   /// No description provided for @auditView.
   ///
   /// In en, this message translates to:
@@ -3949,6 +3961,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Usage'**
   String get usageOverview;
+
+  /// No description provided for @usageQueryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage Query'**
+  String get usageQueryLabel;
 
   /// No description provided for @usage.
   ///

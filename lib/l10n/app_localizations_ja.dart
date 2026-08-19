@@ -1884,6 +1884,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mcpLabel => 'MCP';
 
   @override
+  String get mcpConfigLabel => 'MCP設定';
+
+  @override
   String get modelMcp => 'モデルMCP';
 
   @override
@@ -2063,6 +2066,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sessionSettings => 'セッション設定';
 
   @override
+  String get sessionSettingsTab => 'セッション設定';
+
+  @override
   String get auditView => '監査を表示';
 
   @override
@@ -2070,6 +2076,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get usageOverview => '使用量';
+
+  @override
+  String get usageQueryLabel => '使用量照会';
 
   @override
   String get usage => '使用量';

@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,6 +5,7 @@ import '../../../../controllers/audit_controller.dart';
 import '../../../../data/database.dart';
 import '../../../../models/audit.dart';
 import '../../../../models/chat/session.dart';
+import 'package:llmate/features/widgets/json_view.dart';
 import 'package:llmate/features/widgets/section_title.dart';
 import 'package:llmate/features/widgets/standard_app_bar.dart';
 
@@ -690,7 +689,6 @@ class AuditReplayPage extends StatelessWidget {
 
   Widget _buildEventTile(AuditEvent e, int index, ThemeData theme) {
     final cs = theme.colorScheme;
-    final json = const JsonEncoder.withIndent('  ').convert(e.payload);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -732,10 +730,7 @@ class AuditReplayPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: SelectableText(
-                  json,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                ),
+                child: JsonView(e.payload),
               ),
             ),
           ],

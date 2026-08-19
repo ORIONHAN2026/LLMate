@@ -1917,6 +1917,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mcpLabel => 'MCP';
 
   @override
+  String get mcpConfigLabel => 'MCP Config';
+
+  @override
   String get modelMcp => 'Model MCP';
 
   @override
@@ -2102,6 +2105,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionSettings => 'Session Settings';
 
   @override
+  String get sessionSettingsTab => 'Session Settings';
+
+  @override
   String get auditView => 'Audit View';
 
   @override
@@ -2109,6 +2115,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get usageOverview => 'Usage';
+
+  @override
+  String get usageQueryLabel => 'Usage Query';
 
   @override
   String get usage => 'Usage';

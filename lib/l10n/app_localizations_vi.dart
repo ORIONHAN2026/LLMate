@@ -1900,6 +1900,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get mcpLabel => 'MCP';
 
   @override
+  String get mcpConfigLabel => 'Cấu hình MCP';
+
+  @override
   String get modelMcp => 'Mô hình MCP';
 
   @override
@@ -2084,6 +2087,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get sessionSettings => 'Cài đặt phiên';
 
   @override
+  String get sessionSettingsTab => 'Cài đặt phiên';
+
+  @override
   String get auditView => 'Xem kiểm toán';
 
   @override
@@ -2091,6 +2097,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get usageOverview => 'Mức sử dụng';
+
+  @override
+  String get usageQueryLabel => 'Truy vấn mức sử dụng';
 
   @override
   String get usage => 'Mức sử dụng';

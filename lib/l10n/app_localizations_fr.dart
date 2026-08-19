@@ -1944,6 +1944,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mcpLabel => 'MCP';
 
   @override
+  String get mcpConfigLabel => 'Config MCP';
+
+  @override
   String get modelMcp => 'MCP du modèle';
 
   @override
@@ -2130,6 +2133,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sessionSettings => 'Paramètres de session';
 
   @override
+  String get sessionSettingsTab => 'Paramètres de session';
+
+  @override
   String get auditView => 'Voir l\'audit';
 
   @override
@@ -2137,6 +2143,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get usageOverview => 'Utilisation';
+
+  @override
+  String get usageQueryLabel => 'Requête d\'utilisation';
 
   @override
   String get usage => 'Utilisation';

@@ -1884,6 +1884,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mcpLabel => 'MCP';
 
   @override
+  String get mcpConfigLabel => 'MCP 구성';
+
+  @override
   String get modelMcp => '모델 MCP';
 
   @override
@@ -2062,6 +2065,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get sessionSettings => '세션 설정';
 
   @override
+  String get sessionSettingsTab => '세션 설정';
+
+  @override
   String get auditView => '감사 보기';
 
   @override
@@ -2069,6 +2075,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get usageOverview => '사용량';
+
+  @override
+  String get usageQueryLabel => '사용량 조회';
 
   @override
   String get usage => '사용량';

@@ -1878,6 +1878,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mcpLabel => 'MCP';
 
   @override
+  String get mcpConfigLabel => 'MCP配置';
+
+  @override
   String get modelMcp => '模型MCP';
 
   @override
@@ -2055,6 +2058,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sessionSettings => '会话设置';
 
   @override
+  String get sessionSettingsTab => '会话设定';
+
+  @override
   String get auditView => '审计查看';
 
   @override
@@ -2062,6 +2068,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get usageOverview => '使用量';
+
+  @override
+  String get usageQueryLabel => '用量查询';
 
   @override
   String get usage => '用量';

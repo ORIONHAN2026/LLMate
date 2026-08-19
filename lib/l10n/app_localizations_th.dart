@@ -1917,6 +1917,9 @@ class AppLocalizationsTh extends AppLocalizations {
   String get mcpLabel => 'MCP';
 
   @override
+  String get mcpConfigLabel => 'การตั้งค่า MCP';
+
+  @override
   String get modelMcp => 'โมเดล MCP';
 
   @override
@@ -2101,6 +2104,9 @@ class AppLocalizationsTh extends AppLocalizations {
   String get sessionSettings => 'การตั้งค่าการสนทนา';
 
   @override
+  String get sessionSettingsTab => 'การตั้งค่าการสนทนา';
+
+  @override
   String get auditView => 'ดูการตรวจสอบ';
 
   @override
@@ -2108,6 +2114,9 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get usageOverview => 'การใช้งาน';
+
+  @override
+  String get usageQueryLabel => 'สอบถามการใช้งาน';
 
   @override
   String get usage => 'การใช้งาน';

@@ -2080,7 +2080,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get smartModelSelectionDesc =>
-      'Lorsqu\'il est activé, les questions longues utilisent automatiquement le modèle complexe et les questions courtes utilisent le modèle moins cher';
+      'Lorsqu\'elle est activée, les requêtes simples privilégient un modèle léger et les tâches exigeantes utilisent un modèle plus performant';
 
   @override
   String get sessionDetails => 'Détails de la session';

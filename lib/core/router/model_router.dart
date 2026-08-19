@@ -17,6 +17,7 @@ class RouteDecision {
 
   /// 信号命中明细
   final bool hasTools;
+  final bool toolIntentHit;
   final bool hasMultimodal;
   final bool structuredOutputHit;
   final bool simpleIntentHit;
@@ -41,6 +42,7 @@ class RouteDecision {
     this.capableModel,
     this.usedCapable = false,
     this.hasTools = false,
+    this.toolIntentHit = false,
     this.hasMultimodal = false,
     this.structuredOutputHit = false,
     this.simpleIntentHit = false,
@@ -63,6 +65,7 @@ class RouteDecision {
     'usedCapable': usedCapable,
     'signals': {
       'hasTools': hasTools,
+      'toolIntent': toolIntentHit,
       'hasMultimodal': hasMultimodal,
       'structuredOutput': structuredOutputHit,
       'simpleIntent': simpleIntentHit,
@@ -164,6 +167,7 @@ class ModelRouter {
       capableModel: capable,
       usedCapable: usedCapable,
       hasTools: signals.hasTools,
+      toolIntentHit: signals.toolIntentHit,
       hasMultimodal: signals.hasMultimodal,
       structuredOutputHit: signals.structuredOutputHit,
       simpleIntentHit: signals.simpleIntentHit,
@@ -215,6 +219,7 @@ class ModelRouter {
       capableModel: routePair.capable,
       usedCapable: usedCapable,
       hasTools: signals.hasTools,
+      toolIntentHit: signals.toolIntentHit,
       hasMultimodal: signals.hasMultimodal,
       structuredOutputHit: signals.structuredOutputHit,
       simpleIntentHit: signals.simpleIntentHit,
@@ -332,12 +337,14 @@ class ModelRouter {
     Map<String, dynamic> body,
     ChatModel? model,
   ) {
-    // 信号①：工具调用
+    // 信号①：工具定义与工具意图分开处理，避免 MCP 常驻时闲聊也升级。
     final hasTools = _hasTools(body);
+    final lastText = _lastUserText(body);
+    final toolIntentHit =
+        hasTools &&
+        (_toolChoiceRequiresToolUse(body) || _requiresToolUse(lastText));
     final hasMultimodal = _hasMultimodalContent(body);
     final structuredOutputHit = _requiresStructuredOutput(body);
-
-    final lastText = _lastUserText(body);
 
     // 信号②：强意图（代码/数学/推理）
     final intentHit = _requiresStrongModel(lastText);
@@ -355,7 +362,7 @@ class ModelRouter {
     final mediumLengthHit = lastTextLen > mediumTextThreshold;
 
     var complexityScore = 0;
-    if (hasTools) complexityScore += 4;
+    if (toolIntentHit) complexityScore += 4;
     if (hasMultimodal) complexityScore += 4;
     if (structuredOutputHit) complexityScore += 3;
     if (intentHit) complexityScore += 3;
@@ -369,13 +376,14 @@ class ModelRouter {
     } else if (mediumLengthHit) {
       complexityScore += 1;
     }
-    if (costHit && !hasTools && !hasMultimodal && !intentHit) {
+    if (costHit && !toolIntentHit && !hasMultimodal && !intentHit) {
       complexityScore -= 1;
     }
     if (simpleIntentHit) complexityScore -= 2;
 
     return _SignalResult(
       hasTools: hasTools,
+      toolIntentHit: toolIntentHit,
       hasMultimodal: hasMultimodal,
       structuredOutputHit: structuredOutputHit,
       simpleIntentHit: simpleIntentHit,
@@ -422,6 +430,14 @@ class ModelRouter {
     return true;
   }
 
+  static bool _toolChoiceRequiresToolUse(Map<String, dynamic> body) {
+    final toolChoice = body['tool_choice'];
+    if (toolChoice is Map) return true;
+    if (toolChoice is! String) return false;
+    final normalized = toolChoice.toLowerCase();
+    return normalized != 'none' && normalized != 'auto';
+  }
+
   static bool _hasMultimodalContent(Map<String, dynamic> body) {
     final messages = body['messages'];
     if (messages is! List) return false;
@@ -450,6 +466,14 @@ class ModelRouter {
       if (type.contains('json_schema')) return true;
     }
     return false;
+  }
+
+  static bool _requiresToolUse(String text) {
+    if (text.isEmpty) return false;
+    return RegExp(
+      r'(查一下|查询|搜索|联网|打开|读取|获取|调用|执行|运行|数据库|文件|订单|天气|日程|发送|创建|删除|更新|同步|导入|导出|search|lookup|fetch|open|read|call|execute|run|database|file|order|weather|schedule|send|create|delete|update|sync|import|export)',
+      caseSensitive: false,
+    ).hasMatch(text);
   }
 
   /// 强意图检测：代码 / 数学 / 深度推理类任务交给高能力模型。
@@ -573,6 +597,7 @@ class ModelRouter {
 /// 多信号判定结果（内部使用）
 class _SignalResult {
   final bool hasTools;
+  final bool toolIntentHit;
   final bool hasMultimodal;
   final bool structuredOutputHit;
   final bool simpleIntentHit;
@@ -586,6 +611,7 @@ class _SignalResult {
 
   const _SignalResult({
     required this.hasTools,
+    required this.toolIntentHit,
     required this.hasMultimodal,
     required this.structuredOutputHit,
     required this.simpleIntentHit,
@@ -599,7 +625,7 @@ class _SignalResult {
   });
 
   bool get useCapable =>
-      hasTools ||
+      toolIntentHit ||
       hasMultimodal ||
       structuredOutputHit ||
       intentHit ||

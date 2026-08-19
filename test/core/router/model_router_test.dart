@@ -76,7 +76,27 @@ void main() {
       expect(decision.modelId, 'gpt-5-mini');
     });
 
-    test('uses capable model when tools are available', () {
+    test('keeps simple chat lightweight when tools are merely available', () {
+      final session = _session(autoSelect: true);
+
+      final decision = ModelRouter.decideForSessionDetailed(
+        session: session,
+        body: {
+          ..._body('你好'),
+          'tools': [
+            {'type': 'function'},
+          ],
+          'tool_choice': 'auto',
+        },
+      );
+
+      expect(decision.hasTools, isTrue);
+      expect(decision.toolIntentHit, isFalse);
+      expect(decision.modelId, 'gpt-5-mini');
+      expect(decision.usedCapable, isFalse);
+    });
+
+    test('uses capable model when tool use is likely', () {
       final session = _session(autoSelect: true);
 
       final decision = ModelRouter.decideForSessionDetailed(
@@ -91,6 +111,7 @@ void main() {
       );
 
       expect(decision.hasTools, isTrue);
+      expect(decision.toolIntentHit, isTrue);
       expect(decision.modelId, 'gpt-5');
     });
 

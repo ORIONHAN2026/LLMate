@@ -162,7 +162,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 4),
@@ -170,7 +172,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             loc.sensitiveInfoMaskingDesc,
             style: TextStyle(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 12),
@@ -215,7 +219,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           subtitle,
           style: TextStyle(
             fontSize: 11,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         value: value,
@@ -247,7 +253,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               '$label:',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -257,7 +265,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               value,
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -271,10 +281,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   Widget _buildAvailableModelsItem() {
     final loc = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final options = <String>{
-      if (_currentModel.model.isNotEmpty) _currentModel.model,
-      ..._currentModel.availableModels,
-    }.toList();
+    final options =
+        <String>{
+          if (_currentModel.model.isNotEmpty) _currentModel.model,
+          ..._currentModel.availableModels,
+        }.toList();
 
     // 没有可用模型列表时，保持原有只读展示
     if (options.isEmpty) {
@@ -298,38 +309,60 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             ),
           ),
           Expanded(
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: options.map((m) {
-                final isCurrent = m == _currentModel.model;
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isCurrent
-                        ? scheme.primary.withValues(alpha: 0.12)
-                        : scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: isCurrent
-                          ? scheme.primary.withValues(alpha: 0.5)
-                          : scheme.outlineVariant.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Text(
-                    m,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isCurrent
-                          ? scheme.primary
-                          : scheme.onSurface.withValues(alpha: 0.75),
-                    ),
-                  ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final chipMaxWidth =
+                    constraints.maxWidth.isFinite
+                        ? constraints.maxWidth.clamp(120.0, 260.0)
+                        : 260.0;
+                return Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children:
+                      options.map((m) {
+                        final isCurrent = m == _currentModel.model;
+                        return ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: chipMaxWidth),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  isCurrent
+                                      ? scheme.primary.withValues(alpha: 0.12)
+                                      : scheme.surfaceContainerHighest
+                                          .withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color:
+                                    isCurrent
+                                        ? scheme.primary.withValues(alpha: 0.5)
+                                        : scheme.outlineVariant.withValues(
+                                          alpha: 0.5,
+                                        ),
+                              ),
+                            ),
+                            child: Text(
+                              m,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color:
+                                    isCurrent
+                                        ? scheme.primary
+                                        : scheme.onSurface.withValues(
+                                          alpha: 0.75,
+                                        ),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        );
+                      }).toList(),
                 );
-              }).toList(),
+              },
             ),
           ),
         ],
@@ -349,7 +382,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               '${AppLocalizations.of(context)!.nameLabel}:',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -389,17 +424,15 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                             border: Border.all(
                               color:
                                   _isHoveringModelName
-                                      ? Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface.withValues(alpha: 0.3)
+                                      ? Theme.of(context).colorScheme.onSurface
+                                          .withValues(alpha: 0.3)
                                       : Colors.transparent,
                               width: 1,
                             ),
                             color:
                                 _isHoveringModelName
-                                    ? Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withValues(alpha: 0.05)
+                                    ? Theme.of(context).colorScheme.onSurface
+                                        .withValues(alpha: 0.05)
                                     : Colors.transparent,
                           ),
                           child: Row(
@@ -507,7 +540,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             Text(
@@ -587,7 +622,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           AppLocalizations.of(context)!.temperatureDescription,
           style: TextStyle(
             fontSize: 11,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -613,7 +650,9 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 6),
@@ -651,11 +690,12 @@ class _ModelConfigTabState extends State<ModelConfigTab>
           AppLocalizations.of(context)!.roleSettingDescription,
           style: TextStyle(
             fontSize: 11,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
     );
   }
-
 }

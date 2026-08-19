@@ -2074,11 +2074,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ausweisnummern in Nachrichten durch \'*\' ersetzen';
 
   @override
-  String get costOptimization => 'Kostenoptimierung';
+  String get smartModelSelection => 'Intelligente Modellauswahl';
 
   @override
-  String get costOptimizationDesc =>
-      'Wenn aktiviert, verwenden lange Fragen automatisch das komplexe Modell und kurze Fragen das günstigere Modell';
+  String get smartModelSelectionDesc =>
+      'Wenn aktiviert, verwenden einfache Anfragen ein leichtgewichtiges Modell und anspruchsvolle Aufgaben ein leistungsstärkeres Modell';
 
   @override
   String get sessionDetails => 'Sitzungsdetails';

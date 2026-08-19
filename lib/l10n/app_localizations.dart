@@ -3830,17 +3830,17 @@ abstract class AppLocalizations {
   /// **'Replace ID card numbers in messages with \'*\''**
   String get maskIdCardSubtitle;
 
-  /// No description provided for @costOptimization.
+  /// No description provided for @smartModelSelection.
   ///
   /// In en, this message translates to:
-  /// **'Cost Optimization'**
-  String get costOptimization;
+  /// **'Smart Model Selection'**
+  String get smartModelSelection;
 
-  /// No description provided for @costOptimizationDesc.
+  /// No description provided for @smartModelSelectionDesc.
   ///
   /// In en, this message translates to:
-  /// **'When enabled, long questions automatically use the complex model and short questions use the cheaper model'**
-  String get costOptimizationDesc;
+  /// **'When enabled, simple requests prefer a lightweight model and demanding tasks switch to a more capable model'**
+  String get smartModelSelectionDesc;
 
   /// No description provided for @sessionDetails.
   ///

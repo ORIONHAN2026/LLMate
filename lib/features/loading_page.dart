@@ -7,8 +7,9 @@ class LoadingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -19,7 +20,7 @@ class LoadingPage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF1F2937),
+                color: colorScheme.onSurface,
                 letterSpacing: 1.2,
               ),
             ),
@@ -30,7 +31,7 @@ class LoadingPage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
-                color: const Color(0xFF6B7280),
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
                 letterSpacing: 0.5,
               ),
             ),
@@ -42,7 +43,7 @@ class LoadingPage extends StatelessWidget {
               child: CircularProgressIndicator(
                 strokeWidth: 3,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  const Color(0xFF9CA3AF),
+                  colorScheme.primary.withValues(alpha: 0.7),
                 ),
               ),
             ),

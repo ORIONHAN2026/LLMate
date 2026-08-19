@@ -6,17 +6,20 @@ import '../../models/model_price_catalog.dart';
 /// 一次路由决策的完整明细（供埋点回测调参）。
 ///
 /// 记录决策输入特征（token 估算、成本估算、各信号命中情况）与输出
-/// （最终模型、是否复杂），可序列化 JSON 写入路由日志供离线分析：
+/// （最终模型、是否使用高能力模型），可序列化 JSON 写入路由日志供离线分析：
 /// - 检验各信号阈值是否合理（如 costThreshold 0.03 是否过严/过松）
-/// - 统计复杂模型使用率与预估/实际 token 偏差
+/// - 统计高能力模型使用率与预估/实际 token 偏差
 class RouteDecision {
   final String modelId;
-  final String? cheapModel;
-  final String? complexModel;
-  final bool usedComplex;
+  final String? lightweightModel;
+  final String? capableModel;
+  final bool usedCapable;
 
   /// 信号命中明细
   final bool hasTools;
+  final bool hasMultimodal;
+  final bool structuredOutputHit;
+  final bool simpleIntentHit;
   final bool intentHit;
   final bool costHit;
   final bool lengthHit;
@@ -30,13 +33,17 @@ class RouteDecision {
   final double costThreshold;
   final int contextTokenThreshold;
   final int complexityThreshold;
+  final int complexityScore;
 
   RouteDecision({
     required this.modelId,
-    this.cheapModel,
-    this.complexModel,
-    this.usedComplex = false,
+    this.lightweightModel,
+    this.capableModel,
+    this.usedCapable = false,
     this.hasTools = false,
+    this.hasMultimodal = false,
+    this.structuredOutputHit = false,
+    this.simpleIntentHit = false,
     this.intentHit = false,
     this.costHit = false,
     this.lengthHit = false,
@@ -46,15 +53,19 @@ class RouteDecision {
     this.costThreshold = ModelRouter.costThreshold,
     this.contextTokenThreshold = ModelRouter.contextTokenThreshold,
     this.complexityThreshold = ModelRouter.complexityThreshold,
+    this.complexityScore = 0,
   });
 
   Map<String, dynamic> toJson() => {
     'modelId': modelId,
-    'cheapModel': cheapModel,
-    'complexModel': complexModel,
-    'usedComplex': usedComplex,
+    'lightweightModel': lightweightModel,
+    'capableModel': capableModel,
+    'usedCapable': usedCapable,
     'signals': {
       'hasTools': hasTools,
+      'hasMultimodal': hasMultimodal,
+      'structuredOutput': structuredOutputHit,
+      'simpleIntent': simpleIntentHit,
       'intent': intentHit,
       'cost': costHit,
       'length': lengthHit,
@@ -63,6 +74,7 @@ class RouteDecision {
       'lastTextLen': lastTextLen,
       'contextTokens': contextTokens,
       'estimatedCostCny': estimatedCost,
+      'complexityScore': complexityScore,
     },
     'thresholds': {
       'costCny': costThreshold,
@@ -72,26 +84,34 @@ class RouteDecision {
   };
 }
 
-/// 省钱路由判断器（多信号：预估 token 累计 + 意图 + 工具调用 + 成本）
+/// 自动模型选择器（多信号评分：工具 / 多模态 / 结构化输出 / 意图 / 上下文）
 ///
 /// 决策逻辑：
-/// - 关闭费用优化开关（routingEnabled=false）→ 强制使用 [ChatModel.model] 指定模型
-/// - 开启开关但便宜/复杂模型未配齐 → 兜底使用 [ChatModel.model]（绝不空发）
-/// - 开启且配齐 → 依次检查以下信号，任一命中走复杂模型：
-///   ① 本次请求携带工具定义（tools）→ 复杂模型（工具遵循能力更强）
-///   ② 最后一条 user 消息命中强意图（代码/数学/深度推理）→ 复杂模型
-///   ③ 预估请求成本（含历史上下文）超阈值 → 复杂模型（无价格时退化为 token 阈值）
-///   ④ 最后一条 user 消息超过字符阈值 → 复杂模型（弱信号）
-///   以上均未命中 → 便宜模型
+/// - 关闭模型路由开关（routingEnabled=false）→ 强制使用 [ChatModel.model] 指定模型
+/// - 开启开关但轻量/高能力模型无法形成路由对 → 兜底使用 [ChatModel.model]（绝不空发）
+/// - 开启且配齐 → 强信号直接使用高能力模型，弱信号累计评分后再升级：
+///   ① 工具调用 / 多模态 / 结构化输出 / 明确复杂意图 → 高能力模型
+///   ② 上下文较长、用户输入较长等弱信号叠加达阈值 → 高能力模型
+///   ③ 明显短闲聊、确认、致谢 → 尽量使用轻量模型
+///   这样能减少“短消息也跳高能力模型”的打扰，同时保住复杂任务质量。
 class ModelRouter {
-  /// 最后一条 user 消息字符数阈值（保留为弱信号，主要用于短文本快速分流）
-  static const int complexityThreshold = 200;
+  /// 最后一条 user 消息字符数阈值（弱信号，主要用于中长输入分流）
+  static const int complexityThreshold = 800;
 
-  /// 整段上下文（messages 全量文本）预估 token 阈值：超过则送复杂模型
-  /// （仅在模型没有价格信息时退化为该 token 阈值）
+  /// 中等长度消息阈值：只作为弱信号，不单独升级高能力模型。
+  static const int mediumTextThreshold = 280;
+
+  /// 整段上下文（messages 全量文本）预估 token 阈值：超过后加弱信号分
+  /// 该值只作为弱信号，避免单纯历史较长就频繁切高能力模型。
   static const int contextTokenThreshold = 3000;
 
-  /// 预估请求成本阈值（元，CNY）：有价格信息时，预估成本超过则送复杂模型
+  /// 极长上下文阈值：达到后强烈倾向高能力模型，降低丢上下文或答偏的概率。
+  static const int veryLongContextTokenThreshold = 9000;
+
+  /// 弱信号累计分数阈值。
+  static const int complexityScoreThreshold = 3;
+
+  /// 预估请求成本阈值（元，CNY）：仅作为观测与弱降噪信号
   static const double costThreshold = 0.03;
 
   /// 决策本次请求用哪个模型（返回模型 id，写入 body['model']）
@@ -106,7 +126,7 @@ class ModelRouter {
   ///
   /// - [ChatSession.autoSelectModel] 为 false：使用 [ChatSession.model]
   ///   （手动选定），为空则回退 [ChatModel.model]。
-  /// - 开启自动选择：从 [ChatModel.availableModels] 里自动挑「便宜/复杂」
+  /// - 开启自动选择：从 [ChatModel.availableModels] 里自动挑「轻量/高能力」
   ///   模型，并按多信号路由（见类注释），候选池为可用模型清单。
   static String decideForSession({
     required ChatSession session,
@@ -120,36 +140,40 @@ class ModelRouter {
     required ChatModel model,
     required Map<String, dynamic> body,
   }) {
-    // ① 关闭费用优化开关 → 强制使用指定模型（等价老行为）
+    // ① 关闭自动选择开关 → 强制使用指定模型
     if (!model.routingEnabled) {
       return RouteDecision(modelId: model.model);
     }
 
-    // ② 开启开关但便宜/复杂模型未配齐 → 兜底用指定模型（绝不空发）
-    final cheap = model.cheapModel;
-    final complex = model.complexModel;
-    if (cheap == null ||
-        cheap.isEmpty ||
-        complex == null ||
-        complex.isEmpty) {
+    // ② 开启开关但轻量/高能力模型未配齐 → 兜底用指定模型（绝不空发）
+    final lightweight = model.lightweightModel;
+    final capable = model.capableModel;
+    if (lightweight == null ||
+        lightweight.isEmpty ||
+        capable == null ||
+        capable.isEmpty) {
       return RouteDecision(modelId: model.model);
     }
 
     // ③ 多信号路由
     final signals = _pickBySignals(body, model);
-    final usedComplex = signals.any;
+    final usedCapable = signals.useCapable;
     return RouteDecision(
-      modelId: usedComplex ? complex : cheap,
-      cheapModel: cheap,
-      complexModel: complex,
-      usedComplex: usedComplex,
+      modelId: usedCapable ? capable : lightweight,
+      lightweightModel: lightweight,
+      capableModel: capable,
+      usedCapable: usedCapable,
       hasTools: signals.hasTools,
+      hasMultimodal: signals.hasMultimodal,
+      structuredOutputHit: signals.structuredOutputHit,
+      simpleIntentHit: signals.simpleIntentHit,
       intentHit: signals.intentHit,
       costHit: signals.costHit,
       lengthHit: signals.lengthHit,
       lastTextLen: signals.lastTextLen,
       contextTokens: signals.contextTokens,
       estimatedCost: signals.estimatedCost,
+      complexityScore: signals.complexityScore,
     );
   }
 
@@ -163,69 +187,144 @@ class ModelRouter {
       return RouteDecision(modelId: session.model ?? '');
     }
 
-    final available = chatModel.availableModels.isNotEmpty
-        ? chatModel.availableModels
-        : (chatModel.model.isNotEmpty
-              ? [chatModel.model]
-              : const <String>[]);
-
     // 手动模式：使用会话选定模型，为空回退 chatModel.model
-    if (!session.autoSelectModel) {
-      final selected = session.model;
-      return RouteDecision(
-        modelId: (selected != null && selected.isNotEmpty)
-            ? selected
-            : chatModel.model,
-      );
+    if (!session.autoSelectModel || !chatModel.routingEnabled) {
+      return RouteDecision(modelId: _manualModelFor(session, chatModel));
     }
 
-    // 自动模式：从候选池自动挑便宜/复杂（绝不空发）
+    final available = _candidateModels(chatModel);
+
+    // 自动模式：从候选池自动挑轻量/高能力（绝不空发）
     if (available.isEmpty) {
-      return RouteDecision(modelId: chatModel.model);
+      return RouteDecision(modelId: _manualModelFor(session, chatModel));
     }
     if (available.length < 2) {
       return RouteDecision(modelId: available.first);
     }
 
-    final cheap = ModelCatalog.pickCheap(available);
-    final complex = ModelCatalog.pickComplex(available);
-    if (cheap == null || complex == null) {
+    final routePair = _resolveRoutePair(chatModel, available);
+    if (routePair == null) {
       return RouteDecision(modelId: available.first);
     }
 
     final signals = _pickBySignals(body, chatModel);
-    final usedComplex = signals.any;
+    final usedCapable = signals.useCapable;
     return RouteDecision(
-      modelId: usedComplex ? complex : cheap,
-      cheapModel: cheap,
-      complexModel: complex,
-      usedComplex: usedComplex,
+      modelId: usedCapable ? routePair.capable : routePair.lightweight,
+      lightweightModel: routePair.lightweight,
+      capableModel: routePair.capable,
+      usedCapable: usedCapable,
       hasTools: signals.hasTools,
+      hasMultimodal: signals.hasMultimodal,
+      structuredOutputHit: signals.structuredOutputHit,
+      simpleIntentHit: signals.simpleIntentHit,
       intentHit: signals.intentHit,
       costHit: signals.costHit,
       lengthHit: signals.lengthHit,
       lastTextLen: signals.lastTextLen,
       contextTokens: signals.contextTokens,
       estimatedCost: signals.estimatedCost,
+      complexityScore: signals.complexityScore,
     );
   }
 
-  /// 失败回退：返回当前模型出错时应切换的复杂模型 id。
+  /// 失败回退：返回当前模型出错时应切换的高能力模型 id。
   ///
-  /// 仅当启用费用优化（routingEnabled）、当前模型恰为便宜模型、
-  /// 且便宜/复杂模型均存在且不同时返回复杂模型；否则返回 null。
-  /// 供本机 HTTP 服务在便宜模型失败（网络/超时/5xx/429）时重试。
+  /// 仅当启用自动选择（routingEnabled）、当前模型恰为轻量模型、
+  /// 且轻量/高能力模型均存在且不同时返回高能力模型；否则返回 null。
+  /// 供本机 HTTP 服务在轻量模型失败（网络/超时/5xx/429）时重试。
   static String? fallbackModelFor(ChatSession session, String currentModelId) {
     final chatModel = session.chatModel;
-    if (chatModel == null || !chatModel.routingEnabled) return null;
-    final cheap = chatModel.cheapModel;
-    final complex = chatModel.complexModel;
-    if (cheap == null || cheap.isEmpty || complex == null || complex.isEmpty) {
+    if (chatModel == null ||
+        !session.autoSelectModel ||
+        !chatModel.routingEnabled) {
       return null;
     }
-    if (currentModelId != cheap) return null;
-    if (cheap == complex) return null;
-    return complex;
+    final routePair = _resolveRoutePair(chatModel, _candidateModels(chatModel));
+    if (routePair == null) return null;
+    if (currentModelId != routePair.lightweight) return null;
+    return routePair.capable;
+  }
+
+  static String _manualModelFor(ChatSession session, ChatModel chatModel) {
+    final selected = session.model;
+    if (selected != null && selected.isNotEmpty) return selected;
+    return chatModel.model;
+  }
+
+  static List<String> _candidateModels(ChatModel chatModel) {
+    final seen = <String>{};
+    final models = <String>[chatModel.model, ...chatModel.availableModels];
+    return models
+        .where((model) => model.isNotEmpty && seen.add(model))
+        .toList(growable: false);
+  }
+
+  static _RouteModelPair? _resolveRoutePair(
+    ChatModel chatModel,
+    List<String> available,
+  ) {
+    if (available.length < 2) return null;
+
+    final inferredLightweight = ModelCatalog.pickLightweight(available);
+    final inferredCapable = ModelCatalog.pickCapable(available);
+
+    var lightweight = _validConfiguredModel(
+      chatModel.lightweightModel,
+      available,
+    );
+    var capable = _validConfiguredModel(chatModel.capableModel, available);
+
+    if (_tierOf(lightweight) == ModelTier.capable &&
+        inferredLightweight != null &&
+        inferredLightweight != lightweight) {
+      lightweight = inferredLightweight;
+    }
+
+    if (_tierOf(capable) == ModelTier.lightweight &&
+        inferredCapable != null &&
+        inferredCapable != capable) {
+      capable = inferredCapable;
+    }
+
+    lightweight ??= inferredLightweight;
+    capable ??= inferredCapable;
+
+    if (lightweight == null || capable == null) return null;
+
+    if (lightweight == capable) {
+      final lightweightTier = _tierOf(lightweight);
+      if (lightweightTier == ModelTier.lightweight &&
+          inferredCapable != null &&
+          inferredCapable != lightweight) {
+        capable = inferredCapable;
+      } else if (lightweightTier == ModelTier.capable &&
+          inferredLightweight != null &&
+          inferredLightweight != capable) {
+        lightweight = inferredLightweight;
+      } else if (inferredLightweight != null &&
+          inferredCapable != null &&
+          inferredLightweight != inferredCapable) {
+        lightweight = inferredLightweight;
+        capable = inferredCapable;
+      }
+    }
+
+    if (lightweight == capable) return null;
+    return _RouteModelPair(lightweight: lightweight, capable: capable);
+  }
+
+  static String? _validConfiguredModel(
+    String? modelId,
+    List<String> available,
+  ) {
+    if (modelId == null || modelId.isEmpty) return null;
+    return available.contains(modelId) ? modelId : null;
+  }
+
+  static ModelTier? _tierOf(String? modelId) {
+    if (modelId == null || modelId.isEmpty) return null;
+    return ModelCatalog.tierOf(modelId);
   }
 
   /// 多信号判定结果（各信号命中情况 + 决策输入特征）
@@ -235,30 +334,58 @@ class ModelRouter {
   ) {
     // 信号①：工具调用
     final hasTools = _hasTools(body);
+    final hasMultimodal = _hasMultimodalContent(body);
+    final structuredOutputHit = _requiresStructuredOutput(body);
 
     final lastText = _lastUserText(body);
 
     // 信号②：强意图（代码/数学/推理）
     final intentHit = _requiresStrongModel(lastText);
+    final simpleIntentHit = _isSimpleIntent(lastText);
 
-    // 信号③：预估成本（有价格时按成本，否则按 token 阈值）
+    // 信号③：预估成本。成本高本身不直接升级，只用于观测与弱降噪。
     final costResult = _costSignal(body, model);
     final costHit = costResult.$1;
     final contextTokens = costResult.$2;
     final estimatedCost = costResult.$3;
 
-    // 弱信号：最后一条消息字符数
+    // 弱信号：最后一条消息字符数。
     final lastTextLen = lastText.runes.length;
     final lengthHit = lastTextLen > complexityThreshold;
+    final mediumLengthHit = lastTextLen > mediumTextThreshold;
+
+    var complexityScore = 0;
+    if (hasTools) complexityScore += 4;
+    if (hasMultimodal) complexityScore += 4;
+    if (structuredOutputHit) complexityScore += 3;
+    if (intentHit) complexityScore += 3;
+    if (contextTokens > veryLongContextTokenThreshold) {
+      complexityScore += 3;
+    } else if (contextTokens > contextTokenThreshold) {
+      complexityScore += 1;
+    }
+    if (lengthHit) {
+      complexityScore += 2;
+    } else if (mediumLengthHit) {
+      complexityScore += 1;
+    }
+    if (costHit && !hasTools && !hasMultimodal && !intentHit) {
+      complexityScore -= 1;
+    }
+    if (simpleIntentHit) complexityScore -= 2;
 
     return _SignalResult(
       hasTools: hasTools,
+      hasMultimodal: hasMultimodal,
+      structuredOutputHit: structuredOutputHit,
+      simpleIntentHit: simpleIntentHit,
       intentHit: intentHit,
       costHit: costHit,
       lengthHit: lengthHit,
       lastTextLen: lastTextLen,
       contextTokens: contextTokens,
       estimatedCost: estimatedCost,
+      complexityScore: complexityScore,
     );
   }
 
@@ -287,29 +414,83 @@ class ModelRouter {
   /// 判断请求是否携带工具定义
   static bool _hasTools(Map<String, dynamic> body) {
     final tools = body['tools'];
-    if (tools is List && tools.isNotEmpty) return true;
     final toolChoice = body['tool_choice'];
-    if (toolChoice != null && toolChoice is! String) return true;
-    if (toolChoice is String && toolChoice.isNotEmpty) return true;
+    if (toolChoice is String && toolChoice.toLowerCase() == 'none') {
+      return false;
+    }
+    if (tools is! List || tools.isEmpty) return false;
+    return true;
+  }
+
+  static bool _hasMultimodalContent(Map<String, dynamic> body) {
+    final messages = body['messages'];
+    if (messages is! List) return false;
+    for (final m in messages) {
+      if (m is! Map) continue;
+      final content = m['content'];
+      if (content is! List) continue;
+      for (final part in content) {
+        if (part is! Map) continue;
+        final type = '${part['type'] ?? ''}';
+        if (type != 'text' && type.isNotEmpty) return true;
+        if (part.containsKey('image_url') ||
+            part.containsKey('input_image') ||
+            part.containsKey('file')) {
+          return true;
+        }
+      }
+    }
     return false;
   }
 
-  /// 强意图检测：代码 / 数学 / 深度推理类任务交给复杂模型。
+  static bool _requiresStructuredOutput(Map<String, dynamic> body) {
+    final responseFormat = body['response_format'];
+    if (responseFormat is Map) {
+      final type = '${responseFormat['type'] ?? ''}'.toLowerCase();
+      if (type.contains('json_schema')) return true;
+    }
+    return false;
+  }
+
+  /// 强意图检测：代码 / 数学 / 深度推理类任务交给高能力模型。
   ///
   /// 用轻量正则匹配常见触发点，避免把「闲聊」误判成强任务。
   static bool _requiresStrongModel(String text) {
     if (text.isEmpty) return false;
     // 代码相关（``` 代码块 / 明确的编程指令）
     if (text.contains('```')) return true;
-    if (RegExp(r'\b(debug|refactor|implement|fix\s+b(ug|uild)|write\s+(a\s+)?(function|class|test)|explain\s+this\s+code|code\s+review)\b',
-            caseSensitive: false)
-        .hasMatch(text)) {
+    if (RegExp(
+      r'\b(debug|refactor|implement|fix\s+(bug|build)|write\s+(a\s+)?(function|class|test)|explain\s+this\s+code|code\s+review|optimize|architecture)\b',
+      caseSensitive: false,
+    ).hasMatch(text)) {
       return true;
     }
     // 数学 / 推理
-    if (RegExp(r'\b(prove|derive|solve|calculate|reason|deduce|formal\s+proof)\b',
-            caseSensitive: false)
-        .hasMatch(text)) {
+    if (RegExp(
+      r'\b(prove|derive|solve|calculate|reason|deduce|formal\s+proof|analyze|compare|plan)\b',
+      caseSensitive: false,
+    ).hasMatch(text)) {
+      return true;
+    }
+    if (RegExp(
+      r'(代码|报错|调试|重构|实现|函数|测试|架构|推理|证明|数学|计算|规划|深入分析|对比|复杂|方案|优化)',
+    ).hasMatch(text)) {
+      return true;
+    }
+    return false;
+  }
+
+  static bool _isSimpleIntent(String text) {
+    final normalized = text.trim().toLowerCase();
+    if (normalized.isEmpty || normalized.runes.length > 80) return false;
+    if (RegExp(
+      r'^(hi|hello|hey|ok|okay|thanks|thank you|yes|no|yep|nope)[.!。！\s]*$',
+    ).hasMatch(normalized)) {
+      return true;
+    }
+    if (RegExp(
+      r'^(你好|您好|在吗|好的|可以|收到|谢谢|感谢|嗯|行|是的|不是)[。！!.\s]*$',
+    ).hasMatch(normalized)) {
       return true;
     }
     return false;
@@ -392,23 +573,42 @@ class ModelRouter {
 /// 多信号判定结果（内部使用）
 class _SignalResult {
   final bool hasTools;
+  final bool hasMultimodal;
+  final bool structuredOutputHit;
+  final bool simpleIntentHit;
   final bool intentHit;
   final bool costHit;
   final bool lengthHit;
   final int lastTextLen;
   final int contextTokens;
   final double? estimatedCost;
+  final int complexityScore;
 
   const _SignalResult({
     required this.hasTools,
+    required this.hasMultimodal,
+    required this.structuredOutputHit,
+    required this.simpleIntentHit,
     required this.intentHit,
     required this.costHit,
     required this.lengthHit,
     required this.lastTextLen,
     required this.contextTokens,
     required this.estimatedCost,
+    required this.complexityScore,
   });
 
-  /// 任一信号命中 → 使用复杂模型
-  bool get any => hasTools || intentHit || costHit || lengthHit;
+  bool get useCapable =>
+      hasTools ||
+      hasMultimodal ||
+      structuredOutputHit ||
+      intentHit ||
+      complexityScore >= ModelRouter.complexityScoreThreshold;
+}
+
+class _RouteModelPair {
+  final String lightweight;
+  final String capable;
+
+  const _RouteModelPair({required this.lightweight, required this.capable});
 }

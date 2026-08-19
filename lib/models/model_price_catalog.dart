@@ -1,7 +1,7 @@
 /// 模型价格表与成本估算
 ///
 /// 用途：
-/// 1. 为省钱路由提供「成本信号」：当模型配置了价格时，用预估成本而非
+/// 1. 为智能选模提供「成本信号」：当模型配置了价格时，用预估成本而非
 ///    纯 token 长度做决策；
 /// 2. 为后续「预算上限 / 费用预估」功能提供统一取价入口。
 ///
@@ -68,11 +68,11 @@ class ModelPriceCatalog {
   };
 
   /// 兜底价格：未收录模型按能力分级给保守参考价
-  static const ModelPrice _cheapFallbackPrice = ModelPrice(
+  static const ModelPrice _lightweightFallbackPrice = ModelPrice(
     prompt: 1.0,
     completion: 3.0,
   );
-  static const ModelPrice _complexFallbackPrice = ModelPrice(
+  static const ModelPrice _capableFallbackPrice = ModelPrice(
     prompt: 3.0,
     completion: 10.0,
   );
@@ -81,7 +81,7 @@ class ModelPriceCatalog {
   ///
   /// [customPrompt]/[customCompletion] 为用户在模型配置里填写的价格
   /// （/百万 token，[customCurrency] 为其货币）；两者都填写时优先使用。
-  /// 否则查内置表；再否则按便宜/复杂分级给保守兜底价；仍未知返回 null。
+  /// 否则查内置表；再否则按轻量/高能力分级给保守兜底价；仍未知返回 null。
   static ModelPrice? priceOf(
     String modelId, {
     double? customPrompt,
@@ -93,7 +93,8 @@ class ModelPriceCatalog {
       return ModelPrice(
         prompt: customPrompt,
         completion: customCompletion,
-        currency: customCurrency == 'CNY' ? PriceCurrency.cny : PriceCurrency.usd,
+        currency:
+            customCurrency == 'CNY' ? PriceCurrency.cny : PriceCurrency.usd,
       );
     }
 
@@ -104,10 +105,10 @@ class ModelPriceCatalog {
     // 3. 关键词兜底：按能力分级给保守参考价
     final id = modelId.toLowerCase();
     if (RegExp(r'flash|lite|turbo|mini|air|small|base').hasMatch(id)) {
-      return _cheapFallbackPrice;
+      return _lightweightFallbackPrice;
     }
     if (RegExp(r'reasoner|r1|pro|max|plus|thinking|o1|o3').hasMatch(id)) {
-      return _complexFallbackPrice;
+      return _capableFallbackPrice;
     }
     return null;
   }
@@ -133,6 +134,7 @@ class ModelPriceCatalog {
     );
     if (price == null || promptTokens <= 0) return null;
     final outTokens = completionTokens ?? (promptTokens * 0.3).round();
-    return promptTokens * price.promptCny / 1e6 + outTokens * price.completionCny / 1e6;
+    return promptTokens * price.promptCny / 1e6 +
+        outTokens * price.completionCny / 1e6;
   }
 }

@@ -54,7 +54,7 @@ Handler modelCheckGuard(Handler innerHandler) {
     body['model'] = routeDecision.modelId;
     debugPrint(
       '🧭 [ModelGuard] 本轮使用模型: ${routeDecision.modelId}'
-      '(complex=${routeDecision.usedComplex})',
+      '(capable=${routeDecision.usedCapable})',
     );
 
     // 3. 模型级系统提示词（最高优先级，插到最前；

@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:llmate/features/widgets/standard_app_bar.dart';
 import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
+import 'package:llmate/features/widgets/json_view.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../controllers/mcp_controller.dart';
@@ -29,6 +31,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
   List<Mcp> _services = [];
   bool _isLoading = true;
   final Set<String> _loadingServices = {};
+  bool _embeddedActionsSynced = false;
 
   @override
   void initState() {
@@ -55,9 +58,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
             : _buildBody();
 
     if (widget.embedded) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.onActionsChanged?.call(_buildActions());
-      });
+      _syncEmbeddedActionsOnce();
       return content;
     }
 
@@ -82,6 +83,15 @@ class _McpManagementPageState extends State<McpManagementPage> {
       ),
       body: content,
     );
+  }
+
+  void _syncEmbeddedActionsOnce() {
+    if (_embeddedActionsSynced) return;
+    _embeddedActionsSynced = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onActionsChanged?.call(_buildActions());
+    });
   }
 
   List<Widget> _buildActions() {
@@ -511,6 +521,8 @@ class _McpManagementPageState extends State<McpManagementPage> {
     final jsonCtrl = TextEditingController(
       text: const JsonEncoder.withIndent('  ').convert(serverJson),
     );
+    dynamic previewJson = serverJson;
+    bool isEditingJson = false;
     String? parseError;
 
     showGeneralDialog(
@@ -680,15 +692,66 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   const SizedBox(height: 12),
                                 ],
 
-                                // 脚本配置
-                                Text(
-                                  '脚本配置 (server.json)',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(ctx).colorScheme.onSurface
-                                        .withValues(alpha: 0.7),
-                                  ),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '脚本配置',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(ctx)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.7),
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: '复制 JSON',
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () async {
+                                        await Clipboard.setData(
+                                          ClipboardData(text: jsonCtrl.text),
+                                        );
+                                        if (ctx.mounted) {
+                                          SnackBarUtils.showSuccess(ctx, '已复制');
+                                        }
+                                      },
+                                      icon: const Icon(Icons.copy, size: 16),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        if (isEditingJson) {
+                                          try {
+                                            previewJson =
+                                                jsonDecode(jsonCtrl.text.trim())
+                                                    as Map<String, dynamic>;
+                                            setSheetState(() {
+                                              parseError = null;
+                                              isEditingJson = false;
+                                            });
+                                          } catch (_) {
+                                            setSheetState(
+                                              () => parseError = 'JSON 格式错误',
+                                            );
+                                          }
+                                          return;
+                                        }
+                                        setSheetState(() {
+                                          isEditingJson = true;
+                                          parseError = null;
+                                        });
+                                      },
+                                      icon: Icon(
+                                        isEditingJson
+                                            ? Icons.visibility
+                                            : Icons.edit,
+                                        size: 14,
+                                      ),
+                                      label: Text(isEditingJson ? '预览' : '编辑'),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 8),
                                 Container(
@@ -699,29 +762,75 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                         ).colorScheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: TextField(
-                                    controller: jsonCtrl,
-                                    maxLines: 15,
-                                    minLines: 8,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontFamily: 'monospace',
-                                      color:
-                                          Theme.of(ctx).colorScheme.onSurface,
-                                    ),
-                                    decoration: InputDecoration(
-                                      border: const OutlineInputBorder(
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      contentPadding: const EdgeInsets.all(12),
-                                    ),
-                                    onChanged: (_) {
-                                      if (parseError != null) {
-                                        setSheetState(() => parseError = null);
-                                      }
-                                    },
-                                  ),
+                                  child:
+                                      isEditingJson
+                                          ? TextField(
+                                            controller: jsonCtrl,
+                                            maxLines: 15,
+                                            minLines: 8,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontFamily: 'monospace',
+                                              color:
+                                                  Theme.of(
+                                                    ctx,
+                                                  ).colorScheme.onSurface,
+                                            ),
+                                            decoration: InputDecoration(
+                                              border: const OutlineInputBorder(
+                                                borderSide: BorderSide.none,
+                                              ),
+                                              contentPadding:
+                                                  const EdgeInsets.all(12),
+                                            ),
+                                            onChanged: (_) {
+                                              if (parseError != null) {
+                                                setSheetState(
+                                                  () => parseError = null,
+                                                );
+                                              }
+                                            },
+                                          )
+                                          : ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              minHeight: 180,
+                                              maxHeight: 320,
+                                            ),
+                                            child: SingleChildScrollView(
+                                              padding: const EdgeInsets.all(12),
+                                              child: JsonView(
+                                                previewJson,
+                                                initialExpandDepth: 4,
+                                              ),
+                                            ),
+                                          ),
                                 ),
+                                if (!isEditingJson) ...[
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.account_tree_outlined,
+                                        size: 13,
+                                        color: Theme.of(ctx)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.45),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '点击箭头可展开或收起节点',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Theme.of(ctx)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.45),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                                 if (parseError != null) ...[
                                   const SizedBox(height: 8),
                                   Text(

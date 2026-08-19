@@ -462,7 +462,7 @@ class LocalHttpService {
 
           int toolIteration = 0; // 当前工具调用轮次
           const maxToolIterations = 20; // 防止无限循环
-          bool fallbackTried = false; // 失败回退链：是否已重试过复杂模型
+          bool fallbackTried = false; // 失败回退链：是否已重试过高能力模型
 
           // ── 工具调用循环 ──
           // 每一轮：请求 LLM → 解析响应 → 如果有 MCP 工具调用则执行 → 结果回填 → 继续下一轮
@@ -478,10 +478,10 @@ class LocalHttpService {
                 final routingEnabled =
                     session.chatModel?.routingEnabled ?? false;
                 String decisionMode;
-                if (routeDecision.usedComplex) {
-                  decisionMode = 'auto_complex';
-                } else if (routeDecision.cheapModel != null) {
-                  decisionMode = 'auto_cheap';
+                if (routeDecision.usedCapable) {
+                  decisionMode = 'auto_capable';
+                } else if (routeDecision.lightweightModel != null) {
+                  decisionMode = 'auto_lightweight';
                 } else if (autoSelect && routingEnabled) {
                   decisionMode = 'fallback';
                 } else if (autoSelect) {
@@ -530,7 +530,7 @@ class LocalHttpService {
               );
             }
 
-            // ── 回退链：便宜模型出错（网络/超时/5xx/429）且存在不同复杂模型 → 重试一次 ──
+            // ── 回退链：轻量模型出错且存在高能力模型 → 重试一次 ──
             if (hasError && !cancelStream && !fallbackTried) {
               final currentModel = body['model']?.toString() ?? '';
               final fallbackModel = ModelRouter.fallbackModelFor(
@@ -541,7 +541,7 @@ class LocalHttpService {
                   fallbackModel != currentModel &&
                   _isRetryableError(round.errorCode)) {
                 debugPrint(
-                  '🔄 [Fallback] 模型 $currentModel 失败(code=${round.errorCode})，切换复杂模型重试: $fallbackModel',
+                  '🔄 [Fallback] 模型 $currentModel 失败(code=${round.errorCode})，切换高能力模型重试: $fallbackModel',
                 );
                 body['model'] = fallbackModel;
                 fallbackTried = true;
@@ -989,7 +989,7 @@ class LocalHttpService {
       try {
         final sessionId = session.sessionId;
         final model = session.chatModel;
-        // 实际使用的模型：路由决策优先（省钱路由可能命中便宜模型），
+        // 实际使用的模型：路由决策优先（自动选择可能命中轻量模型），
         // 否则取配置模型的 API 模型名（model），而非配置记录 id（modelId，形如 model<uuid>）
         final modelId = routeDecision?.modelId ?? model?.model ?? 'unknown';
         var currency = model?.currency ?? 'USD';
@@ -997,7 +997,7 @@ class LocalHttpService {
         // 计算本次请求费用：优先按「实际使用模型」的价格计价
         double requestCost = 0.0;
         if (routeDecision != null && routeDecision.modelId != model?.model) {
-          // 路由实际调用了与配置主模型不同的模型（如命中便宜模型）→ 按该模型价格计价
+          // 路由实际调用了与配置主模型不同的模型（如命中轻量模型）→ 按该模型价格计价
           final price = ModelPriceCatalog.priceOf(routeDecision.modelId);
           if (price != null) {
             requestCost =
@@ -1122,7 +1122,7 @@ class LocalHttpService {
   ///
   /// 供离线回测调参：记录每次路由决策的输入特征、信号命中、阈值，
   /// 以及实际 token 用量与回退情况，用于分析各信号/阈值是否合理。
-  /// 仅记录开启费用优化且成功完成流式的请求（routeDecision 为 null 时跳过）。
+  /// 仅记录开启自动选择且成功完成流式的请求（routeDecision 为 null 时跳过）。
   static Future<void> _saveRouteLog({
     required String sessionId,
     required RouteDecision? routeDecision,

@@ -141,7 +141,7 @@ class ChatSession {
   final String? model;
 
   /// 是否开启自动选择模型：开启后每次请求从 [ChatModel.availableModels] 里
-  /// 自动挑选最合适的模型（便宜/复杂按字数路由）；关闭时使用 [model]。
+  /// 自动挑选最合适的模型（轻量/高能力按任务特征路由）；关闭时使用 [model]。
   final bool autoSelectModel;
 
   /// 会话头像 emoji

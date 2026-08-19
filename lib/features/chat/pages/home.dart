@@ -24,6 +24,7 @@ import '../../mcp/pages/mcp_management_page.dart';
 import '../../settings/pages/other_settings_page.dart';
 import '../../settings/pages/domain_management_page.dart';
 import 'package:llmate/features/widgets/command_palette.dart';
+import 'home_layout_state.dart';
 
 class CodeChatHomePage extends StatefulWidget {
   const CodeChatHomePage({super.key});
@@ -44,12 +45,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
 
   final GlobalKey _settingsButtonKey = GlobalKey(); // 设置按钮的key
   final GlobalKey _modelSelectorKey = GlobalKey(); // 模型选择器的key
-  bool _isSidebarCollapsed = false; // 侧边栏折叠状态
-  double _sidebarWidth = 200.0; // 左侧边栏宽度，可调整
-  bool _isRightSidebarCollapsed = false; // 右侧边栏折叠状态（默认显示）
-  bool _isResizeHandleHovered = false; // 拖动条悬停状态
-  // 中间聊天区域的最小可视宽度，避免被两侧面板挤压得太窄
-  static const double _minChatAreaWidth = 700.0;
+  final HomeLayoutState _layoutState = HomeLayoutState();
 
   // 从 ChatInputWidget 获取的状态
   bool _autoScrollEnabled = true; // 是否启用自动滚动
@@ -288,13 +284,11 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
     final sidebar = ChatLeftSidebar(
       chatSessions: chatSessions,
       currentSessionIndex: currentSessionIndex,
-      isCollapsed: _isSidebarCollapsed,
+      isCollapsed: _layoutState.isSidebarCollapsed,
       onSessionSwitch: _switchToSession,
       onNewSession: _createNewSession,
       onToggleCollapse: () {
-        setState(() {
-          _isSidebarCollapsed = !_isSidebarCollapsed;
-        });
+        setState(_layoutState.toggleSidebar);
       },
       onShowSettings: _showSettingsMenu,
       settingsButtonKey: _settingsButtonKey,
@@ -334,9 +328,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                     ),
                     IconButton(
                       onPressed: () {
-                        setState(
-                          () => _isSidebarCollapsed = !_isSidebarCollapsed,
-                        );
+                        setState(_layoutState.toggleSidebar);
                       },
                       icon: Icon(
                         Icons.menu_open,
@@ -376,7 +368,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             AppLocalizations.of(context)!.selectOrCreateSession,
             style: TextStyle(
               fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ),
@@ -425,7 +419,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 return Positioned(
                   left: () {
                     final leftSidebarWidth =
-                        _isSidebarCollapsed ? 0 : _sidebarWidth;
+                        _layoutState.isSidebarCollapsed
+                            ? 0
+                            : _layoutState.sidebarWidth;
                     final screenWidth = MediaQuery.of(context).size.width;
                     final chatAreaWidth = screenWidth - leftSidebarWidth;
                     // 按钮居中于整个对话区域
@@ -544,7 +540,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.mail_outline,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(l10n.feedback, style: const TextStyle(fontSize: 12)),
@@ -558,7 +556,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.auto_awesome,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(l10n.modelManagement, style: const TextStyle(fontSize: 12)),
@@ -585,7 +585,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.link,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(
@@ -614,7 +616,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.language,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(l10n.domainManagement, style: const TextStyle(fontSize: 12)),
@@ -640,7 +644,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
               Icon(
                 Icons.tune,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: 12),
               Text(l10n.otherSettings, style: const TextStyle(fontSize: 12)),
@@ -678,27 +684,25 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       CommandPaletteAction(
         id: 'toggle-sidebar',
         title:
-            _isSidebarCollapsed ? (l10n.expandSidebar) : (l10n.collapseSidebar),
+            _layoutState.isSidebarCollapsed
+                ? (l10n.expandSidebar)
+                : (l10n.collapseSidebar),
         icon: Icons.menu,
         shortcut: '\u2318B',
         onTap: () {
-          setState(() {
-            _isSidebarCollapsed = !_isSidebarCollapsed;
-          });
+          setState(_layoutState.toggleSidebar);
         },
       ),
       CommandPaletteAction(
         id: 'toggle-right-panel',
         title:
-            _isRightSidebarCollapsed
+            _layoutState.isRightSidebarCollapsed
                 ? (l10n.expandRightSidebar)
                 : (l10n.collapseRightSidebar),
         icon: Icons.menu_open,
         shortcut: '\u2318]',
         onTap: () {
-          setState(() {
-            _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
-          });
+          setState(_layoutState.toggleRightSidebar);
         },
       ),
       CommandPaletteAction(
@@ -788,27 +792,20 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
 
   // 处理侧边栏宽度调整
   void _onSidebarResize(double delta) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    double proposed = (_sidebarWidth + delta).clamp(150.0, 400.0);
-    // 计算剩余聊天区域宽度
-    double remaining = screenWidth - proposed;
-    if (remaining < _minChatAreaWidth) {
-      // 调整左侧栏宽度使聊天区保持最小宽度
-      proposed = (screenWidth - _minChatAreaWidth).clamp(200.0, 400.0);
-      remaining = screenWidth - proposed;
-    }
-
-    // 如果屏幕太窄导致无法满足最小聊天宽度，允许聊天区变窄（降级处理）
-    setState(() => _sidebarWidth = proposed);
+    setState(
+      () => _layoutState.resizeSidebar(
+        delta: delta,
+        screenWidth: MediaQuery.of(context).size.width,
+      ),
+    );
   }
 
   // 构建可调整大小的分隔条
   Widget _buildResizableHandle() {
     return MouseRegion(
       cursor: SystemMouseCursors.resizeColumn,
-      onEnter: (_) => setState(() => _isResizeHandleHovered = true),
-      onExit: (_) => setState(() => _isResizeHandleHovered = false),
+      onEnter: (_) => setState(() => _layoutState.setResizeHandleHovered(true)),
+      onExit: (_) => setState(() => _layoutState.setResizeHandleHovered(false)),
       child: GestureDetector(
         onPanUpdate: (details) {
           _onSidebarResize(details.delta.dx);
@@ -820,7 +817,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
             border: Border(
               right: BorderSide(
                 color:
-                    _isResizeHandleHovered
+                    _layoutState.isResizeHandleHovered
                         ? Theme.of(
                           context,
                         ).colorScheme.onSurface.withValues(alpha: 0.3)
@@ -843,20 +840,20 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           padding: const EdgeInsets.only(right: 4),
           child: IconButton(
             onPressed: () {
-              setState(() {
-                _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
-              });
+              setState(_layoutState.toggleRightSidebar);
             },
             icon: Icon(
-              _isRightSidebarCollapsed ? Icons.menu_open : Icons.menu_open,
+              _layoutState.isRightSidebarCollapsed
+                  ? Icons.menu_open
+                  : Icons.menu_open,
               size: 14,
               color: Theme.of(context).colorScheme.onSurface.withValues(
-                alpha: _isRightSidebarCollapsed ? 0.6 : 0.4,
+                alpha: _layoutState.isRightSidebarCollapsed ? 0.6 : 0.4,
               ),
             ),
             visualDensity: VisualDensity.compact,
             tooltip:
-                _isRightSidebarCollapsed
+                _layoutState.isRightSidebarCollapsed
                     ? AppLocalizations.of(context)!.expandRightSidebar
                     : AppLocalizations.of(context)!.collapseRightSidebar,
           ),
@@ -885,11 +882,9 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   Widget _buildRightSidePanel() {
     return ChatRightSidebar(
       width: 0, // 宽度由父级 Expanded 决定，不再需要此参数
-      isCollapsed: _isRightSidebarCollapsed,
+      isCollapsed: _layoutState.isRightSidebarCollapsed,
       onToggleCollapse: () {
-        setState(() {
-          _isRightSidebarCollapsed = !_isRightSidebarCollapsed;
-        });
+        setState(_layoutState.toggleRightSidebar);
       },
     );
   }
@@ -962,7 +957,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           body: Row(
             children: [
               // 左侧边栏 - 可折叠
-              if (!_isSidebarCollapsed) ...[
+              if (!_layoutState.isSidebarCollapsed) ...[
                 SizedBox(
                   width: ResponsiveUtils.getSidebarWidth(context),
                   child: _buildSidePanel(),
@@ -987,7 +982,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 ),
               ),
               // 右侧边栏 - 宽度为聊天窗口的 2/3
-              if (!_isRightSidebarCollapsed) ...[
+              if (!_layoutState.isRightSidebarCollapsed) ...[
                 _buildRightResizableHandle(),
                 Expanded(flex: 2, child: _buildRightSidePanel()),
               ],
@@ -1012,8 +1007,11 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           body: Row(
             children: [
               // 左侧边栏 - 可调整宽度
-              if (!_isSidebarCollapsed) ...[
-                SizedBox(width: _sidebarWidth, child: _buildSidePanel()),
+              if (!_layoutState.isSidebarCollapsed) ...[
+                SizedBox(
+                  width: _layoutState.sidebarWidth,
+                  child: _buildSidePanel(),
+                ),
                 _buildResizableHandle(),
               ],
               // 主内容区域
@@ -1034,7 +1032,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 ),
               ),
               // 右侧边栏 - 宽度为聊天窗口的 2/3
-              if (!_isRightSidebarCollapsed) ...[
+              if (!_layoutState.isRightSidebarCollapsed) ...[
                 _buildRightResizableHandle(),
                 Expanded(flex: 2, child: _buildRightSidePanel()),
               ],
@@ -1072,7 +1070,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
         child: Row(
           children: [
             // 左侧展开按钮（当侧边栏折叠时显示）
-            if (_isSidebarCollapsed)
+            if (_layoutState.isSidebarCollapsed)
               Transform.translate(
                 offset: Offset(0, Platform.isMacOS ? -6 : 0),
                 child: Padding(
@@ -1082,9 +1080,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                   ),
                   child: IconButton(
                     onPressed: () {
-                      setState(() {
-                        _isSidebarCollapsed = false;
-                      });
+                      setState(_layoutState.expandSidebar);
                     },
                     icon: Icon(
                       Icons.menu,

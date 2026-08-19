@@ -41,13 +41,13 @@ class ChatModel {
   /// 该供应商支持的模型列表（候选池，来自 /models 接口或本地 fallback）
   final List<String> availableModels;
 
-  /// 便宜模型（省钱路由：短文本/简单任务）
-  final String? cheapModel;
+  /// 轻量模型（自动选择：短文本/简单任务优先）
+  final String? lightweightModel;
 
-  /// 复杂模型（省钱路由：长文本/复杂任务）
-  final String? complexModel;
+  /// 高能力模型（自动选择：工具、多模态、结构化输出、复杂任务优先）
+  final String? capableModel;
 
-  /// 是否启用省钱路由（关闭时强制使用 [model] 指定的模型）
+  /// 是否启用模型自动选择（关闭时强制使用 [model] 指定的模型）
   final bool routingEnabled;
 
   const ChatModel({
@@ -71,8 +71,8 @@ class ChatModel {
     this.maskPhone = false,
     this.maskIdCard = false,
     this.availableModels = const [],
-    this.cheapModel,
-    this.complexModel,
+    this.lightweightModel,
+    this.capableModel,
     this.routingEnabled = false,
   });
 
@@ -127,8 +127,8 @@ class ChatModel {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
-      cheapModel: map['cheapModel'] as String?,
-      complexModel: map['complexModel'] as String?,
+      lightweightModel: map['lightweightModel'] as String?,
+      capableModel: map['capableModel'] as String?,
       routingEnabled: map['routingEnabled'] as bool? ?? false,
     );
   }
@@ -162,8 +162,8 @@ class ChatModel {
     if (availableModels.isNotEmpty) {
       result['availableModels'] = availableModels;
     }
-    if (cheapModel != null) result['cheapModel'] = cheapModel;
-    if (complexModel != null) result['complexModel'] = complexModel;
+    if (lightweightModel != null) result['lightweightModel'] = lightweightModel;
+    if (capableModel != null) result['capableModel'] = capableModel;
     result['routingEnabled'] = routingEnabled;
 
     return result;
@@ -200,8 +200,8 @@ class ChatModel {
     bool maskPhone = false,
     bool maskIdCard = false,
     List<String> availableModels = const [],
-    String? cheapModel,
-    String? complexModel,
+    String? lightweightModel,
+    String? capableModel,
     bool routingEnabled = false,
   }) {
     return ChatModel(
@@ -225,8 +225,8 @@ class ChatModel {
       maskPhone: maskPhone,
       maskIdCard: maskIdCard,
       availableModels: availableModels,
-      cheapModel: cheapModel,
-      complexModel: complexModel,
+      lightweightModel: lightweightModel,
+      capableModel: capableModel,
       routingEnabled: routingEnabled,
     );
   }
@@ -253,8 +253,8 @@ class ChatModel {
     bool? maskPhone,
     bool? maskIdCard,
     List<String>? availableModels,
-    String? cheapModel,
-    String? complexModel,
+    String? lightweightModel,
+    String? capableModel,
     bool? routingEnabled,
   }) {
     return ChatModel(
@@ -278,8 +278,8 @@ class ChatModel {
       maskPhone: maskPhone ?? this.maskPhone,
       maskIdCard: maskIdCard ?? this.maskIdCard,
       availableModels: availableModels ?? this.availableModels,
-      cheapModel: cheapModel ?? this.cheapModel,
-      complexModel: complexModel ?? this.complexModel,
+      lightweightModel: lightweightModel ?? this.lightweightModel,
+      capableModel: capableModel ?? this.capableModel,
       routingEnabled: routingEnabled ?? this.routingEnabled,
     );
   }
@@ -523,9 +523,19 @@ final List<Map<String, dynamic>> onlineProviders = [
     'color': const Color(0xFF10B981),
     'defaultUrl': 'https://api.openai.com/v1',
     'models': [
-      {'id': 'gpt-4o', 'name': 'GPT-4o', 'specs': '多模态 • 高级推理 • 最新旗舰'},
-      {'id': 'gpt-4-turbo', 'name': 'GPT-4 Turbo', 'specs': '更快响应 • 128K上下文'},
-      {'id': 'gpt-3.5-turbo', 'name': 'GPT-3.5 Turbo', 'specs': '快速响应 • 高性价比'},
+      {'id': 'gpt-5.1', 'name': 'GPT-5.1', 'specs': '旗舰模型 • 复杂任务 • 多模态'},
+      {'id': 'gpt-5', 'name': 'GPT-5', 'specs': '通用旗舰 • 推理与代码'},
+      {'id': 'gpt-5-mini', 'name': 'GPT-5 Mini', 'specs': '轻量快速 • 高性价比'},
+      {'id': 'gpt-4.1', 'name': 'GPT-4.1', 'specs': '复杂任务 • 工具调用 • 长上下文'},
+      {'id': 'gpt-4.1-mini', 'name': 'GPT-4.1 Mini', 'specs': '快速响应 • 日常任务'},
+      {'id': 'gpt-4o', 'name': 'GPT-4o', 'specs': '多模态 • 高级推理'},
+      {'id': 'gpt-4o-mini', 'name': 'GPT-4o Mini', 'specs': '快速响应 • 多模态轻量'},
+      {'id': 'o3', 'name': 'o3', 'specs': '高级推理 • 复杂问题'},
+      {'id': 'o3-mini', 'name': 'o3 Mini', 'specs': '推理轻量 • 高性价比'},
+      {'id': 'o1', 'name': 'o1', 'specs': '深度推理 • 复杂规划'},
+      {'id': 'o1-mini', 'name': 'o1 Mini', 'specs': '推理轻量 • 快速'},
+      {'id': 'gpt-4-turbo', 'name': 'GPT-4 Turbo', 'specs': '旧版旗舰 • 128K上下文'},
+      {'id': 'gpt-3.5-turbo', 'name': 'GPT-3.5 Turbo', 'specs': '旧版快速 • 高性价比'},
     ],
   },
   {
@@ -539,6 +549,31 @@ final List<Map<String, dynamic>> onlineProviders = [
     'defaultUrl': 'https://generativelanguage.googleapis.com/v1',
     'models': [
       {
+        'id': 'gemini-3-pro',
+        'name': 'Gemini 3 Pro',
+        'specs': '旗舰模型 • 复杂推理 • 多模态',
+      },
+      {
+        'id': 'gemini-2.5-pro',
+        'name': 'Gemini 2.5 Pro',
+        'specs': '高级推理 • 长上下文 • 多模态',
+      },
+      {
+        'id': 'gemini-2.5-flash',
+        'name': 'Gemini 2.5 Flash',
+        'specs': '快速响应 • 多模态 • 高性价比',
+      },
+      {
+        'id': 'gemini-2.5-flash-lite',
+        'name': 'Gemini 2.5 Flash Lite',
+        'specs': '轻量快速 • 低成本',
+      },
+      {
+        'id': 'gemini-2.0-flash',
+        'name': 'Gemini 2.0 Flash',
+        'specs': '极速响应 • 多模态 • 轻量',
+      },
+      {
         'id': 'gemini-pro',
         'name': 'Gemini Pro',
         'specs': '多模态 • 长上下文 • Google',
@@ -547,11 +582,6 @@ final List<Map<String, dynamic>> onlineProviders = [
         'id': 'gemini-pro-vision',
         'name': 'Gemini Pro Vision',
         'specs': '视觉理解 • 图像分析 • 多模态',
-      },
-      {
-        'id': 'gemini-2.0-flash',
-        'name': 'Gemini 2.0 Flash',
-        'specs': '极速响应 • 多模态 • 轻量',
       },
     ],
   },
@@ -1466,6 +1496,23 @@ final List<Map<String, dynamic>> onlineProviders = [
         'structuredOutput': false,
         'batchCalling': false,
       },
+    ],
+  },
+  {
+    'name': '智谱AI',
+    'id': 'zhipu',
+    'protocol': 'openai',
+    'currency': 'CNY',
+    'icon': Icons.auto_awesome,
+    'description': '智谱 GLM 系列模型服务',
+    'color': const Color(0xFF2563EB),
+    'defaultUrl': 'https://open.bigmodel.cn/api/paas/v4',
+    'models': [
+      {'id': 'glm-4.5', 'name': 'GLM-4.5', 'specs': '复杂任务 • 推理与代码 • 工具调用'},
+      {'id': 'glm-4.5-air', 'name': 'GLM-4.5-Air', 'specs': '轻量快速 • 高性价比'},
+      {'id': 'glm-4-plus', 'name': 'GLM-4-Plus', 'specs': '通用旗舰 • 长文本'},
+      {'id': 'glm-4-air', 'name': 'GLM-4-Air', 'specs': '通用轻量 • 日常对话'},
+      {'id': 'glm-4-flash', 'name': 'GLM-4-Flash', 'specs': '极速响应 • 低成本'},
     ],
   },
   {

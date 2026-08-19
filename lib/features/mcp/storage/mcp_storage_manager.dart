@@ -42,8 +42,10 @@ class McpStorageManager {
   }
 
   /// 从 Mcp 直接保存（内部构造合并后的配置）
-  static Future<void> saveConfig(Mcp config,
-      {Map<String, dynamic>? serverJson}) async {
+  static Future<void> saveConfig(
+    Mcp config, {
+    Map<String, dynamic>? serverJson,
+  }) async {
     final Mcp mcp;
     if (serverJson != null) {
       final merged = _mergeConfigMeta(serverJson, config);
@@ -92,7 +94,7 @@ class McpData {
   List<Map<String, dynamic>> get tools =>
       mcp.tools?.map((t) => t.toJson()).toList() ?? [];
 
-  /// 获取完整 server.json 内容
+  /// 获取数据库中保存的完整 MCP 配置内容
   Map<String, dynamic> get server => mcp.toJson();
 
   /// 获取 command

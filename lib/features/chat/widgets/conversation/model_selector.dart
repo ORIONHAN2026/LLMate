@@ -28,7 +28,7 @@ class _ModelSelectorState extends State<ModelSelector> {
   final sessionController = Get.find<SessionController>();
 
   /// 优先使用 SessionController 中的实时会话，保证右侧边栏模型设置
-  /// （费用优化/手动模型/绑定模型）更新后，顶部选择器同步刷新。
+  /// （智能选模/手动模型/绑定模型）更新后，顶部选择器同步刷新。
   ChatSession? get _liveSession =>
       sessionController.currentSession.value ?? widget.currentSession;
 
@@ -53,15 +53,16 @@ class _ModelSelectorState extends State<ModelSelector> {
     final chatModel = session?.chatModel;
     if (chatModel != null && chatModel.model.isNotEmpty) {
       final platform = chatModel.platform ?? 'Unknown';
-      // 费用优化开启：自动在便宜/复杂模型间路由
+      // 智能选模开启：自动在轻量/高能力模型间路由
       if (session?.autoSelectModel == true) {
         return "$platform/${AppLocalizations.of(context)!.autoSelectModel}";
       }
       // 手动选择过具体模型：优先显示会话选定模型
       final selected = session?.model;
-      final modelId = (selected != null && selected.isNotEmpty)
-          ? selected
-          : chatModel.model;
+      final modelId =
+          (selected != null && selected.isNotEmpty)
+              ? selected
+              : chatModel.model;
       final prompt = chatModel.systemPrompt ?? '';
       if (prompt.isNotEmpty) {
         return "$platform/$modelId | $prompt ";
@@ -74,6 +75,7 @@ class _ModelSelectorState extends State<ModelSelector> {
 
   void _showModelSelectorPopup(BuildContext context) {
     final isMobile = ResponsiveUtils.isMobile(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
     if (isMobile) {
       // 移动端使用底部弹出框
@@ -124,9 +126,8 @@ class _ModelSelectorState extends State<ModelSelector> {
                                 AppLocalizations.of(context)!.noAvailableModels,
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                             )
@@ -166,6 +167,8 @@ class _ModelSelectorState extends State<ModelSelector> {
                                                 context,
                                               ).colorScheme.onSurface,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   subtitle: Column(
                                     crossAxisAlignment:
@@ -180,6 +183,8 @@ class _ModelSelectorState extends State<ModelSelector> {
                                               .onSurface
                                               .withValues(alpha: 0.6),
                                         ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                       if (model.systemPrompt != null &&
                                           model.systemPrompt!.isNotEmpty)
@@ -259,10 +264,10 @@ class _ModelSelectorState extends State<ModelSelector> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 8,
       color: Theme.of(context).scaffoldBackgroundColor,
-      constraints: const BoxConstraints(
+      constraints: BoxConstraints(
         minWidth: 280,
-        maxWidth: 280,
-        maxHeight: 350,
+        maxWidth: screenWidth < 420 ? screenWidth - 32 : 320,
+        maxHeight: 360,
       ),
       items: <PopupMenuEntry<dynamic>>[
         const PopupMenuDivider(height: 1),
@@ -289,7 +294,8 @@ class _ModelSelectorState extends State<ModelSelector> {
           )
         else
           ...widget.availableModels.map<PopupMenuEntry<dynamic>>((model) {
-            final isSelected = model.modelId == _liveSession?.chatModel?.modelId;
+            final isSelected =
+                model.modelId == _liveSession?.chatModel?.modelId;
             return PopupMenuItem<dynamic>(
               height: 60,
               child: Container(
@@ -323,6 +329,8 @@ class _ModelSelectorState extends State<ModelSelector> {
                                       ? Theme.of(context).colorScheme.onSurface
                                       : Theme.of(context).colorScheme.onSurface,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -333,6 +341,8 @@ class _ModelSelectorState extends State<ModelSelector> {
                                 context,
                               ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
 
                           model.systemPrompt != null &&
@@ -341,10 +351,11 @@ class _ModelSelectorState extends State<ModelSelector> {
                                 "${model.systemPrompt ?? ''}",
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               )
                               : const SizedBox(),
                         ],
@@ -394,85 +405,83 @@ class _ModelSelectorState extends State<ModelSelector> {
     return Obx(() {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 1),
-      child: InkWell(
-        key: widget.selectorKey,
-        onTap: () => _showModelSelectorPopup(context),
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Container(
-                  constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              _getDisplayModelName(),
-                              style: TextStyle(
-                                fontSize: isMobile ? 16 : 13,
-                                fontWeight: FontWeight.w500,
-                                color:
-                                    _hasValidModel()
-                                        ? Theme.of(
-                                          context,
-                                        ).colorScheme.onSurface
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
+        child: InkWell(
+          key: widget.selectorKey,
+          onTap: () => _showModelSelectorPopup(context),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Container(
+                    constraints: BoxConstraints(maxWidth: maxWidth),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                _getDisplayModelName(),
+                                style: TextStyle(
+                                  fontSize: isMobile ? 16 : 13,
+                                  fontWeight: FontWeight.w500,
+                                  color:
+                                      _hasValidModel()
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.chevron_right,
-                            size: 12,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.7),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.chevron_right,
+                              size: 12,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                          ],
+                        ),
+                        if (!isMobile || _hasValidModel()) ...[
+                          const SizedBox(height: 0),
+                          Text(
+                            _getDisplayModelDetail(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color:
+                                  _hasValidModel()
+                                      ? Theme.of(context).colorScheme.onSurface
+                                          .withValues(alpha: 0.7)
+                                      : Theme.of(context).colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ],
-                      ),
-                      if (!isMobile || _hasValidModel()) ...[
-                        const SizedBox(height: 0),
-                        Text(
-                          _getDisplayModelDetail(),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color:
-                                _hasValidModel()
-                                    ? Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withValues(alpha: 0.7)
-                                    : Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withValues(alpha: 0.5),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
       );
     });
   }

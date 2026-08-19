@@ -2030,11 +2030,11 @@ class AppLocalizationsVi extends AppLocalizations {
       'Thay thế số CMND/CCCD trong tin nhắn bằng \'*\'';
 
   @override
-  String get costOptimization => 'Tối ưu chi phí';
+  String get smartModelSelection => 'Chọn mô hình thông minh';
 
   @override
-  String get costOptimizationDesc =>
-      'Khi bật, câu hỏi dài tự động dùng mô hình phức tạp, câu hỏi ngắn dùng mô hình rẻ hơn';
+  String get smartModelSelectionDesc =>
+      'Khi bật, yêu cầu đơn giản ưu tiên mô hình nhẹ và tác vụ khó sẽ chuyển sang mô hình năng lực cao hơn';
 
   @override
   String get sessionDetails => 'Chi tiết phiên';

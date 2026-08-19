@@ -410,36 +410,32 @@ Map<String, dynamic> _sessionConfigSnapshot(ChatSession s) {
       'model': s.model,
       'autoSelectModel': s.autoSelectModel,
     },
-    'model': m == null
-        ? null
-        : {
-            'modelId': m.modelId,
-            'name': m.name,
-            'model': m.model,
-            'type': m.type,
-            'platform': m.platform,
-            'protocol': m.protocol,
-            'temperature': m.temperature,
-            'replyLanguage': m.replyLanguage,
-            'systemPrompt': m.systemPrompt,
-            'maskPhone': m.maskPhone,
-            'maskIdCard': m.maskIdCard,
-            'routingEnabled': m.routingEnabled,
-            'cheapModel': m.cheapModel,
-            'complexModel': m.complexModel,
-          },
+    'model':
+        m == null
+            ? null
+            : {
+              'modelId': m.modelId,
+              'name': m.name,
+              'model': m.model,
+              'type': m.type,
+              'platform': m.platform,
+              'protocol': m.protocol,
+              'temperature': m.temperature,
+              'replyLanguage': m.replyLanguage,
+              'systemPrompt': m.systemPrompt,
+              'maskPhone': m.maskPhone,
+              'maskIdCard': m.maskIdCard,
+              'routingEnabled': m.routingEnabled,
+              'lightweightModel': m.lightweightModel,
+              'capableModel': m.capableModel,
+            },
     'mcps': s.mcps ?? const <String>[],
     'prompts': {
       'connectPrompt': s.connectPrompt,
       'systemPrompt': s.systemPrompt,
-      'quickCommands': s.sessionQuickCommands
-          .map((c) => c.toJson())
-          .toList(),
+      'quickCommands': s.sessionQuickCommands.map((c) => c.toJson()).toList(),
     },
-    'service': {
-      'apiKey': s.apiKey,
-      'isDisabled': s.isDisabled,
-    },
+    'service': {'apiKey': s.apiKey, 'isDisabled': s.isDisabled},
     'quota': quota,
     'tokens': {
       'promptTokens': s.promptTokens,

@@ -15,6 +15,7 @@ import 'package:llmate/features/mcp/widgets/mcp_detail_dialog.dart';
 import '../../../../models/chat/session.dart';
 import '../../../../models/chat/mcp.dart';
 import '../../../../models/model.dart';
+import '../../services/quota_utils.dart';
 import '../../../utils/snackbar_utils.dart';
 import 'package:llmate/features/widgets/confirm_delete_dialog.dart';
 
@@ -660,7 +661,7 @@ class SessionConfigSidebar {
       children: [
         buildBasicInfoSection(context, session),
         const SizedBox(height: 16),
-        // ── 模型设置：费用优化 + 模型选项 ──
+        // ── 模型设置：智能选模 + 模型选项 ──
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1077,7 +1078,7 @@ class _ModelSettingsSectionState extends State<_ModelSettingsSection> {
     );
   }
 
-  /// 自动选择模型开关（即原来的「费用优化」省钱路由，挪到会话级）
+  /// 自动选择模型开关（会话级智能选模）
   Widget _buildAutoSelectToggle(BuildContext context, ChatSession session) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
@@ -1117,7 +1118,7 @@ class _ModelSettingsSectionState extends State<_ModelSettingsSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.costOptimization,
+                  l10n.smartModelSelection,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -1130,7 +1131,7 @@ class _ModelSettingsSectionState extends State<_ModelSettingsSection> {
                   ),
                 ),
                 Text(
-                  l10n.costOptimizationDesc,
+                  l10n.smartModelSelectionDesc,
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
@@ -1481,15 +1482,13 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                 final updated = _session.copyWith(quotaEnabled: val);
                 if (val && _session.quotaPeriodStart == null) {
                   // 开启时按自然时间边界初始化
-                  final now = DateTime.now();
-                  final periodStart =
-                      _session.quotaResetPeriod == 'daily'
-                          ? DateTime(now.year, now.month, now.day)
-                          : _session.quotaResetPeriod == 'monthly'
-                          ? DateTime(now.year, now.month, 1)
-                          : now;
                   _updateSession(
-                    updated.copyWith(quotaPeriodStart: periodStart),
+                    updated.copyWith(
+                      quotaPeriodStart: QuotaUtils.periodStartFor(
+                        _session.quotaResetPeriod,
+                        DateTime.now(),
+                      ),
+                    ),
                   );
                 } else {
                   _updateSession(updated);
@@ -1667,13 +1666,13 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                         clearQuotaResetPeriod: val == null,
                       );
                       if (val != null && _session.quotaPeriodStart == null) {
-                        final now = DateTime.now();
-                        final periodStart =
-                            val == 'daily'
-                                ? DateTime(now.year, now.month, now.day)
-                                : DateTime(now.year, now.month, 1);
                         _updateSession(
-                          updated.copyWith(quotaPeriodStart: periodStart),
+                          updated.copyWith(
+                            quotaPeriodStart: QuotaUtils.periodStartFor(
+                              val,
+                              DateTime.now(),
+                            ),
+                          ),
                         );
                       } else {
                         _updateSession(updated);
@@ -1801,15 +1800,14 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     );
 
     if (shouldReset == true) {
-      final now = DateTime.now();
-      final periodStart =
-          _session.quotaResetPeriod == 'daily'
-              ? DateTime(now.year, now.month, now.day)
-              : _session.quotaResetPeriod == 'monthly'
-              ? DateTime(now.year, now.month, 1)
-              : now;
       _updateSession(
-        _session.copyWith(quotaRequestCount: 0, quotaPeriodStart: periodStart),
+        _session.copyWith(
+          quotaRequestCount: 0,
+          quotaPeriodStart: QuotaUtils.periodStartFor(
+            _session.quotaResetPeriod,
+            DateTime.now(),
+          ),
+        ),
       );
     }
   }
@@ -1864,8 +1862,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     bool isDouble = false,
     String suffix = '',
   }) {
-    final progress =
-        limit > 0 ? (used.toDouble() / limit.toDouble()).clamp(0.0, 1.0) : 0.0;
+    final progress = QuotaUtils.usageProgress(used: used, limit: limit);
     final usedStr =
         isDouble
             ? used.toStringAsFixed(4)

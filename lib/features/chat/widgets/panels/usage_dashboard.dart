@@ -56,7 +56,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
   final Map<String, _ModelUsage> _globalModelStats = {};
   final Map<String, UsageStats> _globalSessionStats = {};
 
-  // 会话视图：按实际使用模型聚合的用量（用于按模型分别展示便宜/贵模型的使用情况）
+  // 会话视图：按实际使用模型聚合的用量（用于分别展示智能选模命中的模型）
   final Map<String, _ModelUsage> _sessionModelStats = {};
 
   /// 时间区间（按粒度解释）：
@@ -116,7 +116,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
         start: start,
         end: end,
       );
-      // 按模型聚合：单会话下分别统计各「实际使用模型」的用量（含路由命中的便宜模型）
+      // 按模型聚合：单会话下分别统计各「实际使用模型」的用量（含智能选模命中的轻量模型）
       final details = await UsageController.instance.loadDetails(
         sessionId: session.sessionId,
         start: start,
@@ -201,13 +201,14 @@ class _UsageDashboardState extends State<UsageDashboard> {
     }
   }
 
-  /// 将某个模型配置「可能实际调用」的所有 API 模型名（主模型 + 便宜/复杂路由 + 候选池）索引到该配置，
+  /// 将某个模型配置「可能实际调用」的所有 API 模型名（主模型 + 智能选模候选 + 候选池）索引到该配置，
   /// 供按实际调用模型名（如 deepseek-v4-flash）分组时关联显示名与图标。
   void _indexModelAliases(Map<String, ChatModel> map, ChatModel m) {
     final names = <String>{
       if (m.model.isNotEmpty) m.model,
-      if (m.cheapModel != null && m.cheapModel!.isNotEmpty) m.cheapModel!,
-      if (m.complexModel != null && m.complexModel!.isNotEmpty) m.complexModel!,
+      if (m.lightweightModel != null && m.lightweightModel!.isNotEmpty)
+        m.lightweightModel!,
+      if (m.capableModel != null && m.capableModel!.isNotEmpty) m.capableModel!,
       ...m.availableModels,
     };
     for (final n in names) {
@@ -314,16 +315,17 @@ class _UsageDashboardState extends State<UsageDashboard> {
           // 加载完成前（_stats == null）回退到配置模型的会话缓存值，避免空白闪烁
           final distStats =
               (_stats == null || _sessionModelStats.isEmpty) &&
-                  currentSession.chatModel != null
-              ? <String, _ModelUsage>{
-                  currentSession.chatModel!.model: _ModelUsage()
-                    ..chatModel = currentSession.chatModel
-                    ..model = currentSession.chatModel!.model
-                    ..sessionCount = 1
-                    ..promptTokens = promptTokens
-                    ..completionTokens = completionTokens,
-                }
-              : _sessionModelStats;
+                      currentSession.chatModel != null
+                  ? <String, _ModelUsage>{
+                    currentSession.chatModel!.model:
+                        _ModelUsage()
+                          ..chatModel = currentSession.chatModel
+                          ..model = currentSession.chatModel!.model
+                          ..sessionCount = 1
+                          ..promptTokens = promptTokens
+                          ..completionTokens = completionTokens,
+                  }
+                  : _sessionModelStats;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,7 +423,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   ),
         ),
 
-        // ===== 按模型用量（本会话：便宜/贵模型分别统计）=====
+        // ===== 按模型用量（本会话：按实际调用模型分别统计）=====
         const SizedBox(height: 80),
       ],
     );
@@ -752,10 +754,9 @@ class _UsageDashboardState extends State<UsageDashboard> {
   ) {
     final entries = stats.entries.toList();
     entries.sort(
-      (a, b) =>
-          (b.value.promptTokens + b.value.completionTokens).compareTo(
-            a.value.promptTokens + a.value.completionTokens,
-          ),
+      (a, b) => (b.value.promptTokens + b.value.completionTokens).compareTo(
+        a.value.promptTokens + a.value.completionTokens,
+      ),
     );
     return entries;
   }
@@ -835,58 +836,58 @@ class _UsageDashboardState extends State<UsageDashboard> {
           color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE5E7EB),
         ),
       ),
-      child: !hasData
-          ? Text(
-              l10n.noUsageData,
-              style: TextStyle(
-                fontSize: 13,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-              ),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: SizedBox(
-                    height: 12,
-                    width: double.infinity,
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < entries.length; i++)
-                          Expanded(
-                            flex:
-                                ((entries[i].value.promptTokens +
-                                            entries[i].value.completionTokens) /
-                                        total *
-                                        1000)
-                                    .round()
-                                    .clamp(1, 1000),
-                            child: Container(color: _distributionColor(i)),
-                          ),
-                      ],
+      child:
+          !hasData
+              ? Text(
+                l10n.noUsageData,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+              )
+              : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: SizedBox(
+                      height: 12,
+                      width: double.infinity,
+                      child: Row(
+                        children: [
+                          for (var i = 0; i < entries.length; i++)
+                            Expanded(
+                              flex: ((entries[i].value.promptTokens +
+                                          entries[i].value.completionTokens) /
+                                      total *
+                                      1000)
+                                  .round()
+                                  .clamp(1, 1000),
+                              child: Container(color: _distributionColor(i)),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 8,
-                  children: [
-                    for (var i = 0; i < entries.length; i++)
-                      _modelShareLegendItem(
-                        theme,
-                        _distributionColor(i),
-                        _modelDisplayName(entries[i].value, entries[i].key),
-                        entries[i].value.promptTokens +
-                            entries[i].value.completionTokens,
-                        total,
-                        l10n,
-                      ),
-                  ],
-                ),
-              ],
-            ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      for (var i = 0; i < entries.length; i++)
+                        _modelShareLegendItem(
+                          theme,
+                          _distributionColor(i),
+                          _modelDisplayName(entries[i].value, entries[i].key),
+                          entries[i].value.promptTokens +
+                              entries[i].value.completionTokens,
+                          total,
+                          l10n,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
     );
   }
 

@@ -31,8 +31,8 @@ class ConfirmDeleteDialog extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     // 红色在暗色下提亮，保证与深色背景的对比度
-    final accentColor = iconColor ??
-        (isDark ? Colors.redAccent.shade200 : Colors.red);
+    final accentColor =
+        iconColor ?? (isDark ? Colors.redAccent.shade200 : Colors.red);
     final onAccentColor = Colors.white;
 
     return AlertDialog(
@@ -46,12 +46,16 @@ class ConfirmDeleteDialog extends StatelessWidget {
             color: accentColor,
           ),
           const SizedBox(width: 6),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: accentColor,
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: accentColor,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -60,12 +64,15 @@ class ConfirmDeleteDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$description "$itemName" 吗？',
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.textTheme.bodyMedium?.color,
-              fontWeight: FontWeight.w500,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Text(
+              '$description "$itemName" 吗？',
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.textTheme.bodyMedium?.color,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           if (warningMessage != null) ...[
@@ -80,12 +87,9 @@ class ConfirmDeleteDialog extends StatelessWidget {
                 ),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 12,
-                    color: accentColor,
-                  ),
+                  Icon(Icons.info_outline, size: 12, color: accentColor),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(

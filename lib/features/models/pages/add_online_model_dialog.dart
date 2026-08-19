@@ -5,6 +5,8 @@ import '../../../models/model.dart';
 import '../../../models/model_catalog.dart';
 import '../../../models/chat/session.dart';
 import '../../../core/llm/common/openai_provider.dart';
+import '../services/model_endpoint_builder.dart';
+import '../view_models/model_connection_test_state.dart';
 
 class AddOnlineModelDialog extends StatefulWidget {
   const AddOnlineModelDialog({super.key});
@@ -19,18 +21,14 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   String _selectedOnlineModel = '';
   final Map<String, String> _selectedModelSizes = {}; // 改为 Map，为每个模型独立存储选中的规格
   String _customModelName = '';
-  bool _isCustomModel = false; // 是否使用自定义模型（在预设提供商下）
   bool _isCustomProvider = false; // 是否使用自定义提供商（完全手动输入）
 
-  // 省钱路由相关状态
+  // 智能选模相关状态
   List<String> _availableModels = []; // 供应商候选模型池（来自 /models 或本地 fallback）
-  bool _routingEnabled = true; // 费用优化开关（关闭则强制使用指定模型）
+  bool _routingEnabled = true; // 智能选模开关（关闭则强制使用指定模型）
 
   // 配置测试相关状态
-  bool _isTesting = false;
-  bool _testCompleted = false;
-  bool _testPassed = false;
-  String _testResponse = '';
+  final ModelConnectionTestState _connectionTest = ModelConnectionTestState();
 
   final TextEditingController _modelNameController = TextEditingController();
   final TextEditingController _apiKeyController = TextEditingController();
@@ -275,18 +273,16 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     _selectedProvider = provider['id'];
                     _selectedOnlineModel = '';
                     _selectedModelSizes.clear();
-                    _isCustomModel = false;
+                    _availableModels = [];
                     _isCustomProvider = false;
                     _customModelController.clear();
                     _apiUrlController.text = provider['defaultUrl'];
 
-                    if (provider['models'] != null &&
-                        (provider['models'] as List).isNotEmpty) {
-                      _selectedOnlineModel = provider['models'][0]['id'];
+                    final providerModels = _modelsForProvider(provider);
+                    if (providerModels.isNotEmpty) {
+                      _selectedOnlineModel = providerModels.first['id'];
                     }
-                    _testCompleted = false;
-                    _testPassed = false;
-                    _testResponse = '';
+                    _connectionTest.reset();
                   });
                 },
                 child: Container(
@@ -377,14 +373,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           _selectedProvider = 'custom';
           _selectedOnlineModel = '';
           _selectedModelSizes.clear();
-          _isCustomModel = true; // 自定义提供商下强制使用自定义模型输入
+          _availableModels = [];
           _customModelController.clear();
           _apiUrlController.clear(); // 清空，让用户手动输入
           _apiKeyController.clear();
 
-          _testCompleted = false;
-          _testPassed = false;
-          _testResponse = '';
+          _connectionTest.reset();
         });
       },
       child: Container(
@@ -495,6 +489,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         return 'assets/icons/gemini-color.webp';
       case 'qwen':
         return 'assets/icons/qwen-color.webp';
+      case 'zhipu':
+        return 'assets/icons/yuanbao-color.webp';
       case 'tencent':
         return 'assets/icons/tencent-color.webp';
       case 'xiaomi_mimo':
@@ -502,6 +498,60 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       default:
         return null;
     }
+  }
+
+  List<Map<String, dynamic>> _modelsForProvider(Map<String, dynamic> provider) {
+    final models = <Map<String, dynamic>>[];
+    final seen = <String>{};
+
+    final configuredModels = provider['models'] as List<dynamic>? ?? const [];
+    for (final model in configuredModels) {
+      if (model is! Map) continue;
+      final normalized = Map<String, dynamic>.from(model);
+      final id = normalized['id'] as String?;
+      if (id == null || id.isEmpty || !seen.add(id)) continue;
+      models.add(normalized);
+    }
+
+    for (final id in ModelCatalog.builtinModels[provider['id']] ?? const []) {
+      if (!seen.add(id)) continue;
+      models.add({
+        'id': id,
+        'name': ModelCatalog.displayName(id),
+        'specs': ModelCatalog.shortDescription(id),
+      });
+    }
+
+    return models;
+  }
+
+  List<String> _modelIdsForProvider(Map<String, dynamic> provider) {
+    return _modelsForProvider(
+      provider,
+    ).map((model) => model['id'] as String).toList(growable: false);
+  }
+
+  String _selectedModelIdWithSize() {
+    final selectedSize = _selectedModelSizes[_selectedOnlineModel];
+    if (selectedSize == null || selectedSize.isEmpty) {
+      return _selectedOnlineModel;
+    }
+    return '$_selectedOnlineModel:$selectedSize';
+  }
+
+  String _selectedModelDisplayName() {
+    if (_selectedOnlineModel.isEmpty) {
+      return AppLocalizations.of(context)!.notSelected;
+    }
+    if (_isCustomProvider) {
+      return '$_selectedOnlineModel ${AppLocalizations.of(context)!.customSuffix}';
+    }
+    final selectedProviderData = _getSelectedProviderData();
+    final selectedModel = _modelsForProvider(selectedProviderData).firstWhere(
+      (model) => model['id'] == _selectedOnlineModel,
+      orElse: () => {'name': ModelCatalog.displayName(_selectedOnlineModel)},
+    );
+    return selectedModel['name'] as String? ?? _selectedOnlineModel;
   }
 
   Widget _buildApiConfiguration() {
@@ -513,6 +563,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     final selectedProviderData = onlineProviders.firstWhere(
       (provider) => provider['id'] == _selectedProvider,
     );
+    final modelOptions = _modelsForProvider(selectedProviderData);
 
     return SingleChildScrollView(
       child: Column(
@@ -562,24 +613,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ), // 减少内边距
             ),
             onChanged: (value) {
-              // 自动去除空格
-              final trimmedValue = value.replaceAll(' ', '');
-              if (trimmedValue != value) {
-                _apiKeyController.value = TextEditingValue(
-                  text: trimmedValue,
-                  selection: TextSelection.collapsed(
-                    offset: trimmedValue.length,
-                  ),
-                );
-              }
-              setState(() {
-                // 重置测试状态（如果用户更改了配置）
-                if (_testCompleted) {
-                  _testCompleted = false;
-                  _testPassed = false;
-                  _testResponse = '';
-                }
-              });
+              _removeSpaces(_apiKeyController, value);
+              _resetConnectionTestIfCompleted();
             },
           ),
           const SizedBox(height: 12), // 从16减少到12
@@ -614,24 +649,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ),
             ),
             onChanged: (value) {
-              // 自动去除空格
-              final trimmedValue = value.replaceAll(' ', '');
-              if (trimmedValue != value) {
-                _apiUrlController.value = TextEditingValue(
-                  text: trimmedValue,
-                  selection: TextSelection.collapsed(
-                    offset: trimmedValue.length,
-                  ),
-                );
-              }
-              setState(() {
-                // 重置测试状态（如果用户更改了配置）
-                if (_testCompleted) {
-                  _testCompleted = false;
-                  _testPassed = false;
-                  _testResponse = '';
-                }
-              });
+              _removeSpaces(_apiUrlController, value);
+              _resetConnectionTestIfCompleted();
             },
           ),
           const SizedBox(height: 6),
@@ -654,360 +673,196 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             ), // 从14减少到12
           ),
           const SizedBox(height: 6), // 从8减少到6
-          // 选择方式：预设模型 vs 自定义输入
-          Row(
-            children: [
-              Flexible(
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _isCustomModel = false;
-                      _selectedModelSizes.clear(); // 清空所有模型的规格选择
-                      // 如果有预设模型，默认选择第一个
-                      if ((selectedProviderData['models'] as List).isNotEmpty) {
-                        _selectedOnlineModel =
-                            selectedProviderData['models'][0]['id'];
-                      }
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          !_isCustomModel
-                              ? Theme.of(
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).dividerColor),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              children:
+                  modelOptions.map((model) {
+                    final isSelected = _selectedOnlineModel == model['id'];
+                    final hasCapabilities = model['context'] != null;
+                    return InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedOnlineModel = model['id'];
+                          _connectionTest.resetIfCompleted();
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              isSelected
+                                  ? Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.08)
+                                  : null,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.1)
-                              : Theme.of(context).colorScheme.surface,
-                      border: Border.all(
-                        color:
-                            !_isCustomModel
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(context).dividerColor,
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context)!.presetModel,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color:
-                            !_isCustomModel
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.6),
-                        fontWeight:
-                            !_isCustomModel
-                                ? FontWeight.w500
-                                : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _isCustomModel = true;
-                      _selectedOnlineModel = ''; // 清空预设选择
-                      _selectedModelSizes.clear(); // 清空所有模型的规格选择
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          _isCustomModel
-                              ? Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.1)
-                              : Theme.of(context).colorScheme.surface,
-                      border: Border.all(
-                        color:
-                            _isCustomModel
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(context).dividerColor,
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context)!.customModel,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color:
-                            _isCustomModel
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.6),
-                        fontWeight:
-                            _isCustomModel
-                                ? FontWeight.w500
-                                : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // 根据选择显示不同的输入方式
-          if (!_isCustomModel) ...[
-            // 预设模型列表
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Theme.of(context).dividerColor),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Column(
-                children:
-                    (selectedProviderData['models'] as List<Map<String, dynamic>>).map((
-                      model,
-                    ) {
-                      final isSelected = _selectedOnlineModel == model['id'];
-                      final hasCapabilities = model['context'] != null;
-                      return InkWell(
-                        onTap: () {
-                          setState(() {
-                            _selectedOnlineModel = model['id'];
-                            // 不需要重置该模型的规格选择，保持用户已选择的状态
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                isSelected
-                                    ? Theme.of(context).colorScheme.onSurface
-                                        .withValues(alpha: 0.08)
-                                    : null,
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Theme.of(
-                                  context,
-                                ).dividerColor.withValues(alpha: 0.5),
-                                width: 0.5,
-                              ),
+                              ).dividerColor.withValues(alpha: 0.5),
+                              width: 0.5,
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color:
-                                        isSelected
-                                            ? Theme.of(
-                                              context,
-                                            ).colorScheme.onSurface
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .outline
-                                                .withValues(alpha: 0.5),
-                                    width: 2,
-                                  ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
                                   color:
                                       isSelected
                                           ? Theme.of(
                                             context,
-                                          ).colorScheme.primary
-                                          : Colors.transparent,
-                                ),
-                                child:
-                                    isSelected
-                                        ? Icon(
-                                          Icons.circle,
-                                          size: 8,
-                                          color:
-                                              Theme.of(
-                                                context,
-                                              ).colorScheme.onPrimary,
-                                        )
-                                        : null,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${model['name']}${_selectedModelSizes[model['id']]?.isNotEmpty == true ? ':${_selectedModelSizes[model['id']]}' : ''}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight:
-                                            isSelected
-                                                ? FontWeight.w500
-                                                : FontWeight.normal,
-                                        color:
-                                            isSelected
-                                                ? Theme.of(
-                                                  context,
-                                                ).colorScheme.onSurface
-                                                : Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withValues(alpha: 0.8),
-                                      ),
-                                    ),
-                                    // 模型能力指标（带勾选标记）
-                                    if (hasCapabilities) ...[
-                                      const SizedBox(height: 4),
-                                      _buildCapabilityTags(model, isSelected),
-                                    ] else if (model['specs'] != null) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        model['specs'],
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Theme.of(context)
+                                          ).colorScheme.onSurface
+                                          : Theme.of(context)
                                               .colorScheme
-                                              .onSurface
+                                              .outline
                                               .withValues(alpha: 0.5),
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                  width: 2,
+                                ),
+                                color:
+                                    isSelected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Colors.transparent,
+                              ),
+                              child:
+                                  isSelected
+                                      ? Icon(
+                                        Icons.circle,
+                                        size: 8,
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.onPrimary,
+                                      )
+                                      : null,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${model['name']}${_selectedModelSizes[model['id']]?.isNotEmpty == true ? ':${_selectedModelSizes[model['id']]}' : ''}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight:
+                                          isSelected
+                                              ? FontWeight.w500
+                                              : FontWeight.normal,
+                                      color:
+                                          isSelected
+                                              ? Theme.of(
+                                                context,
+                                              ).colorScheme.onSurface
+                                              : Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.8),
+                                    ),
+                                  ),
+                                  if (hasCapabilities) ...[
+                                    const SizedBox(height: 4),
+                                    _buildCapabilityTags(model, isSelected),
+                                  ] else if (model['specs'] != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      model['specs'],
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.5),
                                       ),
-                                    ],
-
-                                    // 如果模型有 size 字段且选中了该模型，显示 size 选择标签
-                                    if (isSelected &&
-                                        model['size'] != null &&
-                                        (model['size'] as List).isNotEmpty) ...[
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 6,
-                                        runSpacing: 4,
-                                        children:
-                                            (model['size'] as List<String>).map((
-                                              size,
-                                            ) {
-                                              final isSizeSelected =
-                                                  _selectedModelSizes[model['id']] ==
-                                                  size;
-                                              return GestureDetector(
-                                                onTap: () {
-                                                  setState(() {
-                                                    _selectedModelSizes[model['id']] =
-                                                        size;
-                                                  });
-                                                },
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        isSizeSelected
-                                                            ? const Color(
-                                                              0xFF1F2937,
-                                                            )
-                                                            : const Color(
-                                                              0xFF1F2937,
-                                                            ).withValues(
-                                                              alpha: 0.1,
-                                                            ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                    border: Border.all(
-                                                      color: const Color(
-                                                        0xFF1F2937,
-                                                      ),
-                                                      width: 1,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                  if (isSelected &&
+                                      model['size'] != null &&
+                                      (model['size'] as List).isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      children:
+                                          (model['size'] as List<String>).map((
+                                            size,
+                                          ) {
+                                            final isSizeSelected =
+                                                _selectedModelSizes[model['id']] ==
+                                                size;
+                                            return GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  _selectedModelSizes[model['id']] =
+                                                      size;
+                                                });
+                                              },
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
                                                     ),
-                                                  ),
-                                                  child: Text(
-                                                    size,
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      color:
-                                                          isSizeSelected
-                                                              ? Colors.white
-                                                              : const Color(
-                                                                0xFF1F2937,
-                                                              ),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      isSizeSelected
+                                                          ? const Color(
+                                                            0xFF1F2937,
+                                                          )
+                                                          : const Color(
+                                                            0xFF1F2937,
+                                                          ).withValues(
+                                                            alpha: 0.1,
+                                                          ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: const Color(
+                                                      0xFF1F2937,
                                                     ),
+                                                    width: 1,
                                                   ),
                                                 ),
-                                              );
-                                            }).toList(),
-                                      ),
-                                    ],
+                                                child: Text(
+                                                  size,
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w500,
+                                                    color:
+                                                        isSizeSelected
+                                                            ? Colors.white
+                                                            : const Color(
+                                                              0xFF1F2937,
+                                                            ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                    ),
                                   ],
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      );
-                    }).toList(),
-              ),
+                      ),
+                    );
+                  }).toList(),
             ),
-          ] else ...[
-            // 自定义模型输入
-            TextField(
-              controller: _customModelController,
-              style: const TextStyle(fontSize: 12),
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.modelSearchHint,
-                hintStyle: const TextStyle(fontSize: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: const BorderSide(color: Color(0xFF1F2937)),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _selectedOnlineModel = value.trim();
-                  // 重置测试状态
-                  if (_testCompleted) {
-                    _testCompleted = false;
-                    _testPassed = false;
-                    _testResponse = '';
-                  }
-                });
-              },
-            ),
-            const SizedBox(height: 6),
-            Text(
-              AppLocalizations.of(context)!.enterFullModelName,
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-            ),
-          ],
+          ),
         ],
       ),
     );
@@ -1055,22 +910,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ),
             ),
             onChanged: (value) {
-              final trimmedValue = value.replaceAll(' ', '');
-              if (trimmedValue != value) {
-                _apiUrlController.value = TextEditingValue(
-                  text: trimmedValue,
-                  selection: TextSelection.collapsed(
-                    offset: trimmedValue.length,
-                  ),
-                );
-              }
-              setState(() {
-                if (_testCompleted) {
-                  _testCompleted = false;
-                  _testPassed = false;
-                  _testResponse = '';
-                }
-              });
+              _removeSpaces(_apiUrlController, value);
+              _resetConnectionTestIfCompleted();
             },
           ),
           const SizedBox(height: 6),
@@ -1115,22 +956,8 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               ),
             ),
             onChanged: (value) {
-              final trimmedValue = value.replaceAll(' ', '');
-              if (trimmedValue != value) {
-                _apiKeyController.value = TextEditingValue(
-                  text: trimmedValue,
-                  selection: TextSelection.collapsed(
-                    offset: trimmedValue.length,
-                  ),
-                );
-              }
-              setState(() {
-                if (_testCompleted) {
-                  _testCompleted = false;
-                  _testPassed = false;
-                  _testResponse = '';
-                }
-              });
+              _removeSpaces(_apiKeyController, value);
+              _resetConnectionTestIfCompleted();
             },
           ),
           const SizedBox(height: 12),
@@ -1162,11 +989,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             onChanged: (value) {
               setState(() {
                 _selectedOnlineModel = value.trim();
-                if (_testCompleted) {
-                  _testCompleted = false;
-                  _testPassed = false;
-                  _testResponse = '';
-                }
+                _connectionTest.resetIfCompleted();
               });
             },
           ),
@@ -1181,6 +1004,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   }
 
   Widget _buildModelNameSetting() {
+    final colorScheme = Theme.of(context).colorScheme;
     final String platformDisplayName;
 
     if (_isCustomProvider) {
@@ -1202,9 +1026,13 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.35,
+              ),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1244,15 +1072,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 const SizedBox(height: 8),
                 _buildSummaryItem(
                   AppLocalizations.of(context)!.modelLabel,
-                  _selectedOnlineModel.isNotEmpty
-                      ? _isCustomModel || _isCustomProvider
-                          ? '$_selectedOnlineModel ${AppLocalizations.of(context)!.customSuffix}'
-                          : (_getSelectedProviderData()['models'] as List)
-                              .firstWhere(
-                                (m) => m['id'] == _selectedOnlineModel,
-                                orElse: () => {'name': _selectedOnlineModel},
-                              )['name']
-                      : AppLocalizations.of(context)!.notSelected,
+                  _selectedModelDisplayName(),
                   Icons.desktop_windows,
                 ),
                 const SizedBox(height: 8),
@@ -1297,7 +1117,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           const SizedBox(height: 6),
           Text(
             AppLocalizations.of(context)!.modelNameSuggestion,
-            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 11,
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
 
           const SizedBox(height: 16),
@@ -1358,17 +1181,24 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           const SizedBox(height: 8),
           Text(
             _buildPriceUnitDesc(),
-            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 11,
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
 
           const SizedBox(height: 16),
-          // 费用优化开关
+          // 智能选模开关
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.35,
+              ),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+              ),
             ),
             child: SwitchListTile(
               value: _routingEnabled,
@@ -1379,12 +1209,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
               },
               activeThumbColor: const Color(0xFF10B981),
               title: const Text(
-                '费用优化',
+                '会话自动选择模型',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
               ),
               subtitle: const Text(
-                '开启后，长问题自动使用复杂模型，短问题使用便宜模型',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
+                '开启后会保存完整模型列表，会话里可自动选择或手动指定模型',
+                style: TextStyle(fontSize: 11),
               ),
               contentPadding: EdgeInsets.zero,
               dense: true,
@@ -1402,6 +1232,20 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       (provider) => provider['id'] == _selectedProvider,
       orElse: () => {},
     );
+  }
+
+  void _removeSpaces(TextEditingController controller, String value) {
+    final trimmedValue = value.replaceAll(' ', '');
+    if (trimmedValue == value) return;
+
+    controller.value = TextEditingValue(
+      text: trimmedValue,
+      selection: TextSelection.collapsed(offset: trimmedValue.length),
+    );
+  }
+
+  void _resetConnectionTestIfCompleted() {
+    setState(_connectionTest.resetIfCompleted);
   }
 
   /// 当前模型的货币单位（自定义提供商默认人民币）
@@ -1434,16 +1278,15 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             _apiUrlController.text.trim().isNotEmpty &&
             _selectedOnlineModel.isNotEmpty;
 
-        // 如果是预设模型且有 size 选项，需要检查是否选择了 size
-        if (!_isCustomModel && basicRequirementsMet) {
+        if (basicRequirementsMet) {
           final selectedProviderData = onlineProviders.firstWhere(
             (provider) => provider['id'] == _selectedProvider,
           );
           try {
-            final selectedModel = (selectedProviderData['models'] as List)
-                .firstWhere((model) => model['id'] == _selectedOnlineModel);
-            if (selectedModel != null &&
-                selectedModel['size'] != null &&
+            final selectedModel = _modelsForProvider(
+              selectedProviderData,
+            ).firstWhere((model) => model['id'] == _selectedOnlineModel);
+            if (selectedModel['size'] != null &&
                 (selectedModel['size'] as List).isNotEmpty) {
               return _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty ==
                   true;
@@ -1455,7 +1298,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
         return basicRequirementsMet;
       case 2:
-        return _testCompleted && _testPassed;
+        return _connectionTest.completed && _connectionTest.passed;
       case 3:
         return _customModelName.isNotEmpty;
       default:
@@ -1481,7 +1324,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       // 完成创建
       final inputApiUrl = _apiUrlController.text.trim();
       final inputApiKey = _apiKeyController.text.trim();
-      String finalApiUrl = inputApiUrl;
 
       final String protocol;
       final String platformName;
@@ -1492,14 +1334,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         protocol = 'openai';
         platformName = AppLocalizations.of(context)!.customProvider;
         currency = 'CNY';
-
-        // OpenAI 协议自动补全端点
-        if (!finalApiUrl.endsWith('/chat/completions')) {
-          finalApiUrl =
-              finalApiUrl.endsWith('/')
-                  ? '${finalApiUrl}chat/completions'
-                  : '$finalApiUrl/chat/completions';
-        }
       } else {
         final selectedProviderData = onlineProviders.firstWhere(
           (provider) => provider['id'] == _selectedProvider,
@@ -1508,50 +1342,26 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         protocol = selectedProviderData['protocol'];
         platformName = _resolveProviderPlatformName(_selectedProvider);
         currency = selectedProviderData['currency'] as String? ?? 'CNY';
-
-        // 根据协议自动补全API端点路径
-        switch (protocol) {
-          case 'anthropic':
-            if (!finalApiUrl.endsWith('/messages')) {
-              finalApiUrl =
-                  finalApiUrl.endsWith('/')
-                      ? '${finalApiUrl}messages'
-                      : '$finalApiUrl/messages';
-            }
-            break;
-          case 'gemini':
-            if (!finalApiUrl.contains('/models/')) {
-              finalApiUrl =
-                  finalApiUrl.endsWith('/')
-                      ? '${finalApiUrl}models/$_selectedOnlineModel:generateContent?key=$inputApiKey'
-                      : '$finalApiUrl/models/$_selectedOnlineModel:generateContent?key=$inputApiKey';
-            }
-            break;
-          // OpenAI 兼容协议
-          default:
-            if (!finalApiUrl.endsWith('/chat/completions')) {
-              finalApiUrl =
-                  finalApiUrl.endsWith('/')
-                      ? '${finalApiUrl}chat/completions'
-                      : '$finalApiUrl/chat/completions';
-            }
-        }
       }
 
-      // 构建最终的模型标识符
-      String finalModelId = _selectedOnlineModel;
-      if (!_isCustomModel &&
-          _selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
-        finalModelId =
-            '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
-      }
+      final finalApiUrl = ModelEndpointBuilder.chatCompletionUrl(
+        baseUrl: inputApiUrl,
+        protocol: protocol,
+        modelId: _selectedOnlineModel,
+        apiKey: inputApiKey,
+      );
 
-      // 省钱路由：候选池 + 便宜/复杂模型 + 开关
-      final routeModels = _availableModels.isNotEmpty
-          ? _availableModels
-          : ModelCatalog.resolveModels(_selectedProvider, const []);
-      final cheapModel = ModelCatalog.pickCheap(routeModels);
-      final complexModel = ModelCatalog.pickComplex(routeModels);
+      final finalModelId = _selectedModelIdWithSize();
+
+      // 智能选模：候选池 + 轻量/高能力模型 + 开关
+      final routeModels =
+          _availableModels.isNotEmpty
+              ? _availableModels
+              : _isCustomProvider
+              ? <String>[_selectedOnlineModel]
+              : _modelIdsForProvider(_getSelectedProviderData());
+      final lightweightModel = ModelCatalog.pickLightweight(routeModels);
+      final capableModel = ModelCatalog.pickCapable(routeModels);
 
       final newModel = {
         'modelId': ChatModel.generateModelId(),
@@ -1575,12 +1385,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             _completionPriceController.text.trim(),
           ),
         'availableModels': routeModels,
-        if (cheapModel != null) 'cheapModel': cheapModel,
-        if (complexModel != null) 'complexModel': complexModel,
+        if (lightweightModel != null) 'lightweightModel': lightweightModel,
+        if (capableModel != null) 'capableModel': capableModel,
         'routingEnabled':
             _routingEnabled &&
-            cheapModel != null &&
-            complexModel != null &&
+            lightweightModel != null &&
+            capableModel != null &&
             routeModels.length >= 2,
       };
       Navigator.pop(context, newModel);
@@ -1719,26 +1529,33 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
   }
 
   Widget _buildSummaryItem(String label, String value, IconData icon) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       children: [
-        Icon(icon, size: 12, color: Colors.grey[600]), // 从14减少到12
+        Icon(
+          icon,
+          size: 12,
+          color: colorScheme.onSurface.withValues(alpha: 0.55),
+        ),
         const SizedBox(width: 6), // 从8减少到6
         Text(
           '$label: ',
           style: TextStyle(
             fontSize: 12, // 从14减少到12
-            color: Colors.grey[700],
+            color: colorScheme.onSurface.withValues(alpha: 0.65),
             fontWeight: FontWeight.w500,
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12, // 从14减少到12
-              color: Colors.black87,
+              color: colorScheme.onSurface.withValues(alpha: 0.86),
               fontWeight: FontWeight.w500, // 从w600减少到w500
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -1747,7 +1564,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
   Widget _buildConfigurationTest() {
     // 如果还没有开始测试且不在测试中，自动开始测试
-    if (!_testCompleted && !_isTesting) {
+    if (!_connectionTest.completed && !_connectionTest.isTesting) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _startConfigurationTest();
       });
@@ -1758,7 +1575,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
       children: [
         Text(
           AppLocalizations.of(context)!.testConnectionDesc,
-          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+          style: TextStyle(
+            fontSize: 11,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -1766,7 +1588,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         Container(
           height: 240, // 固定高度，避免溢出
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: Theme.of(context).dividerColor),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Column(
@@ -1782,21 +1604,23 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                       const SizedBox(height: 12),
 
                       // AI回复
-                      if (_isTesting && _testResponse.isEmpty)
+                      if (_connectionTest.isTesting &&
+                          _connectionTest.response.isEmpty)
                         _buildTestMessage(
                           AppLocalizations.of(context)!.waitingForResponse,
                           isUser: false,
                           isLoading: true,
                         )
-                      else if (_testCompleted)
+                      else if (_connectionTest.completed)
                         _buildTestMessage(
-                          _testResponse,
+                          _connectionTest.response,
                           isUser: false,
-                          isError: !_testPassed,
+                          isError: !_connectionTest.passed,
                         )
-                      else if (_testResponse.isNotEmpty && !_testCompleted)
+                      else if (_connectionTest.response.isNotEmpty &&
+                          !_connectionTest.completed)
                         _buildTestMessage(
-                          _testResponse,
+                          _connectionTest.response,
                           isUser: false,
                           isStreaming: true,
                         ),
@@ -1818,6 +1642,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
     bool isError = false,
     bool isStreaming = false,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final userColor = colorScheme.onSurface;
+    final errorColor = colorScheme.error;
+    final assistantColor = colorScheme.surfaceContainerHighest;
     // 获取选中的提供商数据，用于显示图标
     Map<String, dynamic>? selectedProviderData;
     if (_selectedProvider.isNotEmpty) {
@@ -1837,10 +1665,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
           decoration: BoxDecoration(
             color:
                 isUser
-                    ? const Color(0xFF1F2937)
+                    ? userColor
                     : isError
-                    ? Colors.red
-                    : Colors.grey[100], // AI头像使用浅灰色背景
+                    ? errorColor
+                    : assistantColor,
             shape: BoxShape.circle,
           ),
           child:
@@ -1874,10 +1702,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
             decoration: BoxDecoration(
               color:
                   isUser
-                      ? const Color(0xFF1F2937).withValues(alpha: 0.1)
+                      ? userColor.withValues(alpha: 0.08)
                       : isError
-                      ? Colors.red.withValues(alpha: 0.1)
-                      : Colors.grey[100],
+                      ? errorColor.withValues(alpha: 0.1)
+                      : assistantColor.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Column(
@@ -1886,22 +1714,26 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                 if (isLoading)
                   Row(
                     children: [
-                      const SizedBox(
+                      SizedBox(
                         width: 12,
                         height: 12,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            Color(0xFF1F2937),
+                            colorScheme.primary,
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        content,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
+                      Expanded(
+                        child: Text(
+                          content,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colorScheme.onSurface.withValues(
+                              alpha: 0.65,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -1910,16 +1742,16 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                   // 流式显示时添加光标效果
                   RichText(
                     text: TextSpan(
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: Colors.black87,
+                        color: colorScheme.onSurface.withValues(alpha: 0.86),
                       ),
                       children: [
                         TextSpan(text: content.replaceAll('▌', '')),
-                        const TextSpan(
+                        TextSpan(
                           text: '▌',
                           style: TextStyle(
-                            color: Color(0xFF1F2937),
+                            color: colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1931,7 +1763,10 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                     content,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isError ? Colors.red : Colors.black87,
+                      color:
+                          isError
+                              ? errorColor
+                              : colorScheme.onSurface.withValues(alpha: 0.86),
                     ),
                   ),
 
@@ -1949,16 +1784,12 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
                         ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        backgroundColor: Colors.red.withValues(alpha: 0.1),
+                        backgroundColor: errorColor.withValues(alpha: 0.1),
                       ),
-                      icon: const Icon(
-                        Icons.refresh,
-                        size: 12,
-                        color: Colors.red,
-                      ),
+                      icon: Icon(Icons.refresh, size: 12, color: errorColor),
                       label: Text(
                         AppLocalizations.of(context)!.retry,
-                        style: const TextStyle(fontSize: 11, color: Colors.red),
+                        style: TextStyle(fontSize: 11, color: errorColor),
                       ),
                     ),
                   ),
@@ -1973,10 +1804,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
 
   Future<void> _startConfigurationTest() async {
     setState(() {
-      _isTesting = true;
-      _testCompleted = false;
-      _testPassed = false;
-      _testResponse = '';
+      _connectionTest.start();
     });
 
     try {
@@ -2005,63 +1833,23 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         await _fetchProviderModels(testApiUrl, testApiKey);
       }
 
-      // 测试用模型：自定义输入（含自定义提供商）直接用输入框的模型名；
-      // 否则优先候选池第一个，回退用户选择的模型（预设模型带 size 后缀）
-      String testModelId;
-      if (_isCustomProvider || _isCustomModel) {
-        testModelId = _selectedOnlineModel;
-      } else if (_availableModels.isNotEmpty) {
-        testModelId = _availableModels.first;
-      } else {
-        testModelId = _selectedOnlineModel;
-        if (_selectedModelSizes[_selectedOnlineModel]?.isNotEmpty == true) {
-          testModelId =
-              '$_selectedOnlineModel:${_selectedModelSizes[_selectedOnlineModel]}';
-        }
-      }
+      final testModelId = _selectedModelIdWithSize();
 
       if (testApiUrl.isEmpty ||
           (apiKeyRequired && testApiKey.isEmpty) ||
           testModelId.isEmpty) {
         setState(() {
-          _isTesting = false;
-          _testCompleted = true;
-          _testPassed = false;
-          _testResponse = AppLocalizations.of(context)!.configIncomplete;
+          _connectionTest.fail(AppLocalizations.of(context)!.configIncomplete);
         });
         return;
       }
 
-      // 构建完整API端点
-      String finalApiUrl = testApiUrl;
-
-      // 根据协议自动补全API端点路径
-      switch (testProtocol) {
-        case 'anthropic':
-          if (!finalApiUrl.endsWith('/messages')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}messages'
-                    : '$finalApiUrl/messages';
-          }
-          break;
-        case 'gemini':
-          if (!finalApiUrl.contains('/models/')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}models/$_selectedOnlineModel:generateContent?key=$testApiKey'
-                    : '$finalApiUrl/models/$_selectedOnlineModel:generateContent?key=$testApiKey';
-          }
-          break;
-        // OpenAI 兼容协议
-        default:
-          if (!finalApiUrl.endsWith('/chat/completions')) {
-            finalApiUrl =
-                finalApiUrl.endsWith('/')
-                    ? '${finalApiUrl}chat/completions'
-                    : '$finalApiUrl/chat/completions';
-          }
-      }
+      final finalApiUrl = ModelEndpointBuilder.chatCompletionUrl(
+        baseUrl: testApiUrl,
+        protocol: testProtocol,
+        modelId: _selectedOnlineModel,
+        apiKey: testApiKey,
+      );
 
       // 创建临时的 ChatModel 对象用于测试
       final tempModel = ChatModel(
@@ -2073,7 +1861,6 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         apiUrl: finalApiUrl,
         createdAt: DateTime.now(),
       );
-      debugPrint(tempModel.toJson());
 
       // 使用 OpenAiProvider 进行测试
       final provider = OpenAiProvider();
@@ -2107,10 +1894,7 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         // 检查是否是错误响应
         if (chunk.startsWith('错误:')) {
           setState(() {
-            _isTesting = false;
-            _testCompleted = true;
-            _testPassed = false;
-            _testResponse = chunk;
+            _connectionTest.fail(chunk);
           });
           break;
         }
@@ -2120,52 +1904,47 @@ class _AddOnlineModelDialogState extends State<AddOnlineModelDialog> {
         // 实时更新UI显示流式响应
         if (mounted) {
           setState(() {
-            _testResponse = accumulatedResponse;
-            _testCompleted = false;
+            _connectionTest.stream(accumulatedResponse);
           });
         }
       }
 
       // 处理测试完成
-      if (mounted && hasReceived && !_testCompleted) {
+      if (mounted && hasReceived && !_connectionTest.completed) {
         setState(() {
-          _isTesting = false;
-          _testCompleted = true;
-          _testPassed =
-              accumulatedResponse.isNotEmpty &&
-              !accumulatedResponse.startsWith('错误:');
-          if (accumulatedResponse.isEmpty) {
-            _testResponse = AppLocalizations.of(context)!.receivedEmptyResponse;
-            _testPassed = false;
-          }
+          _connectionTest.finish(
+            hasReceived: true,
+            accumulatedResponse: accumulatedResponse,
+            emptyResponseMessage:
+                AppLocalizations.of(context)!.receivedEmptyResponse,
+            noResponseMessage: AppLocalizations.of(context)!.receivedNoResponse,
+          );
         });
       } else if (mounted && !hasReceived) {
         setState(() {
-          _isTesting = false;
-          _testCompleted = true;
-          _testPassed = false;
-          _testResponse = AppLocalizations.of(context)!.receivedNoResponse;
+          _connectionTest.finish(
+            hasReceived: false,
+            accumulatedResponse: accumulatedResponse,
+            emptyResponseMessage:
+                AppLocalizations.of(context)!.receivedEmptyResponse,
+            noResponseMessage: AppLocalizations.of(context)!.receivedNoResponse,
+          );
         });
       }
 
       // 测试完成
     } catch (e) {
       setState(() {
-        _isTesting = false;
-        _testCompleted = true;
-        _testPassed = false;
-        _testResponse = AppLocalizations.of(
-          context,
-        )!.connectionFailed(e.toString());
+        _connectionTest.fail(
+          AppLocalizations.of(context)!.connectionFailed(e.toString()),
+        );
       });
     }
   }
 
   void _retryTest() {
     setState(() {
-      _testCompleted = false;
-      _testPassed = false;
-      _testResponse = '';
+      _connectionTest.reset();
     });
   }
 

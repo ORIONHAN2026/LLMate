@@ -50,27 +50,32 @@ class _CommandPaletteState extends State<CommandPalette> {
     super.initState();
     _filteredActions = widget.actions;
     _controller.addListener(_onSearchChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
   }
 
   void _onSearchChanged() {
     final query = _controller.text.toLowerCase();
     setState(() {
       _selectedIndex = 0;
-      _filteredActions = query.isEmpty
-          ? widget.actions
-          : widget.actions
-              .where((a) =>
-                  a.title.toLowerCase().contains(query) ||
-                  (a.subtitle?.toLowerCase().contains(query) ?? false))
-              .toList();
+      _filteredActions =
+          query.isEmpty
+              ? widget.actions
+              : widget.actions
+                  .where(
+                    (a) =>
+                        a.title.toLowerCase().contains(query) ||
+                        (a.subtitle?.toLowerCase().contains(query) ?? false),
+                  )
+                  .toList();
     });
   }
 
   void _moveSelection(int delta) {
     if (_filteredActions.isEmpty) return;
     setState(() {
-      _selectedIndex =
-          (_selectedIndex + delta) % _filteredActions.length;
+      _selectedIndex = (_selectedIndex + delta) % _filteredActions.length;
       if (_selectedIndex < 0) {
         _selectedIndex = _filteredActions.length - 1;
       }
@@ -95,31 +100,29 @@ class _CommandPaletteState extends State<CommandPalette> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    // Request focus on first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-    });
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final dialogWidth = screenWidth < 640 ? screenWidth - 32 : 560.0;
 
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-            _moveSelection(1),
-        const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
-            _moveSelection(-1),
+        const SingleActivator(LogicalKeyboardKey.arrowDown):
+            () => _moveSelection(1),
+        const SingleActivator(LogicalKeyboardKey.arrowUp):
+            () => _moveSelection(-1),
         const SingleActivator(LogicalKeyboardKey.enter): _executeSelection,
-        const SingleActivator(LogicalKeyboardKey.escape): () =>
-            Navigator.of(context).pop(),
+        const SingleActivator(LogicalKeyboardKey.escape):
+            () => Navigator.of(context).pop(),
       },
       child: Focus(
         autofocus: true,
         child: Dialog(
           backgroundColor: Colors.transparent,
           child: Container(
-            width: 560,
+            width: dialogWidth.clamp(280.0, 560.0),
             constraints: const BoxConstraints(maxHeight: 420),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF23242A) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color:
                     isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE5E7EB),
@@ -145,19 +148,24 @@ class _CommandPaletteState extends State<CommandPalette> {
                       color: theme.colorScheme.onSurface,
                     ),
                     decoration: InputDecoration(
-                      hintText: 'Search commands...',
+                      hintText: '搜索命令...',
                       hintStyle: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                       prefixIcon: Icon(
                         Icons.search,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
                         size: 20,
                       ),
                       filled: true,
-                      fillColor: isDark
-                          ? const Color(0xFF1A1B23)
-                          : const Color(0xFFF3F4F6),
+                      fillColor:
+                          isDark
+                              ? const Color(0xFF1A1B23)
+                              : const Color(0xFFF3F4F6),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -169,127 +177,148 @@ class _CommandPaletteState extends State<CommandPalette> {
                     ),
                   ),
                 ),
-            // Divider
-            Container(
-              height: 1,
-              color:
-                  isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE5E7EB),
-            ),
-            // Results
-            Flexible(
-              child: _filteredActions.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        'No commands found',
-                        style: TextStyle(
-                          color:
-                              theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shrinkWrap: true,
-                      itemCount: _filteredActions.length,
-                      itemBuilder: (context, index) {
-                        final action = _filteredActions[index];
-                        final isSelected = index == _selectedIndex;
-                        const accentColor = Color(0xFF9CA3AF);
-                        return InkWell(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            action.onTap();
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? accentColor.withValues(alpha: 0.1)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  action.icon,
-                                  size: 18,
-                                  color: isSelected
-                                      ? accentColor
-                                      : theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.6),
+                Container(
+                  height: 1,
+                  color:
+                      isDark
+                          ? const Color(0xFF2D2F3A)
+                          : const Color(0xFFE5E7EB),
+                ),
+                Flexible(
+                  child:
+                      _filteredActions.isEmpty
+                          ? Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Text(
+                              '没有找到命令',
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.4,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
+                              ),
+                            ),
+                          )
+                          : ListView.builder(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shrinkWrap: true,
+                            itemCount: _filteredActions.length,
+                            itemBuilder: (context, index) {
+                              final action = _filteredActions[index];
+                              final isSelected = index == _selectedIndex;
+                              const accentColor = Color(0xFF9CA3AF);
+                              return InkWell(
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  action.onTap();
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        isSelected
+                                            ? accentColor.withValues(alpha: 0.1)
+                                            : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        action.title,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: isSelected
-                                              ? accentColor
-                                              : theme.colorScheme.onSurface,
+                                      Icon(
+                                        action.icon,
+                                        size: 18,
+                                        color:
+                                            isSelected
+                                                ? accentColor
+                                                : theme.colorScheme.onSurface
+                                                    .withValues(alpha: 0.6),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              action.title,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                                color:
+                                                    isSelected
+                                                        ? accentColor
+                                                        : theme
+                                                            .colorScheme
+                                                            .onSurface,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            if (action.subtitle != null)
+                                              Text(
+                                                action.subtitle!,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.5),
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                          ],
                                         ),
                                       ),
-                                      if (action.subtitle != null)
-                                        Text(
-                                          action.subtitle!,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: theme
-                                                .colorScheme.onSurface
-                                                .withValues(alpha: 0.5),
+                                      if (action.shortcut != null)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                isSelected
+                                                    ? accentColor.withValues(
+                                                      alpha: 0.1,
+                                                    )
+                                                    : (isDark
+                                                        ? const Color(
+                                                          0xFF1A1B23,
+                                                        )
+                                                        : const Color(
+                                                          0xFFF3F4F6,
+                                                        )),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            action.shortcut!,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: theme.colorScheme.onSurface
+                                                  .withValues(alpha: 0.6),
+                                            ),
                                           ),
                                         ),
                                     ],
                                   ),
                                 ),
-                                if (action.shortcut != null)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? accentColor.withValues(alpha: 0.1)
-                                          : (isDark
-                                              ? const Color(0xFF1A1B23)
-                                              : const Color(0xFFF3F4F6)),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      action.shortcut!,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: theme.colorScheme.onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-      ),
       ),
     );
   }

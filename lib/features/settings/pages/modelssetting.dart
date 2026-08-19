@@ -377,13 +377,6 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     // 生成新的名称
     String newName = _generateCopyName(model.name);
 
-    // 调试：打印原模型的API密钥
-    debugPrint('=== 复制模型调试信息 ===');
-    debugPrint('原模型名称: ${model.name}');
-    debugPrint('原模型API密钥: ${model.apiKey ?? "null"}');
-    debugPrint('原模型API URL: ${model.apiUrl ?? "null"}');
-    debugPrint('原模型platform: ${model.platform ?? "null"}');
-
     // 创建模型副本，只保留基本配置
     ChatModel copiedModel = model.copyWith(
       modelId: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -391,13 +384,6 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
-
-    // 调试：打印复制后的模型信息
-    debugPrint('复制后模型名称: ${copiedModel.name}');
-    debugPrint('复制后模型API密钥: ${copiedModel.apiKey ?? "null"}');
-    debugPrint('复制后模型API URL: ${copiedModel.apiUrl ?? "null"}');
-    debugPrint('复制后模型platform: ${copiedModel.platform ?? "null"}');
-    debugPrint('========================');
 
     // 添加到模型列表并保存
     setState(() {

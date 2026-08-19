@@ -2009,11 +2009,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get maskIdCardSubtitle => 'メッセージ内の身分証番号を「*」に置換';
 
   @override
-  String get costOptimization => 'コスト最適化';
+  String get smartModelSelection => 'スマートモデル選択';
 
   @override
-  String get costOptimizationDesc =>
-      '有効にすると、長い質問には複雑なモデル、短い質問には安価なモデルを自動的に使用します';
+  String get smartModelSelectionDesc =>
+      '有効にすると、簡単な依頼では軽量モデルを優先し、負荷の高いタスクではより高性能なモデルに切り替えます';
 
   @override
   String get sessionDetails => 'セッション詳細';

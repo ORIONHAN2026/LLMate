@@ -6,7 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../controllers/settings_controller.dart';
 import './modelssetting.dart';
 import '../../mcp/pages/mcp_management_page.dart';
-
+import '../widgets/settings_navigation.dart';
 
 /// 设置页面 - 左侧导航 + 右侧内容区
 class SettingsPage extends StatefulWidget {
@@ -25,28 +25,27 @@ class _SettingsPageState extends State<SettingsPage> {
   /// 各页面的 actions 缓存（key = index）
   final Map<int, List<Widget>> _cachedActions = {};
 
-  List<_SettingsNavItem> _buildNavItems() {
+  List<SettingsNavItem> _buildNavItems() {
     final l10n = AppLocalizations.of(context)!;
     return [
-      _SettingsNavItem(
+      SettingsNavItem(
         icon: Icons.auto_awesome,
         label: l10n.modelManagement,
         builder: (_) => const ModelSettingPage(embedded: true),
       ),
-      _SettingsNavItem(
+      SettingsNavItem(
         icon: Icons.link,
         label: l10n.connectorManagement,
-        builder: (actions) => McpManagementPage(
-          embedded: true,
-          onActionsChanged: actions,
-        ),
+        builder:
+            (actions) =>
+                McpManagementPage(embedded: true, onActionsChanged: actions),
       ),
-      _SettingsNavItem(
+      SettingsNavItem(
         icon: Icons.tune,
         label: l10n.otherSettings,
         builder: (_) => const _GeneralSettingsTab(),
       ),
-      _SettingsNavItem(
+      SettingsNavItem(
         icon: Icons.mail_outline,
         label: l10n.feedback,
         builder: (_) => const _FeedbackTab(),
@@ -57,7 +56,6 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
     final navItems = _buildNavItems();
@@ -66,62 +64,30 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: StandardAppBar(
         title: l10n.settings,
-        actions: [
-          ..._currentActions,
-          const SizedBox(width: 4),
-        ],
+        actions: [..._currentActions, const SizedBox(width: 4)],
       ),
       body: Row(
         children: [
-          // 左侧导航栏
-          Container(
-            width: 200,
-            decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-                ),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                ...List.generate(navItems.length, (index) {
-                  final item = navItems[index];
-                  final isSelected = _selectedIndex == index;
-                  return _buildNavItem(
-                    icon: item.icon,
-                    label: item.label,
-                    isSelected: isSelected,
-                    colorScheme: colorScheme,
-                    onTap: () {
-                      setState(() {
-                        _selectedIndex = index;
-                        // 切换时从缓存恢复该页面的 actions
-                        _currentActions = _cachedActions[index] ?? [];
-                      });
-                    },
-                  );
-                }),
-              ],
-            ),
+          SettingsNavigation(
+            items: navItems,
+            selectedIndex: _selectedIndex,
+            onSelected: (index) {
+              setState(() {
+                _selectedIndex = index;
+                _currentActions = _cachedActions[index] ?? [];
+              });
+            },
           ),
-          // 右侧内容区
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
               children: List.generate(navItems.length, (i) {
-                return navItems[i].builder(
-                  (actions) {
-                    // 缓存每个页面的 actions
-                    _cachedActions[i] = actions;
-                    // 只有当前选中页面的 actions 才立即生效
-                    if (_selectedIndex == i && mounted) {
-                      setState(() => _currentActions = actions);
-                    }
-                  },
-                );
+                return navItems[i].builder((actions) {
+                  _cachedActions[i] = actions;
+                  if (_selectedIndex == i && mounted) {
+                    setState(() => _currentActions = actions);
+                  }
+                });
               }),
             ),
           ),
@@ -129,69 +95,6 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required ColorScheme colorScheme,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color:
-                isSelected
-                    ? colorScheme.onSurface.withValues(alpha: 0.1)
-                    : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color:
-                    isSelected
-                        ? colorScheme.onSurface
-                        : colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color:
-                      isSelected
-                          ? colorScheme.onSurface
-                          : colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 设置导航项
-class _SettingsNavItem {
-  final IconData icon;
-  final String label;
-  final Widget Function(void Function(List<Widget>)) builder;
-
-  const _SettingsNavItem({
-    required this.icon,
-    required this.label,
-    required this.builder,
-  });
 }
 
 /// 通用设置 Tab（原 OtherSettingsPage 的内容，去掉 AppBar）
@@ -383,11 +286,7 @@ class _GeneralSettingsTab extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(
-                Icons.check_circle,
-                size: 22,
-                color: colorScheme.onSurface,
-              ),
+              Icon(Icons.check_circle, size: 22, color: colorScheme.onSurface),
           ],
         ),
       ),
@@ -501,11 +400,7 @@ class _GeneralSettingsTab extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(
-                Icons.check_circle,
-                size: 22,
-                color: colorScheme.onSurface,
-              ),
+              Icon(Icons.check_circle, size: 22, color: colorScheme.onSurface),
           ],
         ),
       ),

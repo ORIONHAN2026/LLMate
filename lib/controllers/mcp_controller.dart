@@ -703,7 +703,7 @@ class McpController extends GetxController {
     await initializeClient(cfg);
   }
 
-  /// Get merged tools from session MCP + model MCP, deduplicated by name
+  /// Get merged tools from session-bound MCPs, deduplicated by name
   List<McpTool> getMergedTools(ChatSession s) {
     final seen = <String>{};
     final merged = <McpTool>[];

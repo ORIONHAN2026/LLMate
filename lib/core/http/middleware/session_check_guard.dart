@@ -17,8 +17,8 @@ import '../../../models/chat/session.dart';
 /// 2. 禁用状态检查：会话被禁用（[ChatSession.isDisabled]）→ 403
 /// 3. 配额检查：跨自然周期自动重置后检查 Token/费用/请求次数 → 429
 /// 4. 注入会话级系统提示词（[ChatSession.systemPrompt]）
-/// 5. 注入会话 MCP 工具：合并会话绑定的 MCP 服务工具（若客户端自带 tools
-///    则保持客户端原样，不追加服务端工具），并置 `tool_choice='auto'`
+/// 5. 注入会话 MCP 工具：合并会话绑定的 MCP 服务工具（客户端自带 tools 时
+///    按函数名合并去重，客户端声明优先），并兜底置 `tool_choice='auto'`
 ///
 /// 校验通过的会话存入 `request.context['session']`；增强后的请求体存入
 /// `request.context['body']` 并重新注入下游（无请求体的 GET 请求跳过增强）。
@@ -36,9 +36,10 @@ Handler sessionCheckGuard(Handler innerHandler) {
 
     // Step 1: 通过 API Key 从数据库反查会话
     final sessionController = Get.find<SessionController>();
-    final session = apiKey != null
-        ? await sessionController.getSessionByApiKey(apiKey)
-        : null;
+    final session =
+        apiKey != null
+            ? await sessionController.getSessionByApiKey(apiKey)
+            : null;
 
     if (session == null) {
       debugPrint('🔒 [SessionGuard] 会话未找到 (by api key=$apiKey) → 404');
@@ -157,52 +158,82 @@ Handler sessionCheckGuard(Handler innerHandler) {
       }
 
       // 5. 会话 MCP 工具注入
-      //    如果请求本身已经携带 tools，通常表示调用方是 Cursor/Claude Code/
-      //    Continue 等开发工具，工具调用生命周期应由客户端自己管理。此时保持
-      //    客户端 tools 原样，不追加服务端 MCP 工具，避免模型调用了客户端工具却
-      //    被代理服务截留执行，导致开发工具卡住或协议不完整。
+      //    无论客户端是否自带 tools，只要会话绑定了 MCP 服务，都将其工具注入
+      //    请求体；客户端自带 tools 时按函数名合并去重（客户端声明优先），
+      //    其余会话 MCP 工具追加到末尾，保证模型能调用会话绑定的 MCP 工具。
       clientProvidedTools = body['tools'] is List;
       final mcpTools = McpController.instance.getMergedTools(currentSession);
-      if (!clientProvidedTools && mcpTools.isNotEmpty) {
+      if (mcpTools.isNotEmpty) {
         // OpenAI 要求函数名匹配 ^[a-zA-Z0-9_-]+$，MCP 工具名可能含点号/空格等，
         // 注入前 sanitize 并注册映射，执行端按安全名还原原始名调用 MCP。
-        final tools = mcpTools.map((t) {
-          final func = t.toOpenAIFunction();
-          final f = func['function'] as Map<String, dynamic>;
-          f['name'] = registerSafeToolName(t.name);
-          return func;
-        }).toList();
-        body['tools'] = tools;
-        body['tool_choice'] = 'auto';
-        debugPrint('🔧 [SessionGuard] 注入 ${tools.length} 个会话 MCP 工具');
+        final sessionTools =
+            mcpTools.map((t) {
+              final func = t.toOpenAIFunction();
+              final f = func['function'] as Map<String, dynamic>;
+              f['name'] = registerSafeToolName(t.name);
+              return func;
+            }).toList();
+
+        if (clientProvidedTools) {
+          // 客户端自带 tools → 合并注入：客户端声明的函数名优先，
+          // 同名会话工具不再追加，其余会话 MCP 工具追加到客户端工具末尾。
+          final clientTools =
+              (body['tools'] as List).whereType<Map<String, dynamic>>().toList();
+          final clientNames = clientTools
+              .map(
+                (t) => ((t['function'] as Map?)?['name'] ?? '').toString(),
+              )
+              .where((n) => n.isNotEmpty)
+              .toSet();
+          final merged = <Map<String, dynamic>>[
+            ...clientTools,
+            ...sessionTools.where((func) {
+              final name =
+                  ((func['function'] as Map<String, dynamic>)['name'])
+                      .toString();
+              return !clientNames.contains(name);
+            }),
+          ];
+          body['tools'] = merged;
+          body['tool_choice'] = body['tool_choice'] ?? 'auto';
+          debugPrint(
+            '🔧 [SessionGuard] 客户端 tools ${clientTools.length} 个 + '
+            '会话 MCP 工具 ${merged.length - clientTools.length} 个合并注入',
+          );
+        } else {
+          body['tools'] = sessionTools;
+          body['tool_choice'] = 'auto';
+          debugPrint('🔧 [SessionGuard] 注入 ${sessionTools.length} 个会话 MCP 工具');
+        }
       } else if (clientProvidedTools) {
-        debugPrint('🔧 [SessionGuard] 检测到客户端 tools，切换为透明工具代理模式');
+        debugPrint('🔧 [SessionGuard] 客户端 tools 原样保留（会话无 MCP 工具）');
       }
     }
 
     debugPrint('✅ [SessionGuard] 校验通过: session=${currentSession.sessionId}');
 
-    final updatedRequest = body != null
-        ? request.change(
-            body: utf8.encode(jsonEncode(body)),
-            context: {
-              ...request.context,
-              'session': currentSession,
-              'apiKey': apiKey,
-              'body': body,
-              'clientProvidedTools': clientProvidedTools,
-              'promptInsertCount': promptInsertCount,
-            },
-          )
-        : request.change(
-            context: {
-              ...request.context,
-              'session': currentSession,
-              'apiKey': apiKey,
-              'clientProvidedTools': clientProvidedTools,
-              'promptInsertCount': promptInsertCount,
-            },
-          );
+    final updatedRequest =
+        body != null
+            ? request.change(
+              body: utf8.encode(jsonEncode(body)),
+              context: {
+                ...request.context,
+                'session': currentSession,
+                'apiKey': apiKey,
+                'body': body,
+                'clientProvidedTools': clientProvidedTools,
+                'promptInsertCount': promptInsertCount,
+              },
+            )
+            : request.change(
+              context: {
+                ...request.context,
+                'session': currentSession,
+                'apiKey': apiKey,
+                'clientProvidedTools': clientProvidedTools,
+                'promptInsertCount': promptInsertCount,
+              },
+            );
 
     return innerHandler(updatedRequest);
   };

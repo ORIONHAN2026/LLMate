@@ -6,6 +6,8 @@ import 'package:shelf/shelf.dart';
 import '../../../core/llm/common/message_builder.dart';
 import '../../../core/llm/common/system_prompts.dart';
 import '../../../models/chat/session.dart';
+import '../http_context_keys.dart';
+import '../http_response_utils.dart';
 
 /// 语言检查中间件
 ///
@@ -18,7 +20,7 @@ import '../../../models/chat/session.dart';
 /// 增强后的请求体存入 `request.context['body']` 并重新注入下游。
 Handler languageCheckGuard(Handler innerHandler) {
   return (Request request) async {
-    final session = request.context['session'] as ChatSession?;
+    final session = request.context[HttpContextKeys.session] as ChatSession?;
     if (session == null) {
       return innerHandler(request);
     }
@@ -28,7 +30,9 @@ Handler languageCheckGuard(Handler innerHandler) {
     if (bodyStr.isEmpty) {
       return innerHandler(request);
     }
-    final body = jsonDecode(bodyStr) as Map<String, dynamic>;
+    final parsed = parseJsonObjectBody(bodyStr);
+    if (parsed.error != null) return parsed.error!;
+    final body = parsed.body!;
     final messages = body['messages'];
 
     // 1. 解析回复语言
@@ -41,7 +45,8 @@ Handler languageCheckGuard(Handler innerHandler) {
     }
 
     // 2. 注入回复语言要求（插在已注入的系统提示词之后、原始消息之前）
-    var promptInsertCount = request.context['promptInsertCount'] as int? ?? 0;
+    var promptInsertCount =
+        request.context[HttpContextKeys.promptInsertCount] as int? ?? 0;
     messages.insert(promptInsertCount, {
       'role': 'system',
       'name': 'language_requirement',
@@ -54,8 +59,8 @@ Handler languageCheckGuard(Handler innerHandler) {
       body: utf8.encode(jsonEncode(body)),
       context: {
         ...request.context,
-        'body': body,
-        'promptInsertCount': promptInsertCount,
+        HttpContextKeys.body: body,
+        HttpContextKeys.promptInsertCount: promptInsertCount,
       },
     );
 

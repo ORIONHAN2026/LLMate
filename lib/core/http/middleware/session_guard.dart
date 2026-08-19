@@ -8,6 +8,7 @@ import '../../../models/chat/session.dart';
 import '../../../models/chat/message.dart';
 import '../../../features/chat/widgets/message_widgets/content_block.dart';
 import '../../../models/responses/openai_response.dart' show ToolCall;
+import '../http_context_keys.dart';
 import 'audit_guard.dart';
 
 /// 流式请求完成后的数据载体
@@ -48,18 +49,19 @@ Handler sessionGuard(Handler innerHandler) {
     final updatedRequest = request.change(
       context: {
         ...request.context,
-        'streamComplete': (StreamCompletionData data) {
+        HttpContextKeys.streamComplete: (StreamCompletionData data) {
           // 异步执行，不阻塞任何流程
           () async {
             if (data.error != null) {
               debugPrint('❌ [SessionGuard] 流处理失败: ${data.error}');
               final auditCallback =
-                  request.context['auditCallback'] as AuditCallback?;
+                  request.context[HttpContextKeys.auditCallback]
+                      as AuditCallback?;
               auditCallback?.call(error: 'Stream error: ${data.error}');
             } else {
               // 从 userMessageGuard 中间件中获取预创建的用户消息
               final userMessage =
-                  request.context['userMessage'] as ChatMessage?;
+                  request.context[HttpContextKeys.userMessage] as ChatMessage?;
 
               await _updateSession(
                 session: data.session,
@@ -72,7 +74,8 @@ Handler sessionGuard(Handler innerHandler) {
 
               // 审计回调：补全响应内容
               final auditCallback =
-                  request.context['auditCallback'] as AuditCallback?;
+                  request.context[HttpContextKeys.auditCallback]
+                      as AuditCallback?;
               auditCallback?.call(responseContent: data.content);
             }
           }();

@@ -21,6 +21,8 @@ import 'middleware/model_check_guard.dart';
 import 'middleware/language_check_guard.dart';
 import 'middleware/risk_control_guard.dart';
 import 'middleware/audit_guard.dart';
+import 'http_context_keys.dart';
+import 'http_response_utils.dart';
 import 'sensitive_masker.dart';
 import 'stream_round.dart' show streamSingleRound, writeOpenAiError;
 import '../router/model_router.dart';
@@ -244,10 +246,7 @@ class LocalHttpService {
 
     // 健康检查（无需中间件）
     router.get('/health', (Request request) {
-      return Response.ok(
-        jsonEncode({'status': 'ok'}),
-        headers: {'content-type': 'application/json'},
-      );
+      return Response.ok(jsonEncode({'status': 'ok'}), headers: jsonHeaders);
     });
     router.options('/health', _handleCorsPreflight);
 
@@ -291,8 +290,9 @@ class LocalHttpService {
     Request request,
     String sessionId,
   ) async {
-    final pipeline = const Pipeline()
-        .addMiddleware(sessionCheckGuard); // 会话检查：密钥 / 状态 / 配额
+    final pipeline = const Pipeline().addMiddleware(
+      sessionCheckGuard,
+    ); // 会话检查：密钥 / 状态 / 配额
 
     return pipeline.addHandler((Request req) {
       return _handleModelsList(req);
@@ -321,7 +321,7 @@ class LocalHttpService {
     );
 
     final requestWithId = request.change(
-      context: {...request.context, 'originBody': originBodyStr},
+      context: {...request.context, HttpContextKeys.originBody: originBodyStr},
       body: utf8.encode(originBodyStr),
     );
 
@@ -342,18 +342,13 @@ class LocalHttpService {
   /// 返回当前会话绑定的模型（OpenAI /v1/models 兼容格式）
   static Response _handleModelsList(Request request) {
     try {
-      final session = request.context['session'] as ChatSession?;
+      final session = request.context[HttpContextKeys.session] as ChatSession?;
       if (session == null) {
-        return Response(
-          400,
-          body: jsonEncode({
-            'error': {
-              'message': 'Session not found',
-              'type': 'invalid_request_error',
-              'code': 400,
-            },
-          }),
-          headers: {'content-type': 'application/json'},
+        return openAiErrorResponse(
+          statusCode: 400,
+          message: 'Session not found',
+          type: 'invalid_request_error',
+          code: 400,
         );
       }
 
@@ -368,19 +363,15 @@ class LocalHttpService {
 
       return Response.ok(
         jsonEncode({'object': 'list', 'data': data}),
-        headers: {'content-type': 'application/json'},
+        headers: jsonHeaders,
       );
     } catch (e) {
       debugPrint('❌ 获取模型列表失败: $e');
-      return Response.internalServerError(
-        body: jsonEncode({
-          'error': {
-            'message': 'Failed to retrieve model list',
-            'type': 'api_error',
-            'code': 500,
-          },
-        }),
-        headers: {'content-type': 'application/json'},
+      return openAiErrorResponse(
+        statusCode: 500,
+        message: 'Failed to retrieve model list',
+        type: 'api_error',
+        code: 500,
       );
     }
   }
@@ -412,11 +403,12 @@ class LocalHttpService {
       // SSE 流控制器：后续异步 IIFE 中逐步写入 chunk，shelf 框架从 stream 读取并发送给客户端
       final streamController = StreamController<List<int>>(sync: true);
       // 从中间件注入的 context 中提取会话和增强后的请求体
-      final session = request.context['session'] as ChatSession;
-      final body = request.context['body'] as Map<String, dynamic>;
+      final session = request.context[HttpContextKeys.session] as ChatSession;
+      final body =
+          request.context[HttpContextKeys.body] as Map<String, dynamic>;
       debugPrint('📨 [Request] body: ${jsonEncode(body["messages"])}');
       final clientProvidedTools =
-          request.context['clientProvidedTools'] == true;
+          request.context[HttpContextKeys.clientProvidedTools] == true;
 
       // 客户端是否请求流式响应（缺省视为流式）。
       // 编程工具等第三方客户端可能发送 stream: false，此时本服务内部仍按流式
@@ -437,6 +429,9 @@ class LocalHttpService {
       //    流式模式下不 await，立即返回 Response，流内容异步写入；
       //    非流式模式下 await 其完成后聚合为 JSON 返回
       // ──────────────────────────────────────────
+      final bufferedChunksFuture =
+          !wantStream ? streamController.stream.toList() : null;
+
       final pipelineFuture = () async {
         // 记录生成开始时间，用于计算耗时
         final generationStartTime = DateTime.now();
@@ -475,7 +470,8 @@ class LocalHttpService {
             // ── 审计：LLM 请求开始（含模型使用决策模式）──
             if (auditTrace != null) {
               final routeDecision =
-                  request.context['routeDecision'] as RouteDecision?;
+                  request.context[HttpContextKeys.routeDecision]
+                      as RouteDecision?;
               Map<String, dynamic>? auditDecision;
               if (routeDecision != null) {
                 final autoSelect = session.autoSelectModel;
@@ -746,7 +742,8 @@ class LocalHttpService {
             request: request,
             sessionId: session.sessionId,
             modelId: session.chatModel?.modelId ?? 'unknown',
-            originBody: request.context['originBody'] as String? ?? '',
+            originBody:
+                request.context[HttpContextKeys.originBody] as String? ?? '',
             body: body,
             responseContent: contentBuffer.toString(),
             error: null,
@@ -755,7 +752,9 @@ class LocalHttpService {
           // ── 保存路由决策日志（JSONL 追加，供回测调参）──
           await _saveRouteLog(
             sessionId: session.sessionId,
-            routeDecision: request.context['routeDecision'] as RouteDecision?,
+            routeDecision:
+                request.context[HttpContextKeys.routeDecision]
+                    as RouteDecision?,
             fallbackTried: fallbackTried,
             promptTokens: promptTokens,
             completionTokens: completionTokens,
@@ -767,7 +766,9 @@ class LocalHttpService {
             startTime: generationStartTime,
             promptTokens: promptTokens,
             completionTokens: completionTokens,
-            routeDecision: request.context['routeDecision'] as RouteDecision?,
+            routeDecision:
+                request.context[HttpContextKeys.routeDecision]
+                    as RouteDecision?,
           );
         } catch (e, st) {
           // ── 异步 IIFE 内部异常 ──
@@ -785,7 +786,8 @@ class LocalHttpService {
             request: request,
             sessionId: session.sessionId,
             modelId: session.chatModel?.modelId ?? 'unknown',
-            originBody: request.context['originBody'] as String? ?? '',
+            originBody:
+                request.context[HttpContextKeys.originBody] as String? ?? '',
             body: body,
             responseContent: '',
             error: e.toString(),
@@ -794,9 +796,7 @@ class LocalHttpService {
           // 按 OpenAI 标准错误格式返回给调用方并正常结束响应，而不是抛异常断连
           streamController.add(
             utf8.encode(
-              'data: ${jsonEncode({
-                'error': {'message': e.toString(), 'type': 'api_error', 'param': null, 'code': 500},
-              })}\n\n',
+              'data: ${jsonEncode(openAiErrorBody(message: e.toString(), type: 'api_error', code: 500))}\n\n',
             ),
           );
           streamController.add(utf8.encode('data: [DONE]\n\n'));
@@ -811,7 +811,7 @@ class LocalHttpService {
         // 非流式：等待生成完成，将 SSE 聚合为标准 OpenAI JSON 响应
         try {
           await pipelineFuture;
-          final chunks = await streamController.stream.toList();
+          final chunks = await bufferedChunksFuture!;
           final bytes = chunks.fold<List<int>>(
             <int>[],
             (acc, chunk) => acc..addAll(chunk),
@@ -819,20 +819,15 @@ class LocalHttpService {
           final sseText = utf8.decode(bytes, allowMalformed: true);
           return Response.ok(
             jsonEncode(_sseToChatCompletionJson(sseText, 'auto')),
-            headers: {'content-type': 'application/json'},
+            headers: jsonHeaders,
           );
         } catch (e) {
           debugPrint('❌ 非流式请求处理失败: $e');
-          return Response(
-            500,
-            body: jsonEncode({
-              'error': {
-                'message': 'Internal error: $e',
-                'type': 'api_error',
-                'code': 500,
-              },
-            }),
-            headers: {'content-type': 'application/json'},
+          return openAiErrorResponse(
+            statusCode: 500,
+            message: 'Internal error: $e',
+            type: 'api_error',
+            code: 500,
           );
         }
       }
@@ -852,15 +847,11 @@ class LocalHttpService {
       // 此时流还未建立，直接返回 500，不经过 sessionGuard
       debugPrint('❌ 请求处理失败: $e');
 
-      return Response.internalServerError(
-        body: jsonEncode({
-          'error': {
-            'message': 'Internal error: $e',
-            'type': 'api_error',
-            'code': 500,
-          },
-        }),
-        headers: {'content-type': 'application/json'},
+      return openAiErrorResponse(
+        statusCode: 500,
+        message: 'Internal error: $e',
+        type: 'api_error',
+        code: 500,
       );
     }
   }
@@ -1070,7 +1061,8 @@ class LocalHttpService {
       final fileName =
           '${now.year}${two(now.month)}${two(now.day)}_'
           '${two(now.hour)}${two(now.minute)}${two(now.second)}_'
-          '${now.millisecond.toString().padLeft(3, '0')}_$sessionId.json';
+          '${now.millisecond.toString().padLeft(3, '0')}_'
+          '${safeFileNameSegment(sessionId)}.json';
 
       final entry = <String, dynamic>{
         'timestamp': now.toIso8601String(),

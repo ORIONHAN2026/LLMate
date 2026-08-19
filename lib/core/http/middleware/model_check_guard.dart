@@ -5,6 +5,8 @@ import 'package:shelf/shelf.dart';
 
 import '../../../core/router/model_router.dart';
 import '../../../models/chat/session.dart';
+import '../http_context_keys.dart';
+import '../http_response_utils.dart';
 
 /// 模型检查中间件
 ///
@@ -17,7 +19,7 @@ import '../../../models/chat/session.dart';
 /// 路由决策明细存入 `request.context['routeDecision']` 供审计日志复用。
 Handler modelCheckGuard(Handler innerHandler) {
   return (Request request) async {
-    final session = request.context['session'] as ChatSession?;
+    final session = request.context[HttpContextKeys.session] as ChatSession?;
     if (session == null) {
       // 上游会话检查应已拦截，此处兜底
       return innerHandler(request);
@@ -26,16 +28,11 @@ Handler modelCheckGuard(Handler innerHandler) {
     // 1. 模型配置检查
     if (session.chatModel == null) {
       debugPrint('🔒 [ModelGuard] 会话未配置模型 → 400');
-      return Response(
-        400,
-        body: jsonEncode({
-          'error': {
-            'message': 'Session has no model configured',
-            'type': 'invalid_request_error',
-            'code': 400,
-          },
-        }),
-        headers: {'content-type': 'application/json'},
+      return openAiErrorResponse(
+        statusCode: 400,
+        message: 'Session has no model configured',
+        type: 'invalid_request_error',
+        code: 400,
       );
     }
 
@@ -45,7 +42,9 @@ Handler modelCheckGuard(Handler innerHandler) {
       // 无请求体（如 GET /v1/models），无需模型增强
       return innerHandler(request);
     }
-    final body = jsonDecode(bodyStr) as Map<String, dynamic>;
+    final parsed = parseJsonObjectBody(bodyStr);
+    if (parsed.error != null) return parsed.error!;
+    final body = parsed.body!;
 
     // 2. 模型替换（会话级：自动选择开关开启则按多信号灵活选，关闭则用手动选定模型）
     final routeDecision = ModelRouter.decideForSessionDetailed(
@@ -60,7 +59,8 @@ Handler modelCheckGuard(Handler innerHandler) {
 
     // 3. 模型级系统提示词（最高优先级，插到最前；
     //    会话提示词由上游 sessionCheckGuard 已插入，此处置顶后顺序为：模型 → 会话）
-    var promptInsertCount = request.context['promptInsertCount'] as int? ?? 0;
+    var promptInsertCount =
+        request.context[HttpContextKeys.promptInsertCount] as int? ?? 0;
     final messages = body['messages'];
     final modelSystemPrompt = session.chatModel?.systemPrompt;
     if (messages is List &&
@@ -80,9 +80,9 @@ Handler modelCheckGuard(Handler innerHandler) {
       body: utf8.encode(jsonEncode(body)),
       context: {
         ...request.context,
-        'body': body,
-        'routeDecision': routeDecision,
-        'promptInsertCount': promptInsertCount,
+        HttpContextKeys.body: body,
+        HttpContextKeys.routeDecision: routeDecision,
+        HttpContextKeys.promptInsertCount: promptInsertCount,
       },
     );
 

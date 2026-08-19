@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shelf/shelf.dart';
 
 import '../../../models/chat/session.dart';
+import '../http_context_keys.dart';
 
 /// 审计日志目录
 const String _auditLogDir = 'log_request';
@@ -42,10 +43,10 @@ typedef AuditCallback =
 Handler auditGuard(Handler innerHandler) {
   return (Request request) async {
     final startTime = DateTime.now();
-    final session = request.context['session'] as ChatSession?;
-    final apiKey = request.context['apiKey'] as String?;
+    final session = request.context[HttpContextKeys.session] as ChatSession?;
+    final apiKey = request.context[HttpContextKeys.apiKey] as String?;
     // 读取上游注入的唯一 RequestId（由路由层生成）
-    final requestId = request.context['requestId'] as String?;
+    final requestId = request.context[HttpContextKeys.requestId] as String?;
 
     // 读取请求体
     String? requestBodyStr;
@@ -89,7 +90,7 @@ Handler auditGuard(Handler innerHandler) {
     final updatedRequest = request.change(
       context: {
         ...request.context,
-        'auditCallback':
+        HttpContextKeys.auditCallback:
             ({
               Map<String, dynamic>? rawRequest,
               Map<String, dynamic>? organizedRequest,

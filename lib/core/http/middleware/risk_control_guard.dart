@@ -1,6 +1,7 @@
 import 'package:shelf/shelf.dart';
 
 import '../../../models/chat/session.dart';
+import '../http_context_keys.dart';
 import '../sensitive_masker.dart';
 
 /// 风控脱敏中间件（请求路径 / 前置处理）
@@ -19,12 +20,12 @@ import '../sensitive_masker.dart';
 /// 供下游日志落盘与工具循环复用，保持整条链路一致。
 Handler riskControlGuard(Handler innerHandler) {
   return (Request request) async {
-    final session = request.context['session'] as ChatSession?;
+    final session = request.context[HttpContextKeys.session] as ChatSession?;
     if (session == null) {
       return innerHandler(request);
     }
 
-    final body = request.context['body'] as Map<String, dynamic>?;
+    final body = request.context[HttpContextKeys.body] as Map<String, dynamic>?;
     if (body == null) {
       // 上游未装载 body，直接放行
       return innerHandler(request);
@@ -46,7 +47,11 @@ Handler riskControlGuard(Handler innerHandler) {
     final maskedBody = maskSensitiveBody(body, options);
 
     final updatedRequest = request.change(
-      context: {...request.context, 'body': maskedBody, 'riskControl': options},
+      context: {
+        ...request.context,
+        HttpContextKeys.body: maskedBody,
+        HttpContextKeys.riskControl: options,
+      },
     );
 
     return innerHandler(updatedRequest);
@@ -55,6 +60,6 @@ Handler riskControlGuard(Handler innerHandler) {
 
 /// 从请求 context 中读取风控脱敏开关，缺省视为全部关闭。
 SensitiveMaskOptions riskControlOptionsOf(Request request) {
-  final opts = request.context['riskControl'];
+  final opts = request.context[HttpContextKeys.riskControl];
   return opts is SensitiveMaskOptions ? opts : SensitiveMaskOptions.disabled;
 }

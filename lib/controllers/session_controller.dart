@@ -400,7 +400,7 @@ class SessionController extends GetxController {
         msgId: 'welcome_${DateTime.now().millisecondsSinceEpoch}',
         role: MessageRole.bot,
         content:
-            '👋 你好，我是 LLMate！\n\n我可以帮你写代码、回答问题、分析文件，还能调用 MCP 工具完成更复杂的任务。\n\n直接下方输入框开始对话吧～',
+            '👋 你好，我是 LLMate！\n\n我是一个企业的大模型服务管理工具，可以实现企业大模型相关的密钥管理、配额管理、审计、风控等能力，请先去配置大模型服务，开始使用',
         timestamp: DateTime.now(),
         sessionId: null, // 创建会话后回填
       );

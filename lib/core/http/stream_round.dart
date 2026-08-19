@@ -10,6 +10,7 @@ import '../../models/responses/chunk.dart';
 import '../../models/responses/openai_response.dart'
     show OpenAIDelta, ToolCall, ToolCallFunction;
 import '../llm/modes/mode_utils.dart' show resolveOriginalToolName;
+import 'http_response_utils.dart';
 
 /// 单轮流式请求的结果
 ///
@@ -393,9 +394,7 @@ void writeOpenAiError(
 }) {
   controller.add(
     utf8.encode(
-      'data: ${jsonEncode({
-        'error': {'message': message, 'type': type, 'param': param, 'code': code},
-      })}\n\n',
+      'data: ${jsonEncode(openAiErrorBody(message: message, type: type, param: param, code: code))}\n\n',
     ),
   );
 }

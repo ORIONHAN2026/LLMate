@@ -8,6 +8,8 @@ import '../../../controllers/mcp_controller.dart';
 import '../../../controllers/session_controller.dart';
 import '../../../core/llm/modes/mode_utils.dart';
 import '../../../models/chat/session.dart';
+import '../http_context_keys.dart';
+import '../http_response_utils.dart';
 
 /// 会话检查中间件
 ///
@@ -31,78 +33,58 @@ Handler sessionCheckGuard(Handler innerHandler) {
         '';
     final apiKey = _extractBearerToken(authHeader);
     debugPrint(
-      '🔑 [SessionGuard] 收到请求: path=${request.url.path}, apiKey=$apiKey',
+      '🔑 [SessionGuard] 收到请求: path=${request.url.path}, apiKey=${redactSecret(apiKey)}',
     );
+
+    if (apiKey == null || apiKey.isEmpty) {
+      debugPrint('🔒 [SessionGuard] 缺少 API Key → 401');
+      return openAiErrorResponse(
+        statusCode: 401,
+        message:
+            'Invalid or missing API key. '
+            'Please provide a valid API key via Authorization: Bearer lm-xxx',
+        type: 'invalid_request_error',
+        code: 'invalid_api_key',
+      );
+    }
 
     // Step 1: 通过 API Key 从数据库反查会话
     final sessionController = Get.find<SessionController>();
-    final session =
-        apiKey != null
-            ? await sessionController.getSessionByApiKey(apiKey)
-            : null;
+    final session = await sessionController.getSessionByApiKey(apiKey);
 
     if (session == null) {
-      debugPrint('🔒 [SessionGuard] 会话未找到 (by api key=$apiKey) → 404');
-      return Response.notFound(
-        jsonEncode({
-          'error': {
-            'message': 'Session not found for API key',
-            'type': 'invalid_request_error',
-            'code': 404,
-          },
-        }),
-        headers: {'content-type': 'application/json'},
+      debugPrint(
+        '🔒 [SessionGuard] 会话未找到 (by api key=${redactSecret(apiKey)}) → 404',
+      );
+      return openAiErrorResponse(
+        statusCode: 404,
+        message: 'Session not found for API key',
+        type: 'invalid_request_error',
+        code: 404,
       );
     }
 
     // Step 2: 校验 API Key 是否匹配
-    if (apiKey == null || apiKey.isEmpty) {
-      debugPrint('🔒 [SessionGuard] 缺少 API Key → 401');
-      return Response(
-        401,
-        body: jsonEncode({
-          'error': {
-            'message':
-                'Invalid or missing API key. '
-                'Please provide a valid API key via Authorization: Bearer lm-xxx',
-            'type': 'invalid_request_error',
-            'code': 'invalid_api_key',
-          },
-        }),
-        headers: {'content-type': 'application/json'},
-      );
-    }
-
     if (apiKey != session.apiKey) {
       debugPrint('🔒 [SessionGuard] API Key 不匹配 → 401');
-      return Response(
-        401,
-        body: jsonEncode({
-          'error': {
-            'message':
-                'Incorrect API key provided. '
-                'You can find your API key in the session settings.',
-            'type': 'invalid_request_error',
-            'code': 'invalid_api_key',
-          },
-        }),
-        headers: {'content-type': 'application/json'},
+      return openAiErrorResponse(
+        statusCode: 401,
+        message:
+            'Incorrect API key provided. '
+            'You can find your API key in the session settings.',
+        type: 'invalid_request_error',
+        code: 'invalid_api_key',
       );
     }
 
     // ── 2. 禁用状态检查 ──
     if (session.isDisabled) {
       debugPrint('🚫 [SessionGuard] 会话已禁用: ${session.sessionId} → 403');
-      return Response(
-        403,
-        body: jsonEncode({
-          'error': {
-            'message': 'This session has been disabled and is not available.',
-            'type': 'invalid_request_error',
-            'code': 'session_disabled',
-          },
-        }),
-        headers: {'content-type': 'application/json'},
+      return openAiErrorResponse(
+        statusCode: 403,
+        message: 'This session has been disabled and is not available.',
+        type: 'invalid_request_error',
+        code: 'session_disabled',
       );
     }
 
@@ -118,17 +100,12 @@ Handler sessionCheckGuard(Handler innerHandler) {
     final quotaResult = currentSession.checkQuota();
     if (quotaResult.exceeded) {
       debugPrint('⛔ [SessionGuard] 配额超限: ${quotaResult.reason} → 429');
-      return Response(
-        429,
-        body: jsonEncode({
-          'error': {
-            'message': quotaResult.reason ?? 'Usage limit exceeded',
-            'type': 'insufficient_quota',
-            'code': 'quota_exceeded',
-            'detail': quotaResult.detail,
-          },
-        }),
-        headers: {'content-type': 'application/json'},
+      return openAiErrorResponse(
+        statusCode: 429,
+        message: quotaResult.reason ?? 'Usage limit exceeded',
+        type: 'insufficient_quota',
+        code: 'quota_exceeded',
+        extra: {'detail': quotaResult.detail},
       );
     }
 
@@ -140,7 +117,9 @@ Handler sessionCheckGuard(Handler innerHandler) {
     var clientProvidedTools = false;
 
     if (bodyStr.isNotEmpty) {
-      body = jsonDecode(bodyStr) as Map<String, dynamic>;
+      final parsed = parseJsonObjectBody(bodyStr);
+      if (parsed.error != null) return parsed.error!;
+      body = parsed.body!;
 
       // 4. 会话级系统提示词（若设置，作为会话级指令注入）
       final messages = body['messages'];
@@ -178,13 +157,16 @@ Handler sessionCheckGuard(Handler innerHandler) {
           // 客户端自带 tools → 合并注入：客户端声明的函数名优先，
           // 同名会话工具不再追加，其余会话 MCP 工具追加到客户端工具末尾。
           final clientTools =
-              (body['tools'] as List).whereType<Map<String, dynamic>>().toList();
-          final clientNames = clientTools
-              .map(
-                (t) => ((t['function'] as Map?)?['name'] ?? '').toString(),
-              )
-              .where((n) => n.isNotEmpty)
-              .toSet();
+              (body['tools'] as List)
+                  .whereType<Map<String, dynamic>>()
+                  .toList();
+          final clientNames =
+              clientTools
+                  .map(
+                    (t) => ((t['function'] as Map?)?['name'] ?? '').toString(),
+                  )
+                  .where((n) => n.isNotEmpty)
+                  .toSet();
           final merged = <Map<String, dynamic>>[
             ...clientTools,
             ...sessionTools.where((func) {
@@ -218,20 +200,20 @@ Handler sessionCheckGuard(Handler innerHandler) {
               body: utf8.encode(jsonEncode(body)),
               context: {
                 ...request.context,
-                'session': currentSession,
-                'apiKey': apiKey,
-                'body': body,
-                'clientProvidedTools': clientProvidedTools,
-                'promptInsertCount': promptInsertCount,
+                HttpContextKeys.session: currentSession,
+                HttpContextKeys.apiKey: apiKey,
+                HttpContextKeys.body: body,
+                HttpContextKeys.clientProvidedTools: clientProvidedTools,
+                HttpContextKeys.promptInsertCount: promptInsertCount,
               },
             )
             : request.change(
               context: {
                 ...request.context,
-                'session': currentSession,
-                'apiKey': apiKey,
-                'clientProvidedTools': clientProvidedTools,
-                'promptInsertCount': promptInsertCount,
+                HttpContextKeys.session: currentSession,
+                HttpContextKeys.apiKey: apiKey,
+                HttpContextKeys.clientProvidedTools: clientProvidedTools,
+                HttpContextKeys.promptInsertCount: promptInsertCount,
               },
             );
 

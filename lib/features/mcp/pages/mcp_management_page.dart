@@ -64,23 +64,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: StandardAppBar(
-        title: 'MCP 管理',
-        actions: [
-          IconButton(
-            tooltip: '添加 MCP',
-            onPressed: () => _showAddMcpDialog(),
-            icon: Icon(
-              Icons.add,
-              size: 16,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
+      appBar: const StandardAppBar(title: 'MCP 管理'),
       body: content,
     );
   }
@@ -94,25 +78,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
     });
   }
 
-  List<Widget> _buildActions() {
-    return [
-      Transform.translate(
-        offset: const Offset(0, -5),
-        child: IconButton(
-          visualDensity: VisualDensity.compact,
-          tooltip: '添加 MCP',
-          onPressed: () => _showAddMcpDialog(),
-          icon: Icon(
-            Icons.add,
-            size: 16,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
-        ),
-      ),
-    ];
-  }
+  List<Widget> _buildActions() => const [];
 
   Widget _buildBody() {
     final theme = Theme.of(context);

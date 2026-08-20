@@ -377,15 +377,24 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(
-            context,
-          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Theme.of(context).dividerColor, width: 1),
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colorScheme.outlineVariant, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(
+                alpha: theme.brightness == Brightness.dark ? 0.2 : 0.04,
+              ),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,23 +421,25 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
               child: TextField(
                 controller: _inputController,
                 focusNode: _inputFocusNode,
-                style: const TextStyle(fontSize: 14),
+                style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
                 cursorHeight: 16, // 设置光标高度与文字大小匹配
+                cursorColor: colorScheme.primary,
                 decoration: InputDecoration(
                   hintText:
                       widget.hintText.isNotEmpty
                           ? widget.hintText
                           : l10n.inputHint,
-                  hintStyle: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.45),
                     fontSize: 14,
                   ),
+                  filled: false,
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
+                    horizontal: 16,
+                    vertical: 14,
                   ),
                 ),
                 textInputAction: TextInputAction.newline,
@@ -439,7 +450,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
             ),
             // 功能按钮组
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -452,13 +463,13 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           _buildSettingsEntry(),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           _buildAuditEntry(),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           _buildUsageEntry(),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           _buildMcpToolsToggle(),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
 
                           _buildCleanHistoryToggle(),
                           // Container(
@@ -472,8 +483,8 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     ),
                   ),
                   // 右侧发送/停止按钮
-                  Container(
-                    padding: const EdgeInsets.all(4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
                     child: _buildSendStopButton(),
                   ),
                 ],
@@ -495,15 +506,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           onTap: _stopMessage,
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            width: 16,
-            height: 16,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.onSurface,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.stop,
-              size: 10,
+              size: 14,
               color: Theme.of(context).colorScheme.surface,
             ),
           ),
@@ -517,15 +528,15 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           onTap: _sendMessage,
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            width: 16,
-            height: 16,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.onSurface,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.arrow_upward,
-              size: 10,
+              size: 16,
               color: Theme.of(context).colorScheme.surface,
             ),
           ),
@@ -533,7 +544,21 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       );
     } else {
       // 无文字输入时不显示按钮，但保持高度一致
-      return const SizedBox(width: 16, height: 16);
+      return Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          Icons.arrow_upward,
+          size: 16,
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.28),
+        ),
+      );
     }
   }
 
@@ -558,13 +583,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   }
                   : null,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color:
+                  active
+                      ? Theme.of(context).colorScheme.surfaceContainer
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.settings_outlined,
-                  size: 13,
+                  size: 14,
                   color: active ? onSurface : onSurface.withValues(alpha: 0.3),
                 ),
                 const SizedBox(width: 4),
@@ -574,8 +606,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: active ? onSurface : onSurface.withValues(alpha: 0.3),
+                    fontWeight: FontWeight.w600,
+                    color:
+                        active ? onSurface : onSurface.withValues(alpha: 0.3),
                   ),
                 ),
               ],
@@ -603,13 +636,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   }
                   : null,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color:
+                  active
+                      ? Theme.of(context).colorScheme.surfaceContainer
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.gavel_rounded,
-                  size: 13,
+                  size: 14,
                   color: active ? onSurface : onSurface.withValues(alpha: 0.3),
                 ),
                 const SizedBox(width: 4),
@@ -619,8 +659,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: active ? onSurface : onSurface.withValues(alpha: 0.3),
+                    fontWeight: FontWeight.w600,
+                    color:
+                        active ? onSurface : onSurface.withValues(alpha: 0.3),
                   ),
                 ),
               ],
@@ -648,13 +689,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   }
                   : null,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color:
+                  active
+                      ? Theme.of(context).colorScheme.surfaceContainer
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.bar_chart_rounded,
-                  size: 13,
+                  size: 14,
                   color: active ? onSurface : onSurface.withValues(alpha: 0.3),
                 ),
                 const SizedBox(width: 4),
@@ -664,8 +712,9 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: active ? onSurface : onSurface.withValues(alpha: 0.3),
+                    fontWeight: FontWeight.w600,
+                    color:
+                        active ? onSurface : onSurface.withValues(alpha: 0.3),
                   ),
                 ),
               ],
@@ -682,16 +731,26 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
       message: AppLocalizations.of(context)!.clearConversation,
       child: InkWell(
         onTap: _isSending ? null : _clearHistory,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.all(4),
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Icon(
-            Icons.brush,
-            size: 13,
+            Icons.delete_sweep_outlined,
+            size: 15,
             color:
                 _isSending
-                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ? Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.3)
+                    : Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ),
@@ -722,13 +781,20 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
           onTap:
               canView ? () => showMcpDetailDialog(context, sessionMcps!) : null,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color:
+                  mcpCount > 0
+                      ? Theme.of(context).colorScheme.surfaceContainer
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.link,
-                  size: 13,
+                  Icons.hub_outlined,
+                  size: 14,
                   color:
                       _isSending
                           ? onSurface.withValues(alpha: 0.3)
@@ -746,7 +812,7 @@ class _ChatInputWidgetState extends State<ChatInputWidget> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight:
-                          mcpCount > 0 ? FontWeight.w700 : FontWeight.w500,
+                          mcpCount > 0 ? FontWeight.w700 : FontWeight.w600,
                       color:
                           _isSending
                               ? onSurface.withValues(alpha: 0.3)

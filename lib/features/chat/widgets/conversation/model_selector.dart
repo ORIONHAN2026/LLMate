@@ -87,9 +87,9 @@ class _ModelSelectorState extends State<ModelSelector> {
             (context) => Container(
               height: MediaQuery.of(context).size.height * 0.7,
               decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
+                  top: Radius.circular(10),
                 ),
               ),
               child: Column(
@@ -261,9 +261,12 @@ class _ModelSelectorState extends State<ModelSelector> {
     showMenu(
       context: context,
       position: position,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 8,
-      color: Theme.of(context).scaffoldBackgroundColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      elevation: 10,
+      color: Theme.of(context).colorScheme.surface,
       constraints: BoxConstraints(
         minWidth: 280,
         maxWidth: screenWidth < 420 ? screenWidth - 32 : 320,
@@ -408,12 +411,15 @@ class _ModelSelectorState extends State<ModelSelector> {
         child: InkWell(
           key: widget.selectorKey,
           onTap: () => _showModelSelectorPopup(context),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: BorderRadius.circular(6),
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -421,59 +427,60 @@ class _ModelSelectorState extends State<ModelSelector> {
                 Flexible(
                   child: Container(
                     constraints: BoxConstraints(maxWidth: maxWidth),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                _getDisplayModelName(),
-                                style: TextStyle(
-                                  fontSize: isMobile ? 16 : 13,
-                                  fontWeight: FontWeight.w500,
-                                  color:
-                                      _hasValidModel()
-                                          ? Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.chevron_right,
-                              size: 12,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.7),
-                            ),
-                          ],
-                        ),
-                        if (!isMobile || _hasValidModel()) ...[
-                          const SizedBox(height: 0),
-                          Text(
-                            _getDisplayModelDetail(),
+                        Flexible(
+                          child: Text(
+                            _getDisplayModelName(),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: isMobile ? 15 : 13,
+                              fontWeight: FontWeight.w600,
                               color:
                                   _hasValidModel()
                                       ? Theme.of(context).colorScheme.onSurface
-                                          .withValues(alpha: 0.7)
                                       : Theme.of(context).colorScheme.onSurface
-                                          .withValues(alpha: 0.5),
+                                          .withValues(alpha: 0.6),
                             ),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
                           ),
+                        ),
+                        if (!isMobile && _hasValidModel()) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: Text(
+                              '/',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.35),
+                              ),
+                            ),
+                          ),
+                          Flexible(
+                            child: Text(
+                              _getDisplayModelDetail(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.62),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
                         ],
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 16,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
                       ],
                     ),
                   ),

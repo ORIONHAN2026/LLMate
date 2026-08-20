@@ -93,7 +93,7 @@ class LocalHttpService {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers':
         'Authorization, Content-Type, Accept, Cache-Control, OpenAI-Organization, OpenAI-Project, X-Request-ID, X-Requested-With',
-    'Access-Control-Expose-Headers': 'X-Request-ID',
+    'Access-Control-Expose-Headers': 'X-Request-ID, X-Trace-ID',
     'Access-Control-Max-Age': '86400',
   };
 
@@ -429,26 +429,25 @@ class LocalHttpService {
       final bufferedChunksFuture =
           !wantStream ? streamController.stream.toList() : null;
 
+      final audit = AuditController.instance;
+      AuditTrace? auditTrace;
+      final auditProvider = session.chatModel?.platform ?? 'unknown';
+      final auditModel = session.chatModel?.model ?? 'unknown';
+      try {
+        auditTrace = await audit.beginTrace(
+          sessionId: session.sessionId,
+          ip: extractClientIp(request),
+        );
+        // 记录第三方请求的完整 body（原样存储，便于离线审计排查）
+        audit.body(auditTrace, body);
+        audit.prompt(auditTrace, _extractUserPrompt(body));
+      } catch (e) {
+        debugPrint('⚠️ [Audit] 开启链路追踪失败: $e');
+      }
+
       final pipelineFuture = () async {
         // 记录生成开始时间，用于计算耗时
         final generationStartTime = DateTime.now();
-
-        // ── 审计：开启链路追踪，记录本次请求 ──
-        final audit = AuditController.instance;
-        AuditTrace? auditTrace;
-        final auditProvider = session.chatModel?.platform ?? 'unknown';
-        final auditModel = session.chatModel?.model ?? 'unknown';
-        try {
-          auditTrace = await audit.beginTrace(
-            sessionId: session.sessionId,
-            ip: extractClientIp(request),
-          );
-          // 记录第三方请求的完整 body（原样存储，便于离线审计排查）
-          audit.body(auditTrace, body);
-          audit.prompt(auditTrace, _extractUserPrompt(body));
-        } catch (e) {
-          debugPrint('⚠️ [Audit] 开启链路追踪失败: $e');
-        }
 
         try {
           // ── 工具调用循环状态 ──
@@ -826,7 +825,10 @@ class LocalHttpService {
           final sseText = utf8.decode(bytes, allowMalformed: true);
           return Response.ok(
             jsonEncode(_sseToChatCompletionJson(sseText, 'auto')),
-            headers: jsonHeaders,
+            headers: {
+              ...jsonHeaders,
+              if (auditTrace != null) 'X-Trace-ID': auditTrace.traceId,
+            },
           );
         } catch (e) {
           debugPrint('❌ 非流式请求处理失败: $e');
@@ -847,6 +849,7 @@ class LocalHttpService {
           'content-type': 'text/event-stream',
           'cache-control': 'no-cache',
           'connection': 'keep-alive',
+          if (auditTrace != null) 'X-Trace-ID': auditTrace.traceId,
         },
       );
     } catch (e) {

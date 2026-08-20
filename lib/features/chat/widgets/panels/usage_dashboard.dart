@@ -324,10 +324,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
                   : currentSession.messages
                       .where((m) => m.role.name == 'bot' && !m.isError)
                       .length;
-          final costText =
-              _stats != null && _stats!.costsByCurrency.isNotEmpty
-                  ? _formatCost(_stats!.costsByCurrency)
-                  : _formatSessionCost(currentSession);
           final quotaEnabled = currentSession.quotaEnabled;
           final tokenLimit = currentSession.quotaTokenLimit;
 
@@ -340,7 +336,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
                 theme,
                 isDark,
                 requestCount: requestCount,
-                costText: costText,
                 totalTokens: totalTokens,
                 promptTokens: promptTokens,
                 completionTokens: completionTokens,
@@ -639,7 +634,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
             ),
             const SizedBox(height: 10),
             Text(
-              '按日期范围查看请求、Token、缓存和成本',
+              '按日期范围查看请求、Token 和缓存',
               style: TextStyle(
                 fontSize: 15,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
@@ -743,7 +738,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
     ThemeData theme,
     bool isDark, {
     required int requestCount,
-    required String costText,
     required int totalTokens,
     required int promptTokens,
     required int completionTokens,
@@ -755,7 +749,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
         final width = constraints.maxWidth;
         final columns =
             width >= 840
-                ? 4
+                ? 3
                 : width >= 720
                 ? 2
                 : 1;
@@ -769,7 +763,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               theme,
               isDark,
               width: itemWidth,
-              compact: columns == 4 && itemWidth < 220,
+              compact: columns == 3 && itemWidth < 220,
               title: '总请求数',
               value: _formatInteger(requestCount),
               icon: Icons.monitor_heart_outlined,
@@ -780,18 +774,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               theme,
               isDark,
               width: itemWidth,
-              compact: columns == 4 && itemWidth < 220,
-              title: '总成本',
-              value: costText,
-              icon: Icons.attach_money_rounded,
-              accent: const Color(0xFFA855F7),
-              accentBackground: const Color(0xFFF3E8FF),
-            ),
-            _buildMetricCard(
-              theme,
-              isDark,
-              width: itemWidth,
-              compact: columns == 4 && itemWidth < 220,
+              compact: columns == 3 && itemWidth < 220,
               title: '总 Token 数',
               value: _formatTokenCount(totalTokens),
               icon: Icons.layers_outlined,
@@ -804,7 +787,7 @@ class _UsageDashboardState extends State<UsageDashboard> {
               theme,
               isDark,
               width: itemWidth,
-              compact: columns == 4 && itemWidth < 220,
+              compact: columns == 3 && itemWidth < 220,
               title: '缓存 Token',
               value: _formatTokenCount(cacheWriteTokens + cacheReadTokens),
               icon: Icons.storage_rounded,
@@ -1581,30 +1564,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
       buffer.write(text[i]);
     }
     return buffer.toString();
-  }
-
-  String _formatCost(Map<String, double>? costsByCurrency) {
-    if (costsByCurrency == null || costsByCurrency.isEmpty) return '\$0.00';
-    final entries =
-        costsByCurrency.entries.where((e) => e.value != 0).toList()
-          ..sort((a, b) => a.key.compareTo(b.key));
-    if (entries.isEmpty) return '\$0.00';
-    if (entries.length == 1) {
-      final entry = entries.first;
-      final symbol = entry.key.toUpperCase() == 'CNY' ? '¥' : '\$';
-      return '$symbol${entry.value.toStringAsFixed(2)}';
-    }
-    return entries
-        .map((e) => '${e.key.toUpperCase()} ${e.value.toStringAsFixed(2)}')
-        .join(' / ');
-  }
-
-  String _formatSessionCost(ChatSession session) {
-    final cost = session.totalCost;
-    if (cost <= 0) return '\$0.00';
-    final currency = session.chatModel?.currency?.toUpperCase() ?? 'USD';
-    final symbol = currency == 'CNY' ? '¥' : '\$';
-    return '$symbol${cost.toStringAsFixed(2)}';
   }
 
   String _rangePresetLabel(int days) {

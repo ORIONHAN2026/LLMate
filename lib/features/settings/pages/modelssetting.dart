@@ -164,14 +164,7 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
   @override
   Widget build(BuildContext context) {
     final body = Row(
-      children: [
-        // 左侧导航菜单
-        _buildLeftNavigation(),
-        // 分割线
-        Container(width: 1, color: Theme.of(context).dividerColor),
-        // 右侧内容区域
-        Expanded(child: _buildRightContent()),
-      ],
+      children: [_buildLeftNavigation(), Expanded(child: _buildRightContent())],
     );
 
     if (widget.embedded) {
@@ -189,22 +182,26 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
   }
 
   Widget _buildLeftNavigation() {
+    final scheme = Theme.of(context).colorScheme;
+    final loc = AppLocalizations.of(context)!;
+
     return Container(
-      width: 200,
+      width: 260,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
-          right: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+          right: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.45),
+            width: 1,
+          ),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 顶部标题
-          const SizedBox(height: 12),
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
               itemCount: _availableModels.length,
               itemBuilder: (context, index) {
                 final model = _availableModels[index];
@@ -219,23 +216,28 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
               },
             ),
           ),
-          // 底部添加按钮
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _showOnlineModelDialog,
-                icon: const Icon(Icons.add, size: 10),
+                icon: const Icon(Icons.add, size: 16),
                 label: Text(
-                  AppLocalizations.of(context)!.addModel,
-                  style: const TextStyle(fontSize: 11),
+                  loc.addModel,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
+                  elevation: 0,
+                  backgroundColor: scheme.onSurface,
+                  foregroundColor: scheme.surface,
+                  minimumSize: const Size.fromHeight(42),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  // shadowColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                 ),
               ),
             ),
@@ -253,51 +255,63 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
     bool isSelected,
   ) {
     final model = _availableModels[index];
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 4),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color:
             isSelected
-                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)
-                : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border:
-            isSelected
-                ? Border.all(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.3),
-                  width: 1,
-                )
-                : null,
+                ? scheme.onSurface.withValues(alpha: 0.05)
+                : scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              isSelected
+                  ? scheme.onSurface.withValues(alpha: 0.35)
+                  : scheme.outlineVariant.withValues(alpha: 0.45),
+          width: 1,
+        ),
       ),
       child: GestureDetector(
         onSecondaryTapDown: (details) {
           _showModelContextMenu(context, details.globalPosition, model);
         },
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           onTap: () {
             setState(() {
               _selectedTab = index;
             });
           },
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                // 模型图标
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: _buildModelIconWidget(
-                    model.name,
-                    isSelected,
-                    provider: model.platform,
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest.withValues(
+                      alpha: isSelected ? 0.75 : 0.42,
+                    ),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(
+                      color: scheme.outlineVariant.withValues(alpha: 0.36),
+                    ),
+                  ),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: _buildModelIconWidget(
+                      model.name,
+                      isSelected,
+                      provider: model.platform,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // 模型信息
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,22 +319,25 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
                       Text(
                         modelName,
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                          letterSpacing: 0,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      // 完整名称
+                      const SizedBox(height: 3),
                       Text(
                         fullName,
-                        style: TextStyle(fontSize: 9),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: scheme.onSurface.withValues(alpha: 0.54),
+                          letterSpacing: 0,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-
-                      // 业务类型标签
                     ],
                   ),
                 ),
@@ -434,39 +451,50 @@ class _ModelSettingPageState extends State<ModelSettingPage> {
       final selectedModel = _availableModels[_selectedTab];
       return _buildModelDetailContent(selectedModel);
     }
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.smart_toy_outlined,
-            size: 48,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            AppLocalizations.of(context)!.noModels,
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.6),
-              fontWeight: FontWeight.w500,
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Container(
+          width: 420,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.5),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            AppLocalizations.of(context)!.clickAddModelHint,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.smart_toy_outlined,
+                size: 42,
+                color: scheme.onSurface.withValues(alpha: 0.42),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                AppLocalizations.of(context)!.noModels,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                AppLocalizations.of(context)!.clickAddModelHint,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurface.withValues(alpha: 0.56),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

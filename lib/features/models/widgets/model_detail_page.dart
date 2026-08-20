@@ -122,15 +122,12 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
       );
     }
 
-    return Column(
-      children: [
-        // 模型详情头部
-        _buildModelHeader(),
-        const SizedBox(height: 12),
-        // 模型配置内容
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Column(
+        children: [
+          _buildModelHeader(),
+          Expanded(
             child: ModelConfigTab(
               model: _currentModel,
               apiUrl: widget.apiUrl,
@@ -142,18 +139,41 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
               },
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildModelHeader() {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
       child: Row(
         children: [
-          // 模型图标和信息
-          const SizedBox(width: 12),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.36),
+              ),
+            ),
+            child: Icon(
+              Icons.memory_outlined,
+              color: scheme.onSurface.withValues(alpha: 0.74),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,9 +185,10 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: scheme.onSurface,
+                    letterSpacing: 0,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -182,42 +203,33 @@ class _ModelDetailPageState extends State<ModelDetailPage> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: scheme.onSurface.withValues(alpha: 0.56),
+                    letterSpacing: 0,
                   ),
                 ),
               ],
             ),
           ),
-          // 操作按钮
-          Column(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () {
-                  // 删除模型
-                  _showDeleteConfirmation();
-                },
-                icon: const Icon(Icons.delete_outline, size: 10),
-                label: Text(AppLocalizations.of(context)!.delete),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.error,
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.error,
-                    width: 1,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  minimumSize: const Size(50, 28),
-                  textStyle: const TextStyle(fontSize: 11),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
+          OutlinedButton.icon(
+            onPressed: _showDeleteConfirmation,
+            icon: const Icon(Icons.delete_outline, size: 16),
+            label: Text(AppLocalizations.of(context)!.delete),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: scheme.error,
+              side: BorderSide(
+                color: scheme.error.withValues(alpha: 0.45),
+                width: 1,
               ),
-            ],
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              minimumSize: const Size(74, 40),
+              textStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
           ),
         ],
       ),

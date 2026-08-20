@@ -20,8 +20,7 @@ class ModelConfigTab extends StatefulWidget {
   State<ModelConfigTab> createState() => _ModelConfigTabState();
 }
 
-class _ModelConfigTabState extends State<ModelConfigTab>
-    with SingleTickerProviderStateMixin {
+class _ModelConfigTabState extends State<ModelConfigTab> {
   late ChatModel _currentModel;
   bool _isEditingModelName = false;
   bool _isHoveringModelName = false; // 新增：鼠标悬停状态
@@ -29,7 +28,6 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   late TextEditingController _modelNameController;
   late TextEditingController _systemPromptController;
   Timer? _debounceTimer;
-  late TabController _tabController;
 
   @override
   void initState() {
@@ -38,7 +36,6 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     _apiKeyController = TextEditingController();
     _modelNameController = TextEditingController();
     _systemPromptController = TextEditingController();
-    _tabController = TabController(length: 3, vsync: this);
     _initializeData();
   }
 
@@ -48,7 +45,6 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     _apiKeyController.dispose();
     _modelNameController.dispose();
     _systemPromptController.dispose();
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -68,81 +64,105 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
-    return Column(
-      children: [
-        TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelColor: Theme.of(context).colorScheme.onSurface,
-          unselectedLabelColor: Theme.of(
-            context,
-          ).colorScheme.onSurface.withValues(alpha: 0.55),
-          indicatorColor: Theme.of(context).colorScheme.onSurface,
-          indicatorWeight: 3,
-          tabs: [
-            Tab(
-              text: loc.basicInfo,
-              icon: const Icon(Icons.info_outline, size: 16),
-            ),
-            Tab(text: loc.modelParams, icon: const Icon(Icons.tune, size: 16)),
-            Tab(
-              text: loc.securitySettings,
-              icon: const Icon(Icons.security, size: 16),
-            ),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      child: Column(
+        children: [
+          _buildSection(
+            title: loc.basicInfo,
+            icon: Icons.info_outline,
+            child: _buildBasicInfoTab(),
+          ),
+          const SizedBox(height: 16),
+          _buildSection(
+            title: loc.modelParams,
+            icon: Icons.tune,
+            child: _buildModelParamsTab(),
+          ),
+          const SizedBox(height: 16),
+          _buildSection(
+            title: loc.securitySettings,
+            icon: Icons.security_outlined,
+            child: _buildSecurityTab(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSection({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              // Tab 1: 基本信息
-              _buildBasicInfoTab(),
-              // Tab 2: 模型参数
-              _buildModelParamsTab(),
-              // Tab 3: 安全设置（敏感信息脱敏）
-              _buildSecurityTab(),
+              Icon(
+                icon,
+                size: 18,
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: scheme.onSurface,
+                  letterSpacing: 0,
+                ),
+              ),
             ],
           ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBasicInfoTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildEditableModelNameItem(),
+        const SizedBox(height: 10),
+        _buildAvailableModelsItem(),
+        const SizedBox(height: 10),
+        _buildConfigItem(
+          AppLocalizations.of(context)!.platformLabel,
+          _currentModel.platform ?? AppLocalizations.of(context)!.unknown,
+        ),
+        const SizedBox(height: 10),
+        _buildConfigItem(
+          AppLocalizations.of(context)!.apiAddress,
+          _currentModel.apiUrl ?? widget.apiUrl,
         ),
       ],
     );
   }
 
-  Widget _buildBasicInfoTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildEditableModelNameItem(),
-          const SizedBox(height: 8),
-          _buildAvailableModelsItem(),
-          const SizedBox(height: 8),
-          _buildConfigItem(
-            AppLocalizations.of(context)!.platformLabel,
-            _currentModel.platform ?? AppLocalizations.of(context)!.unknown,
-          ),
-          const SizedBox(height: 8),
-          _buildConfigItem(
-            AppLocalizations.of(context)!.apiAddress,
-            _currentModel.apiUrl ?? widget.apiUrl,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildModelParamsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildTemperatureSlider(),
-          const SizedBox(height: 12),
-          _buildSystemPromptField(),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTemperatureSlider(),
+        const SizedBox(height: 14),
+        _buildSystemPromptField(),
+      ],
     );
   }
 
@@ -152,47 +172,44 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     final maskPhone = _currentModel.maskPhone;
     final maskIdCard = _currentModel.maskIdCard;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            loc.sensitiveInfoMasking,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.8),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          loc.sensitiveInfoMasking,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
-          const SizedBox(height: 4),
-          Text(
-            loc.sensitiveInfoMaskingDesc,
-            style: TextStyle(
-              fontSize: 11,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          loc.sensitiveInfoMaskingDesc,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.56),
           ),
-          const SizedBox(height: 12),
-          _buildSecuritySwitch(
-            title: loc.maskPhoneTitle,
-            subtitle: loc.maskPhoneSubtitle,
-            value: maskPhone,
-            onChanged: (v) => _updateSecuritySetting(maskPhone: v),
-          ),
-          const SizedBox(height: 8),
-          _buildSecuritySwitch(
-            title: loc.maskIdCardTitle,
-            subtitle: loc.maskIdCardSubtitle,
-            value: maskIdCard,
-            onChanged: (v) => _updateSecuritySetting(maskIdCard: v),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 14),
+        _buildSecuritySwitch(
+          title: loc.maskPhoneTitle,
+          subtitle: loc.maskPhoneSubtitle,
+          value: maskPhone,
+          onChanged: (v) => _updateSecuritySetting(maskPhone: v),
+        ),
+        const SizedBox(height: 10),
+        _buildSecuritySwitch(
+          title: loc.maskIdCardTitle,
+          subtitle: loc.maskIdCardSubtitle,
+          value: maskIdCard,
+          onChanged: (v) => _updateSecuritySetting(maskIdCard: v),
+        ),
+      ],
     );
   }
 
@@ -202,31 +219,42 @@ class _ModelConfigTabState extends State<ModelConfigTab>
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-        ),
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
       ),
-      child: SwitchListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        title: Text(title, style: const TextStyle(fontSize: 13)),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 11,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurface.withValues(alpha: 0.56),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        value: value,
-        onChanged: onChanged,
-        dense: true,
+          Switch(value: value, onChanged: onChanged),
+        ],
       ),
     );
   }
@@ -242,21 +270,26 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   }
 
   Widget _buildConfigItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 96,
             child: Text(
-              '$label:',
+              label,
               style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.7),
-                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                color: scheme.onSurface.withValues(alpha: 0.58),
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -264,11 +297,12 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.8),
+                fontSize: 13,
+                color: scheme.onSurface.withValues(alpha: 0.82),
+                letterSpacing: 0,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -292,19 +326,25 @@ class _ModelConfigTabState extends State<ModelConfigTab>
       return _buildConfigItem(loc.modelLabel, _currentModel.model);
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 96,
             child: Text(
-              '${loc.modelLabel}:',
+              loc.modelLabel,
               style: TextStyle(
-                fontSize: 12,
-                color: scheme.onSurface.withValues(alpha: 0.7),
-                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                color: scheme.onSurface.withValues(alpha: 0.58),
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -347,7 +387,11 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                             child: Text(
                               m,
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
+                                fontWeight:
+                                    isCurrent
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
                                 color:
                                     isCurrent
                                         ? scheme.primary
@@ -371,21 +415,27 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   }
 
   Widget _buildEditableModelNameItem() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 80,
+            width: 96,
             child: Text(
-              '${AppLocalizations.of(context)!.nameLabel}:',
+              AppLocalizations.of(context)!.nameLabel,
               style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.7),
-                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                color: scheme.onSurface.withValues(alpha: 0.58),
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -396,14 +446,29 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                       controller: _modelNameController,
                       decoration: InputDecoration(
                         hintText: AppLocalizations.of(context)!.modelNameHint,
-                        border: const OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
+                        filled: true,
+                        fillColor: scheme.surface,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: scheme.outlineVariant.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: scheme.onSurface),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
                           horizontal: 10,
-                          vertical: 6,
+                          vertical: 8,
                         ),
                         isDense: true,
                       ),
-                      style: const TextStyle(fontSize: 12),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: scheme.onSurface,
+                        letterSpacing: 0,
+                      ),
                       autofocus: true,
                       onSubmitted: (value) => _saveModelName(),
                       onTapOutside: (event) => _cancelEditModelName(),
@@ -418,21 +483,23 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                         onDoubleTap: _startEditModelName,
                         child: Container(
                           width: double.infinity,
-                          // padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                          constraints: const BoxConstraints(minHeight: 36),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 7,
+                          ),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color:
                                   _isHoveringModelName
-                                      ? Theme.of(context).colorScheme.onSurface
-                                          .withValues(alpha: 0.3)
+                                      ? scheme.onSurface.withValues(alpha: 0.26)
                                       : Colors.transparent,
                               width: 1,
                             ),
                             color:
                                 _isHoveringModelName
-                                    ? Theme.of(context).colorScheme.onSurface
-                                        .withValues(alpha: 0.05)
+                                    ? scheme.onSurface.withValues(alpha: 0.04)
                                     : Colors.transparent,
                           ),
                           child: Row(
@@ -445,35 +512,43 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                                         context,
                                       )!.notSetDoubleClickToEdit,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 13,
                                     color:
                                         _currentModel.name.isNotEmpty
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.8)
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.5),
+                                            ? scheme.onSurface.withValues(
+                                              alpha: 0.82,
+                                            )
+                                            : scheme.onSurface.withValues(
+                                              alpha: 0.5,
+                                            ),
+                                    letterSpacing: 0,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: _startEditModelName,
-                                child: Icon(
-                                  Icons.edit,
-                                  size: 12,
+                              Tooltip(
+                                message:
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.notSetDoubleClickToEdit,
+                                child: IconButton(
+                                  onPressed: _startEditModelName,
+                                  icon: const Icon(Icons.edit),
+                                  iconSize: 14,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 28,
+                                    height: 28,
+                                  ),
                                   color:
                                       _isHoveringModelName
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.7)
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.4),
+                                          ? scheme.onSurface.withValues(
+                                            alpha: 0.7,
+                                          )
+                                          : scheme.onSurface.withValues(
+                                            alpha: 0.38,
+                                          ),
                                 ),
                               ),
                             ],
@@ -529,6 +604,8 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   // ========== 模型参数 (Temperature + System Prompt) ==========
 
   Widget _buildTemperatureSlider() {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -538,32 +615,28 @@ class _ModelConfigTabState extends State<ModelConfigTab>
             Text(
               AppLocalizations.of(context)!.temperatureLabel,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.7),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
             Text(
               '${(_currentModel.temperature ?? 1.0).toStringAsFixed(1)} (${_getTemperatureLabel(_currentModel.temperature ?? 1.0)})',
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: Theme.of(context).colorScheme.onSurface,
-            inactiveTrackColor: Theme.of(context).dividerColor,
-            thumbColor: Theme.of(context).colorScheme.onSurface,
-            overlayColor: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.1),
+            activeTrackColor: scheme.onSurface,
+            inactiveTrackColor: scheme.outlineVariant.withValues(alpha: 0.7),
+            thumbColor: scheme.onSurface,
+            overlayColor: scheme.onSurface.withValues(alpha: 0.08),
             trackHeight: 3,
           ),
           child: Slider(
@@ -588,9 +661,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                 AppLocalizations.of(context)!.precise,
                 style: TextStyle(
                   fontSize: 10,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: scheme.onSurface.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -598,9 +669,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                 AppLocalizations.of(context)!.neutral,
                 style: TextStyle(
                   fontSize: 10,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: scheme.onSurface.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -608,9 +677,7 @@ class _ModelConfigTabState extends State<ModelConfigTab>
                 AppLocalizations.of(context)!.creative,
                 style: TextStyle(
                   fontSize: 10,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: scheme.onSurface.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -621,10 +688,8 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         Text(
           AppLocalizations.of(context)!.temperatureDescription,
           style: TextStyle(
-            fontSize: 11,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.6),
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.56),
           ),
         ),
       ],
@@ -642,39 +707,45 @@ class _ModelConfigTabState extends State<ModelConfigTab>
   }
 
   Widget _buildSystemPromptField() {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           AppLocalizations.of(context)!.modelRoleSetting,
           style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.7),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         TextField(
           controller: _systemPromptController,
           maxLines: 3,
           decoration: InputDecoration(
             hintText: AppLocalizations.of(context)!.roleDescHint,
             hintStyle: const TextStyle(fontSize: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Theme.of(context).dividerColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
+            filled: true,
+            fillColor: scheme.surface,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: scheme.outlineVariant.withValues(alpha: 0.7),
               ),
             ),
-            contentPadding: const EdgeInsets.all(10),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: scheme.onSurface),
+            ),
+            contentPadding: const EdgeInsets.all(12),
           ),
-          style: const TextStyle(fontSize: 12),
+          style: TextStyle(
+            fontSize: 13,
+            color: scheme.onSurface,
+            letterSpacing: 0,
+          ),
           onChanged: (value) {
             _debounceTimer?.cancel();
             _debounceTimer = Timer(const Duration(seconds: 1), () {
@@ -689,10 +760,8 @@ class _ModelConfigTabState extends State<ModelConfigTab>
         Text(
           AppLocalizations.of(context)!.roleSettingDescription,
           style: TextStyle(
-            fontSize: 11,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.6),
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.56),
           ),
         ),
       ],

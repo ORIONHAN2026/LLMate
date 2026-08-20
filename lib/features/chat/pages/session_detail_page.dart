@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../controllers/session_controller.dart';
+import '../../../models/chat/session.dart';
 import '../widgets/sidebars/session_config_sidebar.dart';
 import '../widgets/panels/usage_dashboard.dart';
 import '../widgets/panels/audit_viewer.dart';
@@ -47,10 +48,8 @@ class SessionDetailPage extends StatelessWidget {
           label: l10n.modelSettings,
           icon: Icons.smart_toy_outlined,
           builder:
-              (ctx) => SessionConfigSidebar.buildModelSettingsSection(
-                ctx,
-                session,
-              ),
+              (ctx) =>
+                  SessionConfigSidebar.buildModelSettingsSection(ctx, session),
         ),
         _DetailTab(
           label: l10n.sessionSettingsTab,
@@ -96,41 +95,145 @@ class SessionDetailPage extends StatelessWidget {
       return DefaultTabController(
         length: tabs.length,
         child: Scaffold(
-          appBar: StandardAppBar(
-            title: session.name,
-            bottom: TabBar(
-              isScrollable: true,
-              labelColor: theme.colorScheme.onSurface,
-              unselectedLabelColor: theme.colorScheme.onSurface.withValues(
-                alpha: 0.55,
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: StandardAppBar(title: l10n.sessionDetails),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SessionDetailHeader(session: session),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                child: _SessionDetailTabs(tabs: tabs),
               ),
-              indicatorColor: theme.colorScheme.onSurface,
-              indicatorWeight: 3,
-              tabs:
-                  tabs
-                      .map(
-                        (t) => Tab(text: t.label, icon: Icon(t.icon, size: 16)),
-                      )
-                      .toList(),
-            ),
-          ),
-          body: TabBarView(
-            children:
-                tabs
-                    .map((t) {
-                      final content = t.builder(context);
-                      return t.scrollable
-                          ? SingleChildScrollView(
-                            padding: const EdgeInsets.all(16),
-                            child: content,
-                          )
-                          : content;
-                    })
-                    .toList(),
+              const SizedBox(height: 16),
+              Expanded(
+                child: TabBarView(
+                  children:
+                      tabs.map((t) {
+                        final content = t.builder(context);
+                        return t.scrollable
+                            ? SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                              child: content,
+                            )
+                            : content;
+                      }).toList(),
+                ),
+              ),
+            ],
           ),
         ),
       );
     });
+  }
+}
+
+class _SessionDetailHeader extends StatelessWidget {
+  final ChatSession session;
+
+  const _SessionDetailHeader({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            session.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            session.group?.toString().isNotEmpty == true
+                ? session.group!
+                : l10n.notGrouped,
+            style: TextStyle(
+              fontSize: 15,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SessionDetailTabs extends StatelessWidget {
+  final List<_DetailTab> tabs;
+
+  const _SessionDetailTabs({required this.tabs});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF4F4F5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TabBar(
+        isScrollable: true,
+        tabAlignment: TabAlignment.start,
+        dividerColor: Colors.transparent,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: isDark ? const Color(0xFF111827) : Colors.white,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow:
+              isDark
+                  ? null
+                  : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+        ),
+        labelColor: theme.colorScheme.onSurface,
+        unselectedLabelColor: theme.colorScheme.onSurface.withValues(
+          alpha: 0.55,
+        ),
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+        tabs:
+            tabs
+                .map(
+                  (t) => Tab(
+                    height: 38,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(t.icon, size: 16),
+                          const SizedBox(width: 6),
+                          Text(t.label),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+      ),
+    );
   }
 }
 

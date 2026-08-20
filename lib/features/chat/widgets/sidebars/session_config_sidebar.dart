@@ -109,25 +109,26 @@ class SessionConfigSidebar {
     int maxLines = 1,
     Color? valueColor,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE1E4E8),
+        ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
             icon,
-            size: 14,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.5),
+            size: 16,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,21 +137,19 @@ class SessionConfigSidebar {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.52),
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   value,
                   maxLines: maxLines,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color:
-                        valueColor ?? Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                    color: valueColor ?? theme.colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -172,31 +171,32 @@ class SessionConfigSidebar {
   }) {
     final showReset = onReset != null;
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return InkWell(
       onTap: () {
         Clipboard.setData(ClipboardData(text: value));
         SnackBarUtils.showSuccess(context, l10n.copiedToClipboard);
       },
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Theme.of(
-            context,
-          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(8),
+          color: isDark ? const Color(0xFF111827) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE1E4E8),
+          ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 14,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.7),
+              size: 16,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,20 +205,21 @@ class SessionConfigSidebar {
                     label,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.52,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     value,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -233,9 +234,7 @@ class SessionConfigSidebar {
                   child: Icon(
                     Icons.refresh,
                     size: 14,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.4),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
                   ),
                 ),
               ),
@@ -243,10 +242,8 @@ class SessionConfigSidebar {
             ],
             Icon(
               Icons.content_copy,
-              size: 12,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.3),
+              size: 14,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
             ),
           ],
         ),
@@ -400,10 +397,10 @@ class SessionConfigSidebar {
     return Text(
       title,
       style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
-        letterSpacing: 0.3,
+        fontSize: 14,
+        fontWeight: FontWeight.w800,
+        color: Theme.of(context).colorScheme.onSurface,
+        letterSpacing: 0,
       ),
     );
   }
@@ -747,27 +744,28 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
       onDoubleTap: _startEditing,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Theme.of(
-            context,
-          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(8),
+          color: isDark ? const Color(0xFF111827) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE1E4E8),
+          ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
               widget.icon,
-              size: 14,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.5),
+              size: 16,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,30 +774,15 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
                     widget.label,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.52,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   if (_isEditing)
-                    TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                        border: InputBorder.none,
-                      ),
-                      maxLines: 1,
-                      onSubmitted: (_) => _finishEditing(),
-                      onTapOutside: (_) => _finishEditing(),
-                    )
+                    _buildInlineEditor(theme, isDark)
                   else
                     Text(
                       widget.value,
@@ -807,14 +790,75 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                 ],
               ),
             ),
+            if (!_isEditing) ...[
+              const SizedBox(width: 10),
+              Tooltip(
+                message: '点击编辑',
+                waitDuration: const Duration(milliseconds: 400),
+                child: InkWell(
+                  onTap: _startEditing,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.04,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.edit_outlined,
+                      size: 15,
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.45,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInlineEditor(ThemeData theme, bool isDark) {
+    return Focus(
+      onFocusChange: (hasFocus) {
+        if (!hasFocus && _isEditing) _finishEditing();
+      },
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF111827) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF2563EB), width: 1.5),
+        ),
+        alignment: Alignment.centerLeft,
+        child: EditableText(
+          controller: _controller,
+          focusNode: _focusNode,
+          style: TextStyle(
+            fontSize: 12,
+            height: 1.2,
+            fontWeight: FontWeight.w700,
+            color: theme.colorScheme.onSurface,
+          ),
+          cursorColor: const Color(0xFF2563EB),
+          backgroundCursorColor: const Color(0xFF9CA3AF),
+          maxLines: 1,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _finishEditing(),
         ),
       ),
     );
@@ -1338,6 +1382,8 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final hasQuotaLimit =
+        _session.quotaTokenLimit != null || _session.quotaRequestLimit != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1393,15 +1439,17 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
           // 重置周期选择
           _buildResetPeriodPicker(context),
 
-          const SizedBox(height: 8),
+          if (hasQuotaLimit) ...[
+            const SizedBox(height: 8),
 
-          // 当前用量状态
-          _buildQuotaStatusCard(context),
+            // 当前用量状态
+            _buildQuotaStatusCard(context),
 
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
 
-          // 手动重置按钮
-          _buildManualResetButton(context),
+            // 手动重置按钮
+            _buildManualResetButton(context),
+          ],
         ],
       ],
     );
@@ -1511,24 +1559,26 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     required ValueChanged<num?> onChanged,
     bool isDouble = false,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE1E4E8),
+        ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
             icon,
-            size: 14,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.5),
+            size: 16,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1537,65 +1587,92 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.52),
                   ),
                 ),
-                const SizedBox(height: 2),
-                TextField(
+                const SizedBox(height: 6),
+                _buildQuotaNumberInput(
+                  theme,
                   controller: controller,
-                  keyboardType:
-                      isDouble
-                          ? const TextInputType.numberWithOptions(decimal: true)
-                          : TextInputType.number,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                    hintText: hint,
-                    hintStyle: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.3),
-                    ),
-                    border: InputBorder.none,
-                  ),
-                  onChanged: (text) {
-                    if (text.isEmpty) {
-                      onChanged(null);
-                    } else {
-                      final parsed =
-                          isDouble ? double.tryParse(text) : int.tryParse(text);
-                      if (parsed != null && parsed >= 0) {
-                        onChanged(parsed);
-                      }
-                    }
-                  },
+                  hint: hint,
+                  isDouble: isDouble,
+                  onChanged: onChanged,
                 ),
               ],
             ),
           ),
           if (value != null)
-            GestureDetector(
-              onTap: () {
-                controller.clear();
-                onChanged(null);
-              },
-              child: Icon(
-                Icons.cancel,
-                size: 14,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.3),
+            Padding(
+              padding: const EdgeInsets.only(left: 10, top: 26),
+              child: Tooltip(
+                message: '清除限制',
+                child: InkWell(
+                  onTap: () {
+                    controller.clear();
+                    onChanged(null);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 16,
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.35,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuotaNumberInput(
+    ThemeData theme, {
+    required TextEditingController controller,
+    required String hint,
+    required bool isDouble,
+    required ValueChanged<num?> onChanged,
+  }) {
+    return SizedBox(
+      height: 36,
+      child: TextField(
+        controller: controller,
+        keyboardType:
+            isDouble
+                ? const TextInputType.numberWithOptions(decimal: true)
+                : TextInputType.number,
+        style: TextStyle(
+          fontSize: 12,
+          height: 1.2,
+          fontWeight: FontWeight.w700,
+          color: theme.colorScheme.onSurface,
+        ),
+        textAlignVertical: TextAlignVertical.center,
+        decoration: InputDecoration(
+          isCollapsed: true,
+          border: InputBorder.none,
+          hintText: hint,
+          hintStyle: TextStyle(
+            fontSize: 12,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+          ),
+        ),
+        onChanged: (text) {
+          if (text.isEmpty) {
+            onChanged(null);
+            return;
+          }
+          final parsed = isDouble ? double.tryParse(text) : int.tryParse(text);
+          if (parsed != null && parsed >= 0) {
+            onChanged(parsed);
+          }
+        },
       ),
     );
   }

@@ -115,66 +115,162 @@ class _McpManagementPageState extends State<McpManagementPage> {
   }
 
   Widget _buildBody() {
+    final theme = Theme.of(context);
     if (_services.isEmpty) {
-      return Center(
+      return Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.widgets,
-              size: 48,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.25),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '暂无 MCP 服务',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.45),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '点击右上角 + 添加',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.35),
-              ),
-            ),
+            _buildHeader(theme),
+            const SizedBox(height: 24),
+            Expanded(child: _buildEmptyState(theme)),
           ],
         ),
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          crossAxisSpacing: 6,
-          mainAxisSpacing: 6,
-          childAspectRatio: 3.0,
-        ),
-        itemCount: _services.length,
-        itemBuilder: (context, index) {
-          final service = _services[index];
-          return _McpCard(
-            service: service,
-            loading: _loadingServices.contains(service.name),
-            onTap: () => _showServiceDetail(service),
-            onRefresh: () => _refreshService(service),
-            onDelete: () => _confirmRemoveService(service),
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeader(theme),
+          const SizedBox(height: 24),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final columns =
+                    width >= 1180
+                        ? 6
+                        : width >= 900
+                        ? 4
+                        : width >= 640
+                        ? 3
+                        : 1;
+                final spacing = 8.0;
+                final itemWidth = (width - spacing * (columns - 1)) / columns;
+                return SingleChildScrollView(
+                  child: Wrap(
+                    spacing: spacing,
+                    runSpacing: spacing,
+                    children:
+                        _services.map((service) {
+                          return SizedBox(
+                            width: itemWidth,
+                            child: _McpCard(
+                              service: service,
+                              loading: _loadingServices.contains(service.name),
+                              onTap: () => _showServiceDetail(service),
+                              onRefresh: () => _refreshService(service),
+                              onDelete: () => _confirmRemoveService(service),
+                            ),
+                          );
+                        }).toList(),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(ThemeData theme) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 700;
+        final title = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'MCP 管理',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                height: 1.1,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '管理全局 MCP 服务、连接配置和可用工具',
+              style: TextStyle(
+                fontSize: 15,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+          ],
+        );
+        final action = FilledButton.icon(
+          onPressed: _showAddMcpDialog,
+          icon: const Icon(Icons.add, size: 16),
+          label: const Text('添加 MCP'),
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF111827),
+            foregroundColor: Colors.white,
+            minimumSize: const Size(0, 42),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [title, const SizedBox(height: 16), action],
           );
-        },
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [Expanded(child: title), const SizedBox(width: 20), action],
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE1E4E8),
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.extension_outlined,
+              size: 42,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.25),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '暂无 MCP 服务',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '添加一个 MCP 服务后，可在会话中绑定使用',
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -543,22 +639,35 @@ class _McpManagementPageState extends State<McpManagementPage> {
                     maxHeight: MediaQuery.of(ctx).size.height * 0.8,
                   ),
                   child: Material(
-                    color: Theme.of(ctx).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
+                    color:
+                        Theme.of(ctx).brightness == Brightness.dark
+                            ? const Color(0xFF111827)
+                            : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // 头部
                         Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.widgets,
-                                size: 20,
-                                color: Theme.of(ctx).colorScheme.onSurface,
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF111827,
+                                  ).withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.extension_outlined,
+                                  size: 22,
+                                  color: Color(0xFF111827),
+                                ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,8 +675,8 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     Text(
                                       service.name,
                                       style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                     if (service.description != null &&
@@ -576,7 +685,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                         service.description!,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey[500],
+                                          color: Theme.of(ctx)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.55),
                                         ),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
@@ -592,7 +704,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                         // 可编辑内容区
                         Expanded(
                           child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(20),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -601,8 +713,8 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   Text(
                                     '工具列表 (${tools.length})',
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
                                       color:
                                           Theme.of(ctx).colorScheme.onSurface,
                                     ),
@@ -625,21 +737,20 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                             child: Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
+                                                    horizontal: 10,
+                                                    vertical: 6,
                                                   ),
                                               decoration: BoxDecoration(
-                                                color: Theme.of(ctx)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withValues(alpha: 0.08),
+                                                color: const Color(
+                                                  0xFF111827,
+                                                ).withValues(alpha: 0.06),
                                                 borderRadius:
-                                                    BorderRadius.circular(4),
+                                                    BorderRadius.circular(8),
                                                 border: Border.all(
                                                   color: Theme.of(ctx)
                                                       .colorScheme
                                                       .onSurface
-                                                      .withValues(alpha: 0.15),
+                                                      .withValues(alpha: 0.08),
                                                 ),
                                               ),
                                               child: Text(
@@ -650,7 +761,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                                       Theme.of(
                                                         ctx,
                                                       ).colorScheme.onSurface,
-                                                  fontWeight: FontWeight.w500,
+                                                  fontWeight: FontWeight.w600,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -698,12 +809,12 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                       child: Text(
                                         '脚本配置',
                                         style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(ctx)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.7),
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800,
+                                          color:
+                                              Theme.of(
+                                                ctx,
+                                              ).colorScheme.onSurface,
                                         ),
                                       ),
                                     ),
@@ -756,11 +867,15 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                 const SizedBox(height: 8),
                                 Container(
                                   decoration: BoxDecoration(
-                                    color:
-                                        Theme.of(
-                                          ctx,
-                                        ).colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: Theme.of(ctx)
+                                        .colorScheme
+                                        .surfaceContainerHighest
+                                        .withValues(alpha: 0.45),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Theme.of(ctx).colorScheme.onSurface
+                                          .withValues(alpha: 0.08),
+                                    ),
                                   ),
                                   child:
                                       isEditingJson
@@ -1007,6 +1122,9 @@ class _McpCardState extends State<_McpCard> {
     final isBuiltin = Get.find<McpController>().isBuiltin(service.name);
     final description =
         service.description?.isNotEmpty == true ? service.description : null;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final toolsCount = service.tools?.length ?? 0;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -1016,22 +1134,23 @@ class _McpCardState extends State<_McpCard> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          height: 76,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color:
                 _isHovered
-                    ? Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.06)
-                    : Theme.of(context).colorScheme.surface,
+                    ? (isDark
+                        ? const Color(0xFF1F2937)
+                        : const Color(0xFFFAFAFA))
+                    : (isDark ? const Color(0xFF111827) : Colors.white),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color:
                   _isHovered
-                      ? Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.35)
-                      : Theme.of(context).dividerColor.withValues(alpha: 0.5),
+                      ? const Color(0xFF111827).withValues(alpha: 0.45)
+                      : (isDark
+                          ? const Color(0xFF2D2F3A)
+                          : const Color(0xFFE1E4E8)),
             ),
           ),
           child: Row(
@@ -1040,6 +1159,7 @@ class _McpCardState extends State<_McpCard> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
@@ -1050,116 +1170,176 @@ class _McpCardState extends State<_McpCard> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
+                              height: 1.12,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                         ),
                         if (isBuiltin) ...[
                           const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: const Text(
-                              '内置',
-                              style: TextStyle(fontSize: 8, color: Colors.blue),
-                            ),
-                          ),
+                          _McpPill(label: '内置', color: const Color(0xFF3B82F6)),
                         ],
                       ],
                     ),
-                    if (description != null)
-                      Text(
-                        description,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.65),
+                    const SizedBox(height: 3),
+                    Text(
+                      description ?? service.command ?? service.url ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: description == null ? 10 : 10.5,
+                        height: 1.1,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.58,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      )
-                    else
-                      Text(
-                        service.command ?? service.url ?? '',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.5),
-                          fontFamily: 'monospace',
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        fontFamily: description == null ? 'monospace' : null,
                       ),
+                    ),
+                    const SizedBox(height: 3),
+                    _McpMeta(
+                      icon: Icons.build_outlined,
+                      label: '$toolsCount 个工具',
+                    ),
                   ],
                 ),
               ),
+              const SizedBox(width: 6),
+              _McpIconButton(
+                tooltip: '刷新工具',
+                onTap: widget.loading ? null : widget.onRefresh,
+                compact: true,
+                child:
+                    widget.loading
+                        ? SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.7,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        )
+                        : const Icon(Icons.refresh, size: 14),
+              ),
               const SizedBox(width: 4),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    onTap: widget.loading ? null : widget.onRefresh,
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.08),
-                        shape: BoxShape.circle,
-                      ),
-                      child:
-                          widget.loading
-                              ? SizedBox(
-                                width: 10,
-                                height: 10,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 1.5,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                              )
-                              : Icon(
-                                Icons.refresh,
-                                size: 10,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: widget.onDelete,
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.error.withValues(alpha: 0.08),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.delete,
-                        size: 10,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
-                ],
+              if (!isBuiltin)
+                _McpIconButton(
+                  tooltip: '删除',
+                  onTap: widget.onDelete,
+                  danger: true,
+                  compact: true,
+                  child: const Icon(Icons.delete_outline, size: 14),
+                ),
+              Icon(
+                Icons.chevron_right,
+                size: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _McpPill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _McpPill({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class _McpIconButton extends StatelessWidget {
+  final String tooltip;
+  final VoidCallback? onTap;
+  final Widget child;
+  final bool danger;
+  final bool compact;
+
+  const _McpIconButton({
+    required this.tooltip,
+    required this.onTap,
+    required this.child,
+    this.danger = false,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color =
+        danger ? theme.colorScheme.error : theme.colorScheme.onSurface;
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: compact ? 24 : 32,
+          height: compact ? 24 : 32,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: IconTheme(
+            data: IconThemeData(
+              color: color.withValues(alpha: onTap == null ? 0.35 : 0.75),
+            ),
+            child: Center(child: child),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _McpMeta extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _McpMeta({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 12,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.42),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.1,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.52),
+          ),
+        ),
+      ],
     );
   }
 }

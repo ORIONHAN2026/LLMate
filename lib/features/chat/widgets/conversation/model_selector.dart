@@ -50,10 +50,9 @@ class _ModelSelectorState extends State<ModelSelector> {
     final session = _liveSession;
     final chatModel = session?.chatModel;
     if (chatModel != null && chatModel.model.isNotEmpty) {
-      final platform = chatModel.platform ?? 'Unknown';
       // 智能选模开启：自动在轻量/高能力模型间路由
       if (session?.autoSelectModel == true) {
-        return "$platform/${AppLocalizations.of(context)!.autoSelectModel}";
+        return AppLocalizations.of(context)!.autoSelectModel;
       }
       // 手动选择过具体模型：优先显示会话选定模型
       final selected = session?.model;
@@ -63,10 +62,10 @@ class _ModelSelectorState extends State<ModelSelector> {
               : chatModel.model;
       final prompt = chatModel.systemPrompt ?? '';
       if (prompt.isNotEmpty) {
-        return "$platform/$modelId | $prompt ";
+        return "$modelId | $prompt";
       }
 
-      return "$platform/$modelId";
+      return modelId;
     }
     return AppLocalizations.of(context)!.clickToSelectModel;
   }

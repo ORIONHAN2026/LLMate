@@ -99,7 +99,6 @@ class _Legend extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       _SeriesStyle('请求数', const Color(0xFF3B82F6)),
-      _SeriesStyle('成本', const Color(0xFFA855F7), dashed: true),
       _SeriesStyle('输入Token', const Color(0xFF16A34A)),
       _SeriesStyle('输出Token', const Color(0xFFF97316)),
       _SeriesStyle('写缓存', const Color(0xFF06B6D4), dashed: true),
@@ -207,7 +206,6 @@ class _UsageTrendPainter extends CustomPainter {
 
     final styles = [
       _SeriesStyle('requests', const Color(0xFF3B82F6)),
-      _SeriesStyle('cost', const Color(0xFFA855F7), dashed: true),
       _SeriesStyle('prompt', const Color(0xFF16A34A)),
       _SeriesStyle('completion', const Color(0xFFF97316)),
       _SeriesStyle('cacheWrite', const Color(0xFF06B6D4), dashed: true),
@@ -216,11 +214,10 @@ class _UsageTrendPainter extends CustomPainter {
 
     final values = <_SeriesStyle, List<double>>{
       styles[0]: data.map((p) => p.requests.toDouble()).toList(),
-      styles[1]: data.map((p) => p.totalCost).toList(),
-      styles[2]: data.map((p) => p.promptTokens.toDouble()).toList(),
-      styles[3]: data.map((p) => p.completionTokens.toDouble()).toList(),
-      styles[4]: data.map((p) => p.cacheWriteTokens.toDouble()).toList(),
-      styles[5]: data.map((p) => p.cacheReadTokens.toDouble()).toList(),
+      styles[1]: data.map((p) => p.promptTokens.toDouble()).toList(),
+      styles[2]: data.map((p) => p.completionTokens.toDouble()).toList(),
+      styles[3]: data.map((p) => p.cacheWriteTokens.toDouble()).toList(),
+      styles[4]: data.map((p) => p.cacheReadTokens.toDouble()).toList(),
     };
 
     for (final entry in values.entries) {

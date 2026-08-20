@@ -72,6 +72,9 @@ Future<StreamRoundResult> streamSingleRound({
   int completionTokens = 0;
   int cacheWriteTokens = 0;
   int cacheReadTokens = 0;
+  final passthroughChunks =
+      !handleSessionTools ||
+      McpController.instance.getMergedTools(session).isEmpty;
   final httpRequest = await client.postUrl(
     Uri.parse(session.chatModel!.apiUrl!),
   );
@@ -129,6 +132,40 @@ Future<StreamRoundResult> streamSingleRound({
         // 非 SSE data 行（注释 / ping 等）→ 原样透传字节
         if (!trimmed.startsWith('data:')) {
           controller.add(utf8.encode('$rawLine\n'));
+          continue;
+        }
+
+        final payload = trimmed.substring('data:'.length).trim();
+        if (payload == '[DONE]') {
+          // 统一由外层发送最终 DONE，避免重复结束事件。
+          continue;
+        }
+
+        if (passthroughChunks) {
+          controller.add(utf8.encode('$rawLine\n\n'));
+          try {
+            final sseChunk = Chunk.fromString(trimmed);
+            final choice =
+                sseChunk.choices.isNotEmpty ? sseChunk.choices.first : null;
+            final delta = choice?.delta;
+            if (delta?.content != null) {
+              contentBuffer.write(delta!.content);
+            }
+            if (delta?.reasoningContent != null) {
+              reasonBuffer.write(delta!.reasoningContent);
+            }
+            if (sseChunk.usage != null) {
+              promptTokens += sseChunk.usage!.promptTokens ?? 0;
+              completionTokens += sseChunk.usage!.completionTokens ?? 0;
+              cacheWriteTokens += sseChunk.usage!.cacheWriteTokens ?? 0;
+              cacheReadTokens +=
+                  sseChunk.usage!.cacheReadTokens ??
+                  sseChunk.usage!.promptTokensDetails?.cachedTokens ??
+                  0;
+            }
+          } catch (_) {
+            // 透传模式下解析失败不影响客户端接收原始上游事件。
+          }
           continue;
         }
 
@@ -253,6 +290,10 @@ Future<StreamRoundResult> streamSingleRound({
     if (lineBuffer.trim().isNotEmpty) {
       final trimmed = lineBuffer.trim();
       if (trimmed.startsWith('data:')) {
+        final payload = trimmed.substring('data:'.length).trim();
+        if (passthroughChunks && payload != '[DONE]') {
+          controller.add(utf8.encode('$lineBuffer\n\n'));
+        }
         try {
           final sseChunk = Chunk.fromString(trimmed);
           final choice =

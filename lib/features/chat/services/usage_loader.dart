@@ -6,6 +6,9 @@ class UsageChartPoint {
   final int totalTokens;
   final int promptTokens;
   final int completionTokens;
+  final int cacheWriteTokens;
+  final int cacheReadTokens;
+  final int requests;
   final double totalCost;
   final Map<String, double> costsByCurrency;
 
@@ -14,9 +17,14 @@ class UsageChartPoint {
     required this.totalTokens,
     required this.promptTokens,
     required this.completionTokens,
+    required this.cacheWriteTokens,
+    required this.cacheReadTokens,
+    required this.requests,
     required this.totalCost,
     required this.costsByCurrency,
   });
+
+  int get cacheTokens => cacheWriteTokens + cacheReadTokens;
 }
 
 /// 用量数据加载器，从用量数据库（[UsageController] / `~/.llmate/usages.db`）读取
@@ -52,6 +60,9 @@ class UsageLoader {
           totalTokens: d.totalTokens,
           promptTokens: d.promptTokens,
           completionTokens: d.completionTokens,
+          cacheWriteTokens: d.cacheWriteTokens,
+          cacheReadTokens: d.cacheReadTokens,
+          requests: 1,
           totalCost: d.cost,
           costsByCurrency: {d.currency: d.cost},
         );
@@ -61,6 +72,9 @@ class UsageLoader {
           totalTokens: existing.totalTokens + d.totalTokens,
           promptTokens: existing.promptTokens + d.promptTokens,
           completionTokens: existing.completionTokens + d.completionTokens,
+          cacheWriteTokens: existing.cacheWriteTokens + d.cacheWriteTokens,
+          cacheReadTokens: existing.cacheReadTokens + d.cacheReadTokens,
+          requests: existing.requests + 1,
           totalCost: existing.totalCost + d.cost,
           costsByCurrency: {
             ...existing.costsByCurrency,
@@ -70,8 +84,9 @@ class UsageLoader {
       }
     }
 
-    final points = buckets.values.toList()
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final points =
+        buckets.values.toList()
+          ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     return points;
   }
 
@@ -93,4 +108,3 @@ class UsageLoader {
     }
   }
 }
-

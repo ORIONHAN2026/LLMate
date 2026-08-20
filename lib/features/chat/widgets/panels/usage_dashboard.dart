@@ -46,6 +46,7 @@ class UsageDashboard extends StatefulWidget {
 
 class _UsageDashboardState extends State<UsageDashboard> {
   String _granularity = 'hour';
+  int _rangePresetDays = 0;
   final _showTokens = ValueNotifier<bool>(true);
   List<UsageChartPoint> _chartData = [];
   bool _chartLoading = false;
@@ -87,18 +88,17 @@ class _UsageDashboardState extends State<UsageDashboard> {
 
     setState(() => _chartLoading = true);
 
-    // 分/小时维度未选日期时，默认取「当天」（与默认粒度 hour 对应）
     DateTime? start = _rangeStart;
     DateTime? end = _rangeEnd;
-    if (_isSingleDay && start == null) {
-      final now = DateTime.now();
-      final baseDay = DateTime(now.year, now.month, now.day);
-      start = baseDay;
-      end = DateTime(baseDay.year, baseDay.month, baseDay.day, 23, 59, 59, 999);
+    if (start == null) {
+      final range = _rangeForPreset(_rangePresetDays);
+      start = range.$1;
+      end = range.$2;
       if (mounted) {
         setState(() {
           _rangeStart = start;
           _rangeEnd = end;
+          _granularity = _rangePresetDays <= 1 ? 'hour' : 'day';
         });
       }
     }
@@ -218,15 +218,25 @@ class _UsageDashboardState extends State<UsageDashboard> {
     }
   }
 
-  /// 分/小时维度只需选「某一天」
-  bool get _isSingleDay => _granularity == 'minute' || _granularity == 'hour';
+  (DateTime, DateTime) _rangeForPreset(int days) {
+    final now = DateTime.now();
+    if (days == 0) {
+      final start = DateTime(now.year, now.month, now.day);
+      final end = DateTime(start.year, start.month, start.day, 23, 59, 59, 999);
+      return (start, end);
+    }
+    final end = now;
+    final start = now.subtract(Duration(days: days));
+    return (start, end);
+  }
 
-  /// 切换粒度时重置区间（分/小时会由 _loadChartData 自动定位到有数据的一天）
-  Future<void> _onGranularityChanged(String granularity) async {
+  Future<void> _onRangePresetChanged(int days) async {
+    final range = _rangeForPreset(days);
     setState(() {
-      _granularity = granularity;
-      _rangeStart = null;
-      _rangeEnd = null;
+      _rangePresetDays = days;
+      _granularity = days <= 1 ? 'hour' : 'day';
+      _rangeStart = range.$1;
+      _rangeEnd = range.$2;
     });
     await _loadChartData();
   }
@@ -292,7 +302,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ===== 概览 (依赖 Obx 响应式数据) =====
         Obx(() {
           final sessions = sessionController.sessions;
           final currentSession =
@@ -302,80 +311,74 @@ class _UsageDashboardState extends State<UsageDashboard> {
               ) ??
               session;
 
-          // 概览数字优先使用 usage_rows 真实累计用量，加载完成前回退到会话缓存值
           final promptTokens =
               _stats?.promptTokens ?? currentSession.promptTokens;
           final completionTokens =
               _stats?.completionTokens ?? currentSession.completionTokens;
           final totalTokens = promptTokens + completionTokens;
+          final cacheWriteTokens = _stats?.cacheWriteTokens ?? 0;
+          final cacheReadTokens = _stats?.cacheReadTokens ?? 0;
+          final requestCount =
+              (_stats?.requests ?? 0) > 0
+                  ? _stats!.requests
+                  : currentSession.messages
+                      .where((m) => m.role.name == 'bot' && !m.isError)
+                      .length;
+          final costText =
+              _stats != null && _stats!.costsByCurrency.isNotEmpty
+                  ? _formatCost(_stats!.costsByCurrency)
+                  : _formatSessionCost(currentSession);
           final quotaEnabled = currentSession.quotaEnabled;
           final tokenLimit = currentSession.quotaTokenLimit;
-
-          // 「模型总用量分布」数据：优先真实按模型聚合结果；
-          // 加载完成前（_stats == null）回退到配置模型的会话缓存值，避免空白闪烁
-          final distStats =
-              (_stats == null || _sessionModelStats.isEmpty) &&
-                      currentSession.chatModel != null
-                  ? <String, _ModelUsage>{
-                    currentSession.chatModel!.model:
-                        _ModelUsage()
-                          ..chatModel = currentSession.chatModel
-                          ..model = currentSession.chatModel!.model
-                          ..sessionCount = 1
-                          ..promptTokens = promptTokens
-                          ..completionTokens = completionTokens,
-                  }
-                  : _sessionModelStats;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle(theme, l10n.overview),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _buildStatCard(
-                    theme,
-                    isDark: isDark,
-                    title: l10n.totalUsage,
-                    value: _formatTokenCount(totalTokens),
-                    accentColor: const Color(0xFF3B82F6),
-                  ),
-                  _buildStatCard(
-                    theme,
-                    isDark: isDark,
-                    title: l10n.inputTokens,
-                    value: _formatTokenCount(promptTokens),
-                    accentColor: const Color(0xFF9CA3AF),
-                  ),
-                  _buildStatCard(
-                    theme,
-                    isDark: isDark,
-                    title: l10n.outputTokens,
-                    value: _formatTokenCount(completionTokens),
-                    accentColor: const Color(0xFF059669),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildSectionTitle(theme, l10n.tokenDistribution),
-              const SizedBox(height: 12),
-              _buildModelDistributionCard(
+              _buildUsageHeader(theme, isDark),
+              const SizedBox(height: 28),
+              _buildUsageMetricGrid(
                 theme,
                 isDark,
-                _modelDistributionEntries(distStats),
-                l10n,
+                requestCount: requestCount,
+                costText: costText,
+                totalTokens: totalTokens,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                cacheWriteTokens: cacheWriteTokens,
+                cacheReadTokens: cacheReadTokens,
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                height: 360,
+                child:
+                    _chartLoading
+                        ? Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.35,
+                              ),
+                            ),
+                          ),
+                        )
+                        : UsageCurveChart(
+                          data: _chartData,
+                          showTokens: _showTokens.value,
+                          granularity: _granularity,
+                          rangeLabel: _rangePresetLabel(_rangePresetDays),
+                        ),
               ),
               if (_sessionModelStats.isNotEmpty) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 _buildSectionTitle(theme, l10n.byModel),
                 const SizedBox(height: 12),
                 _buildSessionModelUsage(theme, isDark, l10n),
               ],
               if (quotaEnabled) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 _buildSectionTitle(theme, l10n.quotaLimitSection),
                 const SizedBox(height: 12),
                 _buildQuotaCard(theme, isDark, totalTokens, tokenLimit, l10n),
@@ -383,47 +386,6 @@ class _UsageDashboardState extends State<UsageDashboard> {
             ],
           );
         }),
-
-        // ===== 用量曲线 (独立于 Obx，依赖 _chartData state) =====
-        const SizedBox(height: 24),
-        _buildSectionTitle(theme, l10n.usageCurve),
-        const SizedBox(height: 12),
-        _buildGranularitySelector(theme, isDark, l10n),
-
-        const SizedBox(height: 12),
-        _buildDateRangeSelector(theme, isDark, l10n),
-
-        const SizedBox(height: 12),
-        _buildChartToggle(theme, l10n),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 220,
-          child:
-              _chartLoading
-                  ? Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.4,
-                        ),
-                      ),
-                    ),
-                  )
-                  : ValueListenableBuilder<bool>(
-                    valueListenable: _showTokens,
-                    builder:
-                        (_, showToken, _) => UsageCurveChart(
-                          data: _chartData,
-                          showTokens: showToken,
-                          granularity: _granularity,
-                        ),
-                  ),
-        ),
-
-        // ===== 按模型用量（本会话：按实际调用模型分别统计）=====
         const SizedBox(height: 80),
       ],
     );
@@ -658,6 +620,295 @@ class _UsageDashboardState extends State<UsageDashboard> {
   }
 
   // ==================== 共用组件 ====================
+
+  Widget _buildUsageHeader(ThemeData theme, bool isDark) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 720;
+        final title = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '使用统计',
+              style: TextStyle(
+                fontSize: compact ? 28 : 32,
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.onSurface,
+                height: 1.1,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '按日期范围查看请求、Token、缓存和成本',
+              style: TextStyle(
+                fontSize: 15,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+          ],
+        );
+
+        final selector = _buildRangeSegmentedControl(theme, isDark);
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              title,
+              const SizedBox(height: 18),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: selector,
+              ),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: title),
+            const SizedBox(width: 20),
+            selector,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRangeSegmentedControl(ThemeData theme, bool isDark) {
+    final options = [(0, '今天'), (1, '1天'), (7, '7天'), (14, '14天'), (30, '30天')];
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF4F4F5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children:
+            options.map((option) {
+              final selected = _rangePresetDays == option.$1;
+              return Padding(
+                padding: const EdgeInsets.only(right: 2),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(9),
+                  onTap: () => _onRangePresetChanged(option.$1),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 140),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          selected
+                              ? (isDark
+                                  ? const Color(0xFF111827)
+                                  : Colors.white)
+                              : Colors.transparent,
+                      borderRadius: BorderRadius.circular(9),
+                      boxShadow:
+                          selected && !isDark
+                              ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                              : null,
+                    ),
+                    child: Text(
+                      option.$2,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w600,
+                        color:
+                            selected
+                                ? theme.colorScheme.onSurface
+                                : theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.55,
+                                ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildUsageMetricGrid(
+    ThemeData theme,
+    bool isDark, {
+    required int requestCount,
+    required String costText,
+    required int totalTokens,
+    required int promptTokens,
+    required int completionTokens,
+    required int cacheWriteTokens,
+    required int cacheReadTokens,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columns =
+            width >= 840
+                ? 4
+                : width >= 720
+                ? 2
+                : 1;
+        final spacing = 16.0;
+        final itemWidth = (width - spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            _buildMetricCard(
+              theme,
+              isDark,
+              width: itemWidth,
+              compact: columns == 4 && itemWidth < 220,
+              title: '总请求数',
+              value: _formatInteger(requestCount),
+              icon: Icons.monitor_heart_outlined,
+              accent: const Color(0xFF3B82F6),
+              accentBackground: const Color(0xFFDBEAFE),
+            ),
+            _buildMetricCard(
+              theme,
+              isDark,
+              width: itemWidth,
+              compact: columns == 4 && itemWidth < 220,
+              title: '总成本',
+              value: costText,
+              icon: Icons.attach_money_rounded,
+              accent: const Color(0xFFA855F7),
+              accentBackground: const Color(0xFFF3E8FF),
+            ),
+            _buildMetricCard(
+              theme,
+              isDark,
+              width: itemWidth,
+              compact: columns == 4 && itemWidth < 220,
+              title: '总 Token 数',
+              value: _formatTokenCount(totalTokens),
+              icon: Icons.layers_outlined,
+              accent: const Color(0xFF10B981),
+              accentBackground: const Color(0xFFD1FAE5),
+              footer:
+                  '输入 ${_formatTokenCount(promptTokens)}    输出 ${_formatTokenCount(completionTokens)}',
+            ),
+            _buildMetricCard(
+              theme,
+              isDark,
+              width: itemWidth,
+              compact: columns == 4 && itemWidth < 220,
+              title: '缓存 Token',
+              value: _formatTokenCount(cacheWriteTokens + cacheReadTokens),
+              icon: Icons.storage_rounded,
+              accent: const Color(0xFFF97316),
+              accentBackground: const Color(0xFFFFEDD5),
+              footer:
+                  '写入 ${_formatTokenCount(cacheWriteTokens)}    命中 ${_formatTokenCount(cacheReadTokens)}',
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricCard(
+    ThemeData theme,
+    bool isDark, {
+    required double width,
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color accent,
+    required Color accentBackground,
+    bool compact = false,
+    String? footer,
+  }) {
+    return SizedBox(
+      width: width,
+      height: 154,
+      child: Container(
+        padding:
+            compact
+                ? const EdgeInsets.fromLTRB(16, 18, 16, 16)
+                : const EdgeInsets.fromLTRB(22, 20, 22, 18),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF111827) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE1E4E8),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.55,
+                      ),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color:
+                        isDark
+                            ? accent.withValues(alpha: 0.16)
+                            : accentBackground,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: accent, size: compact ? 21 : 23),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: compact ? 24 : 28,
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.onSurface,
+                height: 1,
+              ),
+            ),
+            if (footer != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                footer,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: compact ? 12 : 13,
+                  height: 1.2,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.58),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
   PreferredSizeWidget _buildAppBar(String title) {
     return StandardAppBar(title: title, showBottomDivider: true);
@@ -1322,322 +1573,43 @@ class _UsageDashboardState extends State<UsageDashboard> {
     return '$count';
   }
 
-  // ==================== 用量曲线 ====================
-
-  Widget _buildGranularitySelector(
-    ThemeData theme,
-    bool isDark,
-    AppLocalizations l10n,
-  ) {
-    final options = [
-      (l10n.granMinute, 'minute'),
-      (l10n.granHour, 'hour'),
-      (l10n.granDay, 'day'),
-      (l10n.granMonth, 'month'),
-      (l10n.granYear, 'year'),
-    ];
-
-    return Row(
-      children: [
-        ...options.map((opt) {
-          final selected = _granularity == opt.$2;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => _onGranularityChanged(opt.$2),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      selected
-                          ? const Color(0xFF9CA3AF)
-                          : (isDark
-                              ? const Color(0xFF2D2F3A)
-                              : const Color(0xFFF3F4F6)),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  opt.$1,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color:
-                        selected
-                            ? Colors.white
-                            : theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
-  /// 时间区间选择器：根据粒度变化形态
-  /// - 分/小时：选「某一天」
-  /// - 天/月/年：选「开始 ~ 结束」范围
-  Widget _buildDateRangeSelector(
-    ThemeData theme,
-    bool isDark,
-    AppLocalizations l10n,
-  ) {
-    final chipBg = isDark ? const Color(0xFF2D2F3A) : const Color(0xFFF3F4F6);
-    final borderColor =
-        isDark ? const Color(0xFF3A3D4A) : const Color(0xFFE5E7EB);
-
-    if (_isSingleDay) {
-      final day = _rangeStart;
-      return Row(
-        children: [
-          Icon(
-            Icons.calendar_today_outlined,
-            size: 14,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
-          ),
-          const SizedBox(width: 6),
-          _dateChip(
-            theme: theme,
-            bg: chipBg,
-            borderColor: borderColor,
-            label: day == null ? l10n.selectDate : _fmtByGran(day),
-            onTap: _pickDay,
-          ),
-        ],
-      );
+  String _formatInteger(int count) {
+    final text = count.toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < text.length; i++) {
+      if (i > 0 && (text.length - i) % 3 == 0) buffer.write(',');
+      buffer.write(text[i]);
     }
-
-    return Row(
-      children: [
-        Icon(
-          Icons.date_range_outlined,
-          size: 14,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
-        ),
-        const SizedBox(width: 6),
-        _dateChip(
-          theme: theme,
-          bg: chipBg,
-          borderColor: borderColor,
-          label:
-              _rangeStart == null ? l10n.rangeStart : _fmtByGran(_rangeStart!),
-          onTap: () => _pickRange(isStart: true),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: Text(
-            '—',
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
-          ),
-        ),
-        _dateChip(
-          theme: theme,
-          bg: chipBg,
-          borderColor: borderColor,
-          label: _rangeEnd == null ? l10n.rangeEnd : _fmtByGran(_rangeEnd!),
-          onTap: () => _pickRange(isStart: false),
-        ),
-        if (_rangeStart != null || _rangeEnd != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _rangeStart = null;
-                  _rangeEnd = null;
-                });
-                _loadChartData();
-              },
-              child: Icon(
-                Icons.close,
-                size: 16,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-              ),
-            ),
-          ),
-      ],
-    );
+    return buffer.toString();
   }
 
-  Widget _dateChip({
-    required ThemeData theme,
-    required Color bg,
-    required Color borderColor,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: borderColor),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 分/小时：选择某一天
-  Future<void> _pickDay() async {
-    final l10n = AppLocalizations.of(context)!;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _rangeStart ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
-      helpText: l10n.selectDate,
-    );
-    if (picked == null) return;
-    setState(() {
-      _rangeStart = DateTime(picked.year, picked.month, picked.day);
-      _rangeEnd = DateTime(
-        picked.year,
-        picked.month,
-        picked.day,
-        23,
-        59,
-        59,
-        999,
-      );
-    });
-    await _loadChartData();
-  }
-
-  /// 天/月/年：选择范围起点或终点
-  Future<void> _pickRange({required bool isStart}) async {
-    final l10n = AppLocalizations.of(context)!;
-    final current =
-        isStart ? _rangeStart ?? DateTime.now() : _rangeEnd ?? DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: current,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
-      helpText: isStart ? l10n.startDateHelp : l10n.endDateHelp,
-    );
-    if (picked == null) return;
-
-    DateTime start;
-    DateTime end;
-    switch (_granularity) {
-      case 'month':
-        start = DateTime(picked.year, picked.month);
-        end = DateTime(picked.year, picked.month + 1, 0, 23, 59, 59, 999);
-        break;
-      case 'year':
-        start = DateTime(picked.year);
-        end = DateTime(picked.year, 12, 31, 23, 59, 59, 999);
-        break;
-      case 'day':
-      default:
-        start = DateTime(picked.year, picked.month, picked.day);
-        end = DateTime(picked.year, picked.month, picked.day, 23, 59, 59, 999);
-        break;
+  String _formatCost(Map<String, double>? costsByCurrency) {
+    if (costsByCurrency == null || costsByCurrency.isEmpty) return '\$0.00';
+    final entries =
+        costsByCurrency.entries.where((e) => e.value != 0).toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
+    if (entries.isEmpty) return '\$0.00';
+    if (entries.length == 1) {
+      final entry = entries.first;
+      final symbol = entry.key.toUpperCase() == 'CNY' ? '¥' : '\$';
+      return '$symbol${entry.value.toStringAsFixed(2)}';
     }
-
-    setState(() {
-      if (isStart) {
-        _rangeStart = start;
-      } else {
-        _rangeEnd = end;
-      }
-    });
-    await _loadChartData();
+    return entries
+        .map((e) => '${e.key.toUpperCase()} ${e.value.toStringAsFixed(2)}')
+        .join(' / ');
   }
 
-  /// 按粒度格式化时间区间标签
-  String _fmtByGran(DateTime d) {
-    switch (_granularity) {
-      case 'minute':
-      case 'hour':
-        return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
-      case 'day':
-        return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
-      case 'month':
-        return '${d.year}/${d.month.toString().padLeft(2, '0')}';
-      case 'year':
-        return '${d.year}';
-      default:
-        return '${d.year}/${d.month}/${d.day}';
-    }
+  String _formatSessionCost(ChatSession session) {
+    final cost = session.totalCost;
+    if (cost <= 0) return '\$0.00';
+    final currency = session.chatModel?.currency?.toUpperCase() ?? 'USD';
+    final symbol = currency == 'CNY' ? '¥' : '\$';
+    return '$symbol${cost.toStringAsFixed(2)}';
   }
 
-  Widget _buildChartToggle(ThemeData theme, AppLocalizations l10n) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: _showTokens,
-      builder:
-          (_, showToken, _) => Row(
-            children: [
-              _toggleChip(
-                theme: theme,
-                label: l10n.tokenToggle,
-                color: const Color(0xFF9CA3AF),
-                selected: showToken,
-                onTap: () => _showTokens.value = !_showTokens.value,
-              ),
-            ],
-          ),
-    );
-  }
-
-  Widget _toggleChip({
-    required ThemeData theme,
-    required String label,
-    required Color color,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(
-              color: selected ? color : Colors.transparent,
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(
-                color: selected ? color : color.withValues(alpha: 0.4),
-                width: 1.5,
-              ),
-            ),
-            child:
-                selected
-                    ? const Icon(Icons.check, size: 10, color: Colors.white)
-                    : null,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ),
-    );
+  String _rangePresetLabel(int days) {
+    if (days == 0) return '今天';
+    return '$days天';
   }
 }
 

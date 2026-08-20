@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <title>LLMate Governance Logo</title>
-  <desc>A minimal enterprise model governance icon with a shield and managed model layers.</desc>
+  <title>LLMate Logo</title>
+  <desc>A clean LM monogram app icon for LLMate.</desc>
 
   <defs>
     <linearGradient id="surface" x1="148" y1="100" x2="876" y2="924" gradientUnits="userSpaceOnUse">
@@ -16,22 +16,12 @@
   <rect x="72" y="72" width="880" height="880" rx="220" fill="url(#surface)" filter="url(#tileShadow)"/>
   <rect x="72" y="72" width="880" height="880" rx="220" stroke="#DADDD8" stroke-width="14"/>
 
-  <path
-    d="M512 174L774 276V478C774 637 674 781 512 855C350 781 250 637 250 478V276L512 174Z"
-    fill="#FFFFFF"
-    stroke="#252A32"
-    stroke-width="46"
-    stroke-linejoin="round"/>
-
-  <g stroke="#252A32" stroke-width="38" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M374 407H650"/>
-    <path d="M374 510H650"/>
-    <path d="M374 613H650"/>
+  <g stroke="#252A32" stroke-width="68" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M320 324V676H478"/>
+    <path d="M546 676V324L640 492L734 324V676"/>
   </g>
 
-  <g fill="#FFFFFF" stroke="#252A32" stroke-width="32">
-    <circle cx="374" cy="407" r="38"/>
-    <circle cx="650" cy="510" r="38"/>
-    <circle cx="512" cy="613" r="38"/>
+  <g stroke="#252A32" stroke-width="26" stroke-linecap="round" opacity="0.16">
+    <path d="M302 742H742"/>
   </g>
 </svg>

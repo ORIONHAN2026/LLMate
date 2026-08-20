@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>LLMate Logo</title>
+  <desc>A minimal abstract model loop mark for LLMate.</desc>
+
+  <defs>
+    <linearGradient id="surface" x1="160" y1="96" x2="864" y2="928" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F4F5F3"/>
+    </linearGradient>
+    <filter id="tileShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#111827" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect x="72" y="72" width="880" height="880" rx="220" fill="url(#surface)" filter="url(#tileShadow)"/>
+  <rect x="72" y="72" width="880" height="880" rx="220" stroke="#DADDD8" stroke-width="14"/>
+
+  <g stroke="#252A32" stroke-width="48" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M512 232L686 333V534L512 635L338 534V333L512 232Z"/>
+    <path d="M338 333L512 434L686 333"/>
+    <path d="M338 534L512 434L686 534"/>
+    <path d="M512 232V434"/>
+    <path d="M512 635V434"/>
+  </g>
+
+  <circle cx="512" cy="434" r="34" fill="#FFFFFF" stroke="#252A32" stroke-width="34"/>
+</svg>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>LLMate Logo</title>
+  <desc>A minimal LLM agent logo combining a chat bubble, LM monogram, and model routing nodes.</desc>
+
+  <defs>
+    <linearGradient id="surface" x1="168" y1="120" x2="856" y2="904" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F1F2F0"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="28" flood-color="#111827" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect x="72" y="72" width="880" height="880" rx="220" fill="url(#surface)"/>
+  <rect x="72" y="72" width="880" height="880" rx="220" stroke="#DADDD8" stroke-width="16"/>
+
+  <g filter="url(#softShadow)">
+    <path
+      d="M238 330C238 266.935 289.935 215 353 215H664C727.065 215 779 266.935 779 330V550C779 613.065 727.065 665 664 665H475L333 782C320.63 792.193 302 783.391 302 767.364V642.258C264.318 623.964 238 585.332 238 541V330Z"
+      fill="#FFFFFF"
+      stroke="#1F2328"
+      stroke-width="36"
+      stroke-linejoin="round"/>
+  </g>
+
+  <path
+    d="M344 354V550H457"
+    stroke="#1F2328"
+    stroke-width="54"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <path
+    d="M512 550V355L607 478L702 355V550"
+    stroke="#1F2328"
+    stroke-width="54"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+</svg>

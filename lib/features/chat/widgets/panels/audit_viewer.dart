@@ -33,10 +33,13 @@ class AuditViewer extends StatefulWidget {
 
 class _AuditViewerState extends State<AuditViewer> {
   final _traceCtrl = TextEditingController();
+  final _traceFocusNode = FocusNode();
   final _scrollCtrl = ScrollController();
   final Set<AuditEventType> _selectedTypes = {};
   DateTime? _startDate;
   DateTime? _endDate;
+
+  static const double _filterControlHeight = 40;
 
   /// 每页加载的链路（trace）数量
   static const int _pageSize = 20;
@@ -56,12 +59,14 @@ class _AuditViewerState extends State<AuditViewer> {
     _startDate = DateTime(now.year, now.month, now.day);
     _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     _scrollCtrl.addListener(_onScroll);
+    _traceFocusNode.addListener(() => setState(() {}));
     _load();
   }
 
   @override
   void dispose() {
     _scrollCtrl.dispose();
+    _traceFocusNode.dispose();
     _traceCtrl.dispose();
     super.dispose();
   }
@@ -155,10 +160,11 @@ class _AuditViewerState extends State<AuditViewer> {
   }
 
   /// 将分页返回的链路事件列表转换为 [_TraceGroup]（事件已按时间升序）
-  List<_TraceGroup> _toGroups(List<List<AuditEvent>> traces) => traces
-      .where((events) => events.isNotEmpty)
-      .map((events) => _TraceGroup(events.first.traceId, events))
-      .toList();
+  List<_TraceGroup> _toGroups(List<List<AuditEvent>> traces) =>
+      traces
+          .where((events) => events.isNotEmpty)
+          .map((events) => _TraceGroup(events.first.traceId, events))
+          .toList();
 
   void _reset() {
     _traceCtrl.clear();
@@ -172,128 +178,230 @@ class _AuditViewerState extends State<AuditViewer> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final content = Column(
-      children: [_buildSearchPanel(), Expanded(child: _buildResultList())],
+    final theme = Theme.of(context);
+    final content = Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAuditHeader(theme),
+          const SizedBox(height: 24),
+          _buildSearchPanel(),
+          const SizedBox(height: 20),
+          Expanded(child: _buildResultList()),
+        ],
+      ),
     );
     if (widget.embedded) return content;
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: const StandardAppBar(title: '审计查看', showBottomDivider: true),
       body: content,
     );
   }
 
+  Widget _buildAuditHeader(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '审计查看',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            color: theme.colorScheme.onSurface,
+            height: 1.1,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '按链路、时间和事件类型追踪代理请求、模型调用、工具执行和风险事件',
+          style: TextStyle(
+            fontSize: 15,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSearchPanel() {
-    final cs = Theme.of(context).colorScheme;
-    return Card(
-      margin: const EdgeInsets.all(1),
-      color: cs.surface,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide.none,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE1E4E8),
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '筛选条件',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 980;
+              final fields = [
                 SizedBox(
-                  width: 400,
-                  child: SizedBox(
-                    height: 40,
-                    child: TextField(
-                      controller: _traceCtrl,
-                      onSubmitted: (_) => _load(),
-                      style: TextStyle(fontSize: 13),
-                      decoration: _inputDecoration('链路 ID (traceId)'),
-                    ),
-                  ),
+                  width: compact ? double.infinity : 360,
+                  child: _traceInputField(),
                 ),
-                const SizedBox(width: 8),
-                Expanded(child: _dateButton(true)),
-                const SizedBox(width: 8),
-                Expanded(child: _dateButton(false)),
-                const SizedBox(width: 8),
                 SizedBox(
-                  height: 40,
+                  width: compact ? double.infinity : 180,
+                  child: _dateButton(true),
+                ),
+                SizedBox(
+                  width: compact ? double.infinity : 180,
+                  child: _dateButton(false),
+                ),
+                SizedBox(
+                  height: _filterControlHeight,
                   child: ElevatedButton.icon(
                     onPressed: _load,
                     icon: const Icon(Icons.search, size: 16),
-                    label: const Text('搜索', style: TextStyle(fontSize: 11)),
+                    label: const Text('搜索', style: TextStyle(fontSize: 12)),
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF111827),
+                      foregroundColor: Colors.white,
+                      fixedSize: const Size.fromHeight(_filterControlHeight),
+                      minimumSize: const Size(0, _filterControlHeight),
+                      maximumSize: const Size(
+                        double.infinity,
+                        _filterControlHeight,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 SizedBox(
-                  height: 40,
-                  child: TextButton(
+                  height: _filterControlHeight,
+                  child: TextButton.icon(
                     onPressed: _reset,
-                    child: const Text('重置'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(right: 8),
-                  child: Text(
-                    '事件类型',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF6B7280),
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('重置'),
+                    style: TextButton.styleFrom(
+                      fixedSize: const Size.fromHeight(_filterControlHeight),
+                      minimumSize: const Size(0, _filterControlHeight),
+                      maximumSize: const Size(
+                        double.infinity,
+                        _filterControlHeight,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                 ),
-                Expanded(
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children:
-                        AuditEventType.values.map((t) {
-                          final selected = _selectedTypes.contains(t);
-                          return FilterChip(
-                            label: Text(t.name),
-                            selected: selected,
-                            visualDensity: VisualDensity.compact,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            labelStyle: const TextStyle(fontSize: 11),
-                            labelPadding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 2,
-                            ),
-                            onSelected:
-                                (v) => setState(() {
-                                  if (v) {
-                                    _selectedTypes.add(t);
-                                  } else {
-                                    _selectedTypes.remove(t);
-                                  }
-                                }),
-                          );
-                        }).toList(),
+              ];
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < fields.length; i++) ...[
+                      fields[i],
+                      if (i != fields.length - 1) const SizedBox(height: 10),
+                    ],
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  for (var i = 0; i < fields.length; i++) ...[
+                    fields[i],
+                    if (i != fields.length - 1) const SizedBox(width: 10),
+                  ],
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 7, right: 10),
+                child: Text(
+                  '事件类型',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children:
+                      AuditEventType.values.map((t) {
+                        final selected = _selectedTypes.contains(t);
+                        final color = _typeColor(t);
+                        return FilterChip(
+                          label: Text(t.name),
+                          selected: selected,
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                            color:
+                                selected
+                                    ? color
+                                    : theme.colorScheme.onSurface.withValues(
+                                      alpha: 0.62,
+                                    ),
+                          ),
+                          backgroundColor:
+                              isDark
+                                  ? const Color(0xFF1F2937)
+                                  : const Color(0xFFF4F4F5),
+                          selectedColor: color.withValues(alpha: 0.12),
+                          checkmarkColor: color,
+                          side: BorderSide(
+                            color:
+                                selected
+                                    ? color.withValues(alpha: 0.45)
+                                    : Colors.transparent,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          onSelected:
+                              (v) => setState(() {
+                                if (v) {
+                                  _selectedTypes.add(t);
+                                } else {
+                                  _selectedTypes.remove(t);
+                                }
+                              }),
+                        );
+                      }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -302,12 +410,16 @@ class _AuditViewerState extends State<AuditViewer> {
   Widget _dateButton(bool isStart) {
     final d = isStart ? _startDate : _endDate;
     return SizedBox(
-      height: 40,
+      height: _filterControlHeight,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          minimumSize: const Size(0, 40),
+          fixedSize: const Size.fromHeight(_filterControlHeight),
+          minimumSize: const Size(0, _filterControlHeight),
+          maximumSize: const Size(double.infinity, _filterControlHeight),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          side: const BorderSide(color: Color(0xFFE1E4E8)),
         ),
         onPressed: () => _pickDateTime(isStart),
         child: Text(
@@ -320,25 +432,61 @@ class _AuditViewerState extends State<AuditViewer> {
     );
   }
 
-  /// 统一的输入框装饰：对齐「添加模型」弹窗风格
-  /// （圆角 6、浅灰边框、深色聚焦、紧凑内边距）
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+  Widget _traceInputField() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final focused = _traceFocusNode.hasFocus;
+    return GestureDetector(
+      onTap: () => _traceFocusNode.requestFocus(),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        height: _filterControlHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF111827) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: focused ? const Color(0xFF2563EB) : const Color(0xFFE1E4E8),
+            width: focused ? 1.5 : 1,
+          ),
+        ),
+        alignment: Alignment.centerLeft,
+        child: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _traceCtrl,
+          builder: (context, value, _) {
+            return Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                if (value.text.isEmpty)
+                  Text(
+                    '链路 ID (traceId)',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.38,
+                      ),
+                      height: 1.2,
+                    ),
+                  ),
+                EditableText(
+                  controller: _traceCtrl,
+                  focusNode: _traceFocusNode,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.2,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  cursorColor: const Color(0xFF2563EB),
+                  backgroundCursorColor: const Color(0xFF9CA3AF),
+                  maxLines: 1,
+                  onSubmitted: (_) => _load(),
+                  textInputAction: TextInputAction.search,
+                ),
+              ],
+            );
+          },
+        ),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Color(0xFF1F2937)),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
     );
   }
 
@@ -378,37 +526,39 @@ class _AuditViewerState extends State<AuditViewer> {
     int s = initial.second;
     return showDialog<(int, int, int)>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSt) => AlertDialog(
-          title: const Text('选择时间'),
-          content: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _timeColumn('时', 24, h, setSt, (v) => h = v),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text(':'),
-              ),
-              _timeColumn('分', 60, m, setSt, (v) => m = v),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text(':'),
-              ),
-              _timeColumn('秒', 60, s, setSt, (v) => s = v),
-            ],
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (ctx, setSt) => AlertDialog(
+                  title: const Text('选择时间'),
+                  content: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _timeColumn('时', 24, h, setSt, (v) => h = v),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(':'),
+                      ),
+                      _timeColumn('分', 60, m, setSt, (v) => m = v),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(':'),
+                      ),
+                      _timeColumn('秒', 60, s, setSt, (v) => s = v),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('取消'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, (h, m, s)),
+                      child: const Text('确定'),
+                    ),
+                  ],
+                ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, (h, m, s)),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -455,73 +605,175 @@ class _AuditViewerState extends State<AuditViewer> {
   }
 
   Widget _buildResultList() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return _buildListShell(
+        theme,
+        isDark,
+        child: const Center(child: CircularProgressIndicator()),
+      );
     }
     if (_error != null) {
-      return Center(
+      return _buildListShell(
+        theme,
+        isDark,
         child: Text(
           '加载失败: $_error',
-          style: TextStyle(color: Theme.of(context).colorScheme.error),
+          style: TextStyle(color: theme.colorScheme.error),
         ),
       );
     }
     if (_groups.isEmpty) {
-      return const Center(child: Text('无审计记录'));
-    }
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: SectionTitle(
-            '审计链路${_total > 0 ? ' (${_groups.length} / $_total)' : ' (${_groups.length})'}',
+      return _buildListShell(
+        theme,
+        isDark,
+        child: Text(
+          '无审计记录',
+          style: TextStyle(
+            fontSize: 14,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
-        Expanded(
-          child: ListView.separated(
-            controller: _scrollCtrl,
-            padding: const EdgeInsets.all(16),
-            itemCount: _groups.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              if (i == _groups.length) return _buildFooter();
-              final g = _groups[i];
-              final first = g.events.first;
-              return Container(
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE1E4E8),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '审计链路',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  leading: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: cs.primary.withValues(alpha: 0.12),
-                    foregroundColor: cs.primary,
-                    child: Text('${g.events.length}'),
+                Text(
+                  _total > 0
+                      ? '已加载 ${_groups.length} / $_total'
+                      : '已加载 ${_groups.length}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.52),
                   ),
-                  title: Row(
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              controller: _scrollCtrl,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              itemCount: _groups.length + 1,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, i) {
+                if (i == _groups.length) return _buildFooter();
+                return _buildTraceCard(_groups[i], theme, isDark);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListShell(
+    ThemeData theme,
+    bool isDark, {
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE1E4E8),
+        ),
+      ),
+      child: Center(child: child),
+    );
+  }
+
+  Widget _buildTraceCard(_TraceGroup g, ThemeData theme, bool isDark) {
+    final first = g.events.first;
+    final last = g.events.last;
+    final errorCount =
+        g.events.where((e) => e.type == AuditEventType.error).length;
+    final modelEvent = g.events.where((e) => e.type == AuditEventType.model);
+    final modelText =
+        modelEvent.isEmpty
+            ? '未记录模型'
+            : (modelEvent.last.payload['model']?.toString() ?? '未知模型');
+    final statusColor =
+        errorCount > 0 ? const Color(0xFFEF4444) : const Color(0xFF10B981);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => AuditReplayPage.show(context, g.traceId),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1F2937) : const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2D2F3A) : const Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                errorCount > 0
+                    ? Icons.error_outline_rounded
+                    : Icons.check_circle_outline_rounded,
+                color: statusColor,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
                       Flexible(
                         child: Text(
                           g.traceId,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: cs.onSurface,
-                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurface,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.copy, size: 18),
+                        icon: const Icon(Icons.copy, size: 16),
                         tooltip: '复制 traceId',
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
@@ -530,18 +782,55 @@ class _AuditViewerState extends State<AuditViewer> {
                       ),
                     ],
                   ),
-                  subtitle: Text(
-                    '${g.events.length} 个事件  ·  ${_fmt(first.timestamp)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.5),
-                    ),
+                  const SizedBox(height: 7),
+                  Wrap(
+                    spacing: 14,
+                    runSpacing: 6,
+                    children: [
+                      _traceMeta(
+                        theme,
+                        Icons.event_note_outlined,
+                        '${g.events.length} 个事件',
+                      ),
+                      _traceMeta(theme, Icons.memory_outlined, modelText),
+                      _traceMeta(
+                        theme,
+                        Icons.schedule_outlined,
+                        _fmt(last.timestamp),
+                      ),
+                    ],
                   ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => AuditReplayPage.show(context, g.traceId),
-                ),
-              );
-            },
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            _typeChip(first.type),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.chevron_right,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _traceMeta(ThemeData theme, IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.42),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
           ),
         ),
       ],
@@ -659,7 +948,9 @@ class AuditReplayPage extends StatelessWidget {
           decoration: BoxDecoration(
             color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: theme.dividerColor.withValues(alpha: 0.3),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

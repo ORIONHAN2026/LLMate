@@ -23,6 +23,8 @@ class StreamRoundResult {
   bool error;
   int? promptTokens;
   int? completionTokens;
+  int? cacheWriteTokens;
+  int? cacheReadTokens;
 
   /// 错误信息（error=true 时有效，供回退重试 / 最终写出使用）
   String? errorMessage;
@@ -37,6 +39,8 @@ class StreamRoundResult {
     this.error = false,
     this.promptTokens,
     this.completionTokens,
+    this.cacheWriteTokens,
+    this.cacheReadTokens,
     this.errorMessage,
     this.errorType,
     this.errorCode,
@@ -66,6 +70,8 @@ Future<StreamRoundResult> streamSingleRound({
   StringBuffer reasonBuffer = StringBuffer();
   int promptTokens = 0;
   int completionTokens = 0;
+  int cacheWriteTokens = 0;
+  int cacheReadTokens = 0;
   final httpRequest = await client.postUrl(
     Uri.parse(session.chatModel!.apiUrl!),
   );
@@ -146,6 +152,11 @@ Future<StreamRoundResult> streamSingleRound({
             if (sseChunk.usage != null) {
               promptTokens += sseChunk.usage!.promptTokens ?? 0;
               completionTokens += sseChunk.usage!.completionTokens ?? 0;
+              cacheWriteTokens += sseChunk.usage!.cacheWriteTokens ?? 0;
+              cacheReadTokens +=
+                  sseChunk.usage!.cacheReadTokens ??
+                  sseChunk.usage!.promptTokensDetails?.cachedTokens ??
+                  0;
             }
             continue;
           }
@@ -175,6 +186,11 @@ Future<StreamRoundResult> streamSingleRound({
           if (sseChunk.usage != null) {
             promptTokens += sseChunk.usage!.promptTokens ?? 0;
             completionTokens += sseChunk.usage!.completionTokens ?? 0;
+            cacheWriteTokens += sseChunk.usage!.cacheWriteTokens ?? 0;
+            cacheReadTokens +=
+                sseChunk.usage!.cacheReadTokens ??
+                sseChunk.usage!.promptTokensDetails?.cachedTokens ??
+                0;
           }
 
           // tool_calls → 按 index 增量合并（不透传给客户端，由 ToolLoop 统一处理）
@@ -263,6 +279,8 @@ Future<StreamRoundResult> streamSingleRound({
       reasonBuffer: reasonBuffer,
       promptTokens: promptTokens,
       completionTokens: completionTokens,
+      cacheWriteTokens: cacheWriteTokens,
+      cacheReadTokens: cacheReadTokens,
     );
   } on SocketException catch (e) {
     // 网络连接异常：按 OpenAI 标准错误格式返回，不向外抛

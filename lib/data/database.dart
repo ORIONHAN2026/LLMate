@@ -77,6 +77,8 @@ class UsageRows extends Table {
   TextColumn get modelId => text().nullable()();
   IntColumn get promptTokens => integer().nullable()();
   IntColumn get completionTokens => integer().nullable()();
+  IntColumn get cacheWriteTokens => integer().nullable()();
+  IntColumn get cacheReadTokens => integer().nullable()();
   RealColumn get cost => real().nullable()();
   TextColumn get currency => text().nullable()();
   IntColumn get timestamp => integer()(); // 毫秒时间戳
@@ -123,7 +125,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -144,6 +146,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         await customStatement('ALTER TABLE usage_rows DROP COLUMN detail_key');
+      }
+      if (from < 5) {
+        await migrator.addColumn(usageRows, usageRows.cacheWriteTokens);
+        await migrator.addColumn(usageRows, usageRows.cacheReadTokens);
       }
     },
   );
@@ -217,12 +223,16 @@ extension SessionDao on AppDatabase {
   Future<ChatSession?> getSessionByApiKey(String apiKey) async {
     if (apiKey.isEmpty) return null;
     final rows = await select(sessionRows).get();
-    debugPrint('🔑 [DB] getSessionByApiKey: target=$apiKey, rows=${rows.length}');
+    debugPrint(
+      '🔑 [DB] getSessionByApiKey: target=$apiKey, rows=${rows.length}',
+    );
     for (final r in rows) {
       try {
         final map = jsonDecode(r.data) as Map<String, dynamic>;
         final storedKey = map['apiKey'];
-        debugPrint('🔑 [DB] row id=${r.id}, storedApiKey=$storedKey, match=${storedKey == apiKey}');
+        debugPrint(
+          '🔑 [DB] row id=${r.id}, storedApiKey=$storedKey, match=${storedKey == apiKey}',
+        );
         if (storedKey == apiKey) {
           return ChatSession.fromJson(map);
         }
@@ -560,6 +570,8 @@ extension UsageDao on AppDatabase {
         modelId: Value(detail.modelId),
         promptTokens: Value(detail.promptTokens),
         completionTokens: Value(detail.completionTokens),
+        cacheWriteTokens: Value(detail.cacheWriteTokens),
+        cacheReadTokens: Value(detail.cacheReadTokens),
         cost: Value(detail.cost),
         currency: Value(detail.currency),
         timestamp: detail.timestamp.millisecondsSinceEpoch,
@@ -574,6 +586,8 @@ extension UsageDao on AppDatabase {
         modelId: Value(detail.modelId),
         promptTokens: Value(detail.promptTokens),
         completionTokens: Value(detail.completionTokens),
+        cacheWriteTokens: Value(detail.cacheWriteTokens),
+        cacheReadTokens: Value(detail.cacheReadTokens),
         cost: Value(detail.cost),
         currency: Value(detail.currency),
         timestamp: detail.timestamp.millisecondsSinceEpoch,
@@ -609,6 +623,8 @@ extension UsageDao on AppDatabase {
             timestamp: DateTime.fromMillisecondsSinceEpoch(r.timestamp),
             promptTokens: r.promptTokens ?? 0,
             completionTokens: r.completionTokens ?? 0,
+            cacheWriteTokens: r.cacheWriteTokens ?? 0,
+            cacheReadTokens: r.cacheReadTokens ?? 0,
             cost: r.cost ?? 0.0,
             modelId: r.modelId ?? '',
             currency: r.currency ?? 'USD',

@@ -60,12 +60,7 @@ class Chunk {
       object: 'chat.completion.chunk',
       created: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       model: model,
-      choices: [
-        ChunkChoice(
-          index: 0,
-          delta: OpenAIDelta(content: content),
-        ),
-      ],
+      choices: [ChunkChoice(index: 0, delta: OpenAIDelta(content: content))],
     );
   }
 
@@ -77,10 +72,7 @@ class Chunk {
       created: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       model: model,
       choices: [
-        ChunkChoice(
-          index: 0,
-          delta: OpenAIDelta(reasoningContent: reason),
-        ),
+        ChunkChoice(index: 0, delta: OpenAIDelta(reasoningContent: reason)),
       ],
     );
   }
@@ -174,6 +166,8 @@ class ChunkUsage {
   final int? promptTokens;
   final int? completionTokens;
   final int? totalTokens;
+  final int? cacheWriteTokens;
+  final int? cacheReadTokens;
   final CompletionTokensDetails? completionTokensDetails;
   final PromptTokensDetails? promptTokensDetails;
 
@@ -181,15 +175,36 @@ class ChunkUsage {
     this.promptTokens,
     this.completionTokens,
     this.totalTokens,
+    this.cacheWriteTokens,
+    this.cacheReadTokens,
     this.completionTokensDetails,
     this.promptTokensDetails,
   });
 
   factory ChunkUsage.fromJson(Map<String, dynamic> json) {
+    int? firstInt(List<String> keys) {
+      for (final key in keys) {
+        final value = json[key];
+        if (value is int) return value;
+        if (value is num) return value.round();
+      }
+      return null;
+    }
+
     return ChunkUsage(
       promptTokens: json['prompt_tokens'] as int?,
       completionTokens: json['completion_tokens'] as int?,
       totalTokens: json['total_tokens'] as int?,
+      cacheWriteTokens: firstInt([
+        'cache_creation_input_tokens',
+        'cache_write_tokens',
+        'input_cache_write_tokens',
+      ]),
+      cacheReadTokens: firstInt([
+        'cache_read_input_tokens',
+        'cache_read_tokens',
+        'input_cache_read_tokens',
+      ]),
       completionTokensDetails:
           json['completion_tokens_details'] != null
               ? CompletionTokensDetails.fromJson(
@@ -209,6 +224,8 @@ class ChunkUsage {
     if (promptTokens != null) 'prompt_tokens': promptTokens,
     if (completionTokens != null) 'completion_tokens': completionTokens,
     if (totalTokens != null) 'total_tokens': totalTokens,
+    if (cacheWriteTokens != null) 'cache_write_tokens': cacheWriteTokens,
+    if (cacheReadTokens != null) 'cache_read_tokens': cacheReadTokens,
     if (completionTokensDetails != null)
       'completion_tokens_details': completionTokensDetails!.toJson(),
     if (promptTokensDetails != null)

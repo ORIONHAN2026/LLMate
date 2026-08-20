@@ -459,6 +459,8 @@ class LocalHttpService {
           final reasonBuffer = StringBuffer();
           int promptTokens = 0;
           int completionTokens = 0;
+          int cacheWriteTokens = 0;
+          int cacheReadTokens = 0;
 
           int toolIteration = 0; // 当前工具调用轮次
           const maxToolIterations = 20; // 防止无限循环
@@ -520,6 +522,8 @@ class LocalHttpService {
             reasonBuffer.write(round.reasonBuffer);
             promptTokens += round.promptTokens ?? 0;
             completionTokens += round.completionTokens ?? 0;
+            cacheWriteTokens += round.cacheWriteTokens ?? 0;
+            cacheReadTokens += round.cacheReadTokens ?? 0;
 
             // ── 审计：LLM 响应完成 ──
             if (auditTrace != null) {
@@ -559,6 +563,8 @@ class LocalHttpService {
                 reasonBuffer.write(round.reasonBuffer);
                 promptTokens += round.promptTokens ?? 0;
                 completionTokens += round.completionTokens ?? 0;
+                cacheWriteTokens += round.cacheWriteTokens ?? 0;
+                cacheReadTokens += round.cacheReadTokens ?? 0;
                 // ── 审计：回退重试后的用量 ──
                 if (auditTrace != null) {
                   audit.usage(
@@ -758,6 +764,8 @@ class LocalHttpService {
             fallbackTried: fallbackTried,
             promptTokens: promptTokens,
             completionTokens: completionTokens,
+            cacheWriteTokens: cacheWriteTokens,
+            cacheReadTokens: cacheReadTokens,
           );
 
           // ── 保存按分钟累计的用量统计 ──
@@ -766,6 +774,8 @@ class LocalHttpService {
             startTime: generationStartTime,
             promptTokens: promptTokens,
             completionTokens: completionTokens,
+            cacheWriteTokens: cacheWriteTokens,
+            cacheReadTokens: cacheReadTokens,
             routeDecision:
                 request.context[HttpContextKeys.routeDecision]
                     as RouteDecision?,
@@ -983,6 +993,8 @@ class LocalHttpService {
     required DateTime startTime,
     required int promptTokens,
     required int completionTokens,
+    int cacheWriteTokens = 0,
+    int cacheReadTokens = 0,
     RouteDecision? routeDecision,
   }) {
     () async {
@@ -1030,6 +1042,8 @@ class LocalHttpService {
           modelId: modelId,
           promptTokens: promptTokens,
           completionTokens: completionTokens,
+          cacheWriteTokens: cacheWriteTokens,
+          cacheReadTokens: cacheReadTokens,
           cost: requestCost,
           currency: currency,
           timestamp: startTime,
@@ -1129,6 +1143,8 @@ class LocalHttpService {
     required bool fallbackTried,
     required int promptTokens,
     required int completionTokens,
+    int cacheWriteTokens = 0,
+    int cacheReadTokens = 0,
   }) async {
     try {
       if (routeDecision == null) return;
@@ -1144,6 +1160,8 @@ class LocalHttpService {
         'actualTokens': {
           'prompt': promptTokens,
           'completion': completionTokens,
+          'cacheWrite': cacheWriteTokens,
+          'cacheRead': cacheReadTokens,
         },
       };
       final file = File('${logDir.path}/route_log.jsonl');

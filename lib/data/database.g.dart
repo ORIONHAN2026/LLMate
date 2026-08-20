@@ -1520,6 +1520,28 @@ class $UsageRowsTable extends UsageRows
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _cacheWriteTokensMeta = const VerificationMeta(
+    'cacheWriteTokens',
+  );
+  @override
+  late final GeneratedColumn<int> cacheWriteTokens = GeneratedColumn<int>(
+    'cache_write_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cacheReadTokensMeta = const VerificationMeta(
+    'cacheReadTokens',
+  );
+  @override
+  late final GeneratedColumn<int> cacheReadTokens = GeneratedColumn<int>(
+    'cache_read_tokens',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _costMeta = const VerificationMeta('cost');
   @override
   late final GeneratedColumn<double> cost = GeneratedColumn<double>(
@@ -1558,6 +1580,8 @@ class $UsageRowsTable extends UsageRows
     modelId,
     promptTokens,
     completionTokens,
+    cacheWriteTokens,
+    cacheReadTokens,
     cost,
     currency,
     timestamp,
@@ -1604,6 +1628,24 @@ class $UsageRowsTable extends UsageRows
         completionTokens.isAcceptableOrUnknown(
           data['completion_tokens']!,
           _completionTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cache_write_tokens')) {
+      context.handle(
+        _cacheWriteTokensMeta,
+        cacheWriteTokens.isAcceptableOrUnknown(
+          data['cache_write_tokens']!,
+          _cacheWriteTokensMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cache_read_tokens')) {
+      context.handle(
+        _cacheReadTokensMeta,
+        cacheReadTokens.isAcceptableOrUnknown(
+          data['cache_read_tokens']!,
+          _cacheReadTokensMeta,
         ),
       );
     }
@@ -1657,6 +1699,14 @@ class $UsageRowsTable extends UsageRows
         DriftSqlType.int,
         data['${effectivePrefix}completion_tokens'],
       ),
+      cacheWriteTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_write_tokens'],
+      ),
+      cacheReadTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_read_tokens'],
+      ),
       cost: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}cost'],
@@ -1685,6 +1735,8 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
   final String? modelId;
   final int? promptTokens;
   final int? completionTokens;
+  final int? cacheWriteTokens;
+  final int? cacheReadTokens;
   final double? cost;
   final String? currency;
   final int timestamp;
@@ -1694,6 +1746,8 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
     this.modelId,
     this.promptTokens,
     this.completionTokens,
+    this.cacheWriteTokens,
+    this.cacheReadTokens,
     this.cost,
     this.currency,
     required this.timestamp,
@@ -1713,6 +1767,12 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
     }
     if (!nullToAbsent || completionTokens != null) {
       map['completion_tokens'] = Variable<int>(completionTokens);
+    }
+    if (!nullToAbsent || cacheWriteTokens != null) {
+      map['cache_write_tokens'] = Variable<int>(cacheWriteTokens);
+    }
+    if (!nullToAbsent || cacheReadTokens != null) {
+      map['cache_read_tokens'] = Variable<int>(cacheReadTokens);
     }
     if (!nullToAbsent || cost != null) {
       map['cost'] = Variable<double>(cost);
@@ -1743,6 +1803,14 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
           completionTokens == null && nullToAbsent
               ? const Value.absent()
               : Value(completionTokens),
+      cacheWriteTokens:
+          cacheWriteTokens == null && nullToAbsent
+              ? const Value.absent()
+              : Value(cacheWriteTokens),
+      cacheReadTokens:
+          cacheReadTokens == null && nullToAbsent
+              ? const Value.absent()
+              : Value(cacheReadTokens),
       cost: cost == null && nullToAbsent ? const Value.absent() : Value(cost),
       currency:
           currency == null && nullToAbsent
@@ -1763,6 +1831,8 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
       modelId: serializer.fromJson<String?>(json['modelId']),
       promptTokens: serializer.fromJson<int?>(json['promptTokens']),
       completionTokens: serializer.fromJson<int?>(json['completionTokens']),
+      cacheWriteTokens: serializer.fromJson<int?>(json['cacheWriteTokens']),
+      cacheReadTokens: serializer.fromJson<int?>(json['cacheReadTokens']),
       cost: serializer.fromJson<double?>(json['cost']),
       currency: serializer.fromJson<String?>(json['currency']),
       timestamp: serializer.fromJson<int>(json['timestamp']),
@@ -1777,6 +1847,8 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
       'modelId': serializer.toJson<String?>(modelId),
       'promptTokens': serializer.toJson<int?>(promptTokens),
       'completionTokens': serializer.toJson<int?>(completionTokens),
+      'cacheWriteTokens': serializer.toJson<int?>(cacheWriteTokens),
+      'cacheReadTokens': serializer.toJson<int?>(cacheReadTokens),
       'cost': serializer.toJson<double?>(cost),
       'currency': serializer.toJson<String?>(currency),
       'timestamp': serializer.toJson<int>(timestamp),
@@ -1789,6 +1861,8 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
     Value<String?> modelId = const Value.absent(),
     Value<int?> promptTokens = const Value.absent(),
     Value<int?> completionTokens = const Value.absent(),
+    Value<int?> cacheWriteTokens = const Value.absent(),
+    Value<int?> cacheReadTokens = const Value.absent(),
     Value<double?> cost = const Value.absent(),
     Value<String?> currency = const Value.absent(),
     int? timestamp,
@@ -1801,6 +1875,12 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
         completionTokens.present
             ? completionTokens.value
             : this.completionTokens,
+    cacheWriteTokens:
+        cacheWriteTokens.present
+            ? cacheWriteTokens.value
+            : this.cacheWriteTokens,
+    cacheReadTokens:
+        cacheReadTokens.present ? cacheReadTokens.value : this.cacheReadTokens,
     cost: cost.present ? cost.value : this.cost,
     currency: currency.present ? currency.value : this.currency,
     timestamp: timestamp ?? this.timestamp,
@@ -1818,6 +1898,14 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
           data.completionTokens.present
               ? data.completionTokens.value
               : this.completionTokens,
+      cacheWriteTokens:
+          data.cacheWriteTokens.present
+              ? data.cacheWriteTokens.value
+              : this.cacheWriteTokens,
+      cacheReadTokens:
+          data.cacheReadTokens.present
+              ? data.cacheReadTokens.value
+              : this.cacheReadTokens,
       cost: data.cost.present ? data.cost.value : this.cost,
       currency: data.currency.present ? data.currency.value : this.currency,
       timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
@@ -1832,6 +1920,8 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
           ..write('modelId: $modelId, ')
           ..write('promptTokens: $promptTokens, ')
           ..write('completionTokens: $completionTokens, ')
+          ..write('cacheWriteTokens: $cacheWriteTokens, ')
+          ..write('cacheReadTokens: $cacheReadTokens, ')
           ..write('cost: $cost, ')
           ..write('currency: $currency, ')
           ..write('timestamp: $timestamp')
@@ -1846,6 +1936,8 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
     modelId,
     promptTokens,
     completionTokens,
+    cacheWriteTokens,
+    cacheReadTokens,
     cost,
     currency,
     timestamp,
@@ -1859,6 +1951,8 @@ class UsageRow extends DataClass implements Insertable<UsageRow> {
           other.modelId == this.modelId &&
           other.promptTokens == this.promptTokens &&
           other.completionTokens == this.completionTokens &&
+          other.cacheWriteTokens == this.cacheWriteTokens &&
+          other.cacheReadTokens == this.cacheReadTokens &&
           other.cost == this.cost &&
           other.currency == this.currency &&
           other.timestamp == this.timestamp);
@@ -1870,6 +1964,8 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
   final Value<String?> modelId;
   final Value<int?> promptTokens;
   final Value<int?> completionTokens;
+  final Value<int?> cacheWriteTokens;
+  final Value<int?> cacheReadTokens;
   final Value<double?> cost;
   final Value<String?> currency;
   final Value<int> timestamp;
@@ -1879,6 +1975,8 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
     this.modelId = const Value.absent(),
     this.promptTokens = const Value.absent(),
     this.completionTokens = const Value.absent(),
+    this.cacheWriteTokens = const Value.absent(),
+    this.cacheReadTokens = const Value.absent(),
     this.cost = const Value.absent(),
     this.currency = const Value.absent(),
     this.timestamp = const Value.absent(),
@@ -1889,6 +1987,8 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
     this.modelId = const Value.absent(),
     this.promptTokens = const Value.absent(),
     this.completionTokens = const Value.absent(),
+    this.cacheWriteTokens = const Value.absent(),
+    this.cacheReadTokens = const Value.absent(),
     this.cost = const Value.absent(),
     this.currency = const Value.absent(),
     required int timestamp,
@@ -1899,6 +1999,8 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
     Expression<String>? modelId,
     Expression<int>? promptTokens,
     Expression<int>? completionTokens,
+    Expression<int>? cacheWriteTokens,
+    Expression<int>? cacheReadTokens,
     Expression<double>? cost,
     Expression<String>? currency,
     Expression<int>? timestamp,
@@ -1909,6 +2011,8 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
       if (modelId != null) 'model_id': modelId,
       if (promptTokens != null) 'prompt_tokens': promptTokens,
       if (completionTokens != null) 'completion_tokens': completionTokens,
+      if (cacheWriteTokens != null) 'cache_write_tokens': cacheWriteTokens,
+      if (cacheReadTokens != null) 'cache_read_tokens': cacheReadTokens,
       if (cost != null) 'cost': cost,
       if (currency != null) 'currency': currency,
       if (timestamp != null) 'timestamp': timestamp,
@@ -1921,6 +2025,8 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
     Value<String?>? modelId,
     Value<int?>? promptTokens,
     Value<int?>? completionTokens,
+    Value<int?>? cacheWriteTokens,
+    Value<int?>? cacheReadTokens,
     Value<double?>? cost,
     Value<String?>? currency,
     Value<int>? timestamp,
@@ -1931,6 +2037,8 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
       modelId: modelId ?? this.modelId,
       promptTokens: promptTokens ?? this.promptTokens,
       completionTokens: completionTokens ?? this.completionTokens,
+      cacheWriteTokens: cacheWriteTokens ?? this.cacheWriteTokens,
+      cacheReadTokens: cacheReadTokens ?? this.cacheReadTokens,
       cost: cost ?? this.cost,
       currency: currency ?? this.currency,
       timestamp: timestamp ?? this.timestamp,
@@ -1955,6 +2063,12 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
     if (completionTokens.present) {
       map['completion_tokens'] = Variable<int>(completionTokens.value);
     }
+    if (cacheWriteTokens.present) {
+      map['cache_write_tokens'] = Variable<int>(cacheWriteTokens.value);
+    }
+    if (cacheReadTokens.present) {
+      map['cache_read_tokens'] = Variable<int>(cacheReadTokens.value);
+    }
     if (cost.present) {
       map['cost'] = Variable<double>(cost.value);
     }
@@ -1975,6 +2089,8 @@ class UsageRowsCompanion extends UpdateCompanion<UsageRow> {
           ..write('modelId: $modelId, ')
           ..write('promptTokens: $promptTokens, ')
           ..write('completionTokens: $completionTokens, ')
+          ..write('cacheWriteTokens: $cacheWriteTokens, ')
+          ..write('cacheReadTokens: $cacheReadTokens, ')
           ..write('cost: $cost, ')
           ..write('currency: $currency, ')
           ..write('timestamp: $timestamp')
@@ -3223,6 +3339,8 @@ typedef $$UsageRowsTableCreateCompanionBuilder =
       Value<String?> modelId,
       Value<int?> promptTokens,
       Value<int?> completionTokens,
+      Value<int?> cacheWriteTokens,
+      Value<int?> cacheReadTokens,
       Value<double?> cost,
       Value<String?> currency,
       required int timestamp,
@@ -3234,6 +3352,8 @@ typedef $$UsageRowsTableUpdateCompanionBuilder =
       Value<String?> modelId,
       Value<int?> promptTokens,
       Value<int?> completionTokens,
+      Value<int?> cacheWriteTokens,
+      Value<int?> cacheReadTokens,
       Value<double?> cost,
       Value<String?> currency,
       Value<int> timestamp,
@@ -3270,6 +3390,16 @@ class $$UsageRowsTableFilterComposer
 
   ColumnFilters<int> get completionTokens => $composableBuilder(
     column: $table.completionTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cacheWriteTokens => $composableBuilder(
+    column: $table.cacheWriteTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cacheReadTokens => $composableBuilder(
+    column: $table.cacheReadTokens,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3323,6 +3453,16 @@ class $$UsageRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get cacheWriteTokens => $composableBuilder(
+    column: $table.cacheWriteTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cacheReadTokens => $composableBuilder(
+    column: $table.cacheReadTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get cost => $composableBuilder(
     column: $table.cost,
     builder: (column) => ColumnOrderings(column),
@@ -3364,6 +3504,16 @@ class $$UsageRowsTableAnnotationComposer
 
   GeneratedColumn<int> get completionTokens => $composableBuilder(
     column: $table.completionTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cacheWriteTokens => $composableBuilder(
+    column: $table.cacheWriteTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cacheReadTokens => $composableBuilder(
+    column: $table.cacheReadTokens,
     builder: (column) => column,
   );
 
@@ -3410,6 +3560,8 @@ class $$UsageRowsTableTableManager
                 Value<String?> modelId = const Value.absent(),
                 Value<int?> promptTokens = const Value.absent(),
                 Value<int?> completionTokens = const Value.absent(),
+                Value<int?> cacheWriteTokens = const Value.absent(),
+                Value<int?> cacheReadTokens = const Value.absent(),
                 Value<double?> cost = const Value.absent(),
                 Value<String?> currency = const Value.absent(),
                 Value<int> timestamp = const Value.absent(),
@@ -3419,6 +3571,8 @@ class $$UsageRowsTableTableManager
                 modelId: modelId,
                 promptTokens: promptTokens,
                 completionTokens: completionTokens,
+                cacheWriteTokens: cacheWriteTokens,
+                cacheReadTokens: cacheReadTokens,
                 cost: cost,
                 currency: currency,
                 timestamp: timestamp,
@@ -3430,6 +3584,8 @@ class $$UsageRowsTableTableManager
                 Value<String?> modelId = const Value.absent(),
                 Value<int?> promptTokens = const Value.absent(),
                 Value<int?> completionTokens = const Value.absent(),
+                Value<int?> cacheWriteTokens = const Value.absent(),
+                Value<int?> cacheReadTokens = const Value.absent(),
                 Value<double?> cost = const Value.absent(),
                 Value<String?> currency = const Value.absent(),
                 required int timestamp,
@@ -3439,6 +3595,8 @@ class $$UsageRowsTableTableManager
                 modelId: modelId,
                 promptTokens: promptTokens,
                 completionTokens: completionTokens,
+                cacheWriteTokens: cacheWriteTokens,
+                cacheReadTokens: cacheReadTokens,
                 cost: cost,
                 currency: currency,
                 timestamp: timestamp,

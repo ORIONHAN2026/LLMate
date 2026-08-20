@@ -1,7 +1,7 @@
 # LLMate
 
 <p align="center">
-  <strong>AI 驱动的智能工作助手 — 基于 Flutter 的多模式对话应用</strong>
+  <strong>面向企业的大模型代理、治理与审计工作台</strong>
 </p>
 
 <p align="center">
@@ -9,75 +9,95 @@
   <img alt="Flutter" src="https://img.shields.io/badge/Flutter-%3E%3D3.7.2-blue.svg?logo=flutter" />
   <img alt="Dart" src="https://img.shields.io/badge/Dart-%3E%3D3.7.2-blue.svg?logo=dart" />
   <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-orange.svg" />
-  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg" />
+  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg" />
 </p>
 
-LLMate 是一款 AI 驱动的智能工作助手，采用 **「聊天窗口 → 本机 HTTP 服务 → 真实模型 API」** 三层架构，将鉴权、配额、工具注入、审计与用量统计统一收敛在本机服务层，实现安全、可控、可审计的 AI 工作流。
+LLMate 是一个本地优先的大模型代理服务与桌面管理工具。它把不同模型供应商、会话 API Key、MCP 工具、配额、用量统计、审计追踪和风险控制收敛到一个统一入口中，让团队可以用 OpenAI 兼容接口接入模型，同时保留企业侧需要的治理能力。
+
+> 简单说：客户端只访问 LLMate，本地服务再按会话配置、安全策略和模型路由转发到真实大模型接口。
 
 ---
 
-## 目录
+## 预览
 
-- [特性](#特性)
-- [架构](#架构)
-- [快速开始](#快速开始)
-- [使用指南](#使用指南)
-- [项目结构](#项目结构)
-- [技术栈](#技术栈)
-- [数据存储](#数据存储)
-- [贡献指南](#贡献指南)
-- [许可证](#许可证)
-- [致谢](#致谢)
+下方图片为占位路径，你可以后续把截图放到 `docs/images/` 目录中替换。
 
----
+### 主聊天窗口
 
-## 特性
+![主聊天窗口](docs/images/01-chat-home.png)
 
-### 会话模式
+### 会话设置
 
-| 模式 | 说明 |
-|------|------|
-| **会话模式** | 常规对话。消息经本机服务转发，绑定会话 MCP 工具，计入审计与用量统计 |
-| **管理模式** | 管理操作。注入审计/用量/配额管理工具，用量不计入统计、绕过脱敏与配额检查 |
+![会话设置](docs/images/02-session-settings.png)
 
-### 核心能力
+### 模型管理
 
-- **本机服务网关** — 所有会话请求经本机 Shelf HTTP 服务转发，服务层统一完成 API Key 鉴权、配额检查、风险控制、工具执行、审计与用量统计
-- **MCP 协议支持** — 内置完整 MCP 客户端 SDK（auth / client / protocol / transport），可接入外部 MCP 服务并注入其工具
-- **工具调用** — 会话工具（MCP）与第三方工具分类执行，支持流式工具调用
-- **审计系统** — 基于 DuckDB 的链路审计（request / prompt / model / usage / toolStart / toolFinish / response / error），可追溯每次请求的模型、用量与工具调用
-- **用量统计** — 按会话记录 token 用量，支持用量看板与曲线展示
-- **额度管理** — 会话级配额查询 / 设置 / 重置
-- **管理模式工具** — `audit_search` / `audit_get` / `audit_add` / `audit_update` / `audit_delete`、`usage_query`、`quota_get` / `quota_set` / `quota_reset`、`session_config_get`
-- **服务安全中间件** — API Key 守卫、审计守卫、禁用守卫、模型工具守卫、配额守卫、风控守卫、会话守卫
-- **模型管理** — 添加在线模型供应商（OpenAI、DeepSeek 等），配置 API Key、Base URL 与系统提示词
-- **会话管理** — 多会话、随机表情图标、会话级 API Key（`lm-` 前缀）、会话系统提示词
-- **多语言** — 中文、英文、日文、泰语、越南语、韩语、法语、德语
+![模型管理](docs/images/03-model-management.png)
 
-### 平台支持
+### MCP 管理
 
-- macOS
-- Linux
-- Windows
+![MCP 管理](docs/images/04-mcp-management.png)
+
+### 用量统计与审计
+
+![用量统计](docs/images/05-usage-dashboard.png)
+
+![审计查看](docs/images/06-audit-viewer.png)
 
 ---
 
-## 架构
+## 核心能力
 
+- **OpenAI 兼容代理服务**：提供 `/v1/chat/completions` 和 `/v1/models`，支持普通路径和会话路径 `/{sessionId}/v1/chat/completions`。
+- **会话级 API Key**：每个会话拥有独立 `lm-` API Key，可按会话隔离模型、MCP、提示词、配额和审计。
+- **模型统一管理**：集中配置 DeepSeek、OpenAI、Gemini、Qwen、Claude、OpenRouter、Ollama 等模型供应商与模型列表。
+- **自动模型路由**：支持自动选择轻量模型或高能力模型，也可以按会话固定指定模型。
+- **MCP 服务端执行**：会话绑定的 MCP 工具会注入到模型请求中，由 LLMate 服务端执行完成；客户端自带工具则保留给客户端处理。
+- **流式响应代理**：普通请求尽量保持上游 SSE 原样转发，减少代理层对模型输出节奏的影响。
+- **用量统计**：记录请求数、输入 Token、输出 Token、缓存写入 Token、缓存命中 Token，并提供趋势图。
+- **审计追踪**：基于 DuckDB 记录请求、模型决策、工具调用、响应和错误，方便排查与合规留痕。
+- **配额控制**：支持会话级请求次数与 Token 上限，配额周期可自动重置。
+- **风险控制**：支持手机号、身份证号等敏感信息脱敏后再转发给模型。
+- **本地优先存储**：默认数据存储在 `~/.llmate/`，方便备份、迁移和排查。
+
+---
+
+## 工作方式
+
+```text
+┌────────────────────┐
+│ 外部客户端 / 聊天 UI │
+│ OpenAI Compatible  │
+└─────────┬──────────┘
+          │ /v1/chat/completions
+          ▼
+┌──────────────────────────────┐
+│ LLMate 本地 HTTP 服务          │
+│ - API Key / 会话鉴权           │
+│ - 模型路由与提示词注入          │
+│ - MCP 工具注入与服务端执行      │
+│ - 风控脱敏 / 配额检查           │
+│ - 审计与用量统计                │
+└─────────┬────────────────────┘
+          │ OpenAI / Anthropic / Ollama / ...
+          ▼
+┌────────────────────┐
+│ 真实大模型供应商 API │
+└────────────────────┘
 ```
-┌─────────────────┐   HTTP/SSE    ┌──────────────────┐   HTTP/SSE   ┌──────────────┐
-│  Flutter 聊天窗口 │ ────────────▶ │ 本机 Shelf 服务    │ ───────────▶ │ 真实模型 API   │
-│  (GetX 状态管理) │ ◀──────────── │  (localhost)      │ ◀─────────── │ (OpenAI 等)  │
-└─────────────────┘               └──────────────────┘              └──────────────┘
-                                     │  ├─ 鉴权 / 配额 / 风控
-                                     │  ├─ MCP 工具注入与执行
-                                     │  ├─ 审计（DuckDB）
-                                     │  └─ 用量统计（SQLite）
-```
 
-- 所有会话请求经本机 HTTP 服务转发，服务层统一完成 **API Key 鉴权、配额检查、风险控制、工具执行、审计与用量统计**。
-- 状态管理使用 **GetX**。
-- 数据持久化于 `~/.llmate/`（会话数据、SQLite 用量库、DuckDB 审计库）。
+LLMate 的核心不是单纯聊天，而是把模型访问放进一个可治理的代理层中。客户端无需知道真实模型 API Key，也无需自己处理会话 MCP、审计、配额和脱敏策略。
+
+---
+
+## 适用场景
+
+- 给企业内部工具提供统一大模型出口。
+- 为不同团队、项目或业务系统分配独立会话 API Key。
+- 在不暴露真实模型密钥的情况下接入 Cursor、OpenAI SDK、HTTP 客户端或内部系统。
+- 统一管理 MCP 工具，让模型可以调用企业内部能力。
+- 对模型调用过程做审计、回放和故障排查。
+- 按会话观察请求量、Token 用量和缓存命中情况。
 
 ---
 
@@ -87,129 +107,197 @@ LLMate 是一款 AI 驱动的智能工作助手，采用 **「聊天窗口 → �
 
 - Flutter SDK >= 3.7.2
 - Dart SDK >= 3.7.2
+- macOS、Windows 或 Linux
 
-### 安装运行
+### 安装依赖
 
 ```bash
-# 克隆仓库
-git clone <仓库地址>
-
-# 进入项目目录
-cd LLMate
-
-# 安装依赖
 flutter pub get
+```
 
-# 运行应用
+### 运行应用
+
+```bash
 flutter run
 ```
 
-### 配置模型
-
-1. 启动应用后，进入设置页面
-2. 添加 AI 模型供应商（OpenAI、DeepSeek 等）
-3. 配置 API Key 和 Base URL
-4. 选择模型开始对话
+启动后，应用会初始化本地 HTTP 服务。默认端口可在应用内的服务设置中调整。
 
 ---
 
-## 使用指南
+## 基础使用
 
-### 开始对话
+### 1. 添加模型
 
-选择会话模式，在输入框中输入消息即可开始对话。消息经本机服务转发至真实模型 API，所有交互都会写入审计与用量统计。
+进入「模型管理」页面，选择模型供应商和模型列表，填写 API Key 与接口地址。LLMate 会把模型配置保存到本地数据库中。
 
-### 使用管理工具
+### 2. 创建或配置会话
 
-切换到管理模式后，系统自动注入审计查询、用量统计、配额管理等管理工具，可通过自然语言执行管理操作，如：
+每个会话可以独立设置：
 
-- "查询最近 10 条审计记录"
-- "查看今天的 token 用量"
-- "设置会话配额为 10000 tokens"
+- 会话名称与组织名称
+- 会话 API Key
+- 绑定模型或自动选模策略
+- 系统提示词
+- 回复语言
+- MCP 工具
+- 请求次数与 Token 配额
+- 敏感信息脱敏策略
 
-### 接入 MCP 服务
+### 3. 通过 HTTP 接入
 
-在 MCP 服务管理页面添加外部 MCP 服务地址，系统将通过内置 MCP 客户端建立连接并将其工具注入会话。
+外部客户端可以按 OpenAI 兼容方式访问：
+
+```bash
+curl http://127.0.0.1:80/v1/chat/completions \
+  -H "Authorization: Bearer lm-your-session-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "你好，介绍一下你自己"}
+    ]
+  }'
+```
+
+也可以使用兼容会话路径：
+
+```text
+/{sessionId}/v1/chat/completions
+```
+
+### 4. 查看用量与审计
+
+在会话页面可以打开：
+
+- 用量统计：请求数、Token、缓存 Token 和趋势图。
+- 审计查看：按 traceId、时间范围和关键字查询请求链路。
+
+---
+
+## MCP 工作流
+
+LLMate 支持把会话绑定的 MCP 工具注入到模型请求中。
+
+```text
+模型返回 tool_calls
+        │
+        ▼
+LLMate 判断工具来源
+        │
+        ├─ 会话 MCP 工具：服务端执行，并把结果回填给模型
+        │
+        └─ 客户端自带工具：透传给客户端处理
+```
+
+这意味着企业内部工具可以统一由 LLMate 管理和执行，外部客户端无需直接持有 MCP 连接配置。
+
+---
+
+## 数据存储
+
+默认数据位于：
+
+```text
+~/.llmate/
+├── llmate.sqlite     # 应用主数据库
+├── audit.duckdb      # 审计数据库
+├── ssl/              # HTTPS 证书
+└── log/              # 最近请求与路由日志
+```
+
+项目目前主要使用：
+
+- SQLite / Drift：模型、会话、消息、用量等结构化数据。
+- DuckDB：审计事件与链路查询。
 
 ---
 
 ## 项目结构
 
-```
+```text
 lib/
-├── main.dart                    # 应用入口
-├── controllers/                 # 状态管理（会话/审计/用量/MCP/模型/设置）
-├── core/                        # 核心功能
-│   ├── http/                    # 本机 Shelf HTTP 服务
-│   │   ├── local_http_service.dart  # 服务入口：鉴权/配额/审计/用量
-│   │   ├── stream_round.dart        # 单轮流式请求（SSE 解析、工具调用分类）
-│   │   ├── sensitive_masker.dart    # 敏感信息脱敏
-│   │   └── middleware/              # API Key/审计/配额/风控等守卫
-│   ├── llm/                     # LLM 集成
-│   │   ├── llm_client.dart          # LLM 客户端
-│   │   ├── common/                  # 分块解析/消息构建/OpenAI Provider/系统提示词
-│   │   ├── modes/                   # 工作模式工具函数
-│   │   └── tools/                   # 管理模式工具定义
-│   ├── mcp/                     # MCP 客户端 SDK（auth/client/protocol/transport）
-│   ├── router/                  # 路由
-│   └── services/                # DuckDB 存储/存储路径/地址检测等服务
-├── data/                        # 数据存储（SQLite / DuckDB）
-├── features/                    # 功能模块
-│   ├── chat/                    # 聊天界面（输入框/消息/审计查看器/用量面板）
-│   ├── settings/                # 设置页面（主题/语言/服务）
-│   ├── mcp/                     # MCP 服务管理
-│   ├── models/                  # 模型管理
-│   ├── utils/                   # 通用工具
-│   └── widgets/                 # 通用组件
-├── models/                      # 数据模型（会话/消息/审计/模型/系统设置）
-└── l10n/                        # 国际化（8 种语言）
+├── main.dart                         # 应用入口与窗口初始化
+├── controllers/                      # GetX 控制器
+├── core/
+│   ├── http/                         # 本地 HTTP 代理服务
+│   │   ├── local_http_service.dart    # /v1/models 与 /v1/chat/completions
+│   │   ├── stream_round.dart          # SSE 转发、工具调用分类、usage 提取
+│   │   ├── middleware/                # 会话、模型、语言、风控等中间件
+│   │   └── sensitive_masker.dart      # 敏感信息脱敏
+│   ├── router/                       # 自动模型路由
+│   ├── llm/                          # LLM 客户端与消息构建
+│   ├── mcp/                          # MCP 客户端实现
+│   └── services/                     # 存储路径、地址检测等服务
+├── data/                             # Drift 数据库
+├── features/
+│   ├── chat/                         # 聊天页、会话设置、用量、审计
+│   ├── models/                       # 添加模型与模型详情
+│   ├── mcp/                          # MCP 管理页面
+│   ├── settings/                     # 设置模块
+│   └── widgets/                      # 通用组件
+├── models/                           # 业务模型
+├── theme/                            # 应用主题
+└── l10n/                             # 多语言资源
 ```
 
 ---
 
 ## 技术栈
 
-| 类别 | 技术 |
-|------|------|
-| UI 框架 | Flutter |
+| 模块 | 技术 |
+| --- | --- |
+| 桌面应用 | Flutter |
 | 状态管理 | GetX |
-| 本机服务 | Shelf / shelf_router |
-| 数据库 | DuckDB（审计）、SQLite（Drift，用量统计） |
-| 网络 | dio / http |
-| 文档处理 | syncfusion_flutter_pdf / docx_to_text / excel / flutter_quill |
-| 国际化 | flutter_localizations / intl / ARB |
+| 本地 HTTP 服务 | Shelf、shelf_router |
+| 数据库 | Drift / SQLite、DuckDB |
+| 网络请求 | dart:io HttpClient、http、dio |
+| 国际化 | flutter_localizations、intl、ARB |
+| MCP | 项目内置 MCP 客户端实现 |
+| 桌面窗口 | window_manager |
 
 ---
 
-## 数据存储
+## 开发命令
 
-所有数据保存在 `~/.llmate/`：
+```bash
+# 安装依赖
+flutter pub get
 
-```
-~/.llmate/
-├── chats/{sessionId}/    # 会话数据（session.json / messages.json / memory.md）
-├── ssl/                  # HTTPS 证书
-├── *.sqlite              # 用量统计数据库
-└── audit.duckdb          # 审计数据库
+# 静态分析
+flutter analyze
+
+# 运行测试
+flutter test
+
+# 生成 Drift / l10n 等代码
+dart run build_runner build --delete-conflicting-outputs
 ```
 
 ---
 
-## 贡献指南
+## 设计原则
 
-欢迎贡献代码！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详情。
+- **统一入口**：所有模型访问都先进入 LLMate。
+- **会话隔离**：不同会话拥有独立 API Key、模型、工具和治理策略。
+- **服务端治理**：鉴权、配额、脱敏、审计、MCP 执行都在服务端完成。
+- **兼容生态**：尽量保持 OpenAI 兼容接口，方便接入现有 SDK 和工具。
+- **本地可控**：核心数据默认落在本机，便于开发、排查和私有部署。
 
 ---
 
 ## 许可证
 
-本项目采用 [GNU 通用公共许可证 v3.0](LICENSE) 发布。
+本项目基于 [GNU General Public License v3.0](LICENSE) 发布。
 
 ---
 
 ## 致谢
 
-- [Flutter](https://flutter.dev/) — 跨平台 UI 框架
-- [GetX](https://pub.dev/packages/get) — 状态管理
-- [Shelf](https://pub.dev/packages/shelf) — Dart HTTP 服务框架
-- [OpenAI API](https://platform.openai.com/docs) — API 规范参考
+- [Flutter](https://flutter.dev/)
+- [GetX](https://pub.dev/packages/get)
+- [Shelf](https://pub.dev/packages/shelf)
+- [Drift](https://drift.simonbinder.eu/)
+- [DuckDB](https://duckdb.org/)
+- [Model Context Protocol](https://modelcontextprotocol.io/)

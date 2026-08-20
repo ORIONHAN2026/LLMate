@@ -48,7 +48,7 @@ void main() async {
     await windowManager.ensureInitialized();
     const windowOptions = WindowOptions(
       minimumSize: Size(kMinWindowWidth, kMinWindowHeight),
-      size: Size(1200, 800),
+      size: Size(1440, 900),
       center: true,
       backgroundColor: Colors.transparent,
       titleBarStyle: TitleBarStyle.hidden,

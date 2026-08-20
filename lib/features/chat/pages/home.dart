@@ -981,10 +981,13 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                   ],
                 ),
               ),
-              // 右侧边栏 - 宽度为聊天窗口的 2/3
+              // 右侧边栏 - 固定为配置面板适合阅读的宽度，聊天区占据剩余空间
               if (!_layoutState.isRightSidebarCollapsed) ...[
                 _buildRightResizableHandle(),
-                Expanded(flex: 2, child: _buildRightSidePanel()),
+                SizedBox(
+                  width: ResponsiveUtils.getRightPanelWidth(context),
+                  child: _buildRightSidePanel(),
+                ),
               ],
             ],
           ),
@@ -1031,10 +1034,13 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                   ],
                 ),
               ),
-              // 右侧边栏 - 宽度为聊天窗口的 2/3
+              // 右侧边栏 - 固定为配置面板适合阅读的宽度，聊天区占据剩余空间
               if (!_layoutState.isRightSidebarCollapsed) ...[
                 _buildRightResizableHandle(),
-                Expanded(flex: 2, child: _buildRightSidePanel()),
+                SizedBox(
+                  width: ResponsiveUtils.getRightPanelWidth(context),
+                  child: _buildRightSidePanel(),
+                ),
               ],
             ],
           ),

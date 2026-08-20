@@ -57,18 +57,13 @@ class ResponsiveUtils {
       context,
       mobile: MediaQuery.of(context).size.width * 0.9, // 移动端占90%宽度
       tablet: 400.0,
-      desktop: 350.0,
+      desktop: 360.0,
     );
   }
 
   /// 获取顶部栏高度
   static double getTopBarHeight(BuildContext context) {
-    return responsive(
-      context,
-      mobile: 44.0,
-      tablet: 44.0,
-      desktop: 44.0,
-    );
+    return responsive(context, mobile: 44.0, tablet: 44.0, desktop: 44.0);
   }
 
   /// 获取聊天区域的最大宽度
@@ -103,12 +98,7 @@ class ResponsiveUtils {
 
   /// 获取卡片间距
   static double getCardSpacing(BuildContext context) {
-    return responsive(
-      context,
-      mobile: 8.0,
-      tablet: 12.0,
-      desktop: 16.0,
-    );
+    return responsive(context, mobile: 8.0, tablet: 12.0, desktop: 16.0);
   }
 
   /// 检查是否应该显示紧凑版本
@@ -118,11 +108,7 @@ class ResponsiveUtils {
 }
 
 /// 设备类型枚举
-enum DeviceType {
-  mobile,
-  tablet,
-  desktop,
-}
+enum DeviceType { mobile, tablet, desktop }
 
 /// 响应式 Widget Builder
 class ResponsiveBuilder extends StatelessWidget {

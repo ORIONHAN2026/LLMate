@@ -407,9 +407,6 @@ class LocalHttpService {
       final body =
           request.context[HttpContextKeys.body] as Map<String, dynamic>;
       debugPrint('📨 [Request] body: ${jsonEncode(body["messages"])}');
-      final clientProvidedTools =
-          request.context[HttpContextKeys.clientProvidedTools] == true;
-
       // 客户端是否请求流式响应（缺省视为流式）。
       // 编程工具等第三方客户端可能发送 stream: false，此时本服务内部仍按流式
       // 请求上游，待生成完成后将 SSE 聚合为标准 JSON 响应返回。
@@ -512,7 +509,7 @@ class LocalHttpService {
               body: jsonEncode(body),
               controller: streamController,
               deferErrorWrite: true,
-              handleSessionTools: !clientProvidedTools,
+              handleSessionTools: true,
             );
             var sessionTools = round.sessionToolChunks;
             var thirdTools = round.thirdToolChunks;
@@ -554,7 +551,7 @@ class LocalHttpService {
                   body: jsonEncode(body),
                   controller: streamController,
                   deferErrorWrite: true,
-                  handleSessionTools: !clientProvidedTools,
+                  handleSessionTools: true,
                 );
                 sessionTools = round.sessionToolChunks;
                 thirdTools = round.thirdToolChunks;

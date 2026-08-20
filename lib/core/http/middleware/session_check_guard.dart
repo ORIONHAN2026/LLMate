@@ -19,9 +19,9 @@ import '../http_response_utils.dart';
 /// 2. 禁用状态检查：会话被禁用（[ChatSession.isDisabled]）→ 403
 /// 3. 配额检查：跨自然周期自动重置后检查 Token/费用/请求次数 → 429
 /// 4. 注入会话级系统提示词（[ChatSession.systemPrompt]）
-/// 5. 注入会话 MCP 工具：仅当客户端未自带 tools 时注入会话绑定的 MCP 服务工具，
-///    并兜底置 `tool_choice='auto'`。客户端自带 tools 时保持原样透传，
-///    避免把客户端无法执行的会话 MCP 工具混入请求。
+/// 5. 注入会话 MCP 工具：合并会话绑定的 MCP 服务工具（客户端自带 tools 时
+///    按函数名合并去重，客户端声明优先），并兜底置 `tool_choice='auto'`。
+///    会话 MCP 工具由本服务端执行；客户端自带的第三方工具仍交给客户端处理。
 ///
 /// 校验通过的会话存入 `request.context['session']`；增强后的请求体存入
 /// `request.context['body']` 并重新注入下游（无请求体的 GET 请求跳过增强）。
@@ -138,13 +138,13 @@ Handler sessionCheckGuard(Handler innerHandler) {
       }
 
       // 5. 会话 MCP 工具注入
-      //    客户端自带 tools 时，说明调用方希望自己处理工具协议，本服务不再
-      //    混入会话 MCP 工具，避免模型调用到客户端并不知道如何执行的工具。
+      //    无论客户端是否自带 tools，只要会话绑定了 MCP 服务，都将其工具注入
+      //    请求体；客户端自带 tools 时按函数名合并去重（客户端声明优先），
+      //    其余会话 MCP 工具追加到末尾。返回 tool_calls 后，本服务只执行
+      //    会话 MCP 工具，非会话工具会透传给客户端自行处理。
       clientProvidedTools = body['tools'] is List;
       final mcpTools = McpController.instance.getMergedTools(currentSession);
-      if (clientProvidedTools) {
-        debugPrint('🔧 [SessionGuard] 客户端 tools 原样保留，不注入会话 MCP 工具');
-      } else if (mcpTools.isNotEmpty) {
+      if (mcpTools.isNotEmpty) {
         // OpenAI 要求函数名匹配 ^[a-zA-Z0-9_-]+$，MCP 工具名可能含点号/空格等，
         // 注入前 sanitize 并注册映射，执行端按安全名还原原始名调用 MCP。
         final sessionTools =
@@ -155,9 +155,40 @@ Handler sessionCheckGuard(Handler innerHandler) {
               return func;
             }).toList();
 
-        body['tools'] = sessionTools;
-        body['tool_choice'] = 'auto';
-        debugPrint('🔧 [SessionGuard] 注入 ${sessionTools.length} 个会话 MCP 工具');
+        if (clientProvidedTools) {
+          final clientTools =
+              (body['tools'] as List)
+                  .whereType<Map<String, dynamic>>()
+                  .toList();
+          final clientNames =
+              clientTools
+                  .map(
+                    (t) => ((t['function'] as Map?)?['name'] ?? '').toString(),
+                  )
+                  .where((n) => n.isNotEmpty)
+                  .toSet();
+          final merged = <Map<String, dynamic>>[
+            ...clientTools,
+            ...sessionTools.where((func) {
+              final name =
+                  ((func['function'] as Map<String, dynamic>)['name'])
+                      .toString();
+              return !clientNames.contains(name);
+            }),
+          ];
+          body['tools'] = merged;
+          body['tool_choice'] = body['tool_choice'] ?? 'auto';
+          debugPrint(
+            '🔧 [SessionGuard] 客户端 tools ${clientTools.length} 个 + '
+            '会话 MCP 工具 ${merged.length - clientTools.length} 个合并注入',
+          );
+        } else {
+          body['tools'] = sessionTools;
+          body['tool_choice'] = 'auto';
+          debugPrint('🔧 [SessionGuard] 注入 ${sessionTools.length} 个会话 MCP 工具');
+        }
+      } else if (clientProvidedTools) {
+        debugPrint('🔧 [SessionGuard] 客户端 tools 原样保留（会话无 MCP 工具）');
       }
     }
 

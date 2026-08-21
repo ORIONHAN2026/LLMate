@@ -24,25 +24,25 @@ LLMate 是一个本地优先的大模型代理服务与桌面管理工具。它�
 
 ### 主聊天窗口
 
-![主聊天窗口](docs/images/01-chat-home.png)
+![主聊天窗口](docs/images/1.jpg)
 
 ### 会话设置
 
-![会话设置](docs/images/02-session-settings.png)
+![会话设置](docs/images/2.jpg)
 
 ### 模型管理
 
-![模型管理](docs/images/03-model-management.png)
+![模型管理](docs/images/3.jpg)
 
 ### MCP 管理
 
-![MCP 管理](docs/images/04-mcp-management.png)
+![MCP 管理](docs/images/4.jpg)
 
 ### 用量统计与审计
 
-![用量统计](docs/images/05-usage-dashboard.png)
+![用量统计](docs/images/5.jpg)
 
-![审计查看](docs/images/06-audit-viewer.png)
+![审计查看](docs/images/6.jpg)
 
 ---
 

@@ -523,6 +523,22 @@ class SessionConfigSidebar {
     );
   }
 
+  /// 安全设置分节
+  static Widget buildSecuritySettingsSection(
+    BuildContext context,
+    ChatSession session,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context, l10n.securitySettings),
+        const SizedBox(height: 8),
+        _buildSecuritySettings(context, session),
+      ],
+    );
+  }
+
   /// MCP 分节（可勾选绑定 MCP 服务到当前会话）
   static Widget buildMcpSection(BuildContext context, ChatSession session) {
     return _McpConfigSection(session: session);
@@ -644,6 +660,124 @@ class SessionConfigSidebar {
                 );
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _buildSecuritySettings(
+    BuildContext context,
+    ChatSession session,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.sensitiveInfoMaskingDesc,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.48),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildSecuritySwitch(
+          context,
+          icon: Icons.phone_iphone_outlined,
+          title: l10n.maskPhoneTitle,
+          subtitle: l10n.maskPhoneSubtitle,
+          value: session.maskPhone,
+          onChanged:
+              (value) => Get.find<SessionController>().updateSession(
+                session.copyWith(maskPhone: value),
+              ),
+        ),
+        const SizedBox(height: 8),
+        _buildSecuritySwitch(
+          context,
+          icon: Icons.badge_outlined,
+          title: l10n.maskIdCardTitle,
+          subtitle: l10n.maskIdCardSubtitle,
+          value: session.maskIdCard,
+          onChanged:
+              (value) => Get.find<SessionController>().updateSession(
+                session.copyWith(maskIdCard: value),
+              ),
+        ),
+      ],
+    );
+  }
+
+  static Widget _buildSecuritySwitch(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color:
+            value
+                ? scheme.primary.withValues(alpha: 0.06)
+                : scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border:
+            value
+                ? Border.all(
+                  color: scheme.primary.withValues(alpha: 0.22),
+                  width: 1,
+                )
+                : null,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color:
+                value
+                    ? scheme.primary
+                    : scheme.onSurface.withValues(alpha: 0.42),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color:
+                        value
+                            ? scheme.primary
+                            : scheme.onSurface.withValues(alpha: 0.64),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurface.withValues(alpha: 0.45),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.75,
+            child: CupertinoSwitch(value: value, onChanged: onChanged),
           ),
         ],
       ),
@@ -2023,6 +2157,7 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
 
   final GlobalKey _basicInfoKey = GlobalKey();
   final GlobalKey _serviceKey = GlobalKey();
+  final GlobalKey _securityKey = GlobalKey();
   final GlobalKey _mcpKey = GlobalKey();
   final GlobalKey _quotaKey = GlobalKey();
   final GlobalKey _billingKey = GlobalKey();
@@ -2054,6 +2189,11 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
         key: _serviceKey,
         label: l10n.serviceConfigLabel,
         icon: Icons.settings,
+      ),
+      _NavSection(
+        key: _securityKey,
+        label: l10n.securitySettings,
+        icon: Icons.security_outlined,
       ),
       _NavSection(key: _mcpKey, label: l10n.mcpLabel, icon: Icons.grid_view),
       _NavSection(
@@ -2300,6 +2440,18 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildDisabledToggle(context, session),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── 安全设置 ──
+              Container(
+                key: _securityKey,
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SessionConfigSidebar.buildSecuritySettingsSection(
+                  context,
+                  session,
                 ),
               ),
 

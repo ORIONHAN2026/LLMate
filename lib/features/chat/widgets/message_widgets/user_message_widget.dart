@@ -465,7 +465,8 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     int lastAiMessageIndex = -1;
 
     for (int i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role == MessageRole.bot) {
+      if (messages[i].role == MessageRole.bot &&
+          messages[i].auditTraceId == null) {
         lastAiMessage = messages[i];
         lastAiMessageIndex = i;
         break;
@@ -564,8 +565,12 @@ class _UserMessageWidgetState extends State<UserMessageWidget> {
     }
 
     try {
-      // 保留到 startDeleteIndex 之前的所有消息
-      final updatedMessages = messages.sublist(0, startDeleteIndex);
+      // 保留到 startDeleteIndex 之前的所有消息，同时保留系统统计/审计消息。
+      final tailMessages = messages.sublist(startDeleteIndex);
+      final updatedMessages = [
+        ...messages.sublist(0, startDeleteIndex),
+        ...tailMessages.where((m) => m.auditTraceId != null),
+      ];
 
       // 更新会话消息
       final updatedSession = session.copyWith(

@@ -167,6 +167,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isAlertNotice =
+        widget.message.noticeLevel == MessageNoticeLevel.alert;
+    final isAuditNotice = widget.message.auditTraceId != null;
     // 调试信息：打印think内容状态
 
     return Container(
@@ -190,7 +193,18 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             _showAiMessageMenu(context, details.globalPosition);
           },
           child: Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
+            decoration: BoxDecoration(
+              color:
+                  isAlertNotice
+                      ? const Color(0xFFFEF3C7).withValues(alpha: 0.42)
+                      : Theme.of(context).scaffoldBackgroundColor,
+              border:
+                  isAlertNotice
+                      ? const Border(
+                        left: BorderSide(color: Color(0xFFF59E0B), width: 3),
+                      )
+                      : null,
+            ),
             padding: const EdgeInsets.all(16),
             child: MouseRegion(
               onEnter: (_) => setState(() => _isHovered = true),
@@ -336,16 +350,18 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                           ),
                                     ),
                                     const SizedBox(width: 4),
-                                    // 重新生成按钮
-                                    _buildActionButton(
-                                      icon: Icons.refresh,
-                                      tooltip: l10n.regenerate,
-                                      onTap:
-                                          () => _regenerateMessage(
-                                            RegenerateActionType.regenerate,
-                                          ),
-                                    ),
-                                    const SizedBox(width: 4),
+                                    if (!isAuditNotice) ...[
+                                      // 重新生成按钮
+                                      _buildActionButton(
+                                        icon: Icons.refresh,
+                                        tooltip: l10n.regenerate,
+                                        onTap:
+                                            () => _regenerateMessage(
+                                              RegenerateActionType.regenerate,
+                                            ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
                                     // 编辑按钮
                                     _buildActionButton(
                                       icon: Icons.edit,
@@ -409,12 +425,17 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
 
   Widget _buildAuditReplayAction(String traceId) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isAlert = widget.message.noticeLevel == MessageNoticeLevel.alert;
     return TextButton.icon(
       style: TextButton.styleFrom(
         visualDensity: VisualDensity.compact,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        foregroundColor: colorScheme.primary,
-        backgroundColor: colorScheme.primary.withValues(alpha: 0.08),
+        foregroundColor:
+            isAlert ? const Color(0xFF92400E) : colorScheme.primary,
+        backgroundColor:
+            isAlert
+                ? const Color(0xFFF59E0B).withValues(alpha: 0.14)
+                : colorScheme.primary.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       onPressed: () => AuditReplayPage.show(context, traceId),
@@ -736,7 +757,8 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
     int lastAiMessageIndex = -1;
 
     for (int i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role == MessageRole.bot) {
+      if (messages[i].role == MessageRole.bot &&
+          messages[i].auditTraceId == null) {
         lastAiMessage = messages[i];
         lastAiMessageIndex = i;
         break;
@@ -846,8 +868,15 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             return;
           }
 
-          final updatedMessages = messages.sublist(0, targetIndex);
-          removedMessages = messages.sublist(targetIndex);
+          final tailMessages = messages.sublist(targetIndex);
+          final preservedAuditMessages =
+              tailMessages.where((m) => m.auditTraceId != null).toList();
+          final updatedMessages = [
+            ...messages.sublist(0, targetIndex),
+            ...preservedAuditMessages,
+          ];
+          removedMessages =
+              tailMessages.where((m) => m.auditTraceId == null).toList();
           updatedSession = session.copyWith(
             messages: updatedMessages,
             isSending: true,
@@ -1837,6 +1866,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
   // 显示AI消息菜单
   void _showAiMessageMenu(BuildContext context, Offset position) {
     final l10n = AppLocalizations.of(context)!;
+    final isAuditNotice = widget.message.auditTraceId != null;
     // 重置展开状态
     bool isRegenerateExpanded = false;
     bool isScreenshotExpanded = false;
@@ -1879,68 +1909,70 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                     ),
                     const SizedBox(height: 4),
 
-                    // 重新生成
-                    _buildExpandableMenuOption(
-                      context: context,
-                      icon: Icons.refresh,
-                      title: l10n.regenerate,
-                      isExpanded: isRegenerateExpanded,
-                      onToggle: () {
-                        setMenuState(() {
-                          isRegenerateExpanded = !isRegenerateExpanded;
-                          // 关闭其他展开的菜单
-                          isScreenshotExpanded = false;
-                        });
-                      },
-                      children: [
-                        _buildSubMenuOption(
-                          context: context,
-                          icon: Icons.play_arrow,
-                          title: l10n.regenerateFromHere,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _regenerateMessage(
-                              RegenerateActionType.regenerateFromHere,
-                            );
-                          },
-                        ),
-                        _buildSubMenuOption(
-                          context: context,
-                          icon: Icons.reply,
-                          title: l10n.regenerateThisReply,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _regenerateMessage(
-                              RegenerateActionType.regenerateThisReply,
-                            );
-                          },
-                        ),
-                        _buildSubMenuOption(
-                          context: context,
-                          icon: Icons.arrow_back,
-                          title: l10n.regenerateLastReply,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _regenerateMessage(
-                              RegenerateActionType.regenerateLastReply,
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
+                    if (!isAuditNotice) ...[
+                      // 重新生成
+                      _buildExpandableMenuOption(
+                        context: context,
+                        icon: Icons.refresh,
+                        title: l10n.regenerate,
+                        isExpanded: isRegenerateExpanded,
+                        onToggle: () {
+                          setMenuState(() {
+                            isRegenerateExpanded = !isRegenerateExpanded;
+                            // 关闭其他展开的菜单
+                            isScreenshotExpanded = false;
+                          });
+                        },
+                        children: [
+                          _buildSubMenuOption(
+                            context: context,
+                            icon: Icons.play_arrow,
+                            title: l10n.regenerateFromHere,
+                            onTap: () {
+                              Navigator.pop(context);
+                              _regenerateMessage(
+                                RegenerateActionType.regenerateFromHere,
+                              );
+                            },
+                          ),
+                          _buildSubMenuOption(
+                            context: context,
+                            icon: Icons.reply,
+                            title: l10n.regenerateThisReply,
+                            onTap: () {
+                              Navigator.pop(context);
+                              _regenerateMessage(
+                                RegenerateActionType.regenerateThisReply,
+                              );
+                            },
+                          ),
+                          _buildSubMenuOption(
+                            context: context,
+                            icon: Icons.arrow_back,
+                            title: l10n.regenerateLastReply,
+                            onTap: () {
+                              Navigator.pop(context);
+                              _regenerateMessage(
+                                RegenerateActionType.regenerateLastReply,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
 
-                    // 从此处创建新对话
-                    _buildMenuOption(
-                      context: context,
-                      icon: Icons.add,
-                      title: l10n.createNewChatFromHere,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _createNewSessionFromMessage(context, widget.message);
-                      },
-                    ),
-                    const SizedBox(height: 4),
+                      // 从此处创建新对话
+                      _buildMenuOption(
+                        context: context,
+                        icon: Icons.add,
+                        title: l10n.createNewChatFromHere,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _createNewSessionFromMessage(context, widget.message);
+                        },
+                      ),
+                      const SizedBox(height: 4),
+                    ],
 
                     // 截图
                     _buildExpandableMenuOption(
@@ -2074,9 +2106,9 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                               ),
                             ),
                           const SizedBox(height: 2),
-                          if (widget.message.completionTokens != null)
+                          if (widget.message.totalTokens != null)
                             Text(
-                              '${l10n.outputTokensLabel}: ${widget.message.completionTokens}',
+                              '${l10n.totalTokens}: ${widget.message.totalTokens}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -2087,7 +2119,7 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                             )
                           else
                             Text(
-                              '${l10n.outputTokensLabel}: ${l10n.calculating}',
+                              '${l10n.totalTokens}: ${l10n.calculating}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
@@ -2096,6 +2128,21 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                                     ).colorScheme.onSurfaceVariant,
                               ),
                             ),
+                          if (widget.message.promptTokens != null ||
+                              widget.message.completionTokens != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              '${l10n.inputTokens}: ${widget.message.promptTokens ?? 0} / '
+                              '${l10n.outputTokens}: ${widget.message.completionTokens ?? 0}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

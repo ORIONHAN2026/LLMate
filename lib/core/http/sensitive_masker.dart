@@ -1,6 +1,6 @@
 /// 脱敏选项：分别控制手机号、身份证号是否脱敏
 ///
-/// 由大模型设置（[ChatModel.maskPhone] / [ChatModel.maskIdCard]）驱动，
+/// 由会话安全设置（[ChatSession.maskPhone] / [ChatSession.maskIdCard]）驱动，
 /// 仅当对应开关开启时才对匹配到的敏感信息进行 * 号替换。
 class SensitiveMaskOptions {
   /// 是否脱敏手机号
@@ -9,14 +9,13 @@ class SensitiveMaskOptions {
   /// 是否脱敏身份证号
   final bool maskIdCard;
 
-  const SensitiveMaskOptions({
-    this.maskPhone = false,
-    this.maskIdCard = false,
-  });
+  const SensitiveMaskOptions({this.maskPhone = false, this.maskIdCard = false});
 
   /// 两者均未开启
-  static const SensitiveMaskOptions disabled =
-      SensitiveMaskOptions(maskPhone: false, maskIdCard: false);
+  static const SensitiveMaskOptions disabled = SensitiveMaskOptions(
+    maskPhone: false,
+    maskIdCard: false,
+  );
 
   /// 是否至少有一项需要脱敏
   bool get hasAny => maskPhone || maskIdCard;
@@ -39,12 +38,14 @@ class SensitiveMasker {
 
   /// 身份证号：15 位纯数字 或 18 位（17 位数字 + 尾部校验位 [0-9Xx]）
   /// 使用 \b 词边界避免匹配更长数字串的中间片段。
-  static final RegExp _idCardRegex =
-      RegExp(r'\b(?:\d{15}|\d{17}[\dXx])\b');
+  static final RegExp _idCardRegex = RegExp(r'\b(?:\d{15}|\d{17}[\dXx])\b');
 
   /// 对一个字符串中的敏感信息进行脱敏，匹配到的数字串整体替换为等长 * 号。
   /// [options] 决定手机号 / 身份证号是否参与脱敏。
-  static String maskText(String text, [SensitiveMaskOptions options = const SensitiveMaskOptions()]) {
+  static String maskText(
+    String text, [
+    SensitiveMaskOptions options = const SensitiveMaskOptions(),
+  ]) {
     if (text.isEmpty || !options.hasAny) return text;
     var s = text;
     // 先处理身份证号（15/18 位），再处理手机号（11 位），互不重叠。
@@ -94,14 +95,15 @@ class SensitiveMasker {
     if (!options.hasAny) return body;
     final messages = body['messages'];
     if (messages is List) {
-      body['messages'] = messages.map((m) {
-        if (m is Map<String, dynamic>) {
-          final copy = Map<String, dynamic>.from(m);
-          copy['content'] = _maskContent(copy['content'], options);
-          return copy;
-        }
-        return m;
-      }).toList();
+      body['messages'] =
+          messages.map((m) {
+            if (m is Map<String, dynamic>) {
+              final copy = Map<String, dynamic>.from(m);
+              copy['content'] = _maskContent(copy['content'], options);
+              return copy;
+            }
+            return m;
+          }).toList();
     }
     return body;
   }
@@ -133,19 +135,16 @@ class SensitiveMasker {
 String maskSensitiveText(
   String text, [
   SensitiveMaskOptions options = const SensitiveMaskOptions(),
-]) =>
-    SensitiveMasker.maskText(text, options);
+]) => SensitiveMasker.maskText(text, options);
 
 /// 便捷顶层函数：对请求体 messages 脱敏。
 Map<String, dynamic> maskSensitiveBody(
   Map<String, dynamic> body, [
   SensitiveMaskOptions options = const SensitiveMaskOptions(),
-]) =>
-    SensitiveMasker.maskBody(body, options);
+]) => SensitiveMasker.maskBody(body, options);
 
 /// 便捷顶层函数：递归脱敏任意 JSON 结构（审计日志兜底用）。
 dynamic maskSensitiveJson(
   dynamic input, [
   SensitiveMaskOptions options = const SensitiveMaskOptions(),
-]) =>
-    SensitiveMasker.maskJson(input, options);
+]) => SensitiveMasker.maskJson(input, options);

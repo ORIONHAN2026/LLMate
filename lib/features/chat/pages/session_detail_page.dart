@@ -68,6 +68,15 @@ class SessionDetailPage extends StatelessWidget {
                   SessionConfigSidebar.buildServiceConfigSection(ctx, session),
         ),
         _DetailTab(
+          label: l10n.securitySettings,
+          icon: Icons.security_outlined,
+          builder:
+              (ctx) => SessionConfigSidebar.buildSecuritySettingsSection(
+                ctx,
+                session,
+              ),
+        ),
+        _DetailTab(
           label: l10n.mcpConfigLabel,
           icon: Icons.grid_view,
           builder: (ctx) => SessionConfigSidebar.buildMcpSection(ctx, session),

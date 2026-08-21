@@ -50,6 +50,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
   // 从 ChatInputWidget 获取的状态
   bool _autoScrollEnabled = true; // 是否启用自动滚动
   Set<String> _streamingMessageIds = {}; // 正在流式更新的消息ID集合
+  bool _showOnlyAlertMessages = false;
 
   // 滚动位置保存防抖Timer
   Timer? _scrollSaveTimer;
@@ -385,11 +386,13 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
           Column(
             children: [
               // 对话区域
+              _buildNoticeFilterBar(currentSession!),
               Flexible(
                 child: ChatConversationArea(
                   chatSession: currentSession!,
                   scrollController: _scrollController,
                   messageKeys: _messageKeys,
+                  showOnlyAlertMessages: _showOnlyAlertMessages,
                 ),
               ),
               // 附件显示区域
@@ -495,6 +498,67 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoticeFilterBar(ChatSession session) {
+    final alertCount =
+        session.messages
+            .where((m) => m.noticeLevel == MessageNoticeLevel.alert)
+            .length;
+    if (alertCount == 0) return const SizedBox.shrink();
+
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.6),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 16,
+            color: const Color(0xFFB45309),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '告警 $alertCount',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface.withValues(alpha: 0.72),
+            ),
+          ),
+          const Spacer(),
+          SegmentedButton<bool>(
+            showSelectedIcon: false,
+            style: ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 10),
+              ),
+            ),
+            segments: const [
+              ButtonSegment(value: false, label: Text('全部')),
+              ButtonSegment(value: true, label: Text('仅告警')),
+            ],
+            selected: {_showOnlyAlertMessages},
+            onSelectionChanged: (values) {
+              setState(() {
+                _showOnlyAlertMessages = values.first;
+              });
+            },
+          ),
         ],
       ),
     );

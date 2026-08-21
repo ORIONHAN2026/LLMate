@@ -115,6 +115,12 @@ class ChatSession {
   /// 会话级系统提示词（若设置，则在第三方请求时作为最高优先级指令注入）
   final String? systemPrompt;
 
+  /// 会话级安全设置：开启后，请求/工具结果中的手机号将被 * 号脱敏
+  final bool maskPhone;
+
+  /// 会话级安全设置：开启后，请求/工具结果中的身份证号将被 * 号脱敏
+  final bool maskIdCard;
+
   // === 计费统计 ===
 
   /// 累计输入token数
@@ -208,6 +214,8 @@ class ChatSession {
     this.scrollPosition = 0.0,
     this.connectPrompt,
     this.systemPrompt,
+    this.maskPhone = false,
+    this.maskIdCard = false,
     this.sessionQuickCommands = const [],
     this.promptTokens = 0,
     this.completionTokens = 0,
@@ -391,6 +399,8 @@ class ChatSession {
     bool clearConnectPrompt = false,
     String? systemPrompt,
     bool clearSystemPrompt = false,
+    bool? maskPhone,
+    bool? maskIdCard,
     List<ChatCommand>? sessionQuickCommands,
     int? promptTokens,
     int? completionTokens,
@@ -458,6 +468,8 @@ class ChatSession {
           clearConnectPrompt ? null : (connectPrompt ?? this.connectPrompt),
       systemPrompt:
           clearSystemPrompt ? null : (systemPrompt ?? this.systemPrompt),
+      maskPhone: maskPhone ?? this.maskPhone,
+      maskIdCard: maskIdCard ?? this.maskIdCard,
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
       promptTokens: promptTokens ?? this.promptTokens,
       completionTokens: completionTokens ?? this.completionTokens,
@@ -566,6 +578,8 @@ class ChatSession {
       scrollPosition: (json['scrollPosition'] as num?)?.toDouble() ?? 0.0,
       connectPrompt: json['connectPrompt'] as String?,
       systemPrompt: json['systemPrompt'] as String?,
+      maskPhone: json['maskPhone'] as bool? ?? chatModel?.maskPhone ?? false,
+      maskIdCard: json['maskIdCard'] as bool? ?? chatModel?.maskIdCard ?? false,
       sessionQuickCommands:
           (json['sessionQuickCommands'] as List<dynamic>?)
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
@@ -611,6 +625,8 @@ class ChatSession {
       if (connectPrompt != null) 'connectPrompt': connectPrompt,
       if (systemPrompt != null && systemPrompt!.isNotEmpty)
         'systemPrompt': systemPrompt,
+      'maskPhone': maskPhone,
+      'maskIdCard': maskIdCard,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
       'promptTokens': promptTokens,

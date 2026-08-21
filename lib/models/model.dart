@@ -32,10 +32,10 @@ class ChatModel {
   final double? temperature;
   final String? replyLanguage;
 
-  /// 安全设置：开启后，请求/响应中的手机号将被 * 号脱敏
+  /// 旧版模型级安全设置，仅用于迁移旧数据；新配置已迁移到 ChatSession。
   final bool maskPhone;
 
-  /// 安全设置：开启后，请求/响应中的身份证号将被 * 号脱敏
+  /// 旧版模型级安全设置，仅用于迁移旧数据；新配置已迁移到 ChatSession。
   final bool maskIdCard;
 
   /// 该供应商支持的模型列表（候选池，来自 /models 接口或本地 fallback）
@@ -156,9 +156,6 @@ class ChatModel {
     if (systemPrompt != null) result['systemPrompt'] = systemPrompt;
     if (temperature != null) result['temperature'] = temperature;
     if (replyLanguage != null) result['replyLanguage'] = replyLanguage;
-    result['maskPhone'] = maskPhone;
-    result['maskIdCard'] = maskIdCard;
-
     if (availableModels.isNotEmpty) {
       result['availableModels'] = availableModels;
     }

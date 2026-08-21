@@ -10,8 +10,8 @@ import '../sensitive_masker.dart';
 /// 位于 [languageCheckGuard] 之后、[userMessageGuard] 之前执行，
 /// 此时 `request.context['body']` 已由上游中间件装载好增强后的请求体。
 ///
-/// 职责：根据会话所绑定模型的设置（[ChatModel.maskPhone] /
-/// [ChatModel.maskIdCard]），对请求体中所有消息内容（用户消息 / 系统提示 /
+/// 职责：根据会话级安全设置（[ChatSession.maskPhone] /
+/// [ChatSession.maskIdCard]），对请求体中所有消息内容（用户消息 / 系统提示 /
 /// 工具结果等）内的手机号、身份证号等敏感信息进行 * 号脱敏（仅开启的项才处理），
 /// 再向下游注入。这样既避免明文 PII 被转发给第三方大模型，也保证落盘的审计日志
 /// 是脱敏后的。
@@ -32,11 +32,10 @@ Handler riskControlGuard(Handler innerHandler) {
       return innerHandler(request);
     }
 
-    // 从模型设置读取脱敏开关
-    final model = session.chatModel;
+    // 从会话设置读取脱敏开关
     final options = SensitiveMaskOptions(
-      maskPhone: model?.maskPhone ?? false,
-      maskIdCard: model?.maskIdCard ?? false,
+      maskPhone: session.maskPhone,
+      maskIdCard: session.maskIdCard,
     );
 
     // 未开启任何脱敏项则直接放行，零开销

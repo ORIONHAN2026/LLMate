@@ -1037,6 +1037,7 @@ class LocalHttpService {
       final content = _buildHttpAuditNotificationContent(
         success: success,
         riskHit: riskHit,
+        alert: !success || riskHit,
         duration: duration,
         promptTokens: promptTokens,
         completionTokens: completionTokens,
@@ -1054,6 +1055,16 @@ class LocalHttpService {
         model: session.chatModel?.modelId,
         isError: !success,
         auditTraceId: traceId,
+        noticeLevel:
+            !success || riskHit
+                ? MessageNoticeLevel.alert
+                : MessageNoticeLevel.normal,
+        generationStartTime: duration == null ? null : now.subtract(duration),
+        generationEndTime: duration == null ? null : now,
+        generationDuration: duration,
+        promptTokens: promptTokens,
+        completionTokens: completionTokens,
+        totalTokens: totalTokens,
       );
       await Get.find<SessionController>().appendMessage(message);
     } catch (e) {
@@ -1064,6 +1075,7 @@ class LocalHttpService {
   static String _buildHttpAuditNotificationContent({
     required bool success,
     required bool riskHit,
+    required bool alert,
     Duration? duration,
     int promptTokens = 0,
     int completionTokens = 0,
@@ -1075,6 +1087,7 @@ class LocalHttpService {
     final lines = <String>[
       success ? '已经完成大模型请求，点击查看审计。' : '大模型请求已结束，但处理失败，点击查看审计。',
       '',
+      '- 消息级别：${alert ? '告警' : '正常'}',
       '- 敏感信息：${riskHit ? '已触发脱敏' : '未发现敏感信息'}',
       '- 本次耗时：${_formatDurationSeconds(duration)}',
       '- Token 消耗：$totalTokens（输入 $promptTokens，输出 $completionTokens）',

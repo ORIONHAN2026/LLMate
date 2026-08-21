@@ -2,6 +2,8 @@ import '../../features/chat/widgets/message_widgets/content_block.dart';
 
 enum MessageRole { user, bot, tool }
 
+enum MessageNoticeLevel { normal, alert }
+
 class ChatMessage {
   final String msgId;
   final MessageRole role;
@@ -19,6 +21,9 @@ class ChatMessage {
   /// 关联的审计链路 ID。外部 HTTP 代理请求完成后会生成一条提醒消息，
   /// 点击该消息可以按 traceId 打开审计回放。
   final String? auditTraceId;
+
+  /// 消息提醒级别。普通聊天消息默认为 normal；HTTP 请求完成提醒可标记为 alert。
+  final MessageNoticeLevel noticeLevel;
 
   // 消息关联字段
   final String? pairedMsgId; // 配对的消息ID（用于关联用户消息和AI回复）
@@ -47,6 +52,7 @@ class ChatMessage {
     this.model,
     this.isError = false,
     this.auditTraceId,
+    this.noticeLevel = MessageNoticeLevel.normal,
     this.pairedMsgId, // 配对的消息ID（可选）
     this.toolName, // 工具名称（可选）
     this.toolCallId, // 工具调用ID（可选）
@@ -97,6 +103,7 @@ class ChatMessage {
       model: json['model'] as String?,
       isError: json['isError'] ?? false,
       auditTraceId: json['auditTraceId'] as String?,
+      noticeLevel: _parseNoticeLevel(json['noticeLevel'] as String?),
       pairedMsgId: json['pairedMessageId'],
       toolName: json['toolName'],
       toolCallId: json['toolCallId'],
@@ -148,6 +155,7 @@ class ChatMessage {
       'model': model,
       'isError': isError,
       if (auditTraceId != null) 'auditTraceId': auditTraceId,
+      'noticeLevel': _noticeLevelToString(noticeLevel),
       'pairedMessageId': pairedMsgId,
       'toolName': toolName,
       'toolCallId': toolCallId,
@@ -184,6 +192,7 @@ class ChatMessage {
     String? model,
     bool? isError,
     String? auditTraceId,
+    MessageNoticeLevel? noticeLevel,
     String? pairedMsgId, // 配对的消息ID
     String? toolName,
     String? toolCallId,
@@ -206,6 +215,7 @@ class ChatMessage {
       model: model ?? this.model,
       isError: isError ?? this.isError,
       auditTraceId: auditTraceId ?? this.auditTraceId,
+      noticeLevel: noticeLevel ?? this.noticeLevel,
       pairedMsgId: pairedMsgId ?? this.pairedMsgId, // 配对的消息ID
       toolName: toolName ?? this.toolName,
       toolCallId: toolCallId ?? this.toolCallId,
@@ -217,6 +227,25 @@ class ChatMessage {
       completionTokens: completionTokens ?? this.completionTokens,
       generationDuration: generationDuration ?? this.generationDuration,
     );
+  }
+
+  static MessageNoticeLevel _parseNoticeLevel(String? level) {
+    switch (level) {
+      case 'alert':
+        return MessageNoticeLevel.alert;
+      case 'normal':
+      default:
+        return MessageNoticeLevel.normal;
+    }
+  }
+
+  static String _noticeLevelToString(MessageNoticeLevel level) {
+    switch (level) {
+      case MessageNoticeLevel.normal:
+        return 'normal';
+      case MessageNoticeLevel.alert:
+        return 'alert';
+    }
   }
 
   @override

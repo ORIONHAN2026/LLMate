@@ -79,12 +79,6 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
             icon: Icons.tune,
             child: _buildModelParamsTab(),
           ),
-          const SizedBox(height: 16),
-          _buildSection(
-            title: loc.securitySettings,
-            icon: Icons.security_outlined,
-            child: _buildSecurityTab(),
-          ),
         ],
       ),
     );
@@ -164,109 +158,6 @@ class _ModelConfigTabState extends State<ModelConfigTab> {
         _buildSystemPromptField(),
       ],
     );
-  }
-
-  // ========== 安全设置 Tab（敏感信息脱敏开关） ==========
-  Widget _buildSecurityTab() {
-    final loc = AppLocalizations.of(context)!;
-    final maskPhone = _currentModel.maskPhone;
-    final maskIdCard = _currentModel.maskIdCard;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          loc.sensitiveInfoMasking,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.8),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          loc.sensitiveInfoMaskingDesc,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.56),
-          ),
-        ),
-        const SizedBox(height: 14),
-        _buildSecuritySwitch(
-          title: loc.maskPhoneTitle,
-          subtitle: loc.maskPhoneSubtitle,
-          value: maskPhone,
-          onChanged: (v) => _updateSecuritySetting(maskPhone: v),
-        ),
-        const SizedBox(height: 10),
-        _buildSecuritySwitch(
-          title: loc.maskIdCardTitle,
-          subtitle: loc.maskIdCardSubtitle,
-          value: maskIdCard,
-          onChanged: (v) => _updateSecuritySetting(maskIdCard: v),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSecuritySwitch({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: scheme.onSurface.withValues(alpha: 0.56),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(value: value, onChanged: onChanged),
-        ],
-      ),
-    );
-  }
-
-  void _updateSecuritySetting({bool? maskPhone, bool? maskIdCard}) {
-    setState(() {
-      _currentModel = _currentModel.copyWith(
-        maskPhone: maskPhone,
-        maskIdCard: maskIdCard,
-      );
-    });
-    widget.onModelUpdated(_currentModel);
   }
 
   Widget _buildConfigItem(String label, String value) {

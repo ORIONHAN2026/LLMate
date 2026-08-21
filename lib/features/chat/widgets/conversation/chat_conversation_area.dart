@@ -17,12 +17,14 @@ class ChatConversationArea extends StatefulWidget {
   final ChatSession chatSession;
   final ScrollController scrollController;
   final Map<String, GlobalKey> messageKeys;
+  final bool showOnlyAlertMessages;
 
   const ChatConversationArea({
     super.key,
     required this.chatSession,
     required this.scrollController,
     required this.messageKeys,
+    this.showOnlyAlertMessages = false,
   });
 
   @override
@@ -973,65 +975,88 @@ class _ChatConversationAreaState extends State<ChatConversationArea> {
 
   @override
   Widget build(BuildContext context) {
-    return widget.chatSession.messages.isEmpty
-        ? Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 80,
-                height: 80,
-                child: Icon(
-                  Icons.chat_bubble_outline,
-                  size: 80,
-                  color: Colors.grey[600],
-                ),
+    final messages =
+        widget.showOnlyAlertMessages
+            ? widget.chatSession.messages
+                .where((m) => m.noticeLevel == MessageNoticeLevel.alert)
+                .toList()
+            : widget.chatSession.messages;
+
+    if (widget.chatSession.messages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 80,
+              height: 80,
+              child: Icon(
+                Icons.chat_bubble_outline,
+                size: 80,
+                color: Colors.grey[600],
               ),
-              const SizedBox(height: 8),
-            ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      );
+    }
+
+    if (messages.isEmpty) {
+      return Center(
+        child: Text(
+          '暂无告警消息',
+          style: TextStyle(
+            fontSize: 14,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.56),
           ),
-        )
-        : ListView.builder(
-          controller: widget.scrollController,
-          reverse: true,
-          padding: ResponsiveUtils.getPagePadding(context),
-          itemCount: widget.chatSession.messages.length,
-          itemBuilder: (context, idx) {
-            final reversedIdx = widget.chatSession.messages.length - 1 - idx;
-            final msg = widget.chatSession.messages[reversedIdx];
-            if (!widget.messageKeys.containsKey(msg.msgId)) {
-              widget.messageKeys[msg.msgId] = GlobalKey();
-            }
-            Widget messageWidget;
-            if (msg.role == MessageRole.user) {
-              messageWidget = UserMessageWidget(
-                message: msg,
-                onUpdate: () {
-                  setState(() {});
-                },
-                onCaptureMessage: handleCaptureMessageImage,
-                onCaptureRound: handleCaptureRoundImage,
-                onCaptureConversation: handleCaptureConversationImage,
-              );
-            } else {
-              messageWidget = AiMessageWidget(
-                message: msg,
-                onUpdate: () {
-                  setState(() {});
-                },
-                onCaptureMessage: handleCaptureMessageImage,
-                onCaptureRound: handleCaptureRoundImage,
-                onCaptureConversation: handleCaptureConversationImage,
-              );
-            }
-            return Container(
-              margin: const EdgeInsets.only(bottom: 1),
-              child: RepaintBoundary(
-                key: widget.messageKeys[msg.msgId],
-                child: messageWidget,
-              ),
-            );
-          },
+        ),
+      );
+    }
+
+    return ListView.builder(
+      controller: widget.scrollController,
+      reverse: true,
+      padding: ResponsiveUtils.getPagePadding(context),
+      itemCount: messages.length,
+      itemBuilder: (context, idx) {
+        final reversedIdx = messages.length - 1 - idx;
+        final msg = messages[reversedIdx];
+        if (!widget.messageKeys.containsKey(msg.msgId)) {
+          widget.messageKeys[msg.msgId] = GlobalKey();
+        }
+        Widget messageWidget;
+        if (msg.role == MessageRole.user) {
+          messageWidget = UserMessageWidget(
+            message: msg,
+            onUpdate: () {
+              setState(() {});
+            },
+            onCaptureMessage: handleCaptureMessageImage,
+            onCaptureRound: handleCaptureRoundImage,
+            onCaptureConversation: handleCaptureConversationImage,
+          );
+        } else {
+          messageWidget = AiMessageWidget(
+            message: msg,
+            onUpdate: () {
+              setState(() {});
+            },
+            onCaptureMessage: handleCaptureMessageImage,
+            onCaptureRound: handleCaptureRoundImage,
+            onCaptureConversation: handleCaptureConversationImage,
+          );
+        }
+        return Container(
+          margin: const EdgeInsets.only(bottom: 1),
+          child: RepaintBoundary(
+            key: widget.messageKeys[msg.msgId],
+            child: messageWidget,
+          ),
         );
+      },
+    );
   }
 }

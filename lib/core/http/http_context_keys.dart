@@ -10,6 +10,7 @@ class HttpContextKeys {
   static const promptInsertCount = 'promptInsertCount';
   static const routeDecision = 'routeDecision';
   static const riskControl = 'riskControl';
+  static const riskControlHit = 'riskControlHit';
   static const auditCallback = 'auditCallback';
   static const requestId = 'requestId';
   static const userMessage = 'userMessage';

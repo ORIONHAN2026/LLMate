@@ -56,8 +56,8 @@ class ResponsiveUtils {
     return responsive(
       context,
       mobile: MediaQuery.of(context).size.width * 0.9, // 移动端占90%宽度
-      tablet: 400.0,
-      desktop: 360.0,
+      tablet: 410.0,
+      desktop: 370.0,
     );
   }
 

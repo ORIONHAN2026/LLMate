@@ -16,6 +16,10 @@ class ChatMessage {
 
   final bool isError;
 
+  /// 关联的审计链路 ID。外部 HTTP 代理请求完成后会生成一条提醒消息，
+  /// 点击该消息可以按 traceId 打开审计回放。
+  final String? auditTraceId;
+
   // 消息关联字段
   final String? pairedMsgId; // 配对的消息ID（用于关联用户消息和AI回复）
 
@@ -42,6 +46,7 @@ class ChatMessage {
     this.sessionId,
     this.model,
     this.isError = false,
+    this.auditTraceId,
     this.pairedMsgId, // 配对的消息ID（可选）
     this.toolName, // 工具名称（可选）
     this.toolCallId, // 工具调用ID（可选）
@@ -91,6 +96,7 @@ class ChatMessage {
       sessionId: json['sessionId'],
       model: json['model'] as String?,
       isError: json['isError'] ?? false,
+      auditTraceId: json['auditTraceId'] as String?,
       pairedMsgId: json['pairedMessageId'],
       toolName: json['toolName'],
       toolCallId: json['toolCallId'],
@@ -141,6 +147,7 @@ class ChatMessage {
       'sessionId': sessionId,
       'model': model,
       'isError': isError,
+      if (auditTraceId != null) 'auditTraceId': auditTraceId,
       'pairedMessageId': pairedMsgId,
       'toolName': toolName,
       'toolCallId': toolCallId,
@@ -176,6 +183,7 @@ class ChatMessage {
     String? sessionId,
     String? model,
     bool? isError,
+    String? auditTraceId,
     String? pairedMsgId, // 配对的消息ID
     String? toolName,
     String? toolCallId,
@@ -197,6 +205,7 @@ class ChatMessage {
       sessionId: sessionId ?? this.sessionId,
       model: model ?? this.model,
       isError: isError ?? this.isError,
+      auditTraceId: auditTraceId ?? this.auditTraceId,
       pairedMsgId: pairedMsgId ?? this.pairedMsgId, // 配对的消息ID
       toolName: toolName ?? this.toolName,
       toolCallId: toolCallId ?? this.toolCallId,

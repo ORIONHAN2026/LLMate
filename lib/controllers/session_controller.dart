@@ -100,6 +100,48 @@ class SessionController extends GetxController {
     }
   }
 
+  /// 追加一条消息到指定会话。
+  ///
+  /// 用于 HTTP 服务等后台入口：即使目标会话当前未打开，也会先写入消息库；
+  /// 如果会话在内存中，则同步更新内存列表和当前会话，保证 UI 即时刷新。
+  Future<void> appendMessage(ChatMessage message) async {
+    final sessionId = message.sessionId;
+    if (sessionId == null || sessionId.isEmpty) return;
+
+    final normalized =
+        message.sessionId == sessionId
+            ? message
+            : message.copyWith(sessionId: sessionId);
+    await MessageController.instance.addMessage(normalized);
+
+    final idx = sessions.indexWhere((s) => s.sessionId == sessionId);
+    if (idx == -1) return;
+
+    var session = sessions[idx];
+    var messages = List<ChatMessage>.from(session.messages);
+    if (messages.isEmpty) {
+      messages = await loadMessages(sessionId);
+    }
+    final existingIndex = messages.indexWhere(
+      (m) => m.msgId == normalized.msgId,
+    );
+    if (existingIndex >= 0) {
+      messages[existingIndex] = normalized;
+    } else {
+      messages.add(normalized);
+    }
+
+    final updatedSession = session.copyWith(messages: messages);
+    sessions[idx] = updatedSession;
+    if (currentSession.value?.sessionId == sessionId) {
+      currentSession.value = updatedSession;
+    }
+    await _persistSessionAndCurrent(
+      updatedSession,
+      isCurrent: currentSession.value?.sessionId == sessionId,
+    );
+  }
+
   /// 自动计算会话的累计计费信息（Token 统计，费用由 ChatSession.totalCost getter 实时计算）
   ChatSession _recalculateBilling(ChatSession session) {
     // 如果消息列表为空（懒加载未完成），保留现有的 token 值，避免覆盖为 0

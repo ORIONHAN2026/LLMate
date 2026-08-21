@@ -11,9 +11,11 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart' as cors;
 
 import '../../controllers/settings_controller.dart';
 import '../../controllers/audit_controller.dart';
+import '../../controllers/session_controller.dart';
 import '../../controllers/usage_controller.dart';
 import '../../controllers/address_detector_controller.dart';
 import '../services/storage_paths.dart';
+import '../../models/chat/message.dart';
 import '../../models/chat/session.dart';
 import '../../models/audit.dart';
 import 'middleware/session_check_guard.dart';
@@ -461,6 +463,8 @@ class LocalHttpService {
           int toolIteration = 0; // 当前工具调用轮次
           const maxToolIterations = 20; // 防止无限循环
           bool fallbackTried = false; // 失败回退链：是否已重试过高能力模型
+          bool requestFailed = false;
+          String? requestError;
 
           // ── 工具调用循环 ──
           // 每一轮：请求 LLM → 解析响应 → 如果有 MCP 工具调用则执行 → 结果回填 → 继续下一轮
@@ -574,6 +578,8 @@ class LocalHttpService {
 
             // LLM 最终仍错误 → 把延迟的错误 SSE 写出并退出
             if (hasError) {
+              requestFailed = true;
+              requestError = round.errorMessage ?? 'LLM API error';
               writeOpenAiError(
                 streamController,
                 message: round.errorMessage ?? 'LLM API error',
@@ -776,6 +782,21 @@ class LocalHttpService {
                 request.context[HttpContextKeys.routeDecision]
                     as RouteDecision?,
           );
+
+          if (auditTrace != null) {
+            await _appendHttpAuditNotificationMessage(
+              request: request,
+              session: session,
+              trace: auditTrace,
+              success: !requestFailed,
+              error: requestError,
+              duration: DateTime.now().difference(generationStartTime),
+              promptTokens: promptTokens,
+              completionTokens: completionTokens,
+              cacheWriteTokens: cacheWriteTokens,
+              cacheReadTokens: cacheReadTokens,
+            );
+          }
         } catch (e, st) {
           // ── 异步 IIFE 内部异常 ──
           debugPrint('❌ 流式代理错误: $e');
@@ -798,6 +819,17 @@ class LocalHttpService {
             responseContent: '',
             error: e.toString(),
           );
+
+          if (auditTrace != null) {
+            await _appendHttpAuditNotificationMessage(
+              request: request,
+              session: session,
+              trace: auditTrace,
+              success: false,
+              error: e.toString(),
+              duration: DateTime.now().difference(generationStartTime),
+            );
+          }
 
           // 按 OpenAI 标准错误格式返回给调用方并正常结束响应，而不是抛异常断连
           streamController.add(
@@ -982,6 +1014,85 @@ class LocalHttpService {
       ],
       if (usage != null) 'usage': usage,
     };
+  }
+
+  static Future<void> _appendHttpAuditNotificationMessage({
+    required Request request,
+    required ChatSession session,
+    required AuditTrace trace,
+    required bool success,
+    String? error,
+    Duration? duration,
+    int promptTokens = 0,
+    int completionTokens = 0,
+    int cacheWriteTokens = 0,
+    int cacheReadTokens = 0,
+  }) async {
+    try {
+      if (!Get.isRegistered<SessionController>()) return;
+      final now = DateTime.now();
+      final traceId = trace.traceId;
+      final riskHit = request.context[HttpContextKeys.riskControlHit] == true;
+      final totalTokens = promptTokens + completionTokens;
+      final content = _buildHttpAuditNotificationContent(
+        success: success,
+        riskHit: riskHit,
+        duration: duration,
+        promptTokens: promptTokens,
+        completionTokens: completionTokens,
+        totalTokens: totalTokens,
+        cacheWriteTokens: cacheWriteTokens,
+        cacheReadTokens: cacheReadTokens,
+        error: error,
+      );
+      final message = ChatMessage(
+        msgId: 'http_audit_$traceId',
+        role: MessageRole.bot,
+        content: content,
+        timestamp: now,
+        sessionId: session.sessionId,
+        model: session.chatModel?.modelId,
+        isError: !success,
+        auditTraceId: traceId,
+      );
+      await Get.find<SessionController>().appendMessage(message);
+    } catch (e) {
+      debugPrint('⚠️ [HTTP] 写入审计提醒消息失败: $e');
+    }
+  }
+
+  static String _buildHttpAuditNotificationContent({
+    required bool success,
+    required bool riskHit,
+    Duration? duration,
+    int promptTokens = 0,
+    int completionTokens = 0,
+    int totalTokens = 0,
+    int cacheWriteTokens = 0,
+    int cacheReadTokens = 0,
+    String? error,
+  }) {
+    final lines = <String>[
+      success ? '已经完成大模型请求，点击查看审计。' : '大模型请求已结束，但处理失败，点击查看审计。',
+      '',
+      '- 敏感信息：${riskHit ? '已触发脱敏' : '未发现敏感信息'}',
+      '- 本次耗时：${_formatDurationSeconds(duration)}',
+      '- Token 消耗：$totalTokens（输入 $promptTokens，输出 $completionTokens）',
+    ];
+    if (cacheWriteTokens > 0 || cacheReadTokens > 0) {
+      lines.add('- 缓存 Token：写入 $cacheWriteTokens，读取 $cacheReadTokens');
+    }
+    if (!success && error != null && error.isNotEmpty) {
+      lines
+        ..add('')
+        ..add('错误信息：$error');
+    }
+    return lines.join('\n');
+  }
+
+  static String _formatDurationSeconds(Duration? duration) {
+    if (duration == null) return '-- 秒';
+    return '${(duration.inMilliseconds / 1000).toStringAsFixed(2)} 秒';
   }
 
   /// 保存用量统计（写入用量数据库 `~/.llmate/usages.db`）

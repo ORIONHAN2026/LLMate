@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../core/services/backup_service.dart';
+import '../core/services/storage_paths.dart';
 import '../data/database.dart';
 import '../models/system_setting.dart';
 
@@ -50,6 +54,16 @@ class SettingsController extends GetxController {
   RxBool get httpsEnabled => systemSetting.httpsEnabled;
   RxInt get httpPort => systemSetting.httpPort;
   RxInt get httpsPort => systemSetting.httpsPort;
+  RxnString get backupDirectory => systemSetting.backupDirectory;
+  RxBool get autoBackupEnabled => systemSetting.autoBackupEnabled;
+  RxInt get autoBackupKeepCount => systemSetting.autoBackupKeepCount;
+  RxnString get autoBackupLastAt => systemSetting.autoBackupLastAt;
+  String get effectiveBackupDirectory =>
+      systemSetting.backupDirectory.value ??
+      '${StoragePaths.home}/.llmate_backups';
+
+  Timer? _autoBackupTimer;
+  bool _autoBackupRunning = false;
 
   /// 写入单条设置（值为任意可 JSON 序列化对象）
   Future<void> _putSetting(String key, Object value) async {
@@ -85,6 +99,14 @@ class SettingsController extends GetxController {
     Get.changeThemeMode(systemSetting.themeMode);
     Get.updateLocale(systemSetting.locale.value);
     await _ensureDefaultSettings();
+    _restartAutoBackupTimer();
+    Future.microtask(_runAutoBackupIfNeeded);
+  }
+
+  @override
+  void onClose() {
+    _autoBackupTimer?.cancel();
+    super.onClose();
   }
 
   /// 首次启动（db 中尚无 `systemSetting` 记录）时落地默认配置
@@ -129,10 +151,13 @@ class SettingsController extends GetxController {
       final brightness =
           WidgetsBinding.instance.platformDispatcher.platformBrightness;
       setThemeMode(
-          brightness == Brightness.dark ? ThemeMode.light : ThemeMode.dark);
+        brightness == Brightness.dark ? ThemeMode.light : ThemeMode.dark,
+      );
       return;
     }
-    setThemeMode(systemSetting.isDarkMode.value ? ThemeMode.light : ThemeMode.dark);
+    setThemeMode(
+      systemSetting.isDarkMode.value ? ThemeMode.light : ThemeMode.dark,
+    );
   }
 
   // ════════════════════════════════════════════════════════
@@ -151,7 +176,8 @@ class SettingsController extends GetxController {
     systemSetting.domain.value = domain;
     systemSetting.certPath.value = certPath;
     systemSetting.keyPath.value = keyPath;
-    systemSetting.httpsEnabled.value = httpsEnabled ?? systemSetting.httpsEnabled.value;
+    systemSetting.httpsEnabled.value =
+        httpsEnabled ?? systemSetting.httpsEnabled.value;
     systemSetting.httpPort.value = httpPort;
     systemSetting.httpsPort.value = httpsPort ?? systemSetting.httpsPort.value;
     await _saveSystemSetting();
@@ -186,5 +212,90 @@ class SettingsController extends GetxController {
     systemSetting.locale.value = newLocale;
     _saveSystemSetting();
     Get.updateLocale(newLocale);
+  }
+
+  /// 设置备份目录
+  Future<void> setBackupDirectory(String path) async {
+    systemSetting.backupDirectory.value = path;
+    await _saveSystemSetting();
+  }
+
+  Future<void> setAutoBackupEnabled(bool enabled) async {
+    final previous = systemSetting.autoBackupEnabled.value;
+    systemSetting.autoBackupEnabled.value = enabled;
+    await _saveSystemSetting();
+    _restartAutoBackupTimer();
+    if (enabled) {
+      try {
+        await _runAutoBackupIfNeeded(force: true, rethrowErrors: true);
+      } catch (_) {
+        systemSetting.autoBackupEnabled.value = previous;
+        await _saveSystemSetting();
+        _restartAutoBackupTimer();
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> setAutoBackupKeepCount(int count) async {
+    systemSetting.autoBackupKeepCount.value = count.clamp(1, 30);
+    await _saveSystemSetting();
+    await BackupService.pruneAutomaticBackups(
+      outputDirectory: effectiveBackupDirectory,
+      keepLatest: systemSetting.autoBackupKeepCount.value,
+    );
+  }
+
+  Future<void> runAutomaticBackupNow() async {
+    await _runAutoBackupIfNeeded(force: true, rethrowErrors: true);
+  }
+
+  void _restartAutoBackupTimer() {
+    _autoBackupTimer?.cancel();
+    _autoBackupTimer = null;
+    if (!systemSetting.autoBackupEnabled.value) return;
+
+    _autoBackupTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      _runAutoBackupIfNeeded();
+    });
+  }
+
+  Future<void> _runAutoBackupIfNeeded({
+    bool force = false,
+    bool rethrowErrors = false,
+  }) async {
+    if (!force && !systemSetting.autoBackupEnabled.value) return;
+    if (_autoBackupRunning) return;
+
+    final lastAt = DateTime.tryParse(
+      systemSetting.autoBackupLastAt.value ?? '',
+    );
+    if (!force && _hasBackedUpAfterTodayMidnight(lastAt)) {
+      return;
+    }
+
+    _autoBackupRunning = true;
+    try {
+      final file = await BackupService.createAutomaticBackup(
+        outputDirectory: effectiveBackupDirectory,
+        keepLatest:
+            systemSetting.autoBackupKeepCount.value.clamp(1, 30).toInt(),
+      );
+      systemSetting.autoBackupLastAt.value = DateTime.now().toIso8601String();
+      await _saveSystemSetting();
+      debugPrint('✅ [Backup] 自动备份完成: ${file.path}');
+    } catch (e) {
+      debugPrint('⚠️ [Backup] 自动备份失败: $e');
+      if (rethrowErrors) rethrow;
+    } finally {
+      _autoBackupRunning = false;
+    }
+  }
+
+  bool _hasBackedUpAfterTodayMidnight(DateTime? lastAt) {
+    if (lastAt == null) return false;
+    final now = DateTime.now();
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    return !lastAt.isBefore(todayMidnight);
   }
 }

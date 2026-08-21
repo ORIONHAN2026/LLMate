@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../panels/audit_viewer.dart';
 import './chat_message_widget.dart';
 
 // AI消息组件
@@ -299,6 +300,11 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
                           // 显示消息内容（按 contentBlocks 顺序渲染）
                           _buildContentBlocks(),
 
+                        if (widget.message.auditTraceId != null) ...[
+                          const SizedBox(height: 10),
+                          _buildAuditReplayAction(widget.message.auditTraceId!),
+                        ],
+
                         //
 
                         // 底部时间信息和操作按钮 - 悬停时显示，但保持布局高度
@@ -397,6 +403,25 @@ class _AiMessageWidgetState extends State<AiMessageWidget>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAuditReplayAction(String traceId) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextButton.icon(
+      style: TextButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        foregroundColor: colorScheme.primary,
+        backgroundColor: colorScheme.primary.withValues(alpha: 0.08),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      onPressed: () => AuditReplayPage.show(context, traceId),
+      icon: const Icon(Icons.manage_search_outlined, size: 18),
+      label: const Text(
+        '查看审计',
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       ),
     );
   }

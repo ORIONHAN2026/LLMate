@@ -1,4 +1,5 @@
 import 'package:shelf/shelf.dart';
+import 'dart:convert';
 
 import '../../../models/chat/session.dart';
 import '../http_context_keys.dart';
@@ -44,13 +45,16 @@ Handler riskControlGuard(Handler innerHandler) {
     }
 
     // 脱敏后的请求体重新注入下游，并记录脱敏开关供日志/工具循环使用
+    final before = jsonEncode(body);
     final maskedBody = maskSensitiveBody(body, options);
+    final hit = before != jsonEncode(maskedBody);
 
     final updatedRequest = request.change(
       context: {
         ...request.context,
         HttpContextKeys.body: maskedBody,
         HttpContextKeys.riskControl: options,
+        HttpContextKeys.riskControlHit: hit,
       },
     );
 

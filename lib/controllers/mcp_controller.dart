@@ -15,6 +15,7 @@ import './model_controller.dart';
 // MCP 连接信息
 class McpConnectionInfo {
   final String serverName;
+  final String? serverTitle;
   final String? description;
   final String? serverVersion;
   final List<McpTool> tools;
@@ -22,11 +23,30 @@ class McpConnectionInfo {
 
   const McpConnectionInfo({
     required this.serverName,
+    this.serverTitle,
     this.description,
     this.serverVersion,
     required this.tools,
     required this.prompt,
   });
+}
+
+class McpRefreshResult {
+  final String? serverName;
+  final String? serverTitle;
+  final String? description;
+  final String? serverVersion;
+  final List<McpTool> tools;
+
+  const McpRefreshResult({
+    this.serverName,
+    this.serverTitle,
+    this.description,
+    this.serverVersion,
+    required this.tools,
+  });
+
+  String? get displayName => serverTitle ?? serverName;
 }
 
 // 工具调用执行结果（统一返回）
@@ -117,6 +137,7 @@ class McpController extends GetxController {
       if (existing.description != null) {
         merged['description'] = existing.description!;
       }
+      if (existing.title != null) merged['title'] = existing.title!;
       if (existing.tools != null) {
         merged['tools'] = existing.tools!.map((t) => t.toJson()).toList();
       }
@@ -209,7 +230,7 @@ class McpController extends GetxController {
 
   // ═══ 刷新服务工具 ═══
 
-  Future<List<McpTool>> refreshServiceTools(Mcp config) async {
+  Future<McpRefreshResult> refreshServiceTools(Mcp config) async {
     final timeoutSec = config.timeout ?? _defaultTimeout;
     debugPrint('🔄 ====== 开始刷新 MCP 服务工具: ${config.name} ======');
     await _cleanupClient(config.name);
@@ -265,6 +286,13 @@ class McpController extends GetxController {
         Duration(seconds: timeoutSec),
         onTimeout: () => throw TimeoutException('获取工具列表超时: ${config.name}'),
       );
+      final info = client.serverInfo;
+      final serverName = _serverInfoString(info, 'name');
+      final serverTitle = _serverInfoString(info, 'title');
+      final serverVersion = _serverInfoString(info, 'version');
+      final serverDescription =
+          _serverInfoString(info, 'description') ??
+          _nonEmpty(client.instructions);
       final toolInfos =
           tools
               .map(
@@ -276,9 +304,15 @@ class McpController extends GetxController {
               )
               .toList();
       debugPrint(
-        '✅ ====== 刷新成功: ${config.name}, 工具数: ${toolInfos.length} ======',
+        '✅ ====== 刷新成功: ${serverTitle ?? serverName ?? config.name}, 工具数: ${toolInfos.length} ======',
       );
-      return toolInfos;
+      return McpRefreshResult(
+        serverName: serverName,
+        serverTitle: serverTitle,
+        description: serverDescription,
+        serverVersion: serverVersion,
+        tools: toolInfos,
+      );
     } catch (e, stack) {
       debugPrint(
         '${e is TimeoutException ? '⏱' : '❌'} ====== 刷新失败: ${config.name} ======',
@@ -323,11 +357,11 @@ class McpController extends GetxController {
             onTimeout: () => throw TimeoutException('连接超时: ${config.name}'),
           );
       final info = client.serverInfo;
-      final serverName =
-          info != null ? (info['name'] as String? ?? config.name) : config.name;
-      final serverVersion =
-          info != null ? (info['version'] as String? ?? '') : '';
-      final serverDesc = client.instructions;
+      final serverName = _serverInfoString(info, 'name') ?? config.name;
+      final serverTitle = _serverInfoString(info, 'title');
+      final serverVersion = _serverInfoString(info, 'version') ?? '';
+      final serverDesc =
+          _serverInfoString(info, 'description') ?? client.instructions;
       final tools = await client.listTools().timeout(
         Duration(seconds: timeoutSec),
         onTimeout: () => throw TimeoutException('listTools 超时: $serverName'),
@@ -353,6 +387,7 @@ class McpController extends GetxController {
       }
       final server = Mcp(
         name: finalName,
+        title: serverTitle ?? serverName,
         description: finalDesc,
         version: serverVersion.isNotEmpty ? serverVersion : null,
         tools: toolInfos,
@@ -362,6 +397,7 @@ class McpController extends GetxController {
       debugPrint('✅ ====== 获取信息成功: $finalName ======');
       return McpConnectionInfo(
         serverName: finalName,
+        serverTitle: serverTitle ?? serverName,
         description: finalDesc,
         serverVersion: serverVersion.isNotEmpty ? serverVersion : null,
         tools: toolInfos,
@@ -380,6 +416,17 @@ class McpController extends GetxController {
       _clients.remove(config.name);
       _availableTools.remove(config.name);
     }
+  }
+
+  static String? _serverInfoString(Map<String, dynamic>? info, String key) {
+    if (info == null) return null;
+    return _nonEmpty(info[key]);
+  }
+
+  static String? _nonEmpty(Object? value) {
+    if (value is! String) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   // ═══ LLM 总结 ═══
@@ -880,7 +927,7 @@ class McpController extends GetxController {
     if (toolInfos == null || toolInfos.isEmpty) return '';
     final buf = StringBuffer();
     buf.writeln('## 可用的MCP工具\n');
-    buf.writeln('### 📋 ${mcp.name} 服务工具\n');
+    buf.writeln('### 📋 ${mcp.displayName} 服务工具\n');
     for (int i = 0; i < toolInfos.length; i++) {
       final tool = toolInfos[i];
       buf.writeln('#### ${i + 1}. **${tool.name}**');

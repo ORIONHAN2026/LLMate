@@ -532,12 +532,17 @@ class _McpManagementPageState extends State<McpManagementPage> {
     if (!mounted) return;
     setState(() => _loadingServices.add(service.name));
     try {
-      final tools = await McpController.instance.refreshServiceTools(service);
+      final refreshResult = await McpController.instance.refreshServiceTools(
+        service,
+      );
+      final tools = refreshResult.tools;
+      final displayName = refreshResult.displayName ?? service.displayName;
 
-      String finalDescription = service.description ?? '';
-      if (tools.isNotEmpty) {
+      String finalDescription =
+          refreshResult.description ?? service.description ?? '';
+      if (finalDescription.isEmpty && tools.isNotEmpty) {
         final summary = await McpController.instance.summarizeWithLLM(
-          serverName: service.name,
+          serverName: displayName,
           tools: tools,
         );
         if (summary != null) {
@@ -549,7 +554,9 @@ class _McpManagementPageState extends State<McpManagementPage> {
       }
 
       final updatedService = service.copyWith(
+        title: refreshResult.serverTitle ?? refreshResult.serverName,
         description: finalDescription,
+        version: refreshResult.serverVersion,
         tools: tools,
         lastUpdated: DateTime.now(),
       );
@@ -561,7 +568,10 @@ class _McpManagementPageState extends State<McpManagementPage> {
       await _loadServices();
 
       if (mounted) {
-        SnackBarUtils.showSuccess(context, '已刷新 ${tools.length} 个工具');
+        SnackBarUtils.showSuccess(
+          context,
+          '已刷新 $displayName 的 ${tools.length} 个工具',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -639,7 +649,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      service.name,
+                                      mcpObj.displayName,
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w800,
@@ -1030,7 +1040,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
     ConfirmDeleteDialog.show(
       context: context,
       title: '移除 MCP',
-      itemName: service.name,
+      itemName: service.displayName,
       description: '确定要移除该 MCP 服务',
       confirmText: '移除',
     ).then((confirmed) async {
@@ -1052,7 +1062,7 @@ class _McpManagementPageState extends State<McpManagementPage> {
         }
         await _loadServices();
         if (mounted) {
-          SnackBarUtils.showInfo(context, '已移除: ${service.name}');
+          SnackBarUtils.showInfo(context, '已移除: ${service.displayName}');
         }
       }
     });
@@ -1132,7 +1142,7 @@ class _McpCardState extends State<_McpCard> {
                       children: [
                         Flexible(
                           child: Text(
-                            service.name,
+                            service.displayName,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 13,

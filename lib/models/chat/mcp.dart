@@ -31,6 +31,7 @@ extension McpTransportTypeExt on McpTransportType {
 
 class Mcp {
   final String name; // 唯一标识（与文件夹名一致）
+  final String? title; // 服务端展示名称（serverInfo.title）
   final String? description; // 描述
 
   // ── Stdio 类型配置 ──
@@ -54,6 +55,7 @@ class Mcp {
 
   const Mcp({
     required this.name,
+    this.title,
     this.description,
     this.command,
     this.args,
@@ -69,6 +71,11 @@ class Mcp {
     this.tools,
     this.lastUpdated,
   });
+
+  String get displayName {
+    final t = title?.trim();
+    return t != null && t.isNotEmpty ? t : name;
+  }
 
   /// 从包含 name 字段的 Map 反序列化
   factory Mcp.fromMap(Map<String, dynamic> json) {
@@ -104,10 +111,22 @@ class Mcp {
     final lastUpdatedStr = data['lastUpdated'] as String?;
     final lastUpdated =
         lastUpdatedStr != null ? DateTime.tryParse(lastUpdatedStr) : null;
+    final serverInfo =
+        data['serverInfo'] is Map
+            ? Map<String, dynamic>.from(data['serverInfo'] as Map)
+            : null;
+    final title =
+        _readString(data['title']) ?? _readString(serverInfo?['title']);
+    final description =
+        _readString(data['description']) ??
+        _readString(serverInfo?['description']);
+    final version =
+        _readString(data['version']) ?? _readString(serverInfo?['version']);
 
     return Mcp(
       name: effectiveName,
-      description: data['description'] as String?,
+      title: title,
+      description: description,
       command: data['command'] as String?,
       args: data['args'] != null ? List<String>.from(data['args']) : null,
       env: data['env'] != null ? Map<String, String>.from(data['env']) : null,
@@ -123,7 +142,7 @@ class Mcp {
               ? Map<String, dynamic>.from(data['body'] as Map)
               : null,
       type: McpTransportTypeExt.fromString(data['type'] as String?),
-      version: data['version'] as String?,
+      version: version,
       prompt: data['prompt'] as String?,
       tools: tools,
       lastUpdated: lastUpdated,
@@ -133,6 +152,7 @@ class Mcp {
   /// 序列化为 server.json（与本对象内容完全对应）
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {'name': name};
+    if (title != null && title!.isNotEmpty) data['title'] = title;
     if (description != null) data['description'] = description;
 
     // Stdio 类型配置
@@ -171,6 +191,7 @@ class Mcp {
   /// 创建副本
   Mcp copyWith({
     String? name,
+    String? title,
     String? description,
     String? command,
     List<String>? args,
@@ -188,6 +209,7 @@ class Mcp {
   }) {
     return Mcp(
       name: name ?? this.name,
+      title: title ?? this.title,
       description: description ?? this.description,
       command: command ?? this.command,
       args: args ?? this.args,
@@ -207,8 +229,14 @@ class Mcp {
 
   @override
   String toString() {
-    return 'Mcp(name: $name, command: $command, url: $url, tools: ${tools?.length ?? 0})';
+    return 'Mcp(name: $name, title: $title, command: $command, url: $url, tools: ${tools?.length ?? 0})';
   }
+}
+
+String? _readString(Object? value) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 /// MCP工具信息模型

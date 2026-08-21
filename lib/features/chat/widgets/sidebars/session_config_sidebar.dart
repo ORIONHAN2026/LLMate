@@ -2611,7 +2611,7 @@ class _McpConfigSectionState extends State<_McpConfigSection> {
               activeColor: Theme.of(context).colorScheme.onSurface,
               checkColor: Theme.of(context).colorScheme.surface,
               onChanged: (v) => _toggle(s.name, v ?? false),
-              title: Text(s.name, style: const TextStyle(fontSize: 13)),
+              title: Text(s.displayName, style: const TextStyle(fontSize: 13)),
               subtitle:
                   s.description?.isNotEmpty == true
                       ? Text(

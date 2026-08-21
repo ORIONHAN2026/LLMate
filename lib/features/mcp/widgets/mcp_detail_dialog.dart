@@ -113,7 +113,7 @@ class McpDetailCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  mcp.name,
+                  mcp.displayName,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -124,7 +124,9 @@ class McpDetailCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                  color: theme.colorScheme.primaryContainer.withValues(
+                    alpha: 0.5,
+                  ),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -168,7 +170,9 @@ class McpDetailCard extends StatelessWidget {
                       '• ',
                       style: TextStyle(
                         fontSize: 12,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
                       ),
                     ),
                     Expanded(
@@ -178,7 +182,9 @@ class McpDetailCard extends StatelessWidget {
                             : t.name,
                         style: TextStyle(
                           fontSize: 12,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.8,
+                          ),
                         ),
                       ),
                     ),

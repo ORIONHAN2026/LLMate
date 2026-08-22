@@ -11,16 +11,17 @@ extension McpTransportTypeExt on McpTransportType {
       case McpTransportType.http:
         return 'http';
       case McpTransportType.streamableHttp:
-        return 'streamableHttp';
+        return 'streamable-http';
     }
   }
 
   static McpTransportType? fromString(String? s) {
-    switch (s) {
+    switch (s?.trim()) {
       case 'sse':
         return McpTransportType.sse;
       case 'http':
         return McpTransportType.http;
+      case 'streamable-http':
       case 'streamableHttp':
         return McpTransportType.streamableHttp;
       default:

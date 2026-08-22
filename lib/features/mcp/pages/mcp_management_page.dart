@@ -506,9 +506,15 @@ class _McpManagementPageState extends State<McpManagementPage> {
         command: serverConfig['command'] as String?,
         args: (serverConfig['args'] as List?)?.cast<String>(),
         url: serverConfig['url'] as String?,
+        type: McpTransportTypeExt.fromString(serverConfig['type']?.toString()),
+        timeout: (serverConfig['timeout'] as num?)?.toInt(),
         headers:
             serverConfig['headers'] != null
                 ? Map<String, String>.from(serverConfig['headers'] as Map)
+                : null,
+        body:
+            serverConfig['body'] != null
+                ? Map<String, dynamic>.from(serverConfig['body'] as Map)
                 : null,
       );
       await mcpc.addService(mcp, serverJson: serverJson);
@@ -1003,6 +1009,25 @@ class _McpManagementPageState extends State<McpManagementPage> {
                                     args:
                                         (serverConfig?['args'] as List?)
                                             ?.cast<String>(),
+                                    url: serverConfig?['url'] as String?,
+                                    type: McpTransportTypeExt.fromString(
+                                      serverConfig?['type']?.toString(),
+                                    ),
+                                    timeout:
+                                        (serverConfig?['timeout'] as num?)
+                                            ?.toInt(),
+                                    headers:
+                                        serverConfig?['headers'] != null
+                                            ? Map<String, String>.from(
+                                              serverConfig!['headers'] as Map,
+                                            )
+                                            : null,
+                                    body:
+                                        serverConfig?['body'] != null
+                                            ? Map<String, dynamic>.from(
+                                              serverConfig!['body'] as Map,
+                                            )
+                                            : null,
                                   );
                                   await Get.find<McpController>().updateService(
                                     service.name,

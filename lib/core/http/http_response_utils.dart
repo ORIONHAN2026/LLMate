@@ -29,6 +29,7 @@ Response openAiErrorResponse({
   dynamic code,
   dynamic param,
   Map<String, dynamic>? extra,
+  Map<String, String>? headers,
 }) {
   return Response(
     statusCode,
@@ -41,7 +42,7 @@ Response openAiErrorResponse({
         extra: extra,
       ),
     ),
-    headers: jsonHeaders,
+    headers: {...jsonHeaders, ...?headers},
   );
 }
 

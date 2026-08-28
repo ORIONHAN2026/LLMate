@@ -1991,6 +1991,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get requestLimit => 'Anfragenlimit';
 
   @override
+  String get requestRateLimit => 'Anfrageratenlimit';
+
+  @override
+  String get requestsPerMinute => 'Maximale Anfragen pro Minute';
+
+  @override
   String get noLimit => 'Kein Limit';
 
   @override

@@ -656,6 +656,8 @@
   },
   "costBudgetLimit": "Cost Budget Limit ({unit})",
   "requestLimit": "Request Limit",
+  "requestRateLimit": "Request Rate Limit",
+  "requestsPerMinute": "Maximum requests per minute",
   "noLimit": "No limit",
   "enableUsageLimit": "Enable Usage Limit",
   "reachLimitReject": "New requests will be rejected after the limit is reached",

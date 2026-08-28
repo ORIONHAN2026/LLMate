@@ -1929,6 +1929,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get requestLimit => 'リクエスト制限';
 
   @override
+  String get requestRateLimit => 'リクエスト速度制限';
+
+  @override
+  String get requestsPerMinute => '1分あたりの最大リクエスト数';
+
+  @override
   String get noLimit => '制限なし';
 
   @override

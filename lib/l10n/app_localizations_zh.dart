@@ -1922,6 +1922,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get requestLimit => '请求次数上限';
 
   @override
+  String get requestRateLimit => '请求限速';
+
+  @override
+  String get requestsPerMinute => '每分钟最大请求数';
+
+  @override
   String get noLimit => '不限制';
 
   @override

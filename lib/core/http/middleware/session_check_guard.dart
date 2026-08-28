@@ -10,6 +10,7 @@ import '../../../core/llm/modes/mode_utils.dart';
 import '../../../models/chat/session.dart';
 import '../http_context_keys.dart';
 import '../http_response_utils.dart';
+import '../session_rate_limiter.dart';
 
 /// 会话检查中间件
 ///
@@ -89,7 +90,29 @@ Handler sessionCheckGuard(Handler innerHandler) {
       );
     }
 
-    // ── 3. 配额检查 ──
+    // ── 3. 会话限速 ──
+    final rateLimitResult = SessionRateLimiter.instance.checkAndRecord(
+      sessionId: session.sessionId,
+      requestsPerMinute: session.rateLimitPerMinute,
+    );
+    if (!rateLimitResult.allowed) {
+      final retryAfterSeconds =
+          (rateLimitResult.retryAfter?.inMilliseconds ?? 0) ~/ 1000 + 1;
+      debugPrint('⏱️ [SessionGuard] 会话请求过快 → 429');
+      return openAiErrorResponse(
+        statusCode: 429,
+        message: 'Rate limit exceeded. Please retry later.',
+        type: 'rate_limit_error',
+        code: 'rate_limit_exceeded',
+        headers: {'Retry-After': retryAfterSeconds.toString()},
+        extra: {
+          'limit': rateLimitResult.limit,
+          'retry_after_seconds': retryAfterSeconds,
+        },
+      );
+    }
+
+    // ── 4. 配额检查 ──
     var currentSession = session;
     final resetSession = currentSession.tryResetQuotaPeriod();
     if (resetSession != null) {

@@ -1928,6 +1928,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get requestLimit => '요청 제한';
 
   @override
+  String get requestRateLimit => '요청 속도 제한';
+
+  @override
+  String get requestsPerMinute => '분당 최대 요청 수';
+
+  @override
   String get noLimit => '제한 없음';
 
   @override

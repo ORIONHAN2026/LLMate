@@ -601,6 +601,8 @@
   "tokenUsageLimit": "Limite d'utilisation des tokens",
   "costBudgetLimit": "Limite de budget de coût ({unit})",
   "requestLimit": "Limite de requêtes",
+  "requestRateLimit": "Limitation du débit",
+  "requestsPerMinute": "Nombre maximal de requêtes par minute",
   "noLimit": "Aucune limite",
   "enableUsageLimit": "Activer la limite d'utilisation",
   "reachLimitReject": "Les nouvelles requêtes seront rejetées après avoir atteint la limite",

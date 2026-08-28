@@ -601,6 +601,8 @@
   "tokenUsageLimit": "토큰 사용량 제한",
   "costBudgetLimit": "비용 예산 제한 ({unit})",
   "requestLimit": "요청 제한",
+  "requestRateLimit": "요청 속도 제한",
+  "requestsPerMinute": "분당 최대 요청 수",
   "noLimit": "제한 없음",
   "enableUsageLimit": "사용량 제한 사용",
   "reachLimitReject": "제한 도달 후 새 요청이 거부됩니다",

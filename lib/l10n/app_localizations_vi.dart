@@ -1947,6 +1947,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get requestLimit => 'Giới hạn số yêu cầu';
 
   @override
+  String get requestRateLimit => 'Giới hạn tốc độ yêu cầu';
+
+  @override
+  String get requestsPerMinute => 'Số yêu cầu tối đa mỗi phút';
+
+  @override
   String get noLimit => 'Không giới hạn';
 
   @override

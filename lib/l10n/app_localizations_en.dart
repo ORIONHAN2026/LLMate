@@ -1965,6 +1965,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requestLimit => 'Request Limit';
 
   @override
+  String get requestRateLimit => 'Request Rate Limit';
+
+  @override
+  String get requestsPerMinute => 'Maximum requests per minute';
+
+  @override
   String get noLimit => 'No limit';
 
   @override

@@ -191,6 +191,9 @@ class ChatSession {
   /// 请求次数上限（null = 不限制）
   final int? quotaRequestLimit;
 
+  /// 每分钟最多允许的请求数（null = 不限速）
+  final int? rateLimitPerMinute;
+
   /// 配额重置周期，null 表示永不过期
   /// - 'daily': 每天重置
   /// - 'monthly': 每月重置
@@ -235,6 +238,7 @@ class ChatSession {
     this.quotaTokenLimit,
     this.quotaCostLimit,
     this.quotaRequestLimit,
+    this.rateLimitPerMinute,
     this.quotaResetPeriod,
     this.quotaPeriodStart,
     this.quotaRequestCount = 0,
@@ -426,6 +430,8 @@ class ChatSession {
     bool clearQuotaCostLimit = false,
     int? quotaRequestLimit,
     bool clearQuotaRequestLimit = false,
+    int? rateLimitPerMinute,
+    bool clearRateLimitPerMinute = false,
     String? quotaResetPeriod,
     bool clearQuotaResetPeriod = false,
     DateTime? quotaPeriodStart,
@@ -500,6 +506,10 @@ class ChatSession {
           clearQuotaRequestLimit
               ? null
               : (quotaRequestLimit ?? this.quotaRequestLimit),
+      rateLimitPerMinute:
+          clearRateLimitPerMinute
+              ? null
+              : (rateLimitPerMinute ?? this.rateLimitPerMinute),
       quotaResetPeriod:
           clearQuotaResetPeriod
               ? null
@@ -616,6 +626,7 @@ class ChatSession {
       quotaTokenLimit: json['quotaTokenLimit'] as int?,
       quotaCostLimit: (json['quotaCostLimit'] as num?)?.toDouble(),
       quotaRequestLimit: json['quotaRequestLimit'] as int?,
+      rateLimitPerMinute: json['rateLimitPerMinute'] as int?,
       quotaResetPeriod: json['quotaResetPeriod'] as String?,
       quotaPeriodStart:
           json['quotaPeriodStart'] != null
@@ -663,6 +674,7 @@ class ChatSession {
       if (quotaTokenLimit != null) 'quotaTokenLimit': quotaTokenLimit,
       if (quotaCostLimit != null) 'quotaCostLimit': quotaCostLimit,
       if (quotaRequestLimit != null) 'quotaRequestLimit': quotaRequestLimit,
+      if (rateLimitPerMinute != null) 'rateLimitPerMinute': rateLimitPerMinute,
       if (quotaResetPeriod != null) 'quotaResetPeriod': quotaResetPeriod,
       if (quotaPeriodStart != null)
         'quotaPeriodStart': quotaPeriodStart!.toIso8601String(),

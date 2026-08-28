@@ -560,6 +560,8 @@
   "tokenUsageLimit": "ขีดจำกัดการใช้งานโทเค็น",
   "costBudgetLimit": "งบประมาณค่าใช้จ่าย ({unit})",
   "requestLimit": "ขีดจำกัดจำนวนคำขอ",
+  "requestRateLimit": "ขีดจำกัดอัตราคำขอ",
+  "requestsPerMinute": "จำนวนคำขอสูงสุดต่อนาที",
   "noLimit": "ไม่จำกัด",
   "enableUsageLimit": "เปิดใช้งานขีดจำกัดการใช้งาน",
   "reachLimitReject": "คำขอใหม่จะถูกปฏิเสธเมื่อถึงขีดจำกัด",

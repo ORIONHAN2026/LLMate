@@ -1541,6 +1541,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
 
   late final TextEditingController _tokenLimitController;
   late final TextEditingController _requestLimitController;
+  late final TextEditingController _rateLimitController;
 
   @override
   void initState() {
@@ -1558,12 +1559,16 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
               ? _session.quotaRequestLimit.toString()
               : '',
     );
+    _rateLimitController = TextEditingController(
+      text: _session.rateLimitPerMinute?.toString() ?? '',
+    );
   }
 
   @override
   void dispose() {
     _tokenLimitController.dispose();
     _requestLimitController.dispose();
+    _rateLimitController.dispose();
     super.dispose();
   }
 
@@ -1575,6 +1580,7 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
       // 外部更新时同步 controller 文本
       _syncTokenLimitText();
       _syncRequestLimitText();
+      _syncRateLimitText();
     }
   }
 
@@ -1598,6 +1604,13 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
     }
   }
 
+  void _syncRateLimitText() {
+    final newText = _session.rateLimitPerMinute?.toString() ?? '';
+    if (_rateLimitController.text != newText) {
+      _rateLimitController.text = newText;
+    }
+  }
+
   void _updateSession(ChatSession updated) {
     _session = updated;
     final sessionController = Get.find<SessionController>();
@@ -1614,6 +1627,26 @@ class _QuotaConfigSectionState extends State<_QuotaConfigSection> {
       children: [
         // 启用开关
         _buildToggleRow(context),
+
+        const SizedBox(height: 12),
+        SessionConfigSidebar._buildSectionTitle(context, l10n.requestRateLimit),
+        const SizedBox(height: 8),
+        _buildNumberField(
+          context,
+          controller: _rateLimitController,
+          icon: Icons.timer_outlined,
+          label: l10n.requestsPerMinute,
+          value: _session.rateLimitPerMinute,
+          hint: l10n.noLimit,
+          onChanged: (val) {
+            _updateSession(
+              _session.copyWith(
+                rateLimitPerMinute: val as int?,
+                clearRateLimitPerMinute: val == null,
+              ),
+            );
+          },
+        ),
 
         if (_session.quotaEnabled) ...[
           const SizedBox(height: 12),

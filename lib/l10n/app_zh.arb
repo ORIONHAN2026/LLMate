@@ -656,6 +656,8 @@
   },
   "costBudgetLimit": "费用预算上限（{unit}）",
   "requestLimit": "请求次数上限",
+  "requestRateLimit": "请求限速",
+  "requestsPerMinute": "每分钟最大请求数",
   "noLimit": "不限制",
   "enableUsageLimit": "启用用量限制",
   "reachLimitReject": "达到上限后将拒绝新的请求",

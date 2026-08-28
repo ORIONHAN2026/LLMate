@@ -603,6 +603,8 @@
   "tokenUsageLimit": "トークン使用量制限",
   "costBudgetLimit": "コスト予算制限 ({unit})",
   "requestLimit": "リクエスト制限",
+  "requestRateLimit": "リクエスト速度制限",
+  "requestsPerMinute": "1分あたりの最大リクエスト数",
   "noLimit": "制限なし",
   "enableUsageLimit": "使用量制限を有効化",
   "reachLimitReject": "制限到達後、新しいリクエストは拒否されます",

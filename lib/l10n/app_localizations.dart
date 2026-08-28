@@ -3674,6 +3674,18 @@ abstract class AppLocalizations {
   /// **'Request Limit'**
   String get requestLimit;
 
+  /// No description provided for @requestRateLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Rate Limit'**
+  String get requestRateLimit;
+
+  /// No description provided for @requestsPerMinute.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum requests per minute'**
+  String get requestsPerMinute;
+
   /// No description provided for @noLimit.
   ///
   /// In en, this message translates to:

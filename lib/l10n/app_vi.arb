@@ -560,6 +560,8 @@
   "tokenUsageLimit": "Giới hạn sử dụng Token",
   "costBudgetLimit": "Ngân sách chi phí ({unit})",
   "requestLimit": "Giới hạn số yêu cầu",
+  "requestRateLimit": "Giới hạn tốc độ yêu cầu",
+  "requestsPerMinute": "Số yêu cầu tối đa mỗi phút",
   "noLimit": "Không giới hạn",
   "enableUsageLimit": "Bật giới hạn sử dụng",
   "reachLimitReject": "Yêu cầu mới sẽ bị từ chối sau khi đạt giới hạn",

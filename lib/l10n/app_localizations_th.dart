@@ -1966,6 +1966,12 @@ class AppLocalizationsTh extends AppLocalizations {
   String get requestLimit => 'ขีดจำกัดจำนวนคำขอ';
 
   @override
+  String get requestRateLimit => 'ขีดจำกัดอัตราคำขอ';
+
+  @override
+  String get requestsPerMinute => 'จำนวนคำขอสูงสุดต่อนาที';
+
+  @override
   String get noLimit => 'ไม่จำกัด';
 
   @override

@@ -76,8 +76,18 @@ class AuditController {
   Future<void> policy(AuditTrace trace, Map<String, dynamic> policy) =>
       emit(trace, AuditEventType.policy, policy);
 
-  Future<void> toolStart(AuditTrace trace, String tool) =>
-      emit(trace, AuditEventType.toolStart, {'tool': tool});
+  /// 记录工具调用开始及发送给工具的请求参数。
+  ///
+  /// [request] 通常是 MCP 工具调用的 `arguments`。保留可选参数以兼容
+  /// 不带请求内容的历史调用方。
+  Future<void> toolStart(
+    AuditTrace trace,
+    String tool, [
+    Map<String, dynamic>? request,
+  ]) => emit(trace, AuditEventType.toolStart, {
+    'tool': tool,
+    if (request != null) 'request': request,
+  });
 
   Future<void> toolFinish(
     AuditTrace trace,

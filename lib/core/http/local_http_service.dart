@@ -642,26 +642,36 @@ class LocalHttpService {
             // 通知客户端：工具正在执行
             streamController.add(Chunk.fromReason("大模型正在执行MCP服务").toIntList());
 
-            // ── 审计：工具调用开始 ──
-            if (auditTrace != null) {
-              for (final tc in toolCallParams) {
-                audit.toolStart(
+            // ── 逐个执行 MCP 工具，并让审计事件成对出现 ──
+            final executionResults = <Map<String, dynamic>>[];
+            for (final tc in toolCallParams) {
+              final name = tc['name']?.toString() ?? 'unknown';
+              if (auditTrace != null) {
+                await audit.toolStart(
                   auditTrace,
-                  tc['name']?.toString() ?? 'unknown',
+                  name,
+                  tc['arguments'] as Map<String, dynamic>?,
+                );
+              }
+
+              final result = await McpController.instance.executeToolCalls(
+                session: session,
+                toolCalls: [tc],
+                cleanContent: '',
+              );
+              final toolResult = result?.executionResults.firstOrNull;
+              if (toolResult != null) executionResults.add(toolResult);
+
+              if (auditTrace != null) {
+                await audit.toolFinish(
+                  auditTrace,
+                  name,
+                  toolResult ?? <String, dynamic>{},
                 );
               }
             }
 
-            // ── 执行 MCP 工具 ──
-            final executionResult = await McpController.instance
-                .executeToolCalls(
-                  session: session,
-                  toolCalls: toolCallParams,
-                  cleanContent: '',
-                );
-
-            if (executionResult != null &&
-                executionResult.executionResults.isNotEmpty) {
+            if (executionResults.isNotEmpty) {
               // 回填 assistant 消息（含 tool_calls）到对话历史
               // 符合 OpenAI Chat Completions 协议：tool 消息必须紧跟 assistant(tool_calls)
               (body['messages'] as List<dynamic>).add({
@@ -684,7 +694,7 @@ class LocalHttpService {
               });
 
               // 回填 tool 结果消息到对话历史（每个工具一条）
-              for (final r in executionResult.executionResults) {
+              for (final r in executionResults) {
                 final rawResult = r['result']?.toString() ?? '';
                 // 风控脱敏：工具返回内容同样可能含手机号/身份证号等敏感信息，
                 // 沿用与转发大模型一致的脱敏开关
@@ -698,21 +708,6 @@ class LocalHttpService {
                   'content':
                       r['isError'] == true ? '错误: $maskedResult' : maskedResult,
                 });
-              }
-
-              // ── 审计：工具调用完成 ──
-              if (auditTrace != null) {
-                final results = executionResult.executionResults;
-                for (var i = 0; i < toolCallParams.length; i++) {
-                  final name =
-                      toolCallParams[i]['name']?.toString() ?? 'unknown';
-                  final res = i < results.length ? results[i] : null;
-                  audit.toolFinish(
-                    auditTrace,
-                    name,
-                    res ?? <String, dynamic>{},
-                  );
-                }
               }
 
               debugPrint('🔄 [ToolLoop] 第 $toolIteration 轮工具完成，继续请求 LLM');

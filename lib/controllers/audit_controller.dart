@@ -84,16 +84,46 @@ class AuditController {
     AuditTrace trace,
     String tool, [
     Map<String, dynamic>? request,
-  ]) => emit(trace, AuditEventType.toolStart, {
-    'tool': tool,
-    if (request != null) 'request': request,
-  });
+  ], {
+    String? callId,
+    String? parentSpanId,
+  }) => emit(
+    trace,
+    AuditEventType.toolStart,
+    {
+      'tool': tool,
+      if (callId != null && callId.isNotEmpty) 'callId': callId,
+      if (request != null) 'request': request,
+    },
+    parentSpanId: parentSpanId,
+  );
 
   Future<void> toolFinish(
     AuditTrace trace,
     String tool,
     Map<String, dynamic> result,
-  ) => emit(trace, AuditEventType.toolFinish, {'tool': tool, 'result': result});
+  {
+    String? callId,
+    String status = 'success',
+    int? durationMs,
+    String? errorType,
+    String? errorMessage,
+    String? parentSpanId,
+  }) => emit(
+    trace,
+    AuditEventType.toolFinish,
+    {
+      'tool': tool,
+      if (callId != null && callId.isNotEmpty) 'callId': callId,
+      'result': result,
+      'status': status,
+      if (durationMs != null) 'durationMs': durationMs,
+      if (errorType != null && errorType.isNotEmpty) 'errorType': errorType,
+      if (errorMessage != null && errorMessage.isNotEmpty)
+        'errorMessage': errorMessage,
+    },
+    parentSpanId: parentSpanId,
+  );
 
   Future<void> model(
     AuditTrace trace,

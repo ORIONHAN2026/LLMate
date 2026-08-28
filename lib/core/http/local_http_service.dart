@@ -644,13 +644,18 @@ class LocalHttpService {
 
             // ── 逐个执行 MCP 工具，并让审计事件成对出现 ──
             final executionResults = <Map<String, dynamic>>[];
-            for (final tc in toolCallParams) {
+            for (var toolIndex = 0; toolIndex < toolCallParams.length; toolIndex++) {
+              final tc = toolCallParams[toolIndex];
               final name = tc['name']?.toString() ?? 'unknown';
+              final callId =
+                  tc['id']?.toString() ?? 'call_${tc['index'] ?? toolIndex}';
+              final stopwatch = Stopwatch()..start();
               if (auditTrace != null) {
                 await audit.toolStart(
                   auditTrace,
                   name,
                   tc['arguments'] as Map<String, dynamic>?,
+                  callId: callId,
                 );
               }
 
@@ -661,12 +666,24 @@ class LocalHttpService {
               );
               final toolResult = result?.executionResults.firstOrNull;
               if (toolResult != null) executionResults.add(toolResult);
+              stopwatch.stop();
+
+              final isError = toolResult?['isError'] == true;
+              final errorMessage =
+                  isError ? toolResult?['result']?.toString() : null;
 
               if (auditTrace != null) {
                 await audit.toolFinish(
                   auditTrace,
                   name,
                   toolResult ?? <String, dynamic>{},
+                  callId: callId,
+                  status: toolResult == null
+                      ? 'error'
+                      : (isError ? 'error' : 'success'),
+                  durationMs: stopwatch.elapsedMilliseconds,
+                  errorType: isError ? 'toolExecution' : null,
+                  errorMessage: errorMessage,
                 );
               }
             }

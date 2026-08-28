@@ -121,6 +121,12 @@ class ChatSession {
   /// 会话级安全设置：开启后，请求/工具结果中的身份证号将被 * 号脱敏
   final bool maskIdCard;
 
+  /// 额外敏感信息策略（phone/idCard/email/bankCard/address/customerId/sourceCode/contract）。
+  final List<String> sensitiveTypes;
+
+  /// 脱敏模式：hash/block。
+  final String maskingMode;
+
   // === 计费统计 ===
 
   /// 累计输入token数
@@ -216,6 +222,8 @@ class ChatSession {
     this.systemPrompt,
     this.maskPhone = false,
     this.maskIdCard = false,
+    this.sensitiveTypes = const [],
+    this.maskingMode = 'hash',
     this.sessionQuickCommands = const [],
     this.promptTokens = 0,
     this.completionTokens = 0,
@@ -401,6 +409,8 @@ class ChatSession {
     bool clearSystemPrompt = false,
     bool? maskPhone,
     bool? maskIdCard,
+    List<String>? sensitiveTypes,
+    String? maskingMode,
     List<ChatCommand>? sessionQuickCommands,
     int? promptTokens,
     int? completionTokens,
@@ -470,6 +480,8 @@ class ChatSession {
           clearSystemPrompt ? null : (systemPrompt ?? this.systemPrompt),
       maskPhone: maskPhone ?? this.maskPhone,
       maskIdCard: maskIdCard ?? this.maskIdCard,
+      sensitiveTypes: sensitiveTypes ?? this.sensitiveTypes,
+      maskingMode: maskingMode ?? this.maskingMode,
       sessionQuickCommands: sessionQuickCommands ?? this.sessionQuickCommands,
       promptTokens: promptTokens ?? this.promptTokens,
       completionTokens: completionTokens ?? this.completionTokens,
@@ -580,6 +592,12 @@ class ChatSession {
       systemPrompt: json['systemPrompt'] as String?,
       maskPhone: json['maskPhone'] as bool? ?? chatModel?.maskPhone ?? false,
       maskIdCard: json['maskIdCard'] as bool? ?? chatModel?.maskIdCard ?? false,
+      sensitiveTypes:
+          (json['sensitiveTypes'] as List<dynamic>?)
+              ?.whereType<String>()
+              .toList() ??
+          const [],
+      maskingMode: json['maskingMode'] as String? ?? 'hash',
       sessionQuickCommands:
           (json['sessionQuickCommands'] as List<dynamic>?)
               ?.map((commandJson) => ChatCommand.fromJson(commandJson))
@@ -627,6 +645,8 @@ class ChatSession {
         'systemPrompt': systemPrompt,
       'maskPhone': maskPhone,
       'maskIdCard': maskIdCard,
+      'sensitiveTypes': sensitiveTypes,
+      'maskingMode': maskingMode,
       'sessionQuickCommands':
           sessionQuickCommands.map((command) => command.toJson()).toList(),
       'promptTokens': promptTokens,

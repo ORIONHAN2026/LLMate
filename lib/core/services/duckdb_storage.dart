@@ -320,6 +320,26 @@ class DuckDBStorage {
     if (filter.sessionId != null) {
       conds.add('session_id = ${_q(filter.sessionId!)}');
     }
+    if (filter.keyword != null) {
+      final keyword = filter.keyword!.toLowerCase();
+      final pattern = _q('%$keyword%');
+      conds.add(
+        '(lower(payload_json) LIKE $pattern '
+        'OR lower(event_type) LIKE $pattern '
+        'OR lower(trace_id) LIKE $pattern '
+        'OR lower(session_id) LIKE $pattern)',
+      );
+    }
+    if (filter.toolName != null) {
+      conds.add(
+        "lower(json_extract_string(payload_json, '\$.tool')) = ${_q(filter.toolName!.toLowerCase())}",
+      );
+    }
+    if (filter.callId != null) {
+      conds.add(
+        "json_extract_string(payload_json, '\$.callId') = ${_q(filter.callId!)}",
+      );
+    }
     if (filter.eventTypes != null && filter.eventTypes!.isNotEmpty) {
       final types = filter.eventTypes!.map((e) => _q(e.name)).join(', ');
       conds.add('event_type IN ($types)');

@@ -33,6 +33,9 @@ class AuditViewer extends StatefulWidget {
 
 class _AuditViewerState extends State<AuditViewer> {
   final _traceCtrl = TextEditingController();
+  final _keywordCtrl = TextEditingController();
+  final _toolCtrl = TextEditingController();
+  final _callIdCtrl = TextEditingController();
   final _traceFocusNode = FocusNode();
   final _scrollCtrl = ScrollController();
   final Set<AuditEventType> _selectedTypes = {};
@@ -68,6 +71,9 @@ class _AuditViewerState extends State<AuditViewer> {
     _scrollCtrl.dispose();
     _traceFocusNode.dispose();
     _traceCtrl.dispose();
+    _keywordCtrl.dispose();
+    _toolCtrl.dispose();
+    _callIdCtrl.dispose();
     super.dispose();
   }
 
@@ -93,6 +99,9 @@ class _AuditViewerState extends State<AuditViewer> {
     return AuditFilter(
       traceId: _blank(_traceCtrl.text),
       sessionId: widget.session?.sessionId,
+      keyword: _blank(_keywordCtrl.text),
+      toolName: _blank(_toolCtrl.text),
+      callId: _blank(_callIdCtrl.text),
       eventTypes: _selectedTypes.isEmpty ? null : _selectedTypes,
       start: _startDate,
       end: end,
@@ -168,10 +177,11 @@ class _AuditViewerState extends State<AuditViewer> {
 
   void _reset() {
     _traceCtrl.clear();
+    _keywordCtrl.clear();
+    _toolCtrl.clear();
+    _callIdCtrl.clear();
     setState(() {
       _selectedTypes.clear();
-      _startDate = null;
-      _endDate = null;
     });
     _load();
   }
@@ -241,15 +251,6 @@ class _AuditViewerState extends State<AuditViewer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '筛选条件',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 14),
           LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 980;
@@ -257,6 +258,18 @@ class _AuditViewerState extends State<AuditViewer> {
                 SizedBox(
                   width: compact ? double.infinity : 360,
                   child: _traceInputField(),
+                ),
+                SizedBox(
+                  width: compact ? double.infinity : 220,
+                  child: _textFilter(_keywordCtrl, '关键词（请求/结果）'),
+                ),
+                SizedBox(
+                  width: compact ? double.infinity : 180,
+                  child: _textFilter(_toolCtrl, '工具名'),
+                ),
+                SizedBox(
+                  width: compact ? double.infinity : 180,
+                  child: _textFilter(_callIdCtrl, '调用 ID'),
                 ),
                 SizedBox(
                   width: compact ? double.infinity : 180,
@@ -311,23 +324,24 @@ class _AuditViewerState extends State<AuditViewer> {
                   ),
                 ),
               ];
-              if (compact) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < fields.length; i++) ...[
-                      fields[i],
-                      if (i != fields.length - 1) const SizedBox(height: 10),
-                    ],
-                  ],
-                );
-              }
-              return Row(
+              final textFields = fields.sublist(0, 4);
+              final actionFields = fields.sublist(4);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (var i = 0; i < fields.length; i++) ...[
-                    fields[i],
-                    if (i != fields.length - 1) const SizedBox(width: 10),
-                  ],
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: textFields,
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: actionFields,
+                  ),
                 ],
               );
             },
@@ -402,6 +416,26 @@ class _AuditViewerState extends State<AuditViewer> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _textFilter(TextEditingController controller, String hint) {
+    return SizedBox(
+      height: _filterControlHeight,
+      child: TextField(
+        controller: controller,
+        onSubmitted: (_) => _load(),
+        decoration: InputDecoration(
+          hintText: hint,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        style: const TextStyle(fontSize: 13),
       ),
     );
   }

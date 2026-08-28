@@ -1,4 +1,26 @@
-/// 脱敏选项：分别控制手机号、身份证号是否脱敏
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+
+enum SensitiveInfoType {
+  phone,
+  idCard,
+  email,
+  bankCard,
+  address,
+  customerId,
+  sourceCode,
+  contract,
+}
+
+enum SensitiveMaskMode { hash, block }
+
+extension SensitiveMaskModeX on SensitiveMaskMode {
+  String get value => name;
+  static SensitiveMaskMode fromString(String? value) => SensitiveMaskMode.values
+      .firstWhere((m) => m.name == value, orElse: () => SensitiveMaskMode.hash);
+}
+
+/// 脱敏选项：按敏感类型和处理模式控制。
 ///
 /// 由会话安全设置（[ChatSession.maskPhone] / [ChatSession.maskIdCard]）驱动，
 /// 仅当对应开关开启时才对匹配到的敏感信息进行 * 号替换。
@@ -9,7 +31,15 @@ class SensitiveMaskOptions {
   /// 是否脱敏身份证号
   final bool maskIdCard;
 
-  const SensitiveMaskOptions({this.maskPhone = false, this.maskIdCard = false});
+  final Set<SensitiveInfoType> types;
+  final SensitiveMaskMode mode;
+
+  const SensitiveMaskOptions({
+    this.maskPhone = false,
+    this.maskIdCard = false,
+    this.types = const {},
+    this.mode = SensitiveMaskMode.hash,
+  });
 
   /// 两者均未开启
   static const SensitiveMaskOptions disabled = SensitiveMaskOptions(
@@ -18,7 +48,12 @@ class SensitiveMaskOptions {
   );
 
   /// 是否至少有一项需要脱敏
-  bool get hasAny => maskPhone || maskIdCard;
+  bool get hasAny => maskPhone || maskIdCard || types.isNotEmpty;
+
+  bool enabled(SensitiveInfoType type) =>
+      types.contains(type) ||
+      (type == SensitiveInfoType.phone && maskPhone) ||
+      (type == SensitiveInfoType.idCard && maskIdCard);
 }
 
 /// 敏感信息脱敏工具
@@ -39,6 +74,27 @@ class SensitiveMasker {
   /// 身份证号：15 位纯数字 或 18 位（17 位数字 + 尾部校验位 [0-9Xx]）
   /// 使用 \b 词边界避免匹配更长数字串的中间片段。
   static final RegExp _idCardRegex = RegExp(r'\b(?:\d{15}|\d{17}[\dXx])\b');
+  static final RegExp _emailRegex = RegExp(
+    r'\b[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}\b',
+    caseSensitive: false,
+  );
+  static final RegExp _bankCardRegex = RegExp(
+    r'(?<!\d)(?:\d[ -]?){13,19}(?!\d)',
+  );
+  static final RegExp _addressRegex = RegExp(
+    r'(?:(?:中国)?(?:北京|上海|天津|重庆|广东|江苏|浙江|山东|四川|湖北|福建|湖南|河南|河北|安徽|江西|陕西|辽宁|云南|广西|山西|贵州|吉林|黑龙江|甘肃|海南|新疆|内蒙古|西藏|宁夏|青海)省?[^\n，,。]{2,30}(?:路|街|道|号|室|栋|单元))',
+  );
+  static final RegExp _customerIdRegex = RegExp(
+    r'(?:(?:客户编号|客户号|customer[_ -]?id)\s*[:：]?\s*)[A-Za-z0-9_-]{4,}',
+    caseSensitive: false,
+  );
+  static final RegExp _sourceCodeRegex = RegExp(
+    r'```(?:dart|java|python|js|javascript|ts|typescript|go|rust|c\+\+|sql)?\s*[\s\S]*?```',
+    caseSensitive: false,
+  );
+  static final RegExp _contractRegex = RegExp(
+    r'(?:(?:合同编号|合同金额|甲方|乙方|签署日期|合同期限)\s*[:：]?\s*)[^\n，,。]{2,40}',
+  );
 
   /// 对一个字符串中的敏感信息进行脱敏，匹配到的数字串整体替换为等长 * 号。
   /// [options] 决定手机号 / 身份证号是否参与脱敏。
@@ -49,13 +105,33 @@ class SensitiveMasker {
     if (text.isEmpty || !options.hasAny) return text;
     var s = text;
     // 先处理身份证号（15/18 位），再处理手机号（11 位），互不重叠。
-    if (options.maskIdCard) {
-      s = s.replaceAllMapped(_idCardRegex, (m) => '*' * m[0]!.length);
-    }
-    if (options.maskPhone) {
-      s = s.replaceAllMapped(_phoneRegex, (m) => '*' * m[0]!.length);
-    }
+    s = _apply(s, _idCardRegex, SensitiveInfoType.idCard, options);
+    s = _apply(s, _phoneRegex, SensitiveInfoType.phone, options);
+    s = _apply(s, _emailRegex, SensitiveInfoType.email, options);
+    s = _apply(s, _bankCardRegex, SensitiveInfoType.bankCard, options);
+    s = _apply(s, _addressRegex, SensitiveInfoType.address, options);
+    s = _apply(s, _customerIdRegex, SensitiveInfoType.customerId, options);
+    s = _apply(s, _sourceCodeRegex, SensitiveInfoType.sourceCode, options);
+    s = _apply(s, _contractRegex, SensitiveInfoType.contract, options);
     return s;
+  }
+
+  static String _apply(
+    String text,
+    RegExp regex,
+    SensitiveInfoType type,
+    SensitiveMaskOptions options,
+  ) {
+    if (!options.enabled(type)) return text;
+    return text.replaceAllMapped(regex, (m) {
+      final value = m[0] ?? '';
+      switch (options.mode) {
+        case SensitiveMaskMode.hash:
+          return 'sha256:${sha256.convert(utf8.encode(value)).toString().substring(0, 16)}';
+        case SensitiveMaskMode.block:
+          return value;
+      }
+    });
   }
 
   /// 对单个消息 content 进行脱敏，兼容以下形态：
@@ -100,6 +176,28 @@ class SensitiveMasker {
             if (m is Map<String, dynamic>) {
               final copy = Map<String, dynamic>.from(m);
               copy['content'] = _maskContent(copy['content'], options);
+              final toolCalls = copy['tool_calls'];
+              if (toolCalls is List) {
+                copy['tool_calls'] =
+                    toolCalls.map((call) {
+                      if (call is! Map) return call;
+                      final callCopy = Map<String, dynamic>.from(call);
+                      final function = callCopy['function'];
+                      if (function is Map) {
+                        final functionCopy = Map<String, dynamic>.from(
+                          function,
+                        );
+                        if (functionCopy['arguments'] is String) {
+                          functionCopy['arguments'] = maskText(
+                            functionCopy['arguments'] as String,
+                            options,
+                          );
+                        }
+                        callCopy['function'] = functionCopy;
+                      }
+                      return callCopy;
+                    }).toList();
+              }
               return copy;
             }
             return m;

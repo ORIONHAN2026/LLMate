@@ -100,6 +100,9 @@ extension AuditEventTypeX on AuditEventType {
 class AuditFilter {
   final String? traceId;
   final String? sessionId;
+  final String? keyword;
+  final String? toolName;
+  final String? callId;
   final Set<AuditEventType>? eventTypes;
   final DateTime? start;
   final DateTime? end;
@@ -117,6 +120,9 @@ class AuditFilter {
   const AuditFilter({
     this.traceId,
     this.sessionId,
+    this.keyword,
+    this.toolName,
+    this.callId,
     this.eventTypes,
     this.start,
     this.end,
@@ -200,7 +206,9 @@ class AuditEvent {
       spanId: row['span_id'] as String? ?? '',
       parentSpanId: row['parent_span_id'] as String?,
       sessionId: (row['session_id'] as String?) ?? '',
-      type: AuditEventTypeX.fromName((row['event_type'] as String?) ?? 'request'),
+      type: AuditEventTypeX.fromName(
+        (row['event_type'] as String?) ?? 'request',
+      ),
       timestamp:
           DateTime.tryParse((row['timestamp'] as String?) ?? '') ??
           DateTime.now(),

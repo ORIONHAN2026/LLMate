@@ -108,14 +108,12 @@ class _McpManagementPageState extends State<McpManagementPage> {
               builder: (context, constraints) {
                 final width = constraints.maxWidth;
                 final columns =
-                    width >= 1180
-                        ? 6
-                        : width >= 900
+                    width >= 900
                         ? 4
                         : width >= 640
                         ? 3
                         : 1;
-                final spacing = 8.0;
+                final spacing = 12.0;
                 final itemWidth = (width - spacing * (columns - 1)) / columns;
                 return SingleChildScrollView(
                   child: Wrap(
@@ -1135,8 +1133,8 @@ class _McpCardState extends State<_McpCard> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          height: 76,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          height: 108,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color:
                 _isHovered
@@ -1144,7 +1142,7 @@ class _McpCardState extends State<_McpCard> {
                         ? const Color(0xFF1F2937)
                         : const Color(0xFFFAFAFA))
                     : (isDark ? const Color(0xFF111827) : Colors.white),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color:
                   _isHovered
@@ -1170,8 +1168,8 @@ class _McpCardState extends State<_McpCard> {
                             service.displayName,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 13,
-                              height: 1.12,
+                              fontSize: 14,
+                              height: 1.2,
                               fontWeight: FontWeight.w700,
                               color: theme.colorScheme.onSurface,
                             ),
@@ -1183,21 +1181,21 @@ class _McpCardState extends State<_McpCard> {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 8),
                     Text(
                       description ?? service.command ?? service.url ?? '',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: description == null ? 10 : 10.5,
-                        height: 1.1,
+                        fontSize: description == null ? 10.5 : 11,
+                        height: 1.3,
                         color: theme.colorScheme.onSurface.withValues(
                           alpha: 0.58,
                         ),
                         fontFamily: description == null ? 'monospace' : null,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 8),
                     _McpMeta(
                       icon: Icons.build_outlined,
                       label: '$toolsCount 个工具',

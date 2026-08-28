@@ -684,6 +684,8 @@ class SessionConfigSidebar {
           ),
         ),
         const SizedBox(height: 8),
+        _buildMaskingModeSelector(context, session),
+        const SizedBox(height: 8),
         _buildSecuritySwitch(
           context,
           icon: Icons.phone_iphone_outlined,
@@ -707,8 +709,97 @@ class SessionConfigSidebar {
                 session.copyWith(maskIdCard: value),
               ),
         ),
+        ..._extraSensitiveTypes(context, session),
       ],
     );
+  }
+
+  static Widget _buildMaskingModeSelector(
+    BuildContext context,
+    ChatSession session,
+  ) {
+    const modes = <String, String>{'hash': '替换为哈希值', 'block': '检测到即阻断'};
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.tune_outlined, size: 16),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              '处理模式',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
+          DropdownButton<String>(
+            value:
+                modes.containsKey(session.maskingMode)
+                    ? session.maskingMode
+                    : 'hash',
+            underline: const SizedBox.shrink(),
+            items:
+                modes.entries
+                    .map(
+                      (e) => DropdownMenuItem(
+                        value: e.key,
+                        child: Text(
+                          e.value,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    )
+                    .toList(),
+            onChanged: (value) {
+              if (value != null) {
+                Get.find<SessionController>().updateSession(
+                  session.copyWith(maskingMode: value),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  static List<Widget> _extraSensitiveTypes(
+    BuildContext context,
+    ChatSession session,
+  ) {
+    const items = <String, String>{
+      'email': '邮箱',
+      'bankCard': '银行卡',
+      'address': '地址',
+      'customerId': '客户编号',
+      'sourceCode': '源代码',
+      'contract': '合同字段',
+    };
+    return items.entries.map((entry) {
+      final enabled = session.sensitiveTypes.contains(entry.key);
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: _buildSecuritySwitch(
+          context,
+          icon: Icons.privacy_tip_outlined,
+          title: entry.value,
+          subtitle: '对消息中的${entry.value}执行当前处理模式',
+          value: enabled,
+          onChanged: (value) {
+            final types = {...session.sensitiveTypes};
+            value ? types.add(entry.key) : types.remove(entry.key);
+            Get.find<SessionController>().updateSession(
+              session.copyWith(sensitiveTypes: types.toList()),
+            );
+          },
+        ),
+      );
+    }).toList();
   }
 
   static Widget _buildSecuritySwitch(

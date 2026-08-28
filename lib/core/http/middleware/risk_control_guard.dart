@@ -1,5 +1,6 @@
 import 'package:shelf/shelf.dart';
 import 'dart:convert';
+import 'package:llmate/core/http/http_response_utils.dart';
 
 import '../../../models/chat/session.dart';
 import '../http_context_keys.dart';
@@ -36,6 +37,17 @@ Handler riskControlGuard(Handler innerHandler) {
     final options = SensitiveMaskOptions(
       maskPhone: session.maskPhone,
       maskIdCard: session.maskIdCard,
+      types:
+          session.sensitiveTypes
+              .map(
+                (value) =>
+                    SensitiveInfoType.values
+                        .where((t) => t.name == value)
+                        .firstOrNull,
+              )
+              .whereType<SensitiveInfoType>()
+              .toSet(),
+      mode: SensitiveMaskModeX.fromString(session.maskingMode),
     );
 
     // 未开启任何脱敏项则直接放行，零开销
@@ -46,7 +58,30 @@ Handler riskControlGuard(Handler innerHandler) {
     // 脱敏后的请求体重新注入下游，并记录脱敏开关供日志/工具循环使用
     final before = jsonEncode(body);
     final maskedBody = maskSensitiveBody(body, options);
-    final hit = before != jsonEncode(maskedBody);
+    final hit =
+        options.mode == SensitiveMaskMode.block
+            ? before !=
+                jsonEncode(
+                  maskSensitiveBody(
+                    body,
+                    SensitiveMaskOptions(
+                      maskPhone: options.maskPhone,
+                      maskIdCard: options.maskIdCard,
+                      types: options.types,
+                      mode: SensitiveMaskMode.hash,
+                    ),
+                  ),
+                )
+            : before != jsonEncode(maskedBody);
+
+    if (hit && options.mode == SensitiveMaskMode.block) {
+      return openAiErrorResponse(
+        statusCode: 400,
+        message: 'Request blocked because sensitive information was detected.',
+        type: 'invalid_request_error',
+        code: 'sensitive_content_blocked',
+      );
+    }
 
     final updatedRequest = request.change(
       context: {

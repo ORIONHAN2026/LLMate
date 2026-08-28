@@ -43,10 +43,7 @@ class AuditController {
   /// 开启一条审计链路
   ///
   /// [ip] 记录请求发起方的 IP 地址（可为空）。
-  Future<AuditTrace> beginTrace({
-    required String sessionId,
-    String? ip,
-  }) async {
+  Future<AuditTrace> beginTrace({required String sessionId, String? ip}) async {
     final trace = AuditTrace(traceId: _uuid.v4(), sessionId: sessionId);
     await emit(trace, AuditEventType.request, {
       'sessionId': sessionId,
@@ -78,52 +75,39 @@ class AuditController {
 
   /// 记录工具调用开始及发送给工具的请求参数。
   ///
-  /// [request] 通常是 MCP 工具调用的 `arguments`。保留可选参数以兼容
-  /// 不带请求内容的历史调用方。
+  /// [request] 通常是 MCP 工具调用的 `arguments`，无参数时传空对象。
   Future<void> toolStart(
     AuditTrace trace,
-    String tool, [
-    Map<String, dynamic>? request,
-  ], {
-    String? callId,
+    String tool, {
+    required Map<String, dynamic> request,
+    required String callId,
     String? parentSpanId,
-  }) => emit(
-    trace,
-    AuditEventType.toolStart,
-    {
-      'tool': tool,
-      if (callId != null && callId.isNotEmpty) 'callId': callId,
-      if (request != null) 'request': request,
-    },
-    parentSpanId: parentSpanId,
-  );
+  }) => emit(trace, AuditEventType.toolStart, {
+    'tool': tool,
+    'callId': callId,
+    'request': request,
+  }, parentSpanId: parentSpanId);
 
   Future<void> toolFinish(
     AuditTrace trace,
     String tool,
-    Map<String, dynamic> result,
-  {
-    String? callId,
-    String status = 'success',
-    int? durationMs,
+    Map<String, dynamic> result, {
+    required String callId,
+    required String status,
+    required int durationMs,
     String? errorType,
     String? errorMessage,
     String? parentSpanId,
-  }) => emit(
-    trace,
-    AuditEventType.toolFinish,
-    {
-      'tool': tool,
-      if (callId != null && callId.isNotEmpty) 'callId': callId,
-      'result': result,
-      'status': status,
-      if (durationMs != null) 'durationMs': durationMs,
-      if (errorType != null && errorType.isNotEmpty) 'errorType': errorType,
-      if (errorMessage != null && errorMessage.isNotEmpty)
-        'errorMessage': errorMessage,
-    },
-    parentSpanId: parentSpanId,
-  );
+  }) => emit(trace, AuditEventType.toolFinish, {
+    'tool': tool,
+    'callId': callId,
+    'result': result,
+    'status': status,
+    'durationMs': durationMs,
+    if (errorType != null && errorType.isNotEmpty) 'errorType': errorType,
+    if (errorMessage != null && errorMessage.isNotEmpty)
+      'errorMessage': errorMessage,
+  }, parentSpanId: parentSpanId);
 
   Future<void> model(
     AuditTrace trace,
@@ -136,14 +120,11 @@ class AuditController {
     if (decision != null) 'decision': decision,
   });
 
-  Future<void> usage(
-    AuditTrace trace,
-    int inputTokens,
-    int outputTokens,
-  ) => emit(trace, AuditEventType.usage, {
-    'inputTokens': inputTokens,
-    'outputTokens': outputTokens,
-  });
+  Future<void> usage(AuditTrace trace, int inputTokens, int outputTokens) =>
+      emit(trace, AuditEventType.usage, {
+        'inputTokens': inputTokens,
+        'outputTokens': outputTokens,
+      });
 
   Future<void> response(AuditTrace trace, String text) =>
       emit(trace, AuditEventType.response, {'text': text});

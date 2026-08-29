@@ -5,7 +5,7 @@ import 'package:llmate/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, Process;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../../models/models.dart';
@@ -598,7 +598,7 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       items: [
         PopupMenuItem(
           height: 48,
-          onTap: _openFeedbackPage,
+          onTap: _sendFeedbackEmail,
           child: Row(
             children: [
               Icon(
@@ -809,24 +809,44 @@ class _CodeChatHomePageState extends State<CodeChatHomePage>
       CommandPaletteAction(
         id: 'send-feedback',
         title: l10n.feedback,
-        subtitle: 'Open feedback page on GitHub',
+        subtitle: 'Send feedback by email',
         icon: Icons.mail_outline,
-        onTap: _openFeedbackPage,
+        onTap: _sendFeedbackEmail,
       ),
     ];
     CommandPalette.show(context, actions: actions);
   }
 
-  // 打开反馈网页
-  Future<void> _openFeedbackPage() async {
-    final Uri feedbackUri = Uri.parse(
-      'https://github.com/ORIONHAN2026/LLMate/issues',
+  // 调用系统默认邮箱发送反馈
+  Future<void> _sendFeedbackEmail() async {
+    final Uri feedbackUri = Uri(
+      scheme: 'mailto',
+      path: 'hanxinyc@outlook.com',
+      queryParameters: const {'subject': 'LLMate App Feedback'},
     );
     try {
-      if (await canLaunchUrl(feedbackUri)) {
-        await launchUrl(feedbackUri, mode: LaunchMode.externalApplication);
+      // macOS 的默认 mailto 处理器可能被设置成网页邮箱；直接调用系统“邮件”。
+      if (Platform.isMacOS) {
+        final result = await Process.run('/usr/bin/open', [
+          '-a',
+          'Mail',
+          feedbackUri.toString(),
+        ]);
+        if (result.exitCode == 0) return;
       }
-    } catch (_) {}
+
+      final launched = await launchUrl(
+        feedbackUri,
+        mode: LaunchMode.externalNonBrowserApplication,
+      );
+      if (!launched && mounted) {
+        _showErrorSnackBar(AppLocalizations.of(context)!.cannotOpenEmailApp);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showErrorSnackBar(AppLocalizations.of(context)!.sendEmailFailed);
+      }
+    }
   }
 
   // 显示错误提示

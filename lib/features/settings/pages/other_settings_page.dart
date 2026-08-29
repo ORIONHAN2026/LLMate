@@ -42,6 +42,10 @@ class OtherSettingsPage extends StatelessWidget {
             const SizedBox(height: 8),
             _buildSkinOptions(themeController, colorScheme, l10n),
             const SizedBox(height: 32),
+            _buildSectionTitle('本地发信设置', colorScheme),
+            const SizedBox(height: 8),
+            _buildMailSection(context, colorScheme),
+            const SizedBox(height: 32),
             _buildSectionTitle('备份管理', colorScheme),
             const SizedBox(height: 8),
             _buildBackupSection(context, colorScheme),
@@ -54,6 +58,212 @@ class OtherSettingsPage extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildMailSection(BuildContext context, ColorScheme colorScheme) {
+    final settings = Get.find<SettingsController>();
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Obx(
+        () => _buildActionTile(
+          colorScheme,
+          icon: Icons.outgoing_mail,
+          title: 'SMTP 发信服务',
+          subtitle:
+              settings.isMailConfigured
+                  ? '${settings.systemSetting.smtpHost.value}:${settings.systemSetting.smtpPort.value} · ${settings.systemSetting.smtpSenderEmail.value}'
+                  : '未配置，配置后可将会话密钥发送到用户邮箱',
+          isFirst: true,
+          isLast: true,
+          onTap: () => _showMailConfigDialog(context),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showMailConfigDialog(BuildContext context) async {
+    final settings = Get.find<SettingsController>();
+    final config = settings.systemSetting;
+    final formKey = GlobalKey<FormState>();
+    final host = TextEditingController(text: config.smtpHost.value);
+    final port = TextEditingController(text: '${config.smtpPort.value}');
+    final username = TextEditingController(text: config.smtpUsername.value);
+    final password = TextEditingController(text: config.smtpPassword.value);
+    final senderEmail = TextEditingController(
+      text: config.smtpSenderEmail.value,
+    );
+    final senderName = TextEditingController(text: config.smtpSenderName.value);
+    var security = config.smtpSecurity.value;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder:
+          (dialogContext) => StatefulBuilder(
+            builder:
+                (dialogContext, setState) => AlertDialog(
+                  title: const Text('SMTP 发信配置'),
+                  content: SizedBox(
+                    width: 460,
+                    child: Form(
+                      key: formKey,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _mailField(
+                              controller: host,
+                              label: 'SMTP 服务器',
+                              hint: 'smtp.example.com',
+                              required: true,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _mailField(
+                                    controller: port,
+                                    label: '端口',
+                                    required: true,
+                                    keyboardType: TextInputType.number,
+                                    validator: (value) {
+                                      final number = int.tryParse(value ?? '');
+                                      if (number == null ||
+                                          number < 1 ||
+                                          number > 65535) {
+                                        return '请输入 1-65535 之间的端口';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    initialValue: security,
+                                    decoration: const InputDecoration(
+                                      labelText: '加密方式',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'starttls',
+                                        child: Text('STARTTLS'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'ssl',
+                                        child: Text('SSL/TLS'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'none',
+                                        child: Text('无加密'),
+                                      ),
+                                    ],
+                                    onChanged:
+                                        (value) => setState(
+                                          () => security = value ?? 'starttls',
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _mailField(controller: username, label: '用户名（可选）'),
+                            const SizedBox(height: 12),
+                            _mailField(
+                              controller: password,
+                              label: '密码 / 授权码（可选）',
+                              obscureText: true,
+                            ),
+                            const SizedBox(height: 12),
+                            _mailField(
+                              controller: senderEmail,
+                              label: '发件人邮箱',
+                              required: true,
+                              keyboardType: TextInputType.emailAddress,
+                              validator:
+                                  (value) =>
+                                      _validEmail(value ?? '')
+                                          ? null
+                                          : '请输入有效的邮箱地址',
+                            ),
+                            const SizedBox(height: 12),
+                            _mailField(controller: senderName, label: '发件人名称'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('取消'),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        if (formKey.currentState?.validate() ?? false) {
+                          Navigator.pop(dialogContext, true);
+                        }
+                      },
+                      child: const Text('保存'),
+                    ),
+                  ],
+                ),
+          ),
+    );
+
+    if (saved == true) {
+      await settings.saveMailConfig(
+        host: host.text,
+        port: int.parse(port.text),
+        username: username.text,
+        password: password.text,
+        senderEmail: senderEmail.text,
+        senderName: senderName.text,
+        security: security,
+      );
+      if (context.mounted) {
+        SnackBarUtils.showSuccess(context, '本地发信配置已保存');
+      }
+    }
+  }
+
+  Widget _mailField({
+    required TextEditingController controller,
+    required String label,
+    String? hint,
+    bool required = false,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: const OutlineInputBorder(),
+      ),
+      validator:
+          validator ??
+          (value) {
+            if (required && (value == null || value.trim().isEmpty)) {
+              return '此项为必填项';
+            }
+            return null;
+          },
+    );
+  }
+
+  bool _validEmail(String value) =>
+      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim());
 
   Widget _buildBackupSection(BuildContext context, ColorScheme colorScheme) {
     final settings = Get.find<SettingsController>();

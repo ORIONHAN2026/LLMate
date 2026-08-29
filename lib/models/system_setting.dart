@@ -23,6 +23,17 @@ class SystemSetting {
   /// 界面语言（'zh' / 'en'）
   final locale = const Locale('zh').obs;
 
+  // ── 本地发信设置 ──
+  final smtpHost = ''.obs;
+  final smtpPort = 587.obs;
+  final smtpUsername = ''.obs;
+  final smtpPassword = ''.obs;
+  final smtpSenderEmail = ''.obs;
+  final smtpSenderName = 'LLMate'.obs;
+
+  /// ssl / starttls / none
+  final smtpSecurity = 'starttls'.obs;
+
   // ── 服务设置（域名 / 端口 / 证书，扁平字段）──
   /// 域名（不带协议）
   final domain = ''.obs;
@@ -95,6 +106,13 @@ class SystemSetting {
     }
 
     s.locale.value = toLocale(lang);
+    s.smtpHost.value = json['smtpHost'] as String? ?? '';
+    s.smtpPort.value = (json['smtpPort'] as num?)?.toInt() ?? 587;
+    s.smtpUsername.value = json['smtpUsername'] as String? ?? '';
+    s.smtpPassword.value = json['smtpPassword'] as String? ?? '';
+    s.smtpSenderEmail.value = json['smtpSenderEmail'] as String? ?? '';
+    s.smtpSenderName.value = json['smtpSenderName'] as String? ?? 'LLMate';
+    s.smtpSecurity.value = json['smtpSecurity'] as String? ?? 'starttls';
 
     // 域名字段：优先读旧版嵌套 domainConfig，其次读新版扁平字段
     final dc = json['domainConfig'];
@@ -122,6 +140,13 @@ class SystemSetting {
     'useSystemTheme': useSystemTheme.value,
     'isDarkMode': isDarkMode.value,
     'appLanguage': locale.value.languageCode,
+    'smtpHost': smtpHost.value,
+    'smtpPort': smtpPort.value,
+    'smtpUsername': smtpUsername.value,
+    'smtpPassword': smtpPassword.value,
+    'smtpSenderEmail': smtpSenderEmail.value,
+    'smtpSenderName': smtpSenderName.value,
+    'smtpSecurity': smtpSecurity.value,
     'domain': domain.value,
     if (certPath.value != null) 'certPath': certPath.value,
     if (keyPath.value != null) 'keyPath': keyPath.value,
@@ -163,6 +188,13 @@ class SystemSetting {
     useSystemTheme.value = other.useSystemTheme.value;
     isDarkMode.value = other.isDarkMode.value;
     locale.value = other.locale.value;
+    smtpHost.value = other.smtpHost.value;
+    smtpPort.value = other.smtpPort.value;
+    smtpUsername.value = other.smtpUsername.value;
+    smtpPassword.value = other.smtpPassword.value;
+    smtpSenderEmail.value = other.smtpSenderEmail.value;
+    smtpSenderName.value = other.smtpSenderName.value;
+    smtpSecurity.value = other.smtpSecurity.value;
     domain.value = other.domain.value;
     certPath.value = other.certPath.value;
     keyPath.value = other.keyPath.value;

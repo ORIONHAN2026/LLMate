@@ -43,6 +43,10 @@ class SettingsController extends GetxController {
   RxBool get isDarkMode => systemSetting.isDarkMode;
   RxBool get useSystemTheme => systemSetting.useSystemTheme;
   Rx<Locale> get locale => systemSetting.locale;
+  bool get isMailConfigured =>
+      systemSetting.smtpHost.value.trim().isNotEmpty &&
+      systemSetting.smtpPort.value > 0 &&
+      systemSetting.smtpSenderEmail.value.trim().isNotEmpty;
   bool get isConfigured => systemSetting.isConfigured;
   String get effectiveBaseUrl => systemSetting.effectiveBaseUrl;
   ThemeMode get themeMode => systemSetting.themeMode;
@@ -212,6 +216,25 @@ class SettingsController extends GetxController {
     systemSetting.locale.value = newLocale;
     _saveSystemSetting();
     Get.updateLocale(newLocale);
+  }
+
+  Future<void> saveMailConfig({
+    required String host,
+    required int port,
+    required String username,
+    required String password,
+    required String senderEmail,
+    required String senderName,
+    required String security,
+  }) async {
+    systemSetting.smtpHost.value = host.trim();
+    systemSetting.smtpPort.value = port;
+    systemSetting.smtpUsername.value = username.trim();
+    systemSetting.smtpPassword.value = password;
+    systemSetting.smtpSenderEmail.value = senderEmail.trim();
+    systemSetting.smtpSenderName.value = senderName.trim();
+    systemSetting.smtpSecurity.value = security;
+    await _saveSystemSetting();
   }
 
   /// 设置备份目录

@@ -11,6 +11,7 @@ import '../../../../controllers/settings_controller.dart';
 import '../../../../controllers/mcp_controller.dart';
 import '../../../../controllers/model_controller.dart';
 import '../../../../core/http/local_http_service.dart';
+import '../../../../core/services/mail_service.dart';
 import 'package:llmate/features/mcp/widgets/mcp_detail_dialog.dart';
 import '../../../../models/chat/session.dart';
 import '../../../../models/chat/mcp.dart';
@@ -91,12 +92,18 @@ class SessionConfigSidebar {
     required String label,
     required String value,
     required ValueChanged<String> onChanged,
+    String? placeholder,
+    bool allowEmpty = false,
+    bool editOnTap = false,
   }) {
     return _EditableConfigItem(
       icon: icon,
       label: label,
       value: value,
       onChanged: onChanged,
+      placeholder: placeholder,
+      allowEmpty: allowEmpty,
+      editOnTap: editOnTap,
     );
   }
 
@@ -168,6 +175,7 @@ class SessionConfigSidebar {
     required String label,
     required String value,
     VoidCallback? onReset,
+    VoidCallback? onSend,
   }) {
     final showReset = onReset != null;
     final l10n = AppLocalizations.of(context)!;
@@ -245,10 +253,75 @@ class SessionConfigSidebar {
               size: 14,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
             ),
+            if (onSend != null) ...[
+              const SizedBox(width: 6),
+              Tooltip(
+                message: '发送到邮箱',
+                child: InkWell(
+                  onTap: onSend,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Icon(
+                      Icons.outgoing_mail,
+                      size: 15,
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.35,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  static void _updateSessionEmail(
+    BuildContext context,
+    ChatSession session,
+    String value,
+  ) {
+    final email = value.trim();
+    if (email.isNotEmpty && !MailService.isValidRecipientList(email)) {
+      SnackBarUtils.showError(context, '请输入有效的邮箱地址，多个地址请用逗号分隔');
+      return;
+    }
+    Get.find<SessionController>().updateSession(
+      session.copyWith(email: email, clearEmail: email.isEmpty),
+    );
+  }
+
+  static Future<void> _sendApiKeyToEmail(
+    BuildContext context,
+    ChatSession session,
+  ) async {
+    final settings = Get.find<SettingsController>();
+    if (!settings.isMailConfigured) {
+      SnackBarUtils.showError(context, '请先在其他设置中配置本地发信服务');
+      return;
+    }
+    final email = session.email?.trim() ?? '';
+    if (!MailService.isValidRecipientList(email)) {
+      SnackBarUtils.showError(context, '请先为会话设置有效的邮箱地址');
+      return;
+    }
+    try {
+      await MailService.sendSessionApiKey(
+        settings: settings.systemSetting,
+        recipients: email,
+        sessionName: session.name,
+        apiKey: session.apiKey,
+      );
+      if (!context.mounted) return;
+      final count = MailService.parseRecipients(email).length;
+      SnackBarUtils.showSuccess(context, '密钥已发送到 $count 个邮箱');
+    } catch (e) {
+      if (!context.mounted) return;
+      SnackBarUtils.showError(context, '发送失败，请检查发信配置: $e');
+    }
   }
 
   /// 重置会话 API 密钥：弹窗确认后生成新密钥并持久化
@@ -476,6 +549,17 @@ class SessionConfigSidebar {
         const SizedBox(height: 8),
         _buildEditableConfigItem(
           context,
+          icon: Icons.email_outlined,
+          label: '邮箱',
+          value: session.email ?? '',
+          onChanged: (value) => _updateSessionEmail(context, session, value),
+          placeholder: '请点击输入邮箱地址，多个用逗号分隔',
+          allowEmpty: true,
+          editOnTap: true,
+        ),
+        const SizedBox(height: 8),
+        _buildEditableConfigItem(
+          context,
           icon: Icons.grid_view,
           label: l10n.organization,
           value: session.group ?? l10n.notSpecified,
@@ -516,6 +600,7 @@ class SessionConfigSidebar {
           label: l10n.apiKeyLabel,
           value: session.apiKey,
           onReset: () => _resetApiKey(context, session),
+          onSend: () => _sendApiKeyToEmail(context, session),
         ),
         const SizedBox(height: 8),
         _buildDisabledToggle(context, session),
@@ -905,12 +990,18 @@ class _EditableConfigItem extends StatefulWidget {
   final String label;
   final String value;
   final ValueChanged<String> onChanged;
+  final String? placeholder;
+  final bool allowEmpty;
+  final bool editOnTap;
 
   const _EditableConfigItem({
     required this.icon,
     required this.label,
     required this.value,
     required this.onChanged,
+    this.placeholder,
+    this.allowEmpty = false,
+    this.editOnTap = false,
   });
 
   @override
@@ -960,7 +1051,8 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
     final newValue = _controller.text.trim();
     setState(() => _isEditing = false);
 
-    if (newValue.isNotEmpty && newValue != widget.value) {
+    if (newValue != widget.value &&
+        (newValue.isNotEmpty || widget.allowEmpty)) {
       widget.onChanged(newValue);
     } else {
       _controller.text = widget.value;
@@ -972,6 +1064,7 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
+      onTap: widget.editOnTap && !_isEditing ? _startEditing : null,
       onDoubleTap: _startEditing,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1010,13 +1103,23 @@ class _EditableConfigItemState extends State<_EditableConfigItem> {
                     _buildInlineEditor(theme, isDark)
                   else
                     Text(
-                      widget.value,
+                      widget.value.isEmpty
+                          ? (widget.placeholder ?? '')
+                          : widget.value,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.onSurface,
+                        fontWeight:
+                            widget.value.isEmpty
+                                ? FontWeight.w400
+                                : FontWeight.w700,
+                        color:
+                            widget.value.isEmpty
+                                ? theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.4,
+                                )
+                                : theme.colorScheme.onSurface,
                       ),
                     ),
                 ],
@@ -2499,6 +2602,22 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildEditableConfigItem(
                       context,
+                      icon: Icons.email_outlined,
+                      label: '邮箱',
+                      value: session.email ?? '',
+                      onChanged:
+                          (value) => SessionConfigSidebar._updateSessionEmail(
+                            context,
+                            session,
+                            value,
+                          ),
+                      placeholder: '请点击输入邮箱地址，多个用逗号分隔',
+                      allowEmpty: true,
+                      editOnTap: true,
+                    ),
+                    const SizedBox(height: 8),
+                    SessionConfigSidebar._buildEditableConfigItem(
+                      context,
                       icon: Icons.grid_view,
                       label: l10n.groupLabel,
                       value: session.group ?? l10n.notGrouped,
@@ -2557,6 +2676,11 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                       value: session.apiKey,
                       onReset:
                           () => SessionConfigSidebar._resetApiKey(
+                            context,
+                            session,
+                          ),
+                      onSend:
+                          () => SessionConfigSidebar._sendApiKeyToEmail(
                             context,
                             session,
                           ),

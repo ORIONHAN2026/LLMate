@@ -279,21 +279,6 @@ class SessionConfigSidebar {
     );
   }
 
-  static void _updateSessionEmail(
-    BuildContext context,
-    ChatSession session,
-    String value,
-  ) {
-    final email = value.trim();
-    if (email.isNotEmpty && !MailService.isValidRecipientList(email)) {
-      SnackBarUtils.showError(context, '请输入有效的邮箱地址，多个地址请用逗号分隔');
-      return;
-    }
-    Get.find<SessionController>().updateSession(
-      session.copyWith(email: email, clearEmail: email.isEmpty),
-    );
-  }
-
   static Future<void> _sendApiKeyToEmail(
     BuildContext context,
     ChatSession session,
@@ -545,17 +530,6 @@ class SessionConfigSidebar {
               );
             }
           },
-        ),
-        const SizedBox(height: 8),
-        _buildEditableConfigItem(
-          context,
-          icon: Icons.email_outlined,
-          label: '邮箱',
-          value: session.email ?? '',
-          onChanged: (value) => _updateSessionEmail(context, session, value),
-          placeholder: '请点击输入邮箱地址，多个用逗号分隔',
-          allowEmpty: true,
-          editOnTap: true,
         ),
         const SizedBox(height: 8),
         _buildEditableConfigItem(
@@ -2598,22 +2572,6 @@ class _SessionConfigTabsState extends State<_SessionConfigTabs> {
                           );
                         }
                       },
-                    ),
-                    const SizedBox(height: 8),
-                    SessionConfigSidebar._buildEditableConfigItem(
-                      context,
-                      icon: Icons.email_outlined,
-                      label: '邮箱',
-                      value: session.email ?? '',
-                      onChanged:
-                          (value) => SessionConfigSidebar._updateSessionEmail(
-                            context,
-                            session,
-                            value,
-                          ),
-                      placeholder: '请点击输入邮箱地址，多个用逗号分隔',
-                      allowEmpty: true,
-                      editOnTap: true,
                     ),
                     const SizedBox(height: 8),
                     SessionConfigSidebar._buildEditableConfigItem(
